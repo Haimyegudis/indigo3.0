@@ -1,4 +1,5 @@
 ﻿using OxyPlot;
+using OxyPlot.Axes;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -48,17 +49,17 @@ namespace IndiLogs_3._0.Models
         public string ColorCode => Type == "Upper" ? "#FF4444" : "#4444FF";
     }
 
-    // ייצוג קטע זמן של סטייט
+    // ייצוג קטע זמן של סטייט - FIXED to use OxyPlot OADate format
     public class MachineStateSegment
     {
         public string Name { get; set; }
-        public double Start { get; set; }
-        public double End { get; set; }
+        public double Start { get; set; }  // OxyPlot OADate format (from DateTimeAxis.ToDouble)
+        public double End { get; set; }    // OxyPlot OADate format (from DateTimeAxis.ToDouble)
         public OxyColor Color { get; set; }
 
-        // המרה לזמן לצורך תצוגה ברשימה
-        public DateTime StartTimeValue => new DateTime((long)Start);
-        public DateTime EndTimeValue => new DateTime((long)End);
+        // המרה לזמן לצורך תצוגה ברשימה - using OxyPlot's DateTimeAxis
+        public DateTime StartTimeValue => DateTimeAxis.ToDateTime(Start);
+        public DateTime EndTimeValue => DateTimeAxis.ToDateTime(End);
 
         // מחרוזת לתצוגה ברשימה: "HH:mm:ss - HH:mm:ss"
         public string TimeRangeStr => $"{StartTimeValue:HH:mm:ss} - {EndTimeValue:HH:mm:ss}";

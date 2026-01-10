@@ -1,6 +1,5 @@
 ﻿using IndiLogs_3._0.Models;
 using OxyPlot;
-using OxyPlot.Axes;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -87,7 +86,7 @@ namespace IndiLogs_3._0.Services
                 {
                     string msg = log.Message;
                     string thread = log.ThreadName ?? "Unknown";
-                    double timeVal = DateTimeAxis.ToDouble(log.Date);
+                    double timeVal = log.Date.Ticks;
 
                     // =================================================================================
                     // 1. Motor Axis Logic

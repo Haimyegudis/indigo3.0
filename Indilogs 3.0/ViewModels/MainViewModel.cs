@@ -11,6 +11,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using OxyPlot.Axes;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
@@ -728,7 +729,7 @@ namespace IndiLogs_3._0.ViewModels
 
         private void StartBackgroundAnalysis(LogSessionData session)
         {
-            IsAnalysisRunning = true; // סימון שהתהליך רץ
+            IsAnalysisRunning = true;
 
             Task.Run(() =>
             {
@@ -737,7 +738,7 @@ namespace IndiLogs_3._0.ViewModels
                     // חישוב סטייטים (עבור חלון סטייטים)
                     session.CachedStates = CalculateStatesInternal(session.Logs);
 
-                    // חישוב כשלונות (עבור חלון אנליזה) - שימוש במחלקה המאוחדת החדשה
+                    // חישוב כשלונות (עבור חלון אנליזה)
                     session.CachedAnalysis = new UniversalStateFailureAnalyzer().Analyze(session);
 
                     // עדכון הגרף הויזואלי בסטייטים (חייב להיות ב-Dispatcher)
@@ -748,11 +749,23 @@ namespace IndiLogs_3._0.ViewModels
                         {
                             foreach (var s in session.CachedStates)
                             {
+                                // ❌ OLD CODE (WRONG):
+                                /*
                                 GraphsVM.StateTimeline.Add(new MachineStateSegment
                                 {
                                     Name = s.StateName,
-                                    Start = s.StartTime.Ticks,
-                                    End = (s.EndTime ?? DateTime.MaxValue).Ticks,
+                                    Start = s.StartTime.Ticks,  // WRONG!
+                                    End = (s.EndTime ?? DateTime.MaxValue).Ticks,  // WRONG!
+                                    Color = s.Status == "FAILED" ? OxyPlot.OxyColors.Red : OxyPlot.OxyColors.LightGreen
+                                });
+                                */
+
+                                // ✅ NEW CODE (CORRECT):
+                                GraphsVM.StateTimeline.Add(new MachineStateSegment
+                                {
+                                    Name = s.StateName,
+                                    Start = OxyPlot.Axes.DateTimeAxis.ToDouble(s.StartTime),
+                                    End = OxyPlot.Axes.DateTimeAxis.ToDouble(s.EndTime ?? DateTime.MaxValue),
                                     Color = s.Status == "FAILED" ? OxyPlot.OxyColors.Red : OxyPlot.OxyColors.LightGreen
                                 });
                             }
@@ -765,9 +778,8 @@ namespace IndiLogs_3._0.ViewModels
                 }
                 finally
                 {
-                    IsAnalysisRunning = false; // סיימנו
+                    IsAnalysisRunning = false;
 
-                    // עדכון הסטטוס בר למטה (אופציונלי)
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         if (SelectedSession == session)
