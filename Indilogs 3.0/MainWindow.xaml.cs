@@ -334,17 +334,20 @@ namespace IndiLogs_3._0
                         var leftPanelColumn = contentGrid.ColumnDefinitions[0];
 
                         // Save current width for previous tab
-                        if (leftPanelColumn.Width.IsAbsolute && leftPanelColumn.Width.Value > 0)
+                        if (leftPanelColumn.Width.IsAbsolute && leftPanelColumn.Width.Value > 0 && _previousTabIndex != 7)
                         {
                             _tabPanelWidths[_previousTabIndex] = leftPanelColumn.Width.Value;
                         }
 
-                        // Restore width for new tab (or use default)
-                        double newWidth = _tabPanelWidths.ContainsKey(newTabIndex) ? _tabPanelWidths[newTabIndex] : DEFAULT_PANEL_WIDTH;
-
-                        // Skip reset for ANALYSIS tab (index 7) which has Width=0
-                        if (newTabIndex != 7)
+                        // For GRAPHS tab (index 7), set width to 0 explicitly
+                        if (newTabIndex == 7)
                         {
+                            leftPanelColumn.Width = new GridLength(0);
+                        }
+                        else
+                        {
+                            // Restore width for other tabs (or use default)
+                            double newWidth = _tabPanelWidths.ContainsKey(newTabIndex) ? _tabPanelWidths[newTabIndex] : DEFAULT_PANEL_WIDTH;
                             leftPanelColumn.Width = new GridLength(newWidth);
                         }
 

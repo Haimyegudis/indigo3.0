@@ -539,7 +539,7 @@
                     </StackPanel>
                 </Border>
 
-                <TabControl x:Name="MainTabs" Grid.Row="0" SelectedIndex="{Binding SelectedTabIndex}" BorderThickness="0" Background="Transparent" SelectionChanged="TabControl_SelectionChanged">
+                <TabControl x:Name="MainTabs" Grid.Row="0" SelectedIndex="{Binding SelectedTabIndex}" BorderThickness="0" Background="Transparent" Padding="0" SelectionChanged="TabControl_SelectionChanged">
                     <TabItem Header="PLC LOGS">
                         <Grid>
                             <DataGrid x:Name="MainLogsGrid"
@@ -1086,8 +1086,8 @@
                                  BorderThickness="0" VerticalScrollBarVisibility="Auto" Padding="10"/>
                     </TabItem>
 
-                    <TabItem Header="GRAPHS">
-                        <views:GraphsView DataContext="{Binding GraphsVM}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                    <TabItem Header="GRAPHS" Padding="0" Margin="0">
+                        <views:GraphsView DataContext="{Binding GraphsVM}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0"/>
                     </TabItem>
                 </TabControl>
 

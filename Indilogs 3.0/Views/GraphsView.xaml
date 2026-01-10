@@ -4,7 +4,8 @@
              xmlns:oxy="http://oxyplot.org/wpf"
              xmlns:vm="clr-namespace:IndiLogs_3._0.ViewModels"
              xmlns:models="clr-namespace:IndiLogs_3._0.Models"
-             xmlns:converters="clr-namespace:IndiLogs_3._0.Converters">
+             xmlns:converters="clr-namespace:IndiLogs_3._0.Converters"
+             Padding="0" Margin="0">
 
     <UserControl.Resources>
         <converters:OxyColorToBrushConverter x:Key="OxyColorToBrushConverter"/>
@@ -12,8 +13,9 @@
         <Style x:Key="PanelHeader" TargetType="TextBlock">
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Foreground" Value="#555555"/>
-            <Setter Property="Margin" Value="5,10,5,5"/>
+            <Setter Property="Margin" Value="8,10,8,5"/>
             <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Background" Value="#F3F3F3"/>
         </Style>
 
         <Style x:Key="ModernBtn" TargetType="Button">
@@ -45,45 +47,37 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Background="White">
+    <Grid Background="White" Margin="0">
         <Grid.ColumnDefinitions>
-            <!-- Left Panel - דינאמי לפי תוכן -->
-            <ColumnDefinition Width="Auto" MinWidth="300" MaxWidth="600"/>
+            <ColumnDefinition Width="350" MinWidth="300" MaxWidth="600"/>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- LEFT PANEL: Components Tree + Active Signals + Timeline -->
-        <Border Grid.Column="0" Background="#F3F3F3" BorderBrush="#DDDDDD" BorderThickness="0,0,1,0" Padding="8">
-            <Grid Width="350">
+        <!-- LEFT PANEL -->
+        <Border Grid.Column="0" Background="#F3F3F3" BorderBrush="#DDDDDD" BorderThickness="0,0,1,0" Padding="0">
+            <Grid Margin="0">
                 <Grid.RowDefinitions>
-                    <!-- Components Header -->
                     <RowDefinition Height="Auto"/>
-                    <!-- Components Tree - גובה קבוע עם scroll -->
                     <RowDefinition Height="200" MinHeight="150" MaxHeight="350"/>
-                    <!-- Active Signals Header -->
                     <RowDefinition Height="Auto"/>
-                    <!-- Active Signals List - גובה קבוע קטן -->
                     <RowDefinition Height="120"/>
-                    <!-- Timeline Header -->
                     <RowDefinition Height="Auto"/>
-                    <!-- Timeline List - ניקח את השאר -->
                     <RowDefinition Height="*" MinHeight="150"/>
                 </Grid.RowDefinitions>
 
-                <!-- ==================== COMPONENTS TREE SECTION ==================== -->
+                <!-- COMPONENTS TREE SECTION -->
                 <TextBlock Text="AVAILABLE COMPONENTS (Double Click to Add)" 
                            Style="{StaticResource PanelHeader}" 
                            Grid.Row="0"/>
 
-                <Border Grid.Row="1" BorderBrush="#CCCCCC" BorderThickness="1" Background="White">
+                <Border Grid.Row="1" BorderBrush="#CCCCCC" BorderThickness="1" Background="White" Margin="8,0,8,8">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Search Box -->
                         <TextBox Grid.Row="0"
                                  Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
                                  Background="White" 
@@ -91,27 +85,27 @@
                                  BorderThickness="0,0,0,1" 
                                  BorderBrush="#CCC" 
                                  Padding="6" 
-                                 Margin="2"
+                                 Margin="0"
                                  Tag="Search..." 
                                  FontSize="12"/>
 
-                        <!-- TreeView with Vertical Scroll Only -->
                         <ScrollViewer Grid.Row="1" 
                                       VerticalScrollBarVisibility="Auto" 
                                       HorizontalScrollBarVisibility="Disabled"
+                                      Padding="0"
                                       PreviewMouseWheel="TreeView_PreviewMouseWheel">
                             <TreeView x:Name="ComponentTreeView"
                                       ItemsSource="{Binding ComponentTree}" 
                                       Background="Transparent" 
                                       Foreground="Black" 
                                       BorderThickness="0"
-                                      Padding="4">
+                                      Padding="4"
+                                      Margin="0">
                                 <TreeView.ItemContainerStyle>
                                     <Style TargetType="TreeViewItem">
                                         <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
                                         <Setter Property="Visibility" Value="{Binding IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                         <Setter Property="Foreground" Value="Black"/>
-                                        <!-- Dynamic Width based on content -->
                                         <EventSetter Event="Expanded" Handler="TreeViewItem_Expanded"/>
                                         <EventSetter Event="Collapsed" Handler="TreeViewItem_Collapsed"/>
                                     </Style>
@@ -132,12 +126,12 @@
                     </Grid>
                 </Border>
 
-                <!-- ==================== ACTIVE SIGNALS SECTION ==================== -->
+                <!-- ACTIVE SIGNALS SECTION -->
                 <TextBlock Text="ACTIVE CHART SIGNALS" 
                            Style="{StaticResource PanelHeader}" 
                            Grid.Row="2"/>
 
-                <Border Grid.Row="3" BorderBrush="#CCCCCC" BorderThickness="1" Background="White">
+                <Border Grid.Row="3" BorderBrush="#CCCCCC" BorderThickness="1" Background="White" Margin="8,0,8,8">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="*"/>
@@ -146,11 +140,14 @@
 
                         <ScrollViewer Grid.Row="0" 
                                       VerticalScrollBarVisibility="Auto"
+                                      Padding="0"
                                       PreviewMouseWheel="ActiveSignals_PreviewMouseWheel">
                             <ListBox ItemsSource="{Binding ActiveChartSignals}" 
                                      Background="Transparent" 
                                      Foreground="#005A9E" 
                                      BorderThickness="0"
+                                     Padding="4"
+                                     Margin="0"
                                      SelectedItem="{Binding SelectedSignalToRemove}" 
                                      FontSize="11"/>
                         </ScrollViewer>
@@ -162,24 +159,26 @@
                                 Background="#FFEBEB" 
                                 BorderBrush="#FFCCCC" 
                                 Foreground="#CC0000"
-                                Margin="2"/>
+                                Margin="4"/>
                     </Grid>
                 </Border>
 
-                <!-- ==================== TIMELINE SECTION ==================== -->
+                <!-- TIMELINE SECTION -->
                 <TextBlock Text="TIMELINE (Double Click to Zoom)" 
                            Style="{StaticResource PanelHeader}" 
                            Grid.Row="4"/>
 
-                <Border Grid.Row="5" BorderBrush="#CCCCCC" BorderThickness="1" Background="White">
+                <Border Grid.Row="5" BorderBrush="#CCCCCC" BorderThickness="1" Background="White" Margin="8,0,8,8">
                     <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  Padding="0"
                                   PreviewMouseWheel="Timeline_PreviewMouseWheel">
                         <ListBox ItemsSource="{Binding StateTimeline}" 
                                  Background="Transparent" 
                                  Foreground="Black" 
                                  BorderThickness="0" 
                                  FontSize="11"
-                                 Padding="2">
+                                 Padding="4"
+                                 Margin="0">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Margin="0,2" Background="Transparent" Cursor="Hand">
@@ -196,7 +195,6 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
 
-                                        <!-- Color Indicator -->
                                         <Rectangle Grid.Column="0"
                                                    Fill="{Binding Color, Converter={StaticResource OxyColorToBrushConverter}}" 
                                                    Width="4" 
@@ -204,7 +202,6 @@
                                                    VerticalAlignment="Center"
                                                    Margin="0,0,4,0"/>
 
-                                        <!-- Time Range -->
                                         <TextBlock Grid.Column="1" 
                                                    Text="{Binding TimeRangeStr}" 
                                                    Foreground="#666" 
@@ -213,7 +210,6 @@
                                                    FontFamily="Consolas" 
                                                    FontSize="10"/>
 
-                                        <!-- State Name -->
                                         <TextBlock Grid.Column="2" 
                                                    Text="{Binding Name}" 
                                                    Margin="4,0" 
@@ -221,7 +217,6 @@
                                                    FontWeight="SemiBold"
                                                    TextTrimming="CharacterEllipsis"/>
 
-                                        <!-- Duration -->
                                         <TextBlock Grid.Column="3" 
                                                    Text="{Binding DurationStr}" 
                                                    Foreground="#888" 
@@ -300,7 +295,7 @@
                 </StackPanel>
             </Border>
 
-            <!-- CHARTS AREA - OxyPlot with Vertical Scroll Only -->
+            <!-- CHARTS AREA -->
             <ScrollViewer Grid.Row="1" 
                           VerticalScrollBarVisibility="Auto" 
                           HorizontalScrollBarVisibility="Disabled"
@@ -315,17 +310,14 @@
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="30"/>
-                                        <!-- State Timeline Bar -->
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
 
-                                    <!-- Title Bar -->
                                     <DockPanel Grid.Row="0" Background="#F5F5F5" LastChildFill="False">
                                         <TextBlock Text="{Binding Title}" Foreground="#333" Margin="8,4" FontWeight="Bold" FontSize="11"/>
                                         <Button Content="↗" Command="{Binding FloatCommand}" Width="24" Height="20" Padding="0" Background="Transparent" Foreground="#666" BorderThickness="0" DockPanel.Dock="Right" Cursor="Hand" ToolTip="Detach"/>
                                     </DockPanel>
 
-                                    <!-- State Timeline Visualization -->
                                     <Border Grid.Row="1" Background="#F9F9F9" BorderBrush="#DDD" BorderThickness="0,1">
                                         <ItemsControl ItemsSource="{Binding DataContext.StateTimeline, RelativeSource={RelativeSource AncestorType=UserControl}}">
                                             <ItemsControl.ItemsPanel>
@@ -337,15 +329,12 @@
                                                 <DataTemplate>
                                                     <Rectangle Fill="{Binding Color, Converter={StaticResource OxyColorToBrushConverter}}"
                                                                Height="25"
-                                                               ToolTip="{Binding Name}">
-                                                        <!-- Dynamic positioning will be set via behavior/code-behind -->
-                                                    </Rectangle>
+                                                               ToolTip="{Binding Name}"/>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                     </Border>
 
-                                    <!-- OxyPlot Chart -->
                                     <oxy:PlotView Grid.Row="2" 
                                                   Model="{Binding PlotModel}"
                                                   Background="Transparent"/>
@@ -363,5 +352,5 @@
                 </StatusBarItem>
             </StatusBar>
         </Grid>
-    </Grid> 
+    </Grid>
 </UserControl>
