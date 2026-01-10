@@ -1,0 +1,274 @@
+<Window x:Class="IndiLogs_3._0.Views.ExportConfigurationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Export CSV Configuration"
+        Height="700" Width="1000"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgDark}"
+        Foreground="{DynamicResource TextPrimary}"
+        WindowStyle="SingleBorderWindow"
+        ResizeMode="CanResize">
+
+    <Window.Resources>
+        <Style TargetType="GroupBox">
+            <Setter Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        </Style>
+
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="Margin" Value="3,2"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="ModernBtn" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Opacity" Value="0.8"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.4"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SecondaryBtn" TargetType="Button" BasedOn="{StaticResource ModernBtn}">
+            <Setter Property="Background" Value="{DynamicResource BgCard}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- כותרת -->
+        <Border Grid.Row="0" Background="{DynamicResource BgCard}"
+                CornerRadius="8" Padding="15" Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="🔧 Export CSV Configuration"
+                               FontSize="20" FontWeight="Bold"
+                               Foreground="{DynamicResource PrimaryColor}"/>
+                    <TextBlock Text="בחר את הקומפוננטות, Threads והעמודות שברצונך לייצא"
+                               FontSize="12"
+                               Foreground="{DynamicResource TextSecondary}"
+                               Margin="0,5,0,0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="💾 Save Preset"
+                            Command="{Binding SavePresetCommand}"
+                            Style="{StaticResource SecondaryBtn}"/>
+                    <Button Content="📂 Load Preset"
+                            Command="{Binding LoadPresetCommand}"
+                            Style="{StaticResource SecondaryBtn}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- תוכן ראשי -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- אופציות עמודות כלליות -->
+                <GroupBox Grid.Row="0" Header="⚙️ General Options">
+                    <StackPanel>
+                        <CheckBox Content="Include Unix Time Column"
+                                  IsChecked="{Binding IncludeUnixTime}"/>
+                        <CheckBox Content="Include Events Column (Always shown - from THREAD=Events)"
+                                  IsChecked="{Binding IncludeEvents}"
+                                  ToolTip="הצג עמודה נפרדת לאירועים מ-Thread Events"/>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- בחירת קומפוננטות וThreads -->
+                <Grid Grid.Row="1" Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- IO Components -->
+                    <GroupBox Grid.Column="0" Header="🔌 IO Components">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,5">
+                                <Button Content="Select All"
+                                        Command="{Binding SelectAllIOCommand}"
+                                        Style="{StaticResource SecondaryBtn}"
+                                        Padding="8,4" FontSize="11"/>
+                                <Button Content="Deselect All"
+                                        Command="{Binding DeselectAllIOCommand}"
+                                        Style="{StaticResource SecondaryBtn}"
+                                        Padding="8,4" FontSize="11"/>
+                            </StackPanel>
+
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                          MaxHeight="350">
+                                <ItemsControl ItemsSource="{Binding IOComponents}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsSelected}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Category}"
+                                                               Foreground="{DynamicResource WarningColor}"
+                                                               FontWeight="SemiBold"
+                                                               Margin="0,0,5,0"/>
+                                                    <TextBlock Text=" | "/>
+                                                    <TextBlock Text="{Binding Name}"/>
+                                                </StackPanel>
+                                            </CheckBox>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </GroupBox>
+
+                    <!-- AXIS Components -->
+                    <GroupBox Grid.Column="1" Header="⚙️ AXIS Components (Motors)">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,5">
+                                <Button Content="Select All"
+                                        Command="{Binding SelectAllAxisCommand}"
+                                        Style="{StaticResource SecondaryBtn}"
+                                        Padding="8,4" FontSize="11"/>
+                                <Button Content="Deselect All"
+                                        Command="{Binding DeselectAllAxisCommand}"
+                                        Style="{StaticResource SecondaryBtn}"
+                                        Padding="8,4" FontSize="11"/>
+                            </StackPanel>
+
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                          MaxHeight="350">
+                                <ItemsControl ItemsSource="{Binding AxisComponents}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsSelected}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Category}"
+                                                               Foreground="{DynamicResource SuccessColor}"
+                                                               FontWeight="SemiBold"
+                                                               Margin="0,0,5,0"/>
+                                                    <TextBlock Text=" | "/>
+                                                    <TextBlock Text="{Binding Name}"/>
+                                                </StackPanel>
+                                            </CheckBox>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </GroupBox>
+
+                    <!-- Thread Messages -->
+                    <GroupBox Grid.Column="2" Header="📋 Thread Messages">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,5">
+                                <Button Content="Select All"
+                                        Command="{Binding SelectAllThreadsCommand}"
+                                        Style="{StaticResource SecondaryBtn}"
+                                        Padding="8,4" FontSize="11"/>
+                                <Button Content="Deselect All"
+                                        Command="{Binding DeselectAllThreadsCommand}"
+                                        Style="{StaticResource SecondaryBtn}"
+                                        Padding="8,4" FontSize="11"/>
+                            </StackPanel>
+
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                          MaxHeight="350">
+                                <ItemsControl ItemsSource="{Binding ThreadItems}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsSelected}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="🔗 "
+                                                               Foreground="{DynamicResource PrimaryColor}"/>
+                                                    <TextBlock Text="{Binding Name}"/>
+                                                </StackPanel>
+                                            </CheckBox>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </GroupBox>
+                </Grid>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- כפתורים תחתונים -->
+        <Border Grid.Row="2" Background="{DynamicResource BgCard}"
+                CornerRadius="8" Padding="15" Margin="0,10,0,0">
+            <Grid>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="✅ Export CSV"
+                            Command="{Binding ExportCommand}"
+                            Style="{StaticResource ModernBtn}"
+                            Padding="25,10"
+                            FontSize="14"/>
+                    <Button Content="❌ Cancel"
+                            IsCancel="True"
+                            Style="{StaticResource SecondaryBtn}"
+                            Padding="25,10"
+                            FontSize="14"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

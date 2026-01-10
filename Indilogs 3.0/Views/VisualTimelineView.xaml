@@ -1,0 +1,149 @@
+﻿<UserControl x:Class="IndiLogs_3._0.Views.VisualTimelineView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:IndiLogs_3._0.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+
+    <Grid Background="{DynamicResource BgDark}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="50"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="250"/>
+        </Grid.RowDefinitions>
+        <Border Grid.Row="0" Background="{DynamicResource BgPanel}" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderColor}">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10">
+                <TextBlock Text="Timeline Visualization" Foreground="White" FontWeight="Bold" FontSize="16" Margin="0,0,20,0"/>
+
+                <StackPanel Orientation="Horizontal" Margin="20,0">
+                    <TextBlock Text="States: " Foreground="Gray"/>
+                    <TextBlock Text="{Binding TotalStates}" Foreground="White" FontWeight="Bold" Margin="0,0,10,0"/>
+
+                    <TextBlock Text="Errors: " Foreground="Gray"/>
+                    <TextBlock Text="{Binding TotalErrors}" Foreground="#FF6B6B" FontWeight="Bold" Margin="0,0,10,0"/>
+
+                    <TextBlock Text="Events: " Foreground="Gray"/>
+                    <TextBlock Text="{Binding TotalEvents}" Foreground="Cyan" FontWeight="Bold" Margin="0,0,10,0"/>
+                </StackPanel>
+
+                <Button Content="Zoom Out / Clear Filter"
+                        Command="{Binding DataContext.ResetTimeFocusCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Padding="10,2" Margin="20,0,5,0"
+                        Background="#3B82F6" Foreground="White" BorderThickness="0" Cursor="Hand"
+                        ToolTip="Reset zoom and clear all filters to show all states"/>
+            </StackPanel>
+        </Border>
+
+        <controls:TimelineCanvas Grid.Row="1" x:Name="MyTimeline"
+                                 States="{Binding States}"
+                                 Markers="{Binding Markers}"
+                                 ViewScale="{Binding ViewScale, Mode=TwoWay}"
+                                 ViewOffset="{Binding ViewOffset, Mode=TwoWay}"
+                                 StateClicked="OnStateClicked"
+                                 MarkerClicked="OnMarkerClicked"/>
+
+        <Grid Grid.Row="2" Background="{DynamicResource BgPanel}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10,8">
+                <TextBlock Text="Selected State Details:" Foreground="#007ACC" FontWeight="Bold" Margin="0,0,15,0" FontSize="14"/>
+
+                <TextBlock Text="Name: " Foreground="#AAAAAA"/>
+                <TextBlock Text="{Binding SelectedState.Name}" Foreground="White" FontWeight="Bold" Margin="0,0,15,0"/>
+
+                <TextBlock Text="Result: " Foreground="#AAAAAA"/>
+                <TextBlock Text="{Binding SelectedStateResult}" FontWeight="Bold" Margin="0,0,15,0">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="White"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedStateResult}" Value="FAILED">
+                                    <Setter Property="Foreground" Value="#FF4444"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedStateResult}" Value="WARNING">
+                                    <Setter Property="Foreground" Value="Orange"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedStateResult}" Value="SUCCESS">
+                                    <Setter Property="Foreground" Value="#00FF00"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <TextBlock Text="Duration: " Foreground="#AAAAAA"/>
+                <TextBlock Text="{Binding SelectedStateDuration}" Foreground="White" FontWeight="Bold" Margin="0,0,15,0"/>
+
+                <TextBlock Text="Errors in State: " Foreground="#AAAAAA"/>
+                <TextBlock Text="{Binding SelectedStateErrors}" Foreground="#FF6B6B" FontWeight="Bold"/>
+            </StackPanel>
+
+            <DataGrid Grid.Row="1" x:Name="DetailLogGrid"
+                      ItemsSource="{Binding SelectedState.RelatedLogs}"
+                      AutoGenerateColumns="False"
+                      Background="{DynamicResource BgDark}"
+                      BorderThickness="0"
+                      RowBackground="Transparent"
+                      GridLinesVisibility="Horizontal"
+                      HorizontalGridLinesBrush="{DynamicResource BorderColor}"
+                      RowStyle="{DynamicResource LogRowStyle}"
+                      HeadersVisibility="Column"
+                      IsReadOnly="True">
+
+                <DataGrid.Resources>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
+                        <Setter Property="Foreground" Value="White"/>
+                        <Setter Property="Padding" Value="5"/>
+                    </Style>
+                </DataGrid.Resources>
+
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Lvl" Binding="{Binding Level}" Width="50" FontWeight="Bold">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="White"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Level}" Value="Error">
+                                        <Setter Property="Foreground" Value="#FF6B6B"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="Time" Binding="{Binding Date, StringFormat='HH:mm:ss.fff'}" Width="120">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="#DDDDDD"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="Thread" Binding="{Binding ThreadName}" Width="100">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="#4CA1AF"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*" MinWidth="400">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="TextWrapping" Value="NoWrap"/>
+                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+    </Grid>
+</UserControl>
