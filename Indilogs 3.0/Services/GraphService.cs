@@ -1,5 +1,6 @@
 ﻿using IndiLogs_3._0.Models;
 using OxyPlot;
+using OxyPlot.Axes;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -187,6 +188,12 @@ namespace IndiLogs_3._0.Services
                 if (lastStateLog != null && sortedLogs.Count > 0)
                     AddStateSegment(stateSegments, currentStateName, lastStateLog.Date, sortedLogs.Last().Date);
 
+                System.Diagnostics.Debug.WriteLine($"🟡 GraphService: Found {stateSegments.Count} state segments");
+                foreach (var seg in stateSegments)
+                {
+                    System.Diagnostics.Debug.WriteLine($"   - {seg.Name}: {seg.Start} to {seg.End}");
+                }
+
                 return (dataStore, rootNodes, stateSegments);
             });
         }
@@ -196,7 +203,14 @@ namespace IndiLogs_3._0.Services
             var color = _stateColors.ContainsKey(name) ? _stateColors[name] : OxyColors.LightGray;
             if ((end - start).TotalMilliseconds > 10)
             {
-                list.Add(new MachineStateSegment { Name = name, Start = start.Ticks, End = end.Ticks, Color = color });
+                // ✅ CRITICAL FIX: Use DateTimeAxis.ToDouble instead of Ticks
+                list.Add(new MachineStateSegment
+                {
+                    Name = name,
+                    Start = DateTimeAxis.ToDouble(start),  // ✅ Correct format for OxyPlot
+                    End = DateTimeAxis.ToDouble(end),      // ✅ Correct format for OxyPlot
+                    Color = color
+                });
             }
         }
 

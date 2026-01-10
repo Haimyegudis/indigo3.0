@@ -9,6 +9,7 @@
 
     <UserControl.Resources>
         <converters:OxyColorToBrushConverter x:Key="OxyColorToBrushConverter"/>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
         <Style x:Key="PanelHeader" TargetType="TextBlock">
             <Setter Property="FontWeight" Value="Bold"/>
@@ -337,7 +338,8 @@
 
                                     <oxy:PlotView Grid.Row="2" 
                                                   Model="{Binding PlotModel}"
-                                                  Background="Transparent"/>
+                                                  Background="Transparent"
+                                                  IsMouseWheelEnabled="True"/>
                                 </Grid>
                             </Border>
                         </DataTemplate>
