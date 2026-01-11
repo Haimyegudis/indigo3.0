@@ -232,7 +232,7 @@
         </Border>
 
         <!-- GRID SPLITTER -->
-        <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="#DDDDDD" ShowsPreview="True"/>
+        <GridSplitter Grid.Column="1" Width="0.5" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="#DDDDDD" ShowsPreview="True" DragDelta="GridSplitter_DragDelta"/>
 
         <!-- RIGHT PANEL: Charts -->
         <Grid Grid.Column="2" Background="#FAFAFA">
@@ -329,6 +329,7 @@
                     <TextBlock Text="{Binding Status}" FontWeight="SemiBold" Margin="5,0"/>
                 </StatusBarItem>
             </StatusBar>
+
         </Grid>
     </Grid>
 </UserControl>
