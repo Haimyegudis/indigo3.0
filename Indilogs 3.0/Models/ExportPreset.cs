@@ -4,41 +4,33 @@ using System.ComponentModel;
 
 namespace IndiLogs_3._0.Models
 {
-    /// <summary>
-    /// מודל לשמירת הגדרות ייצוא CSV
-    /// </summary>
     public class ExportPreset
     {
         public string Name { get; set; }
         public DateTime CreatedDate { get; set; }
 
-        // הגדרות עמודות כלליות
         public bool IncludeUnixTime { get; set; }
         public bool IncludeEvents { get; set; }
+        public bool IncludeMachineState { get; set; }
 
-        // רשימת קומפוננטות IOS שנבחרו
         public List<string> SelectedIOComponents { get; set; }
-
-        // רשימת קומפוננטות AXIS שנבחרו
         public List<string> SelectedAxisComponents { get; set; }
-
-        // רשימת Threads שנבחרו להצגה כעמודות
+        public List<string> SelectedCHSteps { get; set; }
         public List<string> SelectedThreads { get; set; }
 
         public ExportPreset()
         {
             SelectedIOComponents = new List<string>();
             SelectedAxisComponents = new List<string>();
+            SelectedCHSteps = new List<string>();
             SelectedThreads = new List<string>();
             IncludeUnixTime = true;
             IncludeEvents = true;
+            IncludeMachineState = true;
             CreatedDate = DateTime.Now;
         }
     }
 
-    /// <summary>
-    /// פריט בר-בחירה עבור רשימת קומפוננטות/threads
-    /// </summary>
     public class SelectableItem : INotifyPropertyChanged
     {
         private bool _isSelected;
