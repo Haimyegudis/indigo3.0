@@ -314,6 +314,7 @@
               Controller="{Binding Controller}"
               Background="Transparent"
               PreviewMouseWheel="PlotView_PreviewMouseWheel"
+              MouseEnter="PlotView_MouseEnter"
               Focusable="True"
               FocusVisualStyle="{x:Null}"/>
                                 </Grid>

@@ -444,12 +444,17 @@ namespace IndiLogs_3._0.ViewModels
             }
             if (SelectedChart.PlottedKeys.Contains(key)) return;
 
-            // ? ????? ?????? ???????? ???? ?? ?????
+            // ????? ?????? ???? ???? ????? ????
             var xAxis = SelectedChart.PlotModel.Axes.FirstOrDefault(a => a is DateTimeAxis);
             double savedMinX = xAxis?.Minimum ?? 0;
             double savedMaxX = xAxis?.Maximum ?? 0;
 
-            // ?? ??? ????? ??????, ????? ????? ????
+            System.Diagnostics.Debug.WriteLine($"?? BEFORE adding series:");
+            System.Diagnostics.Debug.WriteLine($"   Minimum: {xAxis?.Minimum}");
+            System.Diagnostics.Debug.WriteLine($"   Maximum: {xAxis?.Maximum}");
+            System.Diagnostics.Debug.WriteLine($"   AbsoluteMinimum: {xAxis?.AbsoluteMinimum}");
+            System.Diagnostics.Debug.WriteLine($"   AbsoluteMaximum: {xAxis?.AbsoluteMaximum}");
+
             if (double.IsNaN(savedMinX) || savedMinX == 0 || double.IsNaN(savedMaxX) || savedMaxX == 0)
             {
                 savedMinX = DateTimeAxis.ToDouble(_logStartTime);
@@ -463,14 +468,11 @@ namespace IndiLogs_3._0.ViewModels
             {
                 displayPoints = new List<DateTimePoint>(10000);
                 int step = Math.Max(1, points.Count / 8000);
-
                 displayPoints.Add(points[0]);
-
                 for (int i = step; i < points.Count - 1; i += step)
                 {
                     displayPoints.Add(points[i]);
                 }
-
                 if (points.Count > 1)
                     displayPoints.Add(points[points.Count - 1]);
             }
@@ -497,6 +499,11 @@ namespace IndiLogs_3._0.ViewModels
             }
 
             SelectedChart.PlotModel.Series.Add(series);
+
+            System.Diagnostics.Debug.WriteLine($"?? AFTER adding series (before restore):");
+            System.Diagnostics.Debug.WriteLine($"   Minimum: {xAxis?.Minimum}");
+            System.Diagnostics.Debug.WriteLine($"   Maximum: {xAxis?.Maximum}");
+
             SelectedChart.PlottedKeys.Add(key);
 
             string newTitle = string.Join(", ", SelectedChart.PlotModel.Series.Select(s => s.Title));
@@ -504,18 +511,29 @@ namespace IndiLogs_3._0.ViewModels
 
             UpdateActiveSignalsList();
 
-            // ? ????? ?????? ???????
+            // ????? ?????? ???? InvalidatePlot
             SelectedChart.SetXAxisLimits(savedMinX, savedMaxX);
+
+            System.Diagnostics.Debug.WriteLine($"?? AFTER SetXAxisLimits:");
+            System.Diagnostics.Debug.WriteLine($"   Minimum: {xAxis?.Minimum}");
+            System.Diagnostics.Debug.WriteLine($"   Maximum: {xAxis?.Maximum}");
+
             AutoZoomYAxis(SelectedChart, savedMinX, savedMaxX);
 
             PlotStateBackgrounds();
 
-            // ? ???? ????: ????? ????? ??? ????? ?????
-            SelectedChart.PlotModel.InvalidatePlot(false); // false = ????? ??
+            System.Diagnostics.Debug.WriteLine($"?? AFTER PlotStateBackgrounds:");
+            System.Diagnostics.Debug.WriteLine($"   Minimum: {xAxis?.Minimum}");
+            System.Diagnostics.Debug.WriteLine($"   Maximum: {xAxis?.Maximum}");
+
+            SelectedChart.PlotModel.InvalidatePlot(false);
+
+            System.Diagnostics.Debug.WriteLine($"?? AFTER InvalidatePlot:");
+            System.Diagnostics.Debug.WriteLine($"   Minimum: {xAxis?.Minimum}");
+            System.Diagnostics.Debug.WriteLine($"   Maximum: {xAxis?.Maximum}");
 
             System.Diagnostics.Debug.WriteLine($"? AddSignalToChart: Restored X axis to {savedMinX} - {savedMaxX}");
         }
-
         public void RemoveSignalFromChart(string key)
         {
             if (SelectedChart == null) return;
@@ -548,7 +566,7 @@ namespace IndiLogs_3._0.ViewModels
                 AutoZoomYAxis(SelectedChart, savedMinX, savedMaxX);
 
                 PlotStateBackgrounds();
-                SelectedChart.PlotModel.InvalidatePlot(true);
+                SelectedChart.PlotModel.InvalidatePlot(false);
 
                 System.Diagnostics.Debug.WriteLine($"? RemoveSignalFromChart: Restored X axis to {savedMinX} - {savedMaxX}");
             }
@@ -780,7 +798,8 @@ namespace IndiLogs_3._0.ViewModels
 
                 System.Diagnostics.Debug.WriteLine($"  ? Chart now has {plotModel.Annotations.Count} annotations");
 
-                plotModel.InvalidatePlot(true);
+                // ? ????? ????? - false ????? true!
+                plotModel.InvalidatePlot(false);
             }
         }
 
