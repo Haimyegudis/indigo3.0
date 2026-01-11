@@ -2,8 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:IndiLogs_3._0"
-             xmlns:converters="clr-namespace:IndiLogs_3._0.Converters"
-             StartupUri="MainWindow.xaml">
+             xmlns:converters="clr-namespace:IndiLogs_3._0.Converters">
+    <!-- ✅ הסרנו את StartupUri="MainWindow.xaml" כדי למנוע כפילות -->
     <Application.Resources>
         <FontFamily x:Key="ContentFontFamily">Consolas, JetBrains Mono, Cascadia Code, Segoe UI</FontFamily>
         <FontFamily x:Key="UIFontFamily">Segoe UI Variable Display, Segoe UI</FontFamily>

@@ -38,8 +38,6 @@ namespace IndiLogs_3._0.Services
                 var rootNodes = new ObservableCollection<GraphNode>();
                 var stateSegments = new List<MachineStateSegment>();
 
-                // פונקציית עזר לבניית עץ: בודקת אם צומת קיים ומוסיפה אם לא
-                // תומכת בעומק בלתי מוגבל
                 void AddPathToTree(string[] pathParts, string fullKey)
                 {
                     ObservableCollection<GraphNode> currentCollection = rootNodes;
@@ -49,7 +47,6 @@ namespace IndiLogs_3._0.Services
                         string partName = pathParts[i];
                         bool isLeaf = (i == pathParts.Length - 1);
 
-                        // חיפוש ברמה הנוכחית
                         var node = currentCollection.FirstOrDefault(n => n.Name == partName);
 
                         if (node == null)
@@ -59,10 +56,9 @@ namespace IndiLogs_3._0.Services
                                 Name = partName,
                                 IsLeaf = isLeaf,
                                 FullPath = isLeaf ? fullKey : null,
-                                IsExpanded = i == 0 // פותח רק את הרמה הראשונה (IO Monitor / Motor Axis)
+                                IsExpanded = i == 0
                             };
 
-                            // הכנסה ממויינת לפי א-ב
                             int insertIndex = 0;
                             while (insertIndex < currentCollection.Count && string.Compare(currentCollection[insertIndex].Name, partName) < 0)
                             {
@@ -71,17 +67,40 @@ namespace IndiLogs_3._0.Services
                             currentCollection.Insert(insertIndex, node);
                         }
 
-                        // צלילה לרמה הבאה
                         currentCollection = node.Children;
                     }
                 }
 
-                // מיון לפי זמן כדי שהגרף ייבנה נכון
                 var sortedLogs = logs.Where(l => !string.IsNullOrEmpty(l.Message)).OrderBy(l => l.Date).ToList();
                 if (sortedLogs.Count == 0) return (dataStore, rootNodes, stateSegments);
 
+                // ✅ שמירת זמני התחלה וסיום של הלוג
+                DateTime logStartTime = sortedLogs.First().Date;
+                DateTime logEndTime = sortedLogs.Last().Date;
+
                 LogEntry lastStateLog = null;
                 string currentStateName = "UNDEFINED";
+
+                // ✅ הוספת state התחלתי אם הלוג לא מתחיל ב-state transition
+                var firstStateTransition = sortedLogs.FirstOrDefault(l =>
+                    l.ThreadName == "Manager" &&
+                    l.Message != null &&
+                    l.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) &&
+                    l.Message.Contains("->"));
+
+                if (firstStateTransition != null && firstStateTransition.Date > logStartTime)
+                {
+                    // יש פער בין תחילת הלוג לבין ה-state הראשון - נמלא אותו
+                    AddStateSegment(stateSegments, "UNDEFINED", logStartTime, firstStateTransition.Date);
+
+                    // עכשיו נתחיל מה-state הראשון
+                    var parts = firstStateTransition.Message.Split(new[] { "->" }, StringSplitOptions.None);
+                    if (parts.Length > 1)
+                    {
+                        currentStateName = parts[1].Trim();
+                        lastStateLog = firstStateTransition;
+                    }
+                }
 
                 foreach (var log in sortedLogs)
                 {
@@ -89,24 +108,17 @@ namespace IndiLogs_3._0.Services
                     string thread = log.ThreadName ?? "Unknown";
                     double timeVal = log.Date.Ticks;
 
-                    // =================================================================================
-                    // 1. Motor Axis Logic
-                    // הפורמט: AxisMon: [Component], [SubComponent], [Key=Val], [Key=Val]...
-                    // העץ הרצוי: Motor Axis -> Thread -> Component -> SubComponent -> Param
-                    // =================================================================================
+                    // Motor Axis Logic
                     if (msg.StartsWith("AxisMon:", StringComparison.OrdinalIgnoreCase))
                     {
-                        string content = msg.Substring(8).Trim(); // דילוג על "AxisMon:"
+                        string content = msg.Substring(8).Trim();
                         var parts = content.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
 
-                        // חייבים לפחות 3 חלקים: Comp, SubComp, Params...
                         if (parts.Length >= 3)
                         {
-                            string component = parts[0].Trim();      // חלק 1: Component (לדוגמה BID_Eng_1_Stn_3)
-                            string subComponent = parts[1].Trim();   // חלק 2: SubComponent (לדוגמה BID_EngageRear)
+                            string component = parts[0].Trim();
+                            string subComponent = parts[1].Trim();
 
-                            // מחברים מחדש את שאר החלקים ומריצים Regex
-                            // זה מבטיח שלא נתבלבל אם יש רווחים מוזרים
                             string paramsPart = string.Join(",", parts.Skip(2));
                             var matches = _paramRegex.Matches(paramsPart);
 
@@ -121,72 +133,71 @@ namespace IndiLogs_3._0.Services
                                     {
                                         string fullKey = $"{thread}.{component}.{subComponent}.{key}";
                                         AddPoint(dataStore, fullKey, timeVal, val);
-
-                                        // בניית העץ
                                         AddPathToTree(new[] { "Motor Axis", thread, component, subComponent, key }, fullKey);
                                     }
                                 }
                             }
                         }
                     }
-                    // =================================================================================
-                    // 2. IO Monitor Logic
-                    // הפורמט: IO_Mon: [Component], [SubComponent=Val], [SubComponent=Val]...
-                    // העץ הרצוי: IO Monitor -> Thread -> Component -> SubComponent
-                    // =================================================================================
+                    // IO Monitor Logic
                     else if (msg.StartsWith("IO_Mon:", StringComparison.OrdinalIgnoreCase))
                     {
-                        string content = msg.Substring(7).Trim(); // דילוג על "IO_Mon:"
+                        string content = msg.Substring(7).Trim();
                         var parts = content.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
 
                         if (parts.Length >= 2)
                         {
-                            // חלק 1: שם הקומפוננטה הראשית (למשל CS_Stn_6)
                             string componentName = parts[0].Trim();
 
-                            // רצים על שאר החלקים שהם זוגות (SubComponent=Value)
                             for (int i = 1; i < parts.Length; i++)
                             {
                                 string pair = parts[i].Trim();
-                                int eqIdx = pair.LastIndexOf('='); // שימוש ב-LastIndexOf למקרה שיש = בשם (נדיר)
+                                int eqIdx = pair.LastIndexOf('=');
 
                                 if (eqIdx > 0)
                                 {
                                     string subComponentName = pair.Substring(0, eqIdx).Trim();
                                     string valStr = pair.Substring(eqIdx + 1).Trim();
 
-                                    // ניקוי הערך (למשל הסרת "(IntrSim)")
                                     if (valStr.Contains(" ")) valStr = valStr.Split(' ')[0];
 
                                     if (double.TryParse(valStr, NumberStyles.Any, CultureInfo.InvariantCulture, out double val))
                                     {
                                         string fullKey = $"IO.{thread}.{componentName}.{subComponentName}";
                                         AddPoint(dataStore, fullKey, timeVal, val);
-
-                                        // בניית העץ
                                         AddPathToTree(new[] { "IO Monitor", thread, componentName, subComponentName }, fullKey);
                                     }
                                 }
                             }
                         }
                     }
-                    // =================================================================================
-                    // 3. Machine States Logic
-                    // =================================================================================
+                    // Machine States Logic
                     else if (log.ThreadName == "Manager" && msg.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) && msg.Contains("->"))
                     {
+                        // דלג על ה-state הראשון אם כבר טיפלנו בו
+                        if (lastStateLog != null && log == firstStateTransition)
+                            continue;
+
                         var parts = msg.Split(new[] { "->" }, StringSplitOptions.None);
                         if (parts.Length > 1)
                         {
-                            if (lastStateLog != null) AddStateSegment(stateSegments, currentStateName, lastStateLog.Date, log.Date);
+                            if (lastStateLog != null)
+                                AddStateSegment(stateSegments, currentStateName, lastStateLog.Date, log.Date);
+
                             currentStateName = parts[1].Trim();
                             lastStateLog = log;
                         }
                     }
                 }
 
-                if (lastStateLog != null && sortedLogs.Count > 0)
-                    AddStateSegment(stateSegments, currentStateName, lastStateLog.Date, sortedLogs.Last().Date);
+                // ✅ סיום ה-state האחרון עד סוף הלוג
+                if (lastStateLog != null)
+                    AddStateSegment(stateSegments, currentStateName, lastStateLog.Date, logEndTime);
+                else if (stateSegments.Count == 0)
+                {
+                    // אין שום state transitions - נמלא את כל הלוג ב-UNDEFINED
+                    AddStateSegment(stateSegments, "UNDEFINED", logStartTime, logEndTime);
+                }
 
                 System.Diagnostics.Debug.WriteLine($"🟡 GraphService: Found {stateSegments.Count} state segments");
                 foreach (var seg in stateSegments)
@@ -201,14 +212,15 @@ namespace IndiLogs_3._0.Services
         private void AddStateSegment(List<MachineStateSegment> list, string name, DateTime start, DateTime end)
         {
             var color = _stateColors.ContainsKey(name) ? _stateColors[name] : OxyColors.LightGray;
-            if ((end - start).TotalMilliseconds > 10)
+
+            // ✅ הורדת הסף המינימלי ל-1ms (במקום 10ms)
+            if ((end - start).TotalMilliseconds > 1)
             {
-                // ✅ CRITICAL FIX: Use DateTimeAxis.ToDouble instead of Ticks
                 list.Add(new MachineStateSegment
                 {
                     Name = name,
-                    Start = DateTimeAxis.ToDouble(start),  // ✅ Correct format for OxyPlot
-                    End = DateTimeAxis.ToDouble(end),      // ✅ Correct format for OxyPlot
+                    Start = DateTimeAxis.ToDouble(start),
+                    End = DateTimeAxis.ToDouble(end),
                     Color = color
                 });
             }

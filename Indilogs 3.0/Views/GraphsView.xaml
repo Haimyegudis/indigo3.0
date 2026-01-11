@@ -4,11 +4,9 @@
              xmlns:oxy="http://oxyplot.org/wpf"
              xmlns:vm="clr-namespace:IndiLogs_3._0.ViewModels"
              xmlns:models="clr-namespace:IndiLogs_3._0.Models"
-             xmlns:converters="clr-namespace:IndiLogs_3._0.Converters"
              Padding="0" Margin="0">
 
     <UserControl.Resources>
-        <converters:OxyColorToBrushConverter x:Key="OxyColorToBrushConverter"/>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
         <Style x:Key="PanelHeader" TargetType="TextBlock">
@@ -197,11 +195,11 @@
                                         </Grid.ColumnDefinitions>
 
                                         <Rectangle Grid.Column="0"
-                                                   Fill="{Binding Color, Converter={StaticResource OxyColorToBrushConverter}}" 
-                                                   Width="4" 
-                                                   Height="16" 
-                                                   VerticalAlignment="Center"
-                                                   Margin="0,0,4,0"/>
+           Fill="Gray" 
+           Width="4" 
+           Height="16" 
+           VerticalAlignment="Center"
+           Margin="0,0,4,0"/>
 
                                         <TextBlock Grid.Column="1" 
                                                    Text="{Binding TimeRangeStr}" 
@@ -261,38 +259,6 @@
 
                     <Button Content="Apply" Command="{Binding ApplyTimeFilterCommand}" Style="{StaticResource ModernBtn}" Background="#E8F0FE" Foreground="#1967D2" FontWeight="Bold" Margin="5,0"/>
                     <Button Content="Reset" Command="{Binding ResetZoomCommand}" Style="{StaticResource ModernBtn}"/>
-
-                    <Rectangle Width="1" Height="20" Fill="#CCC" Margin="10,0"/>
-
-                    <Button Command="{Binding PlayCommand}" Content="▶ Play" Background="#E6F4EA" Foreground="#2E7D32" FontWeight="Bold">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource ModernBtn}">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsPlaying}" Value="False">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-
-                    <Button Command="{Binding PauseCommand}" Content="⏸ Pause" Background="#FFF8E1" Foreground="#F57F17" FontWeight="Bold">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource ModernBtn}">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsPlaying}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-
-                    <TextBlock Text="{Binding PlaybackSpeedText}" Foreground="Black" VerticalAlignment="Center" Margin="10,0,5,0" FontWeight="Bold" Width="30" TextAlignment="Center"/>
-                    <Button Content="+" Command="{Binding SpeedUpCommand}" Style="{StaticResource ModernBtn}" Width="25" Padding="0"/>
-                    <Button Content="-" Command="{Binding SpeedDownCommand}" Style="{StaticResource ModernBtn}" Width="25" Padding="0"/>
                 </StackPanel>
             </Border>
 
@@ -306,7 +272,13 @@
                 <ItemsControl ItemsSource="{Binding Charts}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border BorderBrush="{Binding BorderColor}" BorderThickness="{Binding BorderThickness}" Margin="4,2" Height="300" Background="White">
+                            <Border BorderBrush="{Binding BorderColor}" 
+                                    BorderThickness="{Binding BorderThickness}" 
+                                    Margin="4,2" 
+                                    Height="300" 
+                                    Background="White"
+                                    PreviewMouseDown="Chart_MouseDown"
+                                    Cursor="Hand">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
@@ -328,18 +300,22 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Rectangle Fill="{Binding Color, Converter={StaticResource OxyColorToBrushConverter}}"
-                                                               Height="25"
-                                                               ToolTip="{Binding Name}"/>
+                                                    <Rectangle Fill="LightGray"
+           Height="25"
+           ToolTip="{Binding Name}"/>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                     </Border>
 
+                                    <!-- ✅ כאן התיקון - הוספת PreviewMouseWheel -->
                                     <oxy:PlotView Grid.Row="2" 
-                                                  Model="{Binding PlotModel}"
-                                                  Background="Transparent"
-                                                  IsMouseWheelEnabled="True"/>
+              Model="{Binding PlotModel}"
+              Controller="{Binding Controller}"
+              Background="Transparent"
+              PreviewMouseWheel="PlotView_PreviewMouseWheel"
+              Focusable="True"
+              FocusVisualStyle="{x:Null}"/>
                                 </Grid>
                             </Border>
                         </DataTemplate>
