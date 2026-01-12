@@ -211,6 +211,9 @@
     <Compile Include="Views\ColorPaletteWindow.xaml.cs">
       <DependentUpon>ColorPaletteWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\Exportprogresswindow.xaml.cs">
+      <DependentUpon>Exportprogresswindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\FloatingChartWindow.xaml.cs">
       <DependentUpon>FloatingChartWindow.xaml</DependentUpon>
     </Compile>
@@ -297,6 +300,10 @@
     <Compile Include="Views\VisualTimelineView.xaml.cs">
       <DependentUpon>VisualTimelineView.xaml</DependentUpon>
     </Compile>
+    <Page Include="Views\Exportprogresswindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Views\FilterOutWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
