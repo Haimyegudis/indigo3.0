@@ -121,19 +121,47 @@ namespace IndiLogs_3._0.Services
         {
             stateName = null;
             // CHStep: PlcMngr, STATE_NAME, ...
-            if (msg.Length < 20 || !msg.Contains("PlcMngr,")) return false;
+            // IMPORTANT: PlcMngr must be the CHName, not the Parent!
 
-            int plcMngrIndex = msg.IndexOf("PlcMngr,", StringComparison.OrdinalIgnoreCase);
-            if (plcMngrIndex < 0) return false;
+            if (string.IsNullOrEmpty(msg) || msg.Length < 20) return false;
 
-            int startIndex = plcMngrIndex + 8; // "PlcMngr,".Length
-            while (startIndex < msg.Length && char.IsWhiteSpace(msg[startIndex])) startIndex++;
+            // Must start with "CHStep:"
+            if (!msg.StartsWith("CHStep:", StringComparison.OrdinalIgnoreCase)) return false;
 
-            int endIndex = msg.IndexOf(',', startIndex);
-            if (endIndex < 0) return false;
+            try
+            {
+                // Find first comma after "CHStep:"
+                int chStepEnd = 7; // "CHStep:".Length
+                int firstComma = msg.IndexOf(',', chStepEnd);
+                if (firstComma < 0) return false;
 
-            stateName = msg.Substring(startIndex, endIndex - startIndex).Trim();
-            return !string.IsNullOrEmpty(stateName);
+                // Extract CHName (between "CHStep:" and first comma)
+                string chName = msg.Substring(chStepEnd, firstComma - chStepEnd).Trim();
+
+                // CRITICAL: Only proceed if CHName is "PlcMngr"
+                if (!chName.Equals("PlcMngr", StringComparison.OrdinalIgnoreCase)) return false;
+
+                // Find second comma (after state name)
+                int secondComma = msg.IndexOf(',', firstComma + 1);
+                if (secondComma < 0)
+                {
+                    // Try to find " State " instead
+                    int statePos = msg.IndexOf(" State ", firstComma, StringComparison.OrdinalIgnoreCase);
+                    if (statePos > 0)
+                        secondComma = statePos;
+                    else
+                        return false;
+                }
+
+                // Extract state name between first and second comma
+                stateName = msg.Substring(firstComma + 1, secondComma - firstComma - 1).Trim();
+
+                return !string.IsNullOrEmpty(stateName);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         // Fast CHStep parsing - replaces complex Regex
@@ -472,9 +500,9 @@ namespace IndiLogs_3._0.Services
                     catch { }
                 }
                 // C: Machine State - OPTIMIZED (no Regex)
+                // Only capture CHStep where PlcMngr is the CHName (not Parent!)
                 else if ((preset == null || preset.IncludeMachineState) &&
-                         msg.StartsWith("CHStep:", StringComparison.OrdinalIgnoreCase) &&
-                         msg.Contains("PlcMngr,"))
+                         msg.StartsWith("CHStep:", StringComparison.OrdinalIgnoreCase))
                 {
                     if (TryParsePlcMngrState(msg, out string stateName))
                     {
@@ -504,7 +532,7 @@ namespace IndiLogs_3._0.Services
                             else
                                 chObjTypeText = chObjType;
 
-                            string subsys = $"CHStep: {chParentName}_{chName}_{subsysID}";
+                            string subsys = $"CHStep: {chParentName}§{chName}§{subsysID}";
                             string component = "Data";
 
                             AddToSchema(schema, subsys, component, _chStepParams);
@@ -637,8 +665,9 @@ namespace IndiLogs_3._0.Services
                             string fullKey = $"{subEntry.Key}|{compName}|{param}";
                             string thread = threadNameMap.ContainsKey(fullKey) ? threadNameMap[fullKey] : "";
 
-                            // Use - as separator instead of _
-                            string hierarchicalHeader = $"{subsysClean.Replace("_", "-")}-{compName.Replace("_", "-")}-{param}";
+                            // Use - as separator between components (Parent-Child-Subsystem)
+                            // Keep _ within each component name
+                            string hierarchicalHeader = $"{subsysClean.Replace("§", "-")}-{compName}-{param}";
 
                             if (!string.IsNullOrEmpty(thread))
                                 hierarchicalHeader += $" [{thread}]";
