@@ -13,6 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace IndiLogs_3._0.ViewModels
 {
@@ -31,6 +32,14 @@ namespace IndiLogs_3._0.ViewModels
         private List<SelectableItem> _cachedAxisFiltered;
         private List<SelectableItem> _cachedCHStepFiltered;
         private List<SelectableItem> _cachedThreadFiltered;
+
+        // Debounce timer for search - prevents lag while typing
+        private DispatcherTimer _searchDebounceTimer;
+        private const int SEARCH_DEBOUNCE_MS = 300;
+        private bool _ioSearchPending = false;
+        private bool _axisSearchPending = false;
+        private bool _chStepSearchPending = false;
+        private bool _threadSearchPending = false;
 
         private bool _includeUnixTime = true;
         public bool IncludeUnixTime
@@ -73,7 +82,11 @@ namespace IndiLogs_3._0.ViewModels
             {
                 _ioSearchText = value;
                 OnPropertyChanged(nameof(IOSearchText));
-                UpdateIOFilter();
+
+                // Debounced search - mark as pending and restart timer
+                _ioSearchPending = true;
+                _searchDebounceTimer?.Stop();
+                _searchDebounceTimer?.Start();
             }
         }
 
@@ -85,7 +98,10 @@ namespace IndiLogs_3._0.ViewModels
             {
                 _axisSearchText = value;
                 OnPropertyChanged(nameof(AxisSearchText));
-                UpdateAxisFilter();
+
+                _axisSearchPending = true;
+                _searchDebounceTimer?.Stop();
+                _searchDebounceTimer?.Start();
             }
         }
 
@@ -97,7 +113,10 @@ namespace IndiLogs_3._0.ViewModels
             {
                 _chStepSearchText = value;
                 OnPropertyChanged(nameof(CHStepSearchText));
-                UpdateCHStepFilter();
+
+                _chStepSearchPending = true;
+                _searchDebounceTimer?.Stop();
+                _searchDebounceTimer?.Start();
             }
         }
 
@@ -109,7 +128,10 @@ namespace IndiLogs_3._0.ViewModels
             {
                 _threadSearchText = value;
                 OnPropertyChanged(nameof(ThreadSearchText));
-                UpdateThreadFilter();
+
+                _threadSearchPending = true;
+                _searchDebounceTimer?.Stop();
+                _searchDebounceTimer?.Start();
             }
         }
 
@@ -207,6 +229,37 @@ namespace IndiLogs_3._0.ViewModels
             OnPropertyChanged(nameof(FilteredThreadItems));
         }
 
+        // Timer tick - execute pending searches
+        private void SearchDebounceTimer_Tick(object sender, EventArgs e)
+        {
+            _searchDebounceTimer.Stop();
+
+            // Execute only pending searches
+            if (_ioSearchPending)
+            {
+                _ioSearchPending = false;
+                UpdateIOFilter();
+            }
+
+            if (_axisSearchPending)
+            {
+                _axisSearchPending = false;
+                UpdateAxisFilter();
+            }
+
+            if (_chStepSearchPending)
+            {
+                _chStepSearchPending = false;
+                UpdateCHStepFilter();
+            }
+
+            if (_threadSearchPending)
+            {
+                _threadSearchPending = false;
+                UpdateThreadFilter();
+            }
+        }
+
         public ICommand ExportCommand { get; }
         public ICommand SavePresetCommand { get; }
         public ICommand LoadPresetCommand { get; }
@@ -228,6 +281,13 @@ namespace IndiLogs_3._0.ViewModels
             AxisComponents = new ObservableCollection<SelectableItem>();
             CHStepComponents = new ObservableCollection<SelectableItem>();
             ThreadItems = new ObservableCollection<SelectableItem>();
+
+            // Initialize debounce timer for search
+            _searchDebounceTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(SEARCH_DEBOUNCE_MS)
+            };
+            _searchDebounceTimer.Tick += SearchDebounceTimer_Tick;
 
             ExportCommand = new RelayCommand(async _ => await ExecuteExport(), _ => CanExport());
             SavePresetCommand = new RelayCommand(_ => SavePreset());

@@ -58,6 +58,7 @@ namespace IndiLogs_3._0.ViewModels
         private MarkedLogsWindow _markedAppLogsWindow;
         private MarkedLogsWindow _combinedMarkedWindow;
         private bool _isAnalysisRunning;
+        private ExportConfigurationWindow _exportConfigWindow = null;
         public bool IsAnalysisRunning
         {
             get => _isAnalysisRunning;
@@ -1630,12 +1631,25 @@ namespace IndiLogs_3._0.ViewModels
                 return;
             }
 
-            // פתיחת חלון הגדרות ייצוא
-            var exportConfigWindow = new ExportConfigurationWindow();
+            // אם החלון כבר פתוח, תביא אותו לקדמה
+            if (_exportConfigWindow != null && _exportConfigWindow.IsLoaded)
+            {
+                _exportConfigWindow.Activate();
+                _exportConfigWindow.Focus();
+                return;
+            }
+
+            // צור חלון חדש
+            _exportConfigWindow = new ExportConfigurationWindow();
             var viewModel = new ExportConfigurationViewModel(SelectedSession, _csvService);
-            exportConfigWindow.DataContext = viewModel;
-            exportConfigWindow.Owner = Application.Current.MainWindow;
-            exportConfigWindow.ShowDialog();
+            _exportConfigWindow.DataContext = viewModel;
+            _exportConfigWindow.Owner = Application.Current.MainWindow;
+
+            // כשהחלון נסגר, אפס את המשתנה
+            _exportConfigWindow.Closed += (s, e) => _exportConfigWindow = null;
+
+            // Show במקום ShowDialog - לא חוסם!
+            _exportConfigWindow.Show();
         }
         private void OpenAnalysisWindow(List<AnalysisResult> results)
         {
