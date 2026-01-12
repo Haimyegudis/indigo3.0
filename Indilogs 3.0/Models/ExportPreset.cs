@@ -12,6 +12,7 @@ namespace IndiLogs_3._0.Models
         public bool IncludeUnixTime { get; set; }
         public bool IncludeEvents { get; set; }
         public bool IncludeMachineState { get; set; }
+        public bool IncludeLogStats { get; set; }
 
         public List<string> SelectedIOComponents { get; set; }
         public List<string> SelectedAxisComponents { get; set; }
@@ -27,6 +28,7 @@ namespace IndiLogs_3._0.Models
             IncludeUnixTime = true;
             IncludeEvents = true;
             IncludeMachineState = true;
+            IncludeLogStats = false; // Default to false - user must opt-in
             CreatedDate = DateTime.Now;
         }
     }

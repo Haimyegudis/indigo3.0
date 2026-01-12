@@ -14,7 +14,7 @@ namespace IndiLogs_3._0.Services
     public class CsvExportService
     {
         private readonly string[] _axisParams = new[] { "SetP", "ActP", "SetV", "ActV", "Trq", "LagErr" };
-        private readonly string[] _chStepParams = new[] { "CHObjType", "CHParentName", "DiffTime", "PrevStepNo", "State", "StepMessage", "SubStepNo", "SubsysID" };
+        private readonly string[] _chStepParams = new[] { "StepMessage", "SubStepNo", "CHObjType", "PrevStepNo", "DiffTime", "State" };
 
         public async Task ExportLogsToCsvAsync(IEnumerable<LogEntry> logs, string defaultFileName, ExportPreset preset = null)
         {
@@ -254,17 +254,17 @@ namespace IndiLogs_3._0.Services
                             // Check if selected (if filtering)
                             if (selectedCHSteps == null || selectedCHSteps.Contains(componentKey))
                             {
-                                // Normalize CHObjType: 1 => action, 0 => component
+                                // Normalize CHObjType: 0 => action (CH_OBJ_ACT), 1 => component (CH_OBJ_COMP)
                                 string chObjType;
-                                if (chObjTypeRaw == "1")
+                                if (chObjTypeRaw == "0")
                                     chObjType = "action";
-                                else if (chObjTypeRaw == "0")
+                                else if (chObjTypeRaw == "1")
                                     chObjType = "component";
                                 else
                                     chObjType = chObjTypeRaw;
 
-                                // Subsystem = CHParentName_CHName (flattened)
-                                string subsys = $"CHStep: {chParentName}_{chName}";
+                                // Subsystem = CHParentName_CHName_SubsysID (with SubsysID in header)
+                                string subsys = $"CHStep: {chParentName}_{chName}_{subsysID}";
 
                                 // Component = "Data" (single entry point)
                                 string component = "Data";
@@ -274,14 +274,13 @@ namespace IndiLogs_3._0.Services
                                 if (!dataMatrix.ContainsKey(time))
                                     dataMatrix[time] = new Dictionary<string, string>();
 
-                                dataMatrix[time][$"{subsys}|{component}|CHObjType"] = chObjType;
-                                dataMatrix[time][$"{subsys}|{component}|CHParentName"] = chParentName;
-                                dataMatrix[time][$"{subsys}|{component}|DiffTime"] = diffTime;
-                                dataMatrix[time][$"{subsys}|{component}|PrevStepNo"] = prevStepNo;
-                                dataMatrix[time][$"{subsys}|{component}|State"] = stateId;
+                                // New order: StepMessage, SubStepNo, CHObjType, PrevStepNo, DiffTime, State
                                 dataMatrix[time][$"{subsys}|{component}|StepMessage"] = stepMessage;
                                 dataMatrix[time][$"{subsys}|{component}|SubStepNo"] = subStepNo;
-                                dataMatrix[time][$"{subsys}|{component}|SubsysID"] = subsysID;
+                                dataMatrix[time][$"{subsys}|{component}|CHObjType"] = chObjType;
+                                dataMatrix[time][$"{subsys}|{component}|PrevStepNo"] = prevStepNo;
+                                dataMatrix[time][$"{subsys}|{component}|DiffTime"] = diffTime;
+                                dataMatrix[time][$"{subsys}|{component}|State"] = stateId;
 
                                 // Store thread name
                                 foreach (var param in _chStepParams)
@@ -314,61 +313,64 @@ namespace IndiLogs_3._0.Services
                     threadMessages[time]["Events"] = msg;
                 }
 
-                // G: LogStats parsing
-                string cleanThreadName = threadName?.Trim() ?? "";
-                if (string.Equals(cleanThreadName, "LogStats", StringComparison.OrdinalIgnoreCase) &&
-                    msg.StartsWith("LogStat:", StringComparison.OrdinalIgnoreCase))
+                // G: LogStats parsing - ONLY IF ENABLED
+                if ((preset == null || preset.IncludeLogStats))
                 {
-                    try
+                    string cleanThreadName = threadName?.Trim() ?? "";
+                    if (string.Equals(cleanThreadName, "LogStats", StringComparison.OrdinalIgnoreCase) &&
+                        msg.StartsWith("LogStat:", StringComparison.OrdinalIgnoreCase))
                     {
-                        // Pattern: LogStat: Logs(Total=X IsReady=Y) nSemMissed(total=Z Mult=W) Lost=L bufFull=B Max(num=N cat=C)
-                        var logsMatch = Regex.Match(msg, @"Logs\(Total=(\d+)\s+IsReady=(\d+)\)");
-                        var semMatch = Regex.Match(msg, @"nSemMissed\(total=(\d+)\s+Mult=(\d+)\)");
-                        var lostMatch = Regex.Match(msg, @"Lost=(\d+)");
-                        var bufFullMatch = Regex.Match(msg, @"bufFull=(\d+)");
-                        var maxMatch = Regex.Match(msg, @"Max\(num=(\d+)\s+cat=([^)]+)\)");
-
-                        if (logsMatch.Success)
+                        try
                         {
-                            string subsys = "LogStats";
-                            string component = "Metrics";
+                            // Pattern: LogStat: Logs(Total=X IsReady=Y) nSemMissed(total=Z Mult=W) Lost=L bufFull=B Max(num=N cat=C)
+                            var logsMatch = Regex.Match(msg, @"Logs\(Total=(\d+)\s+IsReady=(\d+)\)");
+                            var semMatch = Regex.Match(msg, @"nSemMissed\(total=(\d+)\s+Mult=(\d+)\)");
+                            var lostMatch = Regex.Match(msg, @"Lost=(\d+)");
+                            var bufFullMatch = Regex.Match(msg, @"bufFull=(\d+)");
+                            var maxMatch = Regex.Match(msg, @"Max\(num=(\d+)\s+cat=([^)]+)\)");
 
-                            var logStatsParams = new[] { "Total", "IsReady", "nSemMissed_total", "nSemMissed_Mult", "Lost", "bufFull", "Max_num", "Max_cat" };
-                            AddToSchema(schema, subsys, component, logStatsParams);
-
-                            if (!dataMatrix.ContainsKey(time))
-                                dataMatrix[time] = new Dictionary<string, string>();
-
-                            dataMatrix[time][$"{subsys}|{component}|Total"] = logsMatch.Groups[1].Value;
-                            dataMatrix[time][$"{subsys}|{component}|IsReady"] = logsMatch.Groups[2].Value;
-
-                            if (semMatch.Success)
+                            if (logsMatch.Success)
                             {
-                                dataMatrix[time][$"{subsys}|{component}|nSemMissed_total"] = semMatch.Groups[1].Value;
-                                dataMatrix[time][$"{subsys}|{component}|nSemMissed_Mult"] = semMatch.Groups[2].Value;
-                            }
+                                string subsys = "LogStats";
+                                string component = "Metrics";
 
-                            if (lostMatch.Success)
-                                dataMatrix[time][$"{subsys}|{component}|Lost"] = lostMatch.Groups[1].Value;
+                                var logStatsParams = new[] { "Total", "IsReady", "nSemMissed_total", "nSemMissed_Mult", "Lost", "bufFull", "Max_num", "Max_cat" };
+                                AddToSchema(schema, subsys, component, logStatsParams);
 
-                            if (bufFullMatch.Success)
-                                dataMatrix[time][$"{subsys}|{component}|bufFull"] = bufFullMatch.Groups[1].Value;
+                                if (!dataMatrix.ContainsKey(time))
+                                    dataMatrix[time] = new Dictionary<string, string>();
 
-                            if (maxMatch.Success)
-                            {
-                                dataMatrix[time][$"{subsys}|{component}|Max_num"] = maxMatch.Groups[1].Value;
-                                dataMatrix[time][$"{subsys}|{component}|Max_cat"] = maxMatch.Groups[2].Value;
-                            }
+                                dataMatrix[time][$"{subsys}|{component}|Total"] = logsMatch.Groups[1].Value;
+                                dataMatrix[time][$"{subsys}|{component}|IsReady"] = logsMatch.Groups[2].Value;
 
-                            // Store thread name
-                            foreach (var param in logStatsParams)
-                            {
-                                string key = $"{subsys}|{component}|{param}";
-                                threadNameMap[key] = threadName;
+                                if (semMatch.Success)
+                                {
+                                    dataMatrix[time][$"{subsys}|{component}|nSemMissed_total"] = semMatch.Groups[1].Value;
+                                    dataMatrix[time][$"{subsys}|{component}|nSemMissed_Mult"] = semMatch.Groups[2].Value;
+                                }
+
+                                if (lostMatch.Success)
+                                    dataMatrix[time][$"{subsys}|{component}|Lost"] = lostMatch.Groups[1].Value;
+
+                                if (bufFullMatch.Success)
+                                    dataMatrix[time][$"{subsys}|{component}|bufFull"] = bufFullMatch.Groups[1].Value;
+
+                                if (maxMatch.Success)
+                                {
+                                    dataMatrix[time][$"{subsys}|{component}|Max_num"] = maxMatch.Groups[1].Value;
+                                    dataMatrix[time][$"{subsys}|{component}|Max_cat"] = maxMatch.Groups[2].Value;
+                                }
+
+                                // Store thread name
+                                foreach (var param in logStatsParams)
+                                {
+                                    string key = $"{subsys}|{component}|{param}";
+                                    threadNameMap[key] = threadName;
+                                }
                             }
                         }
+                        catch { }
                     }
-                    catch { }
                 }
             }
 

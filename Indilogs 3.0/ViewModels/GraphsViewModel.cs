@@ -75,13 +75,16 @@ namespace IndiLogs_3._0.ViewModels
         protected void OnPropertyChanged([CallerMemberName] string name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
+        // ???? ????? GraphsViewModel.cs
+
         public SingleChartViewModel(string title)
         {
             Title = title;
             _originalTitle = title;
 
-            // ? ????? Controller ??? - ??? ???????? ??? ??????
+            // ????? ????????? ?????
             Controller = new PlotController();
+            Controller.UnbindAll();
 
             CreateNewChart();
         }
@@ -97,7 +100,10 @@ namespace IndiLogs_3._0.ViewModels
                 StringFormat = "HH:mm:ss",
                 MinorIntervalType = DateTimeIntervalType.Seconds,
                 MajorGridlineStyle = LineStyle.Solid,
-                MinorGridlineStyle = LineStyle.Dot
+                MinorGridlineStyle = LineStyle.Dot,
+                // --- ?????? ??????: ????? ????? ?????? ---
+                IsZoomEnabled = false,
+                IsPanEnabled = false
             };
             PlotModel.Axes.Add(xAxis);
 
@@ -106,7 +112,10 @@ namespace IndiLogs_3._0.ViewModels
             {
                 Position = AxisPosition.Left,
                 MajorGridlineStyle = LineStyle.Solid,
-                MinorGridlineStyle = LineStyle.Dot
+                MinorGridlineStyle = LineStyle.Dot,
+                // --- ?????? ??????: ????? ????? ?????? ---
+                IsZoomEnabled = false,
+                IsPanEnabled = false
             };
             PlotModel.Axes.Add(yAxis);
         }
@@ -125,21 +134,9 @@ namespace IndiLogs_3._0.ViewModels
             var xAxis = plotModel.Axes.FirstOrDefault(a => a is DateTimeAxis);
             if (xAxis != null)
             {
-                // ????? ????? ??????
-                if (double.IsNaN(minX) || double.IsInfinity(minX) || minX == 0 ||
-                    double.IsNaN(maxX) || double.IsInfinity(maxX) || maxX == 0 ||
-                    minX >= maxX)
-                {
-                    System.Diagnostics.Debug.WriteLine($"?? SetXAxisLimits: Invalid values! minX={minX}, maxX={maxX}");
-                    return;
-                }
-
                 xAxis.Minimum = minX;
                 xAxis.Maximum = maxX;
-
-                plotModel.InvalidatePlot(true);
-
-                System.Diagnostics.Debug.WriteLine($"? SetXAxisLimits: {minX} to {maxX}");
+                // ????? ??: ????? ???? ?? InvalidatePlot!
             }
         }
 
@@ -400,11 +397,23 @@ namespace IndiLogs_3._0.ViewModels
 
             if (_logStartTime != DateTime.MinValue)
             {
-                double minX = DateTimeAxis.ToDouble(_logStartTime);
-                double maxX = DateTimeAxis.ToDouble(_logEndTime);
+                // ????? ??????? ???????? (???????? ?????? ??????)
+                double absMin = DateTimeAxis.ToDouble(_logStartTime);
+                double absMax = DateTimeAxis.ToDouble(_logEndTime);
+                vm.SetAxisAbsoluteLimits(absMin, absMax);
 
-                vm.SetAxisAbsoluteLimits(minX, maxX);
-                vm.SetXAxisLimits(minX, maxX);
+                // --- ??????: ????? ???? ?????? ??? ?? ?????? ???? ???? ---
+                double currentMin = DateTimeAxis.ToDouble(FilterStartTime);
+                double currentMax = DateTimeAxis.ToDouble(FilterEndTime);
+
+                // ????: ?? ??? ????? ????, ?? ?? ???
+                if (currentMin <= 0 || currentMin >= currentMax)
+                {
+                    currentMin = absMin;
+                    currentMax = absMax;
+                }
+
+                vm.SetXAxisLimits(currentMin, currentMax);
             }
 
             Charts.Add(vm);
@@ -444,18 +453,12 @@ namespace IndiLogs_3._0.ViewModels
             }
             if (SelectedChart.PlottedKeys.Contains(key)) return;
 
-            // ????? ?????? ???? ???? ????? ????
-            var xAxis = SelectedChart.PlotModel.Axes.FirstOrDefault(a => a is DateTimeAxis);
-            double savedMinX = xAxis?.Minimum ?? 0;
-            double savedMaxX = xAxis?.Maximum ?? 0;
+            // --- ????? 1: ????? ????? ???? (ViewModel) ?????? ???? ---
+            double savedMinX = DateTimeAxis.ToDouble(FilterStartTime);
+            double savedMaxX = DateTimeAxis.ToDouble(FilterEndTime);
 
-            System.Diagnostics.Debug.WriteLine($"?? BEFORE adding series:");
-            System.Diagnostics.Debug.WriteLine($"   Minimum: {xAxis?.Minimum}");
-            System.Diagnostics.Debug.WriteLine($"   Maximum: {xAxis?.Maximum}");
-            System.Diagnostics.Debug.WriteLine($"   AbsoluteMinimum: {xAxis?.AbsoluteMinimum}");
-            System.Diagnostics.Debug.WriteLine($"   AbsoluteMaximum: {xAxis?.AbsoluteMaximum}");
-
-            if (double.IsNaN(savedMinX) || savedMinX == 0 || double.IsNaN(savedMaxX) || savedMaxX == 0)
+            // ???? ????? ??????? ?? ?????? (????)
+            if (savedMinX >= savedMaxX || savedMinX == 0)
             {
                 savedMinX = DateTimeAxis.ToDouble(_logStartTime);
                 savedMaxX = DateTimeAxis.ToDouble(_logEndTime);
@@ -464,17 +467,14 @@ namespace IndiLogs_3._0.ViewModels
             var points = _allData[key];
             List<DateTimePoint> displayPoints;
 
+            // (?????? ????? ?????? ????? ???...)
             if (points.Count > 10000)
             {
                 displayPoints = new List<DateTimePoint>(10000);
                 int step = Math.Max(1, points.Count / 8000);
                 displayPoints.Add(points[0]);
-                for (int i = step; i < points.Count - 1; i += step)
-                {
-                    displayPoints.Add(points[i]);
-                }
-                if (points.Count > 1)
-                    displayPoints.Add(points[points.Count - 1]);
+                for (int i = step; i < points.Count - 1; i += step) displayPoints.Add(points[i]);
+                if (points.Count > 1) displayPoints.Add(points[points.Count - 1]);
             }
             else
             {
@@ -499,11 +499,6 @@ namespace IndiLogs_3._0.ViewModels
             }
 
             SelectedChart.PlotModel.Series.Add(series);
-
-            System.Diagnostics.Debug.WriteLine($"?? AFTER adding series (before restore):");
-            System.Diagnostics.Debug.WriteLine($"   Minimum: {xAxis?.Minimum}");
-            System.Diagnostics.Debug.WriteLine($"   Maximum: {xAxis?.Maximum}");
-
             SelectedChart.PlottedKeys.Add(key);
 
             string newTitle = string.Join(", ", SelectedChart.PlotModel.Series.Select(s => s.Title));
@@ -511,26 +506,19 @@ namespace IndiLogs_3._0.ViewModels
 
             UpdateActiveSignalsList();
 
-            // ????? ?????? ???? InvalidatePlot
-            SelectedChart.SetXAxisLimits(savedMinX, savedMaxX);
+            // --- ????? 2: ??? ?????? ????? ---
 
-            System.Diagnostics.Debug.WriteLine($"?? AFTER SetXAxisLimits:");
-            System.Diagnostics.Debug.WriteLine($"   Minimum: {xAxis?.Minimum}");
-            System.Diagnostics.Debug.WriteLine($"   Maximum: {xAxis?.Maximum}");
-
-            AutoZoomYAxis(SelectedChart, savedMinX, savedMaxX);
-
+            // ?. ???? ??????? ?????
             PlotStateBackgrounds();
 
-            System.Diagnostics.Debug.WriteLine($"?? AFTER PlotStateBackgrounds:");
-            System.Diagnostics.Debug.WriteLine($"   Minimum: {xAxis?.Minimum}");
-            System.Diagnostics.Debug.WriteLine($"   Maximum: {xAxis?.Maximum}");
+            // ?. ??????? ?? ?????? ??? ???? ????? (???? ?? ????? ???? ?????)
+            SelectedChart.SetXAxisLimits(savedMinX, savedMaxX);
 
-            SelectedChart.PlotModel.InvalidatePlot(false);
+            // ?. ??????? ?? ??? Y
+            AutoZoomYAxis(SelectedChart, savedMinX, savedMaxX);
 
-            System.Diagnostics.Debug.WriteLine($"?? AFTER InvalidatePlot:");
-            System.Diagnostics.Debug.WriteLine($"   Minimum: {xAxis?.Minimum}");
-            System.Diagnostics.Debug.WriteLine($"   Maximum: {xAxis?.Maximum}");
+            // ?. ??????? ?? ???? ?????
+            SelectedChart.PlotModel.InvalidatePlot(true);
 
             System.Diagnostics.Debug.WriteLine($"? AddSignalToChart: Restored X axis to {savedMinX} - {savedMaxX}");
         }
@@ -538,13 +526,11 @@ namespace IndiLogs_3._0.ViewModels
         {
             if (SelectedChart == null) return;
 
-            // ? ????? ?????? ???????? ???? ?? ?????
-            var xAxis = SelectedChart.PlotModel.Axes.FirstOrDefault(a => a is DateTimeAxis);
-            double savedMinX = xAxis?.Minimum ?? 0;
-            double savedMaxX = xAxis?.Maximum ?? 0;
+            // --- ?????: ????? ????? ???? ---
+            double savedMinX = DateTimeAxis.ToDouble(FilterStartTime);
+            double savedMaxX = DateTimeAxis.ToDouble(FilterEndTime);
 
-            // ?? ??? ????? ??????, ????? ????? ????
-            if (double.IsNaN(savedMinX) || savedMinX == 0 || double.IsNaN(savedMaxX) || savedMaxX == 0)
+            if (savedMinX >= savedMaxX || savedMinX == 0)
             {
                 savedMinX = DateTimeAxis.ToDouble(_logStartTime);
                 savedMaxX = DateTimeAxis.ToDouble(_logEndTime);
@@ -561,17 +547,15 @@ namespace IndiLogs_3._0.ViewModels
 
                 UpdateActiveSignalsList();
 
-                // ? ????? ?????? ???????
+                // --- ?????: ??? ?????? ---
+                PlotStateBackgrounds();
                 SelectedChart.SetXAxisLimits(savedMinX, savedMaxX);
                 AutoZoomYAxis(SelectedChart, savedMinX, savedMaxX);
-
-                PlotStateBackgrounds();
-                SelectedChart.PlotModel.InvalidatePlot(false);
+                SelectedChart.PlotModel.InvalidatePlot(true);
 
                 System.Diagnostics.Debug.WriteLine($"? RemoveSignalFromChart: Restored X axis to {savedMinX} - {savedMaxX}");
             }
         }
-
         private void UpdateActiveSignalsList()
         {
             ActiveChartSignals.Clear();
@@ -582,36 +566,27 @@ namespace IndiLogs_3._0.ViewModels
 
         public void UpdateGraphsView(DateTime start, DateTime end)
         {
-            System.Diagnostics.Debug.WriteLine($"?? UpdateGraphsView: {start:HH:mm:ss.fff} - {end:HH:mm:ss.fff}");
-
-            // ????? ???? ????
-            if (start < _logStartTime) start = _logStartTime;
-            if (end > _logEndTime) end = _logEndTime;
-            if (start >= end)
-            {
-                System.Diagnostics.Debug.WriteLine($"?? Invalid range! start >= end");
-                return;
-            }
-
+            // ?. ????? ?????? (Binding ??????? ?????)
             FilterStartTime = start;
             FilterEndTime = end;
 
             double min = DateTimeAxis.ToDouble(start);
             double max = DateTimeAxis.ToDouble(end);
 
-            System.Diagnostics.Debug.WriteLine($"?? Updating {Charts.Count} charts: minX={min}, maxX={max}");
-
+            // ?. ????? ???? ?? ?????? (??? ????? ?????!)
             foreach (var chart in Charts)
             {
                 if (chart == null) continue;
-
                 chart.SetXAxisLimits(min, max);
-                AutoZoomYAxis(chart, min, max);
+                AutoZoomYAxis(chart, min, max); // ???? ??? ??????? ?? ?? ???? InvalidatePlot
             }
 
+            // ?. ????? ???? ?? ?????? (??? ?????!)
             PlotStateBackgrounds();
-        }
 
+            // ?. ???? ???? ???? - ??? ??? ?????
+            RefreshAllCharts();
+        }
         public void AutoZoomYAxis(SingleChartViewModel chart, double minX, double maxX)
         {
             try
@@ -737,6 +712,44 @@ namespace IndiLogs_3._0.ViewModels
 
             System.Diagnostics.Debug.WriteLine($"? APPLY ALL CHARTS: minX={minX}, maxX={maxX}");
         }
+        // ???? ?? ?? ?????? GraphsViewModel
+        public void PerformZoom(int delta)
+        {
+            if (_logStartTime == DateTime.MinValue || _logEndTime == DateTime.MinValue) return;
+
+            // ????? ???? ?????? ??? ??????? ???? (?? ??? ????!)
+            double currentMin = DateTimeAxis.ToDouble(FilterStartTime);
+            double currentMax = DateTimeAxis.ToDouble(FilterEndTime);
+
+            if (currentMin >= currentMax)
+            {
+                currentMin = DateTimeAxis.ToDouble(_logStartTime);
+                currentMax = DateTimeAxis.ToDouble(_logEndTime);
+            }
+
+            double range = currentMax - currentMin;
+            if (range <= 0) return;
+
+            double zoomFactor = delta > 0 ? 0.85 : 1.15;
+            double newRange = range * zoomFactor;
+            double center = (currentMin + currentMax) / 2.0;
+
+            double newMin = center - (newRange / 2.0);
+            double newMax = center + (newRange / 2.0);
+
+            // Clamp
+            double absMin = DateTimeAxis.ToDouble(_logStartTime);
+            double absMax = DateTimeAxis.ToDouble(_logEndTime);
+
+            if (newMin < absMin) { newMin = absMin; if (newMax < newMin + newRange) newMax = newMin + newRange; }
+            if (newMax > absMax) { newMax = absMax; if (newMin > newMax - newRange) newMin = newMax - newRange; }
+
+            var newStart = DateTimeAxis.ToDateTime(newMin);
+            var newEnd = DateTimeAxis.ToDateTime(newMax);
+
+            // ????? ??????? ???????
+            SetTimeRange(newStart, newEnd);
+        }
         private void ZoomToState(object param)
         {
             if (param is MachineStateSegment s)
@@ -753,34 +766,21 @@ namespace IndiLogs_3._0.ViewModels
 
         public void PlotStateBackgrounds()
         {
-            if (_allStates == null || !_allStates.Any())
-            {
-                System.Diagnostics.Debug.WriteLine("?? No states to plot!");
-                return;
-            }
-
-            System.Diagnostics.Debug.WriteLine($"?? Plotting {_allStates.Count} states on {Charts.Count} charts");
+            if (_allStates == null || !_allStates.Any()) return;
 
             foreach (var chart in Charts)
             {
                 if (chart?.PlotModel == null) continue;
-
                 var plotModel = chart.PlotModel;
 
-                var existingStateAnnotations = plotModel.Annotations
-                    .Where(a => a is RectangleAnnotation && a.Tag?.ToString() == "StateBackground")
-                    .ToList();
+                // ???? ?????
+                var existing = plotModel.Annotations.Where(a => a.Tag?.ToString() == "StateBackground").ToList();
+                foreach (var ann in existing) plotModel.Annotations.Remove(ann);
 
-                System.Diagnostics.Debug.WriteLine($"  ??? Removing {existingStateAnnotations.Count} old annotations from chart");
-
-                foreach (var ann in existingStateAnnotations)
-                {
-                    plotModel.Annotations.Remove(ann);
-                }
-
+                // ????? ?????
                 foreach (var state in _allStates)
                 {
-                    var annotation = new RectangleAnnotation
+                    plotModel.Annotations.Add(new RectangleAnnotation
                     {
                         MinimumX = state.Start,
                         MaximumX = state.End,
@@ -788,21 +788,24 @@ namespace IndiLogs_3._0.ViewModels
                         MaximumY = double.PositiveInfinity,
                         Fill = OxyColor.FromAColor(80, state.Color),
                         Layer = AnnotationLayer.BelowSeries,
-                        Tag = "StateBackground",
-                        ClipByXAxis = false,
-                        ClipByYAxis = false
-                    };
-
-                    plotModel.Annotations.Add(annotation);
+                        Tag = "StateBackground"
+                    });
                 }
-
-                System.Diagnostics.Debug.WriteLine($"  ? Chart now has {plotModel.Annotations.Count} annotations");
-
-                // ? ????? ????? - false ????? true!
-                plotModel.InvalidatePlot(false);
+                // ?? ?????? ??? ?-InvalidatePlot!
             }
         }
 
+        // 4. ??????? ???? ??????? ????
+        private void RefreshAllCharts()
+        {
+            foreach (var chart in Charts)
+            {
+                if (chart?.PlotModel != null)
+                {
+                    chart.PlotModel.InvalidatePlot(true); // ?? ????? ????? ??????!
+                }
+            }
+        }
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }

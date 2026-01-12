@@ -3,13 +3,14 @@ using IndiLogs_3._0.Services;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 
@@ -50,6 +51,18 @@ namespace IndiLogs_3._0.ViewModels
         {
             get => _includeMachineState;
             set { _includeMachineState = value; OnPropertyChanged(nameof(IncludeMachineState)); }
+        }
+
+        private bool _includeLogStats = false;
+        public bool IncludeLogStats
+        {
+            get => _includeLogStats;
+            set
+            {
+                _includeLogStats = value;
+                OnPropertyChanged(nameof(IncludeLogStats));
+                // CommandManager will automatically refresh - no manual trigger needed
+            }
         }
 
         private string _ioSearchText = string.Empty;
@@ -213,28 +226,29 @@ namespace IndiLogs_3._0.ViewModels
         {
             if (_sessionData?.Logs == null) return;
 
-            // Use HashSet for O(1) lookups instead of lists
-            var ioComponents = new HashSet<string>();
-            var axisComponents = new HashSet<string>();
-            var chStepComponents = new HashSet<string>();
-            var threads = new HashSet<string>();
+            // Use ConcurrentDictionary for thread-safe parallel processing
+            var ioComponents = new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase);
+            var axisComponents = new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase);
+            var chStepComponents = new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase);
+            var threads = new ConcurrentDictionary<string, byte>();
 
-            // Pre-compiled regex for CHStep (much faster than Regex.Match in loop)
-            var chStepRegex = new Regex(@"CHStep:\s*([^,]+),\s*[^,]*,\s*State\s+\d+\s*<([^,]+),", RegexOptions.Compiled);
-
-            foreach (var log in _sessionData.Logs)
+            // Process logs in parallel for better performance
+            Parallel.ForEach(_sessionData.Logs, log =>
             {
-                if (string.IsNullOrEmpty(log.Message)) continue;
+                if (string.IsNullOrEmpty(log.Message)) return;
 
-                string msg = log.Message.Trim();
+                string msg = log.Message;
 
-                // IO Components - optimized
-                if (msg.StartsWith("IO_Mon:", StringComparison.OrdinalIgnoreCase))
+                // IO Components - optimized with faster checks
+                if (msg.Length > 7 && (msg[0] == 'I' || msg[0] == 'i') &&
+                    msg.StartsWith("IO_Mon:", StringComparison.OrdinalIgnoreCase))
                 {
                     try
                     {
                         int colonIndex = msg.IndexOf(':');
-                        string content = msg.Substring(colonIndex + 1).Trim();
+                        if (colonIndex < 0) return;
+
+                        string content = msg.Substring(colonIndex + 1);
                         var parts = content.Split(',');
 
                         if (parts.Length >= 2)
@@ -256,7 +270,7 @@ namespace IndiLogs_3._0.ViewModels
                                     else
                                         componentName = fullSymbolName;
 
-                                    ioComponents.Add($"{subsystem}|{componentName}");
+                                    ioComponents.TryAdd($"{subsystem}|{componentName}", 0);
                                 }
                             }
                         }
@@ -264,39 +278,54 @@ namespace IndiLogs_3._0.ViewModels
                     catch { }
                 }
                 // Axis Components - optimized
-                else if (msg.StartsWith("AxisMon:", StringComparison.OrdinalIgnoreCase))
+                else if (msg.Length > 8 && (msg[0] == 'A' || msg[0] == 'a') &&
+                         msg.StartsWith("AxisMon:", StringComparison.OrdinalIgnoreCase))
                 {
                     try
                     {
                         int colonIndex = msg.IndexOf(':');
-                        string content = msg.Substring(colonIndex + 1).Trim();
+                        if (colonIndex < 0) return;
+
+                        string content = msg.Substring(colonIndex + 1);
                         var parts = content.Split(',');
 
                         if (parts.Length >= 3)
                         {
                             string subsystem = parts[0].Trim();
                             string motor = parts[1].Trim();
-                            axisComponents.Add($"{subsystem}|{motor}");
+                            axisComponents.TryAdd($"{subsystem}|{motor}", 0);
                         }
                     }
                     catch { }
                 }
-                // CHStep Components - using pre-compiled regex
-                else if (msg.StartsWith("CHStep:", StringComparison.OrdinalIgnoreCase))
+                // CHStep Components - optimized with faster string parsing
+                else if (msg.Length > 7 && (msg[0] == 'C' || msg[0] == 'c') &&
+                         msg.StartsWith("CHStep:", StringComparison.OrdinalIgnoreCase))
                 {
                     try
                     {
-                        var match = chStepRegex.Match(msg);
+                        // Fast path: use IndexOf instead of regex
+                        int firstComma = msg.IndexOf(',', 7);
+                        if (firstComma < 0) return;
 
-                        if (match.Success)
+                        int statePos = msg.IndexOf("State ", firstComma, StringComparison.OrdinalIgnoreCase);
+                        if (statePos < 0) return;
+
+                        int openBracket = msg.IndexOf('<', statePos);
+                        if (openBracket < 0) return;
+
+                        // Extract CHName (between "CHStep:" and first comma)
+                        string chName = msg.Substring(7, firstComma - 7).Trim();
+
+                        // Extract CHParentName (first item after '<')
+                        int nextComma = msg.IndexOf(',', openBracket);
+                        if (nextComma < 0) return;
+
+                        string chParentName = msg.Substring(openBracket + 1, nextComma - openBracket - 1).Trim();
+
+                        if (!chName.Equals("PlcMngr", StringComparison.OrdinalIgnoreCase))
                         {
-                            string chName = match.Groups[1].Value.Trim();
-                            string chParentName = match.Groups[2].Value.Trim();
-
-                            if (!chName.Equals("PlcMngr", StringComparison.OrdinalIgnoreCase))
-                            {
-                                chStepComponents.Add($"{chParentName}|{chName}");
-                            }
+                            chStepComponents.TryAdd($"{chParentName}|{chName}", 0);
                         }
                     }
                     catch { }
@@ -305,12 +334,12 @@ namespace IndiLogs_3._0.ViewModels
                 // Threads
                 if (!string.IsNullOrEmpty(log.ThreadName))
                 {
-                    threads.Add(log.ThreadName);
+                    threads.TryAdd(log.ThreadName, 0);
                 }
-            }
+            });
 
             // Fill collections - DEFAULT = FALSE (not selected)
-            foreach (var io in ioComponents.OrderBy(x => x))
+            foreach (var io in ioComponents.Keys.OrderBy(x => x))
             {
                 var parts = io.Split('|');
                 IOComponents.Add(new SelectableItem
@@ -321,7 +350,7 @@ namespace IndiLogs_3._0.ViewModels
                 });
             }
 
-            foreach (var axis in axisComponents.OrderBy(x => x))
+            foreach (var axis in axisComponents.Keys.OrderBy(x => x))
             {
                 var parts = axis.Split('|');
                 AxisComponents.Add(new SelectableItem
@@ -332,7 +361,7 @@ namespace IndiLogs_3._0.ViewModels
                 });
             }
 
-            foreach (var chStep in chStepComponents.OrderBy(x => x))
+            foreach (var chStep in chStepComponents.Keys.OrderBy(x => x))
             {
                 var parts = chStep.Split('|');
                 CHStepComponents.Add(new SelectableItem
@@ -343,7 +372,7 @@ namespace IndiLogs_3._0.ViewModels
                 });
             }
 
-            foreach (var thread in threads.OrderBy(x => x))
+            foreach (var thread in threads.Keys.OrderBy(x => x))
             {
                 ThreadItems.Add(new SelectableItem
                 {
@@ -356,13 +385,14 @@ namespace IndiLogs_3._0.ViewModels
 
         private bool CanExport()
         {
-            return IOComponents.Any(x => x.IsSelected) ||
+            return IncludeLogStats ||
+                   IOComponents.Any(x => x.IsSelected) ||
                    AxisComponents.Any(x => x.IsSelected) ||
                    CHStepComponents.Any(x => x.IsSelected) ||
                    ThreadItems.Any(x => x.IsSelected);
         }
 
-        private async System.Threading.Tasks.Task ExecuteExport()
+        private async Task ExecuteExport()
         {
             try
             {
@@ -371,6 +401,7 @@ namespace IndiLogs_3._0.ViewModels
                     IncludeUnixTime = IncludeUnixTime,
                     IncludeEvents = IncludeEvents,
                     IncludeMachineState = IncludeMachineState,
+                    IncludeLogStats = IncludeLogStats,
                     SelectedIOComponents = IOComponents.Where(x => x.IsSelected)
                         .Select(x => $"{x.Category}|{x.Name}").ToList(),
                     SelectedAxisComponents = AxisComponents.Where(x => x.IsSelected)
@@ -400,6 +431,7 @@ namespace IndiLogs_3._0.ViewModels
                     IncludeUnixTime = IncludeUnixTime,
                     IncludeEvents = IncludeEvents,
                     IncludeMachineState = IncludeMachineState,
+                    IncludeLogStats = IncludeLogStats,
                     SelectedIOComponents = IOComponents.Where(x => x.IsSelected)
                         .Select(x => $"{x.Category}|{x.Name}").ToList(),
                     SelectedAxisComponents = AxisComponents.Where(x => x.IsSelected)
@@ -461,6 +493,7 @@ namespace IndiLogs_3._0.ViewModels
             IncludeUnixTime = preset.IncludeUnixTime;
             IncludeEvents = preset.IncludeEvents;
             IncludeMachineState = preset.IncludeMachineState;
+            IncludeLogStats = preset.IncludeLogStats;
 
             foreach (var item in IOComponents)
             {

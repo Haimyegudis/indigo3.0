@@ -156,6 +156,8 @@
                                   IsChecked="{Binding IncludeMachineState}"/>
                         <CheckBox Content="Include Events Column"
                                   IsChecked="{Binding IncludeEvents}"/>
+                        <CheckBox Content="Include LogStats Metrics (Total, IsReady, nSemMissed, Lost, bufFull, Max)"
+                                  IsChecked="{Binding IncludeLogStats}"/>
                     </StackPanel>
                 </GroupBox>
 
