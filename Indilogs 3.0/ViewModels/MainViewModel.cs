@@ -139,6 +139,33 @@ namespace IndiLogs_3._0.ViewModels
         public ObservableCollection<string> AvailableFonts { get; set; }
         public ObservableCollection<string> TimeUnits { get; } = new ObservableCollection<string> { "Seconds", "Minutes" };
 
+        // --- NEW CONFIG & DB PROPERTIES ---
+        public ObservableCollection<string> ConfigurationFiles { get; set; } = new ObservableCollection<string>();
+        private Dictionary<string, string> _configFilesPathMap = new Dictionary<string, string>();
+
+        private string _selectedConfigFile;
+        public string SelectedConfigFile
+        {
+            get => _selectedConfigFile;
+            set
+            {
+                if (_selectedConfigFile != value)
+                {
+                    _selectedConfigFile = value;
+                    OnPropertyChanged();
+                    LoadSelectedFileContent();
+                }
+            }
+        }
+
+        private string _configFileContent;
+        public string ConfigFileContent
+        {
+            get => _configFileContent;
+            set { _configFileContent = value; OnPropertyChanged(); }
+        }
+        // ----------------------------------
+
         public event Action<LogEntry> RequestScrollToLog;
 
         // --- SELECTED TAB INDEX ---
@@ -584,7 +611,6 @@ namespace IndiLogs_3._0.ViewModels
 
         private void InitializeVisualMode()
         {
-            // Visual mode should always show all logs, not filtered ones
             var logsToUse = _allLogsCache ?? Logs;
             if (VisualTimelineVM != null)
             {
@@ -606,32 +632,36 @@ namespace IndiLogs_3._0.ViewModels
                     StatusMessage = update.Message;
                 });
 
-                // שלב 1: טעינת הלוגים (IO) - חייב להסתיים לפני שמציגים משהו
                 var newSession = await _logService.LoadSessionAsync(filePaths, progress);
 
                 newSession.FileName = System.IO.Path.GetFileName(filePaths[0]);
                 if (filePaths.Length > 1) newSession.FileName += $" (+{filePaths.Length - 1})";
                 newSession.FilePath = filePaths[0];
 
-                // שלב 2: צביעה (מהיר יחסית)
                 StatusMessage = "Applying Colors...";
                 await _coloringService.ApplyDefaultColorsAsync(newSession.Logs, false);
                 if (newSession.AppDevLogs != null && newSession.AppDevLogs.Any())
                     await _coloringService.ApplyDefaultColorsAsync(newSession.AppDevLogs, true);
 
-                // שלב 3: הצגת הלוגים למשתמש **מיד**
                 LoadedSessions.Add(newSession);
                 SelectedSession = newSession;
 
-                // עדכון הגרפים בצד (לא חוסם)
+                // --- NEW LOGIC: Load Configuration Files from the folder ---
+                if (filePaths.Length > 0)
+                {
+                    // Assuming filePaths[0] is the extracted folder or the file next to "Configuration" folder
+                    string rootPath = Path.GetDirectoryName(filePaths[0]);
+                    LoadConfigurationFiles(rootPath);
+                }
+                // -----------------------------------------------------------
+
                 if (newSession.Logs != null && newSession.Logs.Any())
                     _ = GraphsVM.ProcessLogsAsync(newSession.Logs);
 
                 CurrentProgress = 100;
                 StatusMessage = "Logs Loaded. Running Analysis in Background...";
-                IsBusy = false; // שחרור ה-UI! המשתמש יכול לעבוד עכשיו.
+                IsBusy = false;
 
-                // שלב 4: הרצת האנליזה ברקע (Fire and Forget Task)
                 StartBackgroundAnalysis(newSession);
             }
             catch (Exception ex)
@@ -641,6 +671,95 @@ namespace IndiLogs_3._0.ViewModels
                 IsBusy = false;
             }
         }
+
+        // --- NEW CONFIG METHODS ---
+        private void LoadConfigurationFiles(string rootPath)
+        {
+            ConfigurationFiles.Clear();
+            _configFilesPathMap.Clear();
+            ConfigFileContent = string.Empty;
+
+            try
+            {
+                string configDir = Path.Combine(rootPath, "Configuration");
+                // Fallback check if rootPath IS the config dir or similar structure
+                if (!Directory.Exists(configDir))
+                {
+                    // Check if we are inside a subfolder and need to go up
+                    var parent = Directory.GetParent(rootPath);
+                    if (parent != null)
+                    {
+                        var siblingConfig = Path.Combine(parent.FullName, "Configuration");
+                        if (Directory.Exists(siblingConfig)) configDir = siblingConfig;
+                    }
+                }
+
+                if (Directory.Exists(configDir))
+                {
+                    var files = Directory.GetFiles(configDir, "*.*")
+                                         .Where(s => s.EndsWith(".json", StringComparison.OrdinalIgnoreCase) || s.EndsWith(".db", StringComparison.OrdinalIgnoreCase));
+
+                    foreach (var file in files)
+                    {
+                        string fileName = Path.GetFileName(file);
+                        ConfigurationFiles.Add(fileName);
+                        _configFilesPathMap[fileName] = file;
+                    }
+
+                    if (ConfigurationFiles.Count > 0)
+                        SelectedConfigFile = ConfigurationFiles[0];
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error loading config files: {ex.Message}";
+            }
+        }
+
+        private void LoadSelectedFileContent()
+        {
+            // בדיקה שהמשתמש בחר קובץ ושה-Session הנוכחי מכיל קבצים כאלו
+            if (string.IsNullOrEmpty(SelectedConfigFile) ||
+                SelectedSession == null ||
+                SelectedSession.ConfigurationFiles == null ||
+                !SelectedSession.ConfigurationFiles.ContainsKey(SelectedConfigFile))
+            {
+                ConfigFileContent = "";
+                return;
+            }
+
+            try
+            {
+                // שליפת התוכן ישירות מהמילון שנמצא בזיכרון
+                string content = SelectedSession.ConfigurationFiles[SelectedConfigFile];
+
+                // נסיון לפרמט את התוכן אם הוא בפורמט JSON כדי שיהיה קריא יותר
+                try
+                {
+                    if (SelectedConfigFile.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ||
+                        content.TrimStart().StartsWith("{") ||
+                        content.TrimStart().StartsWith("["))
+                    {
+                        dynamic parsedJson = JsonConvert.DeserializeObject(content);
+                        ConfigFileContent = JsonConvert.SerializeObject(parsedJson, Formatting.Indented);
+                    }
+                    else
+                    {
+                        ConfigFileContent = content;
+                    }
+                }
+                catch
+                {
+                    // אם הפרמוט נכשל, פשוט הצג את הטקסט המקורי
+                    ConfigFileContent = content;
+                }
+            }
+            catch (Exception ex)
+            {
+                ConfigFileContent = $"Error displaying file content: {ex.Message}";
+            }
+        }
+
         private List<StateEntry> CalculateStatesInternal(IEnumerable<LogEntry> logs)
         {
             var statesList = new List<StateEntry>();
@@ -655,7 +774,6 @@ namespace IndiLogs_3._0.ViewModels
 
             if (transitionLogs.Count == 0) return statesList;
 
-            // *** אופטימיזציה: מיפוי מראש של failure events לפי זמן ***
             var failureEvents = sortedLogs
                 .Where(l => l.ThreadName == "Events" &&
                            l.Message != null &&
@@ -689,7 +807,6 @@ namespace IndiLogs_3._0.ViewModels
                 else
                     entry.EndTime = logEndLimit;
 
-                // *** אופטימיזציה: חיפוש מהיר ב-HashSet במקום Any על כל הלוגים ***
                 bool hasFailureEvent = failureEvents.Any(eventTime =>
                     eventTime >= entry.StartTime && eventTime <= (entry.EndTime ?? logEndLimit));
 
@@ -736,13 +853,9 @@ namespace IndiLogs_3._0.ViewModels
             {
                 try
                 {
-                    // חישוב סטייטים (עבור חלון סטייטים)
                     session.CachedStates = CalculateStatesInternal(session.Logs);
-
-                    // חישוב כשלונות (עבור חלון אנליזה)
                     session.CachedAnalysis = new UniversalStateFailureAnalyzer().Analyze(session);
 
-                    // עדכון הגרף הויזואלי בסטייטים (חייב להיות ב-Dispatcher)
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         GraphsVM.StateTimeline.Clear();
@@ -750,18 +863,6 @@ namespace IndiLogs_3._0.ViewModels
                         {
                             foreach (var s in session.CachedStates)
                             {
-                                // ❌ OLD CODE (WRONG):
-                                /*
-                                GraphsVM.StateTimeline.Add(new MachineStateSegment
-                                {
-                                    Name = s.StateName,
-                                    Start = s.StartTime.Ticks,  // WRONG!
-                                    End = (s.EndTime ?? DateTime.MaxValue).Ticks,  // WRONG!
-                                    Color = s.Status == "FAILED" ? OxyPlot.OxyColors.Red : OxyPlot.OxyColors.LightGreen
-                                });
-                                */
-
-                                // ✅ NEW CODE (CORRECT):
                                 GraphsVM.StateTimeline.Add(new MachineStateSegment
                                 {
                                     Name = s.StateName,
@@ -780,7 +881,6 @@ namespace IndiLogs_3._0.ViewModels
                 finally
                 {
                     IsAnalysisRunning = false;
-
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         if (SelectedSession == session)
@@ -802,7 +902,6 @@ namespace IndiLogs_3._0.ViewModels
                         {
                             fs.CopyTo(ms);
                             ms.Position = 0;
-                            // תיקון: פירוק ה-Tuple שחוזר מ-ParseLogStream
                             var result = _logService.ParseLogStream(ms);
                             var allLogs = result.AllLogs;
 
@@ -861,7 +960,6 @@ namespace IndiLogs_3._0.ViewModels
                         {
                             await fs.CopyToAsync(ms);
                             ms.Position = 0;
-                            // תיקון: שימוש נכון בתוצאה החדשה
                             var result = _logService.ParseLogStream(ms);
                             _totalLogsReadFromFile = result.AllLogs.Count;
                             _lastKnownFileSize = fs.Length;
@@ -889,14 +987,18 @@ namespace IndiLogs_3._0.ViewModels
             _allAppLogsCache = null;
             ResetTreeFilters();
 
-            // ניקוי המצב הויזואלי
+            // --- CLEAR NEW PROPERTIES ---
+            ConfigurationFiles.Clear();
+            ConfigFileContent = "";
+            _configFilesPathMap.Clear();
+            // ----------------------------
+
             VisualTimelineVM?.Clear();
             IsVisualMode = false;
         }
 
         private void OpenStatesWindow(object obj)
         {
-            // --- תיקון: בדיקה אם האנליזה רצה ---
             if (IsAnalysisRunning)
             {
                 MessageBox.Show("Still analyzing data in background...\nPlease wait until the process finishes.",
@@ -922,10 +1024,8 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
-        // --- הפונקציה המתוקנת RESET TIME FOCUS ---
         private void ResetTimeFocus(object obj)
         {
-            // 1. איפוס הגדרות תצוגה בויזואלי
             if (VisualTimelineVM != null)
             {
                 VisualTimelineVM.ViewScale = 1.0;
@@ -933,7 +1033,6 @@ namespace IndiLogs_3._0.ViewModels
                 VisualTimelineVM.SelectedState = null;
             }
 
-            // 2. ניקוי מוחלט של כל הפילטרים
             _isTimeFocusActive = false;
             _isAppTimeFocusActive = false;
             _lastFilteredCache.Clear();
@@ -948,15 +1047,12 @@ namespace IndiLogs_3._0.ViewModels
             _negativeFilters.Clear();
             ResetTreeFilters();
 
-            // 3. עדכון ה-UI על ביטול הפילטרים
             OnPropertyChanged(nameof(IsFilterActive));
             OnPropertyChanged(nameof(IsFilterOutActive));
 
-            // 4. החזרת הפילטר למצב הרגיל (false = הכל)
             UpdateMainLogsFilter(false);
             ApplyAppLogsFilter();
 
-            // 5. טעינה מחדש של הויזואלי עם הנתונים המלאים
             InitializeVisualMode();
 
             StatusMessage = "Filter reset. Showing all data.";
@@ -970,7 +1066,6 @@ namespace IndiLogs_3._0.ViewModels
                 return;
             }
 
-            // בדיקה האם התהליך עדיין רץ
             if (IsAnalysisRunning)
             {
                 MessageBox.Show("Analysis is still running in the background.\nPlease wait a moment and try again.",
@@ -984,7 +1079,6 @@ namespace IndiLogs_3._0.ViewModels
                 return;
             }
 
-            // בדיקה אם יש תוצאות (הפעם נציג חלון רק אם יש כשלונות)
             if (SelectedSession.CachedAnalysis != null && SelectedSession.CachedAnalysis.Any())
             {
                 OpenAnalysisWindow(SelectedSession.CachedAnalysis);
@@ -1036,12 +1130,9 @@ namespace IndiLogs_3._0.ViewModels
                             OnPropertyChanged(nameof(IsFilterActive));
                             StatusMessage = $"State: {state.StateName} | Main: {timeSlice.Count}, Filtered: {smartFiltered.Count}";
 
-                            // *** עדכון הויזואלי - טוען הכל אבל עושה פוקוס על הסטייט ***
                             if (IsVisualMode && VisualTimelineVM != null)
                             {
-                                // טוען את כל הלוגים (לא רק המפולטרים)
                                 VisualTimelineVM.LoadData(_allLogsCache, Events);
-                                // עושה פוקוס על הסטייט הספציפי עם זום
                                 VisualTimelineVM.FocusOnState(state.StateName);
                             }
 
@@ -1091,6 +1182,20 @@ namespace IndiLogs_3._0.ViewModels
             _allLogsCache = session.Logs;
             Logs = session.Logs;
 
+            ConfigurationFiles.Clear();
+            if (session.ConfigurationFiles != null)
+            {
+                foreach (var kvp in session.ConfigurationFiles)
+                {
+                    ConfigurationFiles.Add(kvp.Key);
+                }
+            }
+
+            if (ConfigurationFiles.Count > 0)
+                SelectedConfigFile = ConfigurationFiles[0];
+            else
+                SelectedConfigFile = null;
+
             var defaultFilteredLogs = session.Logs.Where(l => IsDefaultLog(l)).ToList();
             FilteredLogs.ReplaceAll(defaultFilteredLogs);
             if (FilteredLogs.Count > 0) SelectedLog = FilteredLogs[0];
@@ -1100,6 +1205,13 @@ namespace IndiLogs_3._0.ViewModels
             MarkedLogs = session.MarkedLogs; OnPropertyChanged(nameof(MarkedLogs));
             SetupInfo = session.SetupInfo;
             PressConfig = session.PressConfiguration;
+
+            // --- Load configs for session if possible (re-scan folder) ---
+            if (!string.IsNullOrEmpty(session.FilePath))
+            {
+                LoadConfigurationFiles(Path.GetDirectoryName(session.FilePath));
+            }
+            // -----------------------------------------------------------
 
             if (!string.IsNullOrEmpty(session.VersionsInfo))
                 WindowTitle = $"IndiLogs 3.0 - {session.FileName} ({session.VersionsInfo})";
@@ -1330,8 +1442,6 @@ namespace IndiLogs_3._0.ViewModels
                 });
             }
             Logs = currentLogs.ToList();
-
-            // Visual mode now always shows all logs, so we don't update it when filters change
         }
         private void ApplyAppLogsFilter()
         {
@@ -1385,15 +1495,13 @@ namespace IndiLogs_3._0.ViewModels
                 {
                     if (l.Message == null) return false;
 
-                    // Search in entire message
                     if (l.Message.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
                         return true;
 
-                    // Additionally search specifically within DATA: sections
                     int dataIndex = l.Message.IndexOf("DATA:", StringComparison.OrdinalIgnoreCase);
                     if (dataIndex >= 0)
                     {
-                        string dataSection = l.Message.Substring(dataIndex + 5); // Skip "DATA:"
+                        string dataSection = l.Message.Substring(dataIndex + 5);
                         if (dataSection.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
                             return true;
                     }
@@ -1631,7 +1739,6 @@ namespace IndiLogs_3._0.ViewModels
                 return;
             }
 
-            // אם החלון כבר פתוח, תביא אותו לקדמה
             if (_exportConfigWindow != null && _exportConfigWindow.IsLoaded)
             {
                 _exportConfigWindow.Activate();
@@ -1639,16 +1746,12 @@ namespace IndiLogs_3._0.ViewModels
                 return;
             }
 
-            // צור חלון חדש
             _exportConfigWindow = new ExportConfigurationWindow();
             var viewModel = new ExportConfigurationViewModel(SelectedSession, _csvService);
             _exportConfigWindow.DataContext = viewModel;
             _exportConfigWindow.Owner = Application.Current.MainWindow;
 
-            // כשהחלון נסגר, אפס את המשתנה
             _exportConfigWindow.Closed += (s, e) => _exportConfigWindow = null;
-
-            // Show במקום ShowDialog - לא חוסם!
             _exportConfigWindow.Show();
         }
         private void OpenAnalysisWindow(List<AnalysisResult> results)

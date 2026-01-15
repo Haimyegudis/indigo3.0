@@ -15,6 +15,9 @@ namespace IndiLogs_3._0.Models
         public List<LogEntry> CriticalFailureEvents { get; set; } = new List<LogEntry>();
         // ----------------------------------------------------
 
+        // >>> כאן התיקון: הוספנו את המילון שחסר לך <<<
+        public Dictionary<string, string> ConfigurationFiles { get; set; } = new Dictionary<string, string>();
+
         public List<EventEntry> Events { get; set; } = new List<EventEntry>();
         public List<BitmapImage> Screenshots { get; set; } = new List<BitmapImage>();
         public ObservableCollection<LogEntry> MarkedLogs { get; set; } = new ObservableCollection<LogEntry>();

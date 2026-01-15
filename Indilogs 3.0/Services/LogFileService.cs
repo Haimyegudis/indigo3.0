@@ -40,13 +40,14 @@ namespace IndiLogs_3._0.Services
             return await Task.Run(() =>
             {
                 var session = new LogSessionData();
+                // אתחול המילון
+                session.ConfigurationFiles = new Dictionary<string, string>();
+
                 if (filePaths == null || filePaths.Length == 0) return session;
 
-                // שימוש ב-ConcurrentBag לעיבוד מקבילי
                 var logsBag = new ConcurrentBag<LogEntry>();
                 var transitionsBag = new ConcurrentBag<LogEntry>();
                 var failuresBag = new ConcurrentBag<LogEntry>();
-
                 var appDevLogsBag = new ConcurrentBag<LogEntry>();
                 var eventsBag = new ConcurrentBag<EventEntry>();
                 var screenshotsBag = new ConcurrentBag<BitmapImage>();
@@ -81,8 +82,9 @@ namespace IndiLogs_3._0.Services
                                 {
                                     if (entry.Length == 0) continue;
 
-                                    // --- סינון אגרסיבי: התעלמות מתיקיות לא רלוונטיות ---
                                     string lowerName = entry.FullName.ToLower();
+
+                                    // --- סינון אגרסיבי ---
                                     if (lowerName.Contains("/backup/") || lowerName.Contains("\\backup\\") ||
                                         lowerName.Contains("/old/") || lowerName.Contains("\\old\\") ||
                                         lowerName.Contains("/temp/") || lowerName.Contains("\\temp\\") ||
@@ -94,13 +96,38 @@ namespace IndiLogs_3._0.Services
                                     bool shouldProcess = false;
                                     var entryData = new ZipEntryData { Name = entry.Name };
 
-                                    // 1. לוגים ראשיים (Engine)
+                                    // 1. תיקון קריטי: זיהוי קבצי Configuration (גם בשורש וגם בתיקייה פנימית)
+                                    // אנו בודקים אם הנתיב מכיל את המילה configuration עם לוכסן כלשהו אחריה
+                                    if (lowerName.Contains("configuration/") || lowerName.Contains("configuration\\"))
+                                    {
+                                        try
+                                        {
+                                            using (var ms = CopyToMemory(entry))
+                                            using (var r = new StreamReader(ms))
+                                            {
+                                                string content = r.ReadToEnd();
+                                                string fileNameOnly = Path.GetFileName(entry.Name);
+
+                                                if (!session.ConfigurationFiles.ContainsKey(fileNameOnly))
+                                                {
+                                                    session.ConfigurationFiles.Add(fileNameOnly, content);
+                                                }
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            Debug.WriteLine($"Failed to read config file {entry.Name}: {ex.Message}");
+                                        }
+                                        continue;
+                                    }
+
+                                    // 2. לוגים ראשיים
                                     if (entry.Name.IndexOf("engineGroupA.file", StringComparison.OrdinalIgnoreCase) >= 0)
                                     {
                                         entryData.Type = FileType.MainLog;
                                         shouldProcess = true;
                                     }
-                                    // 2. לוגים של אפליקציה
+                                    // 3. לוגים של אפליקציה
                                     else if ((entry.Name.IndexOf("APPDEV", StringComparison.OrdinalIgnoreCase) >= 0 ||
                                               entry.Name.IndexOf("PRESS.HOST.APP", StringComparison.OrdinalIgnoreCase) >= 0) &&
                                              (lowerName.Contains("indigologs/logger files") || lowerName.Contains("indigologs\\logger files")))
@@ -108,14 +135,14 @@ namespace IndiLogs_3._0.Services
                                         entryData.Type = FileType.AppDevLog;
                                         shouldProcess = true;
                                     }
-                                    // 3. Events CSV
+                                    // 4. Events CSV
                                     else if (entry.Name.StartsWith("event-history__From", StringComparison.OrdinalIgnoreCase) &&
                                              entry.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
                                     {
                                         entryData.Type = FileType.EventsCsv;
                                         shouldProcess = true;
                                     }
-                                    // 4. תמונות (טיפול מיידי ללא Thread נפרד לחסכון בזיכרון)
+                                    // 5. תמונות
                                     else if (entry.Name.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
                                              entry.Name.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase))
                                     {
@@ -123,7 +150,7 @@ namespace IndiLogs_3._0.Services
                                         if (bmp != null) screenshotsBag.Add(bmp);
                                         continue;
                                     }
-                                    // 5. קבצי מידע (Readme/Setup)
+                                    // 6. קבצי מידע
                                     else if (entry.Name.Equals("Readme.txt", StringComparison.OrdinalIgnoreCase))
                                     {
                                         using (var ms = CopyToMemory(entry))
@@ -150,13 +177,11 @@ namespace IndiLogs_3._0.Services
 
                                     if (shouldProcess)
                                     {
-                                        // העתקה לזיכרון רק אם זה קובץ שבאמת צריך
                                         entryData.Stream = CopyToMemory(entry);
                                         filesToProcess.Add(entryData);
                                     }
                                 }
 
-                                // עיבוד מקבילי
                                 int totalFiles = filesToProcess.Count;
                                 int processedCount = 0;
 
@@ -192,7 +217,7 @@ namespace IndiLogs_3._0.Services
                                     finally
                                     {
                                         int c = Interlocked.Increment(ref processedCount);
-                                        if (c % 3 == 0) // עדכון UI כל כמה קבצים
+                                        if (c % 3 == 0)
                                         {
                                             double ratio = (double)c / totalFiles;
                                             double fileProg = (0.5 + (ratio * 0.5)) * currentFileSize;
@@ -232,8 +257,6 @@ namespace IndiLogs_3._0.Services
                     progress?.Report((98, "Finalizing..."));
 
                     session.VersionsInfo = $"SW: {detectedSwVersion} | PLC: {detectedPlcVersion}";
-
-                    // מיון סופי - חשוב מאוד
                     session.Logs = logsBag.OrderByDescending(x => x.Date).ToList();
                     session.StateTransitions = transitionsBag.OrderBy(x => x.Date).ToList();
                     session.CriticalFailureEvents = failuresBag.OrderBy(x => x.Date).ToList();
@@ -251,8 +274,6 @@ namespace IndiLogs_3._0.Services
                 return session;
             });
         }
-
-        // --- פונקציות פרסור מלאות וברורות ---
 
         public (List<LogEntry> AllLogs, List<LogEntry> Transitions, List<LogEntry> Failures) ParseLogStream(Stream stream)
         {
@@ -281,14 +302,12 @@ namespace IndiLogs_3._0.Services
 
                         allLogs.Add(entry);
 
-                        // זיהוי מעברים בזמן אמת לשימוש ב-Universal Analyzer
                         if (entry.ThreadName == "Manager" &&
                             entry.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) &&
                             entry.Message.Contains("->"))
                         {
                             transitions.Add(entry);
                         }
-                        // זיהוי כשלונות בזמן אמת
                         else if (entry.ThreadName == "Events" &&
                                  entry.Message.Contains("PLC_FAILURE_STATE_CHANGE"))
                         {
@@ -388,10 +407,8 @@ namespace IndiLogs_3._0.Services
                     string header = reader.ReadLine();
                     if (header == null) return list;
 
-                    // ניקוי מרכאות ורווחים מהכותרות
                     var headers = header.Split(',').Select(h => h.Trim().Trim('"')).ToArray();
 
-                    // מציאת אינדקסים בצורה גמישה
                     int timeIdx = Array.FindIndex(headers, h => h.IndexOf("Time", StringComparison.OrdinalIgnoreCase) >= 0);
                     int nameIdx = Array.FindIndex(headers, h => h.IndexOf("Name", StringComparison.OrdinalIgnoreCase) >= 0);
                     int stateIdx = Array.FindIndex(headers, h => h.IndexOf("State", StringComparison.OrdinalIgnoreCase) >= 0);
@@ -399,7 +416,6 @@ namespace IndiLogs_3._0.Services
                     int descIdx = Array.FindIndex(headers, h => h.IndexOf("Subsystem", StringComparison.OrdinalIgnoreCase) >= 0);
                     int paramIdx = Array.FindIndex(headers, h => h.IndexOf("Parameters", StringComparison.OrdinalIgnoreCase) >= 0);
 
-                    // מינימום נדרש
                     if (timeIdx == -1 || nameIdx == -1) return list;
 
                     while (!reader.EndOfStream)
@@ -436,7 +452,6 @@ namespace IndiLogs_3._0.Services
             return list;
         }
 
-        // עזרים
         private List<string> SplitCsvLine(string line)
         {
             var result = new List<string>();
@@ -478,16 +493,6 @@ namespace IndiLogs_3._0.Services
                     bitmap.Freeze();
                     return bitmap;
                 }
-            }
-            catch { return null; }
-        }
-
-        private BitmapImage LoadBitmapFromStream(MemoryStream stream)
-        {
-            try
-            {
-                if (stream.Position != 0) stream.Position = 0;
-                var b = new BitmapImage(); b.BeginInit(); b.CacheOption = BitmapCacheOption.OnLoad; b.StreamSource = stream; b.EndInit(); b.Freeze(); return b;
             }
             catch { return null; }
         }
