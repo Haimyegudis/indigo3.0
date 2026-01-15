@@ -11,7 +11,6 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using OxyPlot.Axes;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
@@ -22,6 +21,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using System.Data.SQLite;
 
 namespace IndiLogs_3._0.ViewModels
 {
@@ -45,7 +45,6 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand ToggleVisualModeCommand { get; }
 
         public ObservableCollection<LogEntry> MarkedAppLogs { get; set; }
-        public GraphsViewModel GraphsVM { get; set; }
 
         private readonly LogFileService _logService;
         private readonly LogColoringService _coloringService;
@@ -164,6 +163,39 @@ namespace IndiLogs_3._0.ViewModels
             get => _configFileContent;
             set { _configFileContent = value; OnPropertyChanged(); }
         }
+
+        // Tree view for SQLite databases
+        private ObservableCollection<DbTreeNode> _dbTreeNodes = new ObservableCollection<DbTreeNode>();
+        public ObservableCollection<DbTreeNode> DbTreeNodes
+        {
+            get => _dbTreeNodes;
+            set { _dbTreeNodes = value; OnPropertyChanged(); }
+        }
+
+        private bool _isDbFileSelected;
+        public bool IsDbFileSelected
+        {
+            get => _isDbFileSelected;
+            set { _isDbFileSelected = value; OnPropertyChanged(); }
+        }
+
+        // Search in config tab
+        private string _configSearchText = "";
+        public string ConfigSearchText
+        {
+            get => _configSearchText;
+            set
+            {
+                if (_configSearchText != value)
+                {
+                    _configSearchText = value;
+                    OnPropertyChanged();
+                    FilterConfigContent();
+                }
+            }
+        }
+
+        private ObservableCollection<DbTreeNode> _allDbTreeNodes = new ObservableCollection<DbTreeNode>();
         // ----------------------------------
 
         public event Action<LogEntry> RequestScrollToLog;
@@ -191,9 +223,13 @@ namespace IndiLogs_3._0.ViewModels
 
                     OnPropertyChanged(nameof(IsFilterActive));
                     OnPropertyChanged(nameof(IsFilterOutActive));
+                    OnPropertyChanged(nameof(IsPLCTabSelected));
                 }
             }
         }
+
+        // PLC tab is index 0 (PLC LOGS) or 1 (PLC FILTERED)
+        public bool IsPLCTabSelected => _selectedTabIndex == 0 || _selectedTabIndex == 1;
 
         private LogSessionData _selectedSession;
         public LogSessionData SelectedSession
@@ -401,7 +437,14 @@ namespace IndiLogs_3._0.ViewModels
         public bool IsDarkMode
         {
             get => _isDarkMode;
-            set { _isDarkMode = value; ApplyTheme(value); OnPropertyChanged(); }
+            set
+            {
+                _isDarkMode = value;
+                ApplyTheme(value);
+                OnPropertyChanged();
+                Properties.Settings.Default.IsDarkMode = value;
+                Properties.Settings.Default.Save();
+            }
         }
 
         private double _gridFontSize = 12;
@@ -504,7 +547,6 @@ namespace IndiLogs_3._0.ViewModels
             _csvService = new CsvExportService();
             _logService = new LogFileService();
             _coloringService = new LogColoringService();
-            GraphsVM = new GraphsViewModel();
 
             ToggleVisualModeCommand = new RelayCommand(o => IsVisualMode = !IsVisualMode);
 
@@ -599,7 +641,8 @@ namespace IndiLogs_3._0.ViewModels
             LivePauseCommand = new RelayCommand(LivePause);
             LiveClearCommand = new RelayCommand(LiveClear);
 
-            ApplyTheme(false);
+            _isDarkMode = Properties.Settings.Default.IsDarkMode;
+            ApplyTheme(_isDarkMode);
             LoadSavedConfigurations();
         }
 
@@ -646,17 +689,8 @@ namespace IndiLogs_3._0.ViewModels
                 LoadedSessions.Add(newSession);
                 SelectedSession = newSession;
 
-                // --- NEW LOGIC: Load Configuration Files from the folder ---
-                if (filePaths.Length > 0)
-                {
-                    // Assuming filePaths[0] is the extracted folder or the file next to "Configuration" folder
-                    string rootPath = Path.GetDirectoryName(filePaths[0]);
-                    LoadConfigurationFiles(rootPath);
-                }
-                // -----------------------------------------------------------
-
-                if (newSession.Logs != null && newSession.Logs.Any())
-                    _ = GraphsVM.ProcessLogsAsync(newSession.Logs);
+                // Configuration files are loaded from ZIP in SwitchToSession() via SelectedSession setter
+                // No need to call LoadConfigurationFiles here - it would clear ZIP-loaded files
 
                 CurrentProgress = 100;
                 StatusMessage = "Logs Loaded. Running Analysis in Background...";
@@ -718,22 +752,52 @@ namespace IndiLogs_3._0.ViewModels
 
         private void LoadSelectedFileContent()
         {
-            // בדיקה שהמשתמש בחר קובץ ושה-Session הנוכחי מכיל קבצים כאלו
-            if (string.IsNullOrEmpty(SelectedConfigFile) ||
-                SelectedSession == null ||
-                SelectedSession.ConfigurationFiles == null ||
-                !SelectedSession.ConfigurationFiles.ContainsKey(SelectedConfigFile))
+            ConfigSearchText = ""; // Reset search when changing files
+
+            if (string.IsNullOrEmpty(SelectedConfigFile) || SelectedSession == null)
             {
                 ConfigFileContent = "";
+                IsDbFileSelected = false;
+                DbTreeNodes.Clear();
                 return;
             }
 
             try
             {
-                // שליפת התוכן ישירות מהמילון שנמצא בזיכרון
+                // Check if this is a SQLite database file
+                if (SelectedConfigFile.EndsWith(".db", StringComparison.OrdinalIgnoreCase))
+                {
+                    IsDbFileSelected = true;
+                    ConfigFileContent = ""; // Clear text content for DB files
+
+                    if (SelectedSession.DatabaseFiles != null &&
+                        SelectedSession.DatabaseFiles.ContainsKey(SelectedConfigFile))
+                    {
+                        // Load DB async to prevent UI freeze
+                        _ = LoadSqliteToTreeAsync(SelectedSession.DatabaseFiles[SelectedConfigFile]);
+                    }
+                    else
+                    {
+                        DbTreeNodes.Clear();
+                    }
+                    return;
+                }
+
+                // For non-DB files, clear tree and show text
+                IsDbFileSelected = false;
+                DbTreeNodes.Clear();
+
+                // Handle JSON/text configuration files
+                if (SelectedSession.ConfigurationFiles == null ||
+                    !SelectedSession.ConfigurationFiles.ContainsKey(SelectedConfigFile))
+                {
+                    ConfigFileContent = "";
+                    return;
+                }
+
                 string content = SelectedSession.ConfigurationFiles[SelectedConfigFile];
 
-                // נסיון לפרמט את התוכן אם הוא בפורמט JSON כדי שיהיה קריא יותר
+                // Try to format JSON for better readability
                 try
                 {
                     if (SelectedConfigFile.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ||
@@ -750,13 +814,266 @@ namespace IndiLogs_3._0.ViewModels
                 }
                 catch
                 {
-                    // אם הפרמוט נכשל, פשוט הצג את הטקסט המקורי
                     ConfigFileContent = content;
                 }
             }
             catch (Exception ex)
             {
                 ConfigFileContent = $"Error displaying file content: {ex.Message}";
+            }
+        }
+
+        private string LoadSqliteContent(byte[] dbBytes)
+        {
+            var sb = new System.Text.StringBuilder();
+            string tempDbPath = null;
+
+            try
+            {
+                // Write DB bytes to a temporary file (SQLite needs a file path)
+                tempDbPath = Path.Combine(Path.GetTempPath(), $"indilogs_temp_{Guid.NewGuid()}.db");
+                File.WriteAllBytes(tempDbPath, dbBytes);
+
+                using (var connection = new SQLiteConnection($"Data Source={tempDbPath};Read Only=True;"))
+                {
+                    connection.Open();
+
+                    // Get all table names
+                    var tables = new List<string>();
+                    using (var cmd = new SQLiteCommand("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;", connection))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            tables.Add(reader.GetString(0));
+                        }
+                    }
+
+                    sb.AppendLine($"=== SQLite Database: {tables.Count} tables ===");
+                    sb.AppendLine();
+
+                    foreach (var tableName in tables)
+                    {
+                        sb.AppendLine($"━━━ TABLE: {tableName} ━━━");
+
+                        // Get row count
+                        using (var countCmd = new SQLiteCommand($"SELECT COUNT(*) FROM [{tableName}]", connection))
+                        {
+                            var count = countCmd.ExecuteScalar();
+                            sb.AppendLine($"Rows: {count}");
+                        }
+
+                        // Get column info and data
+                        using (var cmd = new SQLiteCommand($"SELECT * FROM [{tableName}] LIMIT 100", connection))
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            // Get column names
+                            var columns = new List<string>();
+                            for (int i = 0; i < reader.FieldCount; i++)
+                            {
+                                columns.Add(reader.GetName(i));
+                            }
+                            sb.AppendLine($"Columns: {string.Join(", ", columns)}");
+                            sb.AppendLine();
+
+                            // Display data
+                            int rowNum = 0;
+                            while (reader.Read() && rowNum < 100)
+                            {
+                                sb.AppendLine($"--- Row {++rowNum} ---");
+                                for (int i = 0; i < reader.FieldCount; i++)
+                                {
+                                    var value = reader.IsDBNull(i) ? "NULL" : reader.GetValue(i)?.ToString() ?? "NULL";
+                                    // Truncate very long values
+                                    if (value.Length > 500) value = value.Substring(0, 500) + "...";
+                                    sb.AppendLine($"  {columns[i]}: {value}");
+                                }
+                            }
+                        }
+                        sb.AppendLine();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                sb.AppendLine($"Error reading SQLite database: {ex.Message}");
+            }
+            finally
+            {
+                // Clean up temp file
+                if (tempDbPath != null && File.Exists(tempDbPath))
+                {
+                    try { File.Delete(tempDbPath); } catch { }
+                }
+            }
+
+            return sb.ToString();
+        }
+
+        private async Task LoadSqliteToTreeAsync(byte[] dbBytes)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                DbTreeNodes.Clear();
+                _allDbTreeNodes.Clear();
+            });
+
+            DbTreeNode tablesRoot = null;
+            string tempDbPath = null;
+
+            try
+            {
+                // Do all DB work on background thread
+                tablesRoot = await Task.Run(() =>
+                {
+                    tempDbPath = Path.Combine(Path.GetTempPath(), $"indilogs_temp_{Guid.NewGuid()}.db");
+                    File.WriteAllBytes(tempDbPath, dbBytes);
+
+                    var root = new DbTreeNode
+                    {
+                        NodeType = "Root",
+                        IsExpanded = true
+                    };
+
+                    using (var connection = new SQLiteConnection($"Data Source={tempDbPath};Read Only=True;"))
+                    {
+                        connection.Open();
+
+                        // Get all tables with their CREATE statements
+                        var tablesInfo = new List<(string name, string sql)>();
+                        using (var cmd = new SQLiteCommand("SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name;", connection))
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string name = reader.GetString(0);
+                                string sql = reader.IsDBNull(1) ? "" : reader.GetString(1);
+                                tablesInfo.Add((name, sql));
+                            }
+                        }
+
+                        root.Name = $"Tables ({tablesInfo.Count})";
+
+                        foreach (var (tableName, tableSql) in tablesInfo)
+                        {
+                            // Table node with schema
+                            var tableNode = new DbTreeNode
+                            {
+                                Name = tableName,
+                                Schema = tableSql,
+                                NodeType = "Table",
+                                IsExpanded = false
+                            };
+
+                            // Get column info using PRAGMA
+                            using (var cmd = new SQLiteCommand($"PRAGMA table_info([{tableName}])", connection))
+                            using (var reader = cmd.ExecuteReader())
+                            {
+                                while (reader.Read())
+                                {
+                                    // cid, name, type, notnull, dflt_value, pk
+                                    string colName = reader.GetString(1);
+                                    string colType = reader.IsDBNull(2) ? "" : reader.GetString(2);
+                                    bool notNull = reader.GetInt32(3) == 1;
+                                    bool isPk = reader.GetInt32(5) == 1;
+
+                                    // Build schema description
+                                    string schemaDesc = $"\"{colName}\" {colType}";
+                                    if (notNull) schemaDesc += " NOT NULL";
+                                    if (isPk) schemaDesc += " PRIMARY KEY";
+
+                                    var columnNode = new DbTreeNode
+                                    {
+                                        Name = colName,
+                                        Type = colType,
+                                        Schema = schemaDesc,
+                                        NodeType = "Column"
+                                    };
+
+                                    tableNode.Children.Add(columnNode);
+                                }
+                            }
+
+                            root.Children.Add(tableNode);
+                        }
+                    }
+
+                    // Cleanup temp file
+                    if (tempDbPath != null && File.Exists(tempDbPath))
+                    {
+                        try { File.Delete(tempDbPath); } catch { }
+                    }
+
+                    return root;
+                });
+
+                // Update UI on main thread
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    DbTreeNodes.Add(tablesRoot);
+                    _allDbTreeNodes.Add(tablesRoot);
+                });
+            }
+            catch (Exception ex)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    DbTreeNodes.Add(new DbTreeNode { Name = $"Error: {ex.Message}", NodeType = "Error" });
+                });
+            }
+        }
+
+        private void FilterConfigContent()
+        {
+            if (string.IsNullOrWhiteSpace(ConfigSearchText))
+            {
+                // No filter - show all nodes
+                foreach (var node in DbTreeNodes)
+                {
+                    SetNodeVisibility(node, true);
+                }
+                return;
+            }
+
+            string searchLower = ConfigSearchText.ToLower();
+
+            foreach (var tableNode in DbTreeNodes)
+            {
+                bool tableHasMatch = FilterTreeNode(tableNode, searchLower);
+                tableNode.IsVisible = tableHasMatch;
+            }
+        }
+
+        private bool FilterTreeNode(DbTreeNode node, string searchLower)
+        {
+            bool selfMatches = (node.Name?.ToLower().Contains(searchLower) == true) ||
+                               (node.Type?.ToLower().Contains(searchLower) == true) ||
+                               (node.Schema?.ToLower().Contains(searchLower) == true);
+
+            bool anyChildMatches = false;
+            foreach (var child in node.Children)
+            {
+                bool childMatches = FilterTreeNode(child, searchLower);
+                if (childMatches) anyChildMatches = true;
+            }
+
+            bool isVisible = selfMatches || anyChildMatches;
+            node.IsVisible = isVisible;
+
+            if (isVisible && node.Children.Count > 0)
+            {
+                node.IsExpanded = true;
+            }
+
+            return isVisible;
+        }
+
+        private void SetNodeVisibility(DbTreeNode node, bool visible)
+        {
+            node.IsVisible = visible;
+            foreach (var child in node.Children)
+            {
+                SetNodeVisibility(child, visible);
             }
         }
 
@@ -855,24 +1172,6 @@ namespace IndiLogs_3._0.ViewModels
                 {
                     session.CachedStates = CalculateStatesInternal(session.Logs);
                     session.CachedAnalysis = new UniversalStateFailureAnalyzer().Analyze(session);
-
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        GraphsVM.StateTimeline.Clear();
-                        if (session.CachedStates != null)
-                        {
-                            foreach (var s in session.CachedStates)
-                            {
-                                GraphsVM.StateTimeline.Add(new MachineStateSegment
-                                {
-                                    Name = s.StateName,
-                                    Start = OxyPlot.Axes.DateTimeAxis.ToDouble(s.StartTime),
-                                    End = OxyPlot.Axes.DateTimeAxis.ToDouble(s.EndTime ?? DateTime.MaxValue),
-                                    Color = s.Status == "FAILED" ? OxyPlot.OxyColors.Red : OxyPlot.OxyColors.LightGreen
-                                });
-                            }
-                        }
-                    });
                 }
                 catch (Exception ex)
                 {
@@ -1101,14 +1400,6 @@ namespace IndiLogs_3._0.ViewModels
                     DateTime start = state.StartTime;
                     DateTime end = state.EndTime ?? DateTime.MaxValue;
 
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        if (GraphsVM != null)
-                        {
-                            GraphsVM.SetTimeRange(start, end);
-                        }
-                    });
-
                     if (_allLogsCache != null)
                     {
                         var timeSlice = _allLogsCache.Where(l => l.Date >= start && l.Date <= end).OrderByDescending(l => l.Date).ToList();
@@ -1183,9 +1474,18 @@ namespace IndiLogs_3._0.ViewModels
             Logs = session.Logs;
 
             ConfigurationFiles.Clear();
+            // Add JSON/text configuration files
             if (session.ConfigurationFiles != null)
             {
                 foreach (var kvp in session.ConfigurationFiles)
+                {
+                    ConfigurationFiles.Add(kvp.Key);
+                }
+            }
+            // Add SQLite database files
+            if (session.DatabaseFiles != null)
+            {
+                foreach (var kvp in session.DatabaseFiles)
                 {
                     ConfigurationFiles.Add(kvp.Key);
                 }
@@ -1196,6 +1496,8 @@ namespace IndiLogs_3._0.ViewModels
             else
                 SelectedConfigFile = null;
 
+            OnPropertyChanged(nameof(ConfigurationFiles));
+
             var defaultFilteredLogs = session.Logs.Where(l => IsDefaultLog(l)).ToList();
             FilteredLogs.ReplaceAll(defaultFilteredLogs);
             if (FilteredLogs.Count > 0) SelectedLog = FilteredLogs[0];
@@ -1205,13 +1507,6 @@ namespace IndiLogs_3._0.ViewModels
             MarkedLogs = session.MarkedLogs; OnPropertyChanged(nameof(MarkedLogs));
             SetupInfo = session.SetupInfo;
             PressConfig = session.PressConfiguration;
-
-            // --- Load configs for session if possible (re-scan folder) ---
-            if (!string.IsNullOrEmpty(session.FilePath))
-            {
-                LoadConfigurationFiles(Path.GetDirectoryName(session.FilePath));
-            }
-            // -----------------------------------------------------------
 
             if (!string.IsNullOrEmpty(session.VersionsInfo))
                 WindowTitle = $"IndiLogs 3.0 - {session.FileName} ({session.VersionsInfo})";

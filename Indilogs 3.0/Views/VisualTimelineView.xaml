@@ -15,16 +15,16 @@
         </Grid.RowDefinitions>
         <Border Grid.Row="0" Background="{DynamicResource BgPanel}" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderColor}">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10">
-                <TextBlock Text="Timeline Visualization" Foreground="White" FontWeight="Bold" FontSize="16" Margin="0,0,20,0"/>
+                <TextBlock Text="Timeline Visualization" Foreground="{DynamicResource TextPrimary}" FontWeight="Bold" FontSize="16" Margin="0,0,20,0"/>
 
                 <StackPanel Orientation="Horizontal" Margin="20,0">
-                    <TextBlock Text="States: " Foreground="Gray"/>
-                    <TextBlock Text="{Binding TotalStates}" Foreground="White" FontWeight="Bold" Margin="0,0,10,0"/>
+                    <TextBlock Text="States: " Foreground="{DynamicResource TextSecondary}"/>
+                    <TextBlock Text="{Binding TotalStates}" Foreground="{DynamicResource TextPrimary}" FontWeight="Bold" Margin="0,0,10,0"/>
 
-                    <TextBlock Text="Errors: " Foreground="Gray"/>
+                    <TextBlock Text="Errors: " Foreground="{DynamicResource TextSecondary}"/>
                     <TextBlock Text="{Binding TotalErrors}" Foreground="#FF6B6B" FontWeight="Bold" Margin="0,0,10,0"/>
 
-                    <TextBlock Text="Events: " Foreground="Gray"/>
+                    <TextBlock Text="Events: " Foreground="{DynamicResource TextSecondary}"/>
                     <TextBlock Text="{Binding TotalEvents}" Foreground="Cyan" FontWeight="Bold" Margin="0,0,10,0"/>
                 </StackPanel>
 
@@ -51,16 +51,16 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10,8">
-                <TextBlock Text="Selected State Details:" Foreground="#007ACC" FontWeight="Bold" Margin="0,0,15,0" FontSize="14"/>
+                <TextBlock Text="Selected State Details:" Foreground="{DynamicResource PrimaryColor}" FontWeight="Bold" Margin="0,0,15,0" FontSize="14"/>
 
-                <TextBlock Text="Name: " Foreground="#AAAAAA"/>
-                <TextBlock Text="{Binding SelectedState.Name}" Foreground="White" FontWeight="Bold" Margin="0,0,15,0"/>
+                <TextBlock Text="Name: " Foreground="{DynamicResource TextSecondary}"/>
+                <TextBlock Text="{Binding SelectedState.Name}" Foreground="{DynamicResource TextPrimary}" FontWeight="Bold" Margin="0,0,15,0"/>
 
-                <TextBlock Text="Result: " Foreground="#AAAAAA"/>
+                <TextBlock Text="Result: " Foreground="{DynamicResource TextSecondary}"/>
                 <TextBlock Text="{Binding SelectedStateResult}" FontWeight="Bold" Margin="0,0,15,0">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding SelectedStateResult}" Value="FAILED">
                                     <Setter Property="Foreground" Value="#FF4444"/>
@@ -76,10 +76,10 @@
                     </TextBlock.Style>
                 </TextBlock>
 
-                <TextBlock Text="Duration: " Foreground="#AAAAAA"/>
-                <TextBlock Text="{Binding SelectedStateDuration}" Foreground="White" FontWeight="Bold" Margin="0,0,15,0"/>
+                <TextBlock Text="Duration: " Foreground="{DynamicResource TextSecondary}"/>
+                <TextBlock Text="{Binding SelectedStateDuration}" Foreground="{DynamicResource TextPrimary}" FontWeight="Bold" Margin="0,0,15,0"/>
 
-                <TextBlock Text="Errors in State: " Foreground="#AAAAAA"/>
+                <TextBlock Text="Errors in State: " Foreground="{DynamicResource TextSecondary}"/>
                 <TextBlock Text="{Binding SelectedStateErrors}" Foreground="#FF6B6B" FontWeight="Bold"/>
             </StackPanel>
 
@@ -98,7 +98,7 @@
                 <DataGrid.Resources>
                     <Style TargetType="DataGridColumnHeader">
                         <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
-                        <Setter Property="Foreground" Value="White"/>
+                        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                         <Setter Property="Padding" Value="5"/>
                     </Style>
                 </DataGrid.Resources>
@@ -107,7 +107,7 @@
                     <DataGridTextColumn Header="Lvl" Binding="{Binding Level}" Width="50" FontWeight="Bold">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding Level}" Value="Error">
                                         <Setter Property="Foreground" Value="#FF6B6B"/>
@@ -120,7 +120,7 @@
                     <DataGridTextColumn Header="Time" Binding="{Binding Date, StringFormat='HH:mm:ss.fff'}" Width="120">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="#DDDDDD"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
@@ -136,7 +136,7 @@
                     <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*" MinWidth="400">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                                 <Setter Property="TextWrapping" Value="NoWrap"/>
                                 <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
                             </Style>

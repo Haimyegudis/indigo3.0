@@ -96,21 +96,44 @@ namespace IndiLogs_3._0.Services
                                     bool shouldProcess = false;
                                     var entryData = new ZipEntryData { Name = entry.Name };
 
-                                    // 1. תיקון קריטי: זיהוי קבצי Configuration (גם בשורש וגם בתיקייה פנימית)
-                                    // אנו בודקים אם הנתיב מכיל את המילה configuration עם לוכסן כלשהו אחריה
-                                    if (lowerName.Contains("configuration/") || lowerName.Contains("configuration\\"))
+                                    // 1. זיהוי קבצי Configuration - בודק אם הנתיב מכיל תיקיית Configuration
+                                    bool isConfigFile = lowerName.Contains("/configuration/") ||
+                                                        lowerName.Contains("\\configuration\\") ||
+                                                        lowerName.Contains("\\configuration/") ||
+                                                        lowerName.Contains("/configuration\\") ||
+                                                        lowerName.StartsWith("configuration/") ||
+                                                        lowerName.StartsWith("configuration\\");
+
+                                    if (isConfigFile)
                                     {
                                         try
                                         {
-                                            using (var ms = CopyToMemory(entry))
-                                            using (var r = new StreamReader(ms))
-                                            {
-                                                string content = r.ReadToEnd();
-                                                string fileNameOnly = Path.GetFileName(entry.Name);
+                                            string fileNameOnly = Path.GetFileName(entry.Name);
 
-                                                if (!session.ConfigurationFiles.ContainsKey(fileNameOnly))
+                                            // Check if this is a SQLite database file
+                                            if (fileNameOnly.EndsWith(".db", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                // Read as binary for SQLite databases
+                                                using (var ms = CopyToMemory(entry))
                                                 {
-                                                    session.ConfigurationFiles.Add(fileNameOnly, content);
+                                                    byte[] dbBytes = ms.ToArray();
+                                                    if (!session.DatabaseFiles.ContainsKey(fileNameOnly))
+                                                    {
+                                                        session.DatabaseFiles.Add(fileNameOnly, dbBytes);
+                                                    }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                // Read as text for JSON and other text files
+                                                using (var ms = CopyToMemory(entry))
+                                                using (var r = new StreamReader(ms))
+                                                {
+                                                    string content = r.ReadToEnd();
+                                                    if (!session.ConfigurationFiles.ContainsKey(fileNameOnly))
+                                                    {
+                                                        session.ConfigurationFiles.Add(fileNameOnly, content);
+                                                    }
                                                 }
                                             }
                                         }

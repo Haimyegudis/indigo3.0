@@ -40,16 +40,17 @@
         <SolidColorBrush x:Key="AnimColor3" Color="#FFFF00"/>
         <SolidColorBrush x:Key="AnimText" Color="#FFFFFF"/>
 
+        <!-- Modern thin scrollbar style -->
         <Style TargetType="ScrollBar">
-            <Setter Property="Background" Value="{DynamicResource BgDark}"/>
-            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Opacity" Value="0.7"/>
             <Style.Triggers>
                 <Trigger Property="Orientation" Value="Vertical">
-                    <Setter Property="Width" Value="14"/>
+                    <Setter Property="Width" Value="8"/>
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="ScrollBar">
-                                <Grid x:Name="GridRoot" Width="14" Background="{DynamicResource BgDark}">
+                                <Grid x:Name="GridRoot" Width="8" Background="Transparent">
                                     <Track x:Name="PART_Track" IsDirectionReversed="true" Focusable="false">
                                         <Track.Thumb>
                                             <Thumb>
@@ -58,10 +59,13 @@
                                                         <Setter Property="Template">
                                                             <Setter.Value>
                                                                 <ControlTemplate TargetType="Thumb">
-                                                                    <Border x:Name="ThumbBorder" Background="#888888" CornerRadius="3" Margin="2"/>
+                                                                    <Border x:Name="ThumbBorder" Background="#505050" CornerRadius="4" Margin="1" MinHeight="30"/>
                                                                     <ControlTemplate.Triggers>
                                                                         <Trigger Property="IsMouseOver" Value="True">
-                                                                            <Setter TargetName="ThumbBorder" Property="Background" Value="#AAAAAA"/>
+                                                                            <Setter TargetName="ThumbBorder" Property="Background" Value="#707070"/>
+                                                                        </Trigger>
+                                                                        <Trigger Property="IsDragging" Value="True">
+                                                                            <Setter TargetName="ThumbBorder" Property="Background" Value="#888888"/>
                                                                         </Trigger>
                                                                     </ControlTemplate.Triggers>
                                                                 </ControlTemplate>
@@ -78,11 +82,11 @@
                     </Setter>
                 </Trigger>
                 <Trigger Property="Orientation" Value="Horizontal">
-                    <Setter Property="Height" Value="14"/>
+                    <Setter Property="Height" Value="8"/>
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="ScrollBar">
-                                <Grid x:Name="GridRoot" Height="14" Background="{DynamicResource BgDark}">
+                                <Grid x:Name="GridRoot" Height="8" Background="Transparent">
                                     <Track x:Name="PART_Track" Focusable="false">
                                         <Track.Thumb>
                                             <Thumb>
@@ -91,10 +95,13 @@
                                                         <Setter Property="Template">
                                                             <Setter.Value>
                                                                 <ControlTemplate TargetType="Thumb">
-                                                                    <Border x:Name="ThumbBorder" Background="#888888" CornerRadius="3" Margin="2"/>
+                                                                    <Border x:Name="ThumbBorder" Background="#505050" CornerRadius="4" Margin="1" MinWidth="30"/>
                                                                     <ControlTemplate.Triggers>
                                                                         <Trigger Property="IsMouseOver" Value="True">
-                                                                            <Setter TargetName="ThumbBorder" Property="Background" Value="#AAAAAA"/>
+                                                                            <Setter TargetName="ThumbBorder" Property="Background" Value="#707070"/>
+                                                                        </Trigger>
+                                                                        <Trigger Property="IsDragging" Value="True">
+                                                                            <Setter TargetName="ThumbBorder" Property="Background" Value="#888888"/>
                                                                         </Trigger>
                                                                     </ControlTemplate.Triggers>
                                                                 </ControlTemplate>
@@ -280,23 +287,23 @@
             <Setter Property="FontFamily" Value="{StaticResource UIFontFamily}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="11"/>
             <Setter Property="Margin" Value="0,0,0,0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TabItem">
                         <Grid>
-                            <Border Name="Border" Padding="16,10" BorderThickness="0" Background="Transparent" CornerRadius="4,4,0,0">
+                            <Border Name="Border" Padding="8,5" BorderThickness="0" Background="Transparent" CornerRadius="3,3,0,0">
                                 <ContentPresenter x:Name="ContentSite" VerticalAlignment="Center" HorizontalAlignment="Center" ContentSource="Header"/>
                             </Border>
-                            <Border x:Name="Indicator" Height="3" Background="{DynamicResource PrimaryColor}" VerticalAlignment="Bottom" Margin="5,0" Opacity="0"/>
+                            <Border x:Name="Indicator" Height="2" Background="{DynamicResource PrimaryColor}" VerticalAlignment="Bottom" Margin="3,0" Opacity="0"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Indicator" Property="Opacity" Value="1"/>
                                 <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
-                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>

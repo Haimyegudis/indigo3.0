@@ -18,6 +18,9 @@ namespace IndiLogs_3._0.Models
         // >>> כאן התיקון: הוספנו את המילון שחסר לך <<<
         public Dictionary<string, string> ConfigurationFiles { get; set; } = new Dictionary<string, string>();
 
+        // Binary DB files (SQLite) - stored as byte arrays
+        public Dictionary<string, byte[]> DatabaseFiles { get; set; } = new Dictionary<string, byte[]>();
+
         public List<EventEntry> Events { get; set; } = new List<EventEntry>();
         public List<BitmapImage> Screenshots { get; set; } = new List<BitmapImage>();
         public ObservableCollection<LogEntry> MarkedLogs { get; set; } = new ObservableCollection<LogEntry>();

@@ -6,15 +6,22 @@
         xmlns:vm="clr-namespace:IndiLogs_3._0.ViewModels"
         xmlns:controls="clr-namespace:IndiLogs_3._0.Controls"
         xmlns:views="clr-namespace:IndiLogs_3._0.Views"
+        xmlns:converters="clr-namespace:IndiLogs_3._0.Converters"
         mc:Ignorable="d"
-        Title="{Binding WindowTitle}" 
-        Height="700" Width="1100" 
+        Title="{Binding WindowTitle}"
+        Height="700" Width="1100"
         Background="{DynamicResource BgDark}"
         WindowStartupLocation="CenterScreen"
-        AllowDrop="True" 
+        AllowDrop="True"
         Drop="Window_Drop"
         TextOptions.TextFormattingMode="Display"
         UseLayoutRounding="True">
+
+    <Window.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+    </Window.Resources>
 
     <Window.DataContext>
         <vm:MainViewModel />
@@ -35,9 +42,9 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="65"/>
+            <RowDefinition Height="50"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="32"/>
+            <RowDefinition Height="24"/>
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1">
@@ -52,40 +59,40 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,30,0">
-                        <Button Command="{Binding OpenSettingsCommand}" 
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,15,0">
+                        <Button Command="{Binding OpenSettingsCommand}"
                                 CommandParameter="{Binding RelativeSource={RelativeSource Self}}"
-                                Style="{DynamicResource ModernBtn}" 
-                                Width="40" Height="40" ToolTip="Settings" Padding="0" Background="Transparent" BorderThickness="0">
-                            <TextBlock Text="⚙" FontFamily="Segoe UI Symbol" FontSize="20" 
+                                Style="{DynamicResource ModernBtn}"
+                                Width="28" Height="28" ToolTip="Settings" Padding="0" Background="Transparent" BorderThickness="0">
+                            <TextBlock Text="⚙" FontFamily="Segoe UI Symbol" FontSize="14"
                                        VerticalAlignment="Center" HorizontalAlignment="Center"
                                        Foreground="{DynamicResource TextSecondary}"/>
                         </Button>
 
-                        <StackPanel VerticalAlignment="Center" Margin="10,0,0,0">
-                            <TextBlock Text="INDILOGS" FontWeight="Bold" FontSize="20" Foreground="{DynamicResource TextPrimary}"/>
-                            <TextBlock Text="VERSION 3.0" FontWeight="Normal" FontSize="10" Foreground="{DynamicResource PrimaryColor}" HorizontalAlignment="Right" Margin="0,-2,0,0"/>
+                        <StackPanel VerticalAlignment="Center" Margin="6,0,0,0">
+                            <TextBlock Text="INDILOGS" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimary}"/>
+                            <TextBlock Text="VERSION 3.0" FontWeight="Normal" FontSize="8" Foreground="{DynamicResource PrimaryColor}" HorizontalAlignment="Right" Margin="0,-2,0,0"/>
                         </StackPanel>
                     </StackPanel>
 
-                    <Button Command="{Binding LoadCommand}" Style="{DynamicResource PrimaryBtn}" 
-                            ToolTip="Load Files... (Drag &amp; Drop supported)" Width="140" Height="40">
+                    <Button Command="{Binding LoadCommand}" Style="{DynamicResource PrimaryBtn}"
+                            ToolTip="Load Files... (Drag &amp; Drop supported)" Width="100" Height="28" Padding="8,4">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="📂" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="OPEN LOGS" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <TextBlock Text="📂" FontSize="12" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="OPEN" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Border Background="{DynamicResource BgCard}" CornerRadius="20" Padding="5" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1">
+                    <Border Background="{DynamicResource BgCard}" CornerRadius="12" Padding="2" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1">
                         <StackPanel Orientation="Horizontal">
-                            <Button Command="{Binding MarkRowCommand}" Style="{DynamicResource ModernBtn}" 
-                                    Background="Transparent" ToolTip="Mark Row (Space)" Width="40" Height="30" Padding="0">
-                                <TextBlock Text="📌" FontSize="16" Foreground="{DynamicResource TextPrimary}"/>
+                            <Button Command="{Binding MarkRowCommand}" Style="{DynamicResource ModernBtn}"
+                                    Background="Transparent" ToolTip="Mark Row (Space)" Width="28" Height="22" Padding="0">
+                                <TextBlock Text="📌" FontSize="11" Foreground="{DynamicResource TextPrimary}"/>
                             </Button>
-                            <Button Content="⬇" Command="{Binding NextMarkedCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" Foreground="{DynamicResource TextPrimary}" ToolTip="Next Marked" Width="40" Height="30" Padding="0"/>
-                            <Button Content="⬆" Command="{Binding PrevMarkedCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" Foreground="{DynamicResource TextPrimary}" ToolTip="Previous Marked" Width="40" Height="30" Padding="0"/>
+                            <Button Content="⬇" Command="{Binding NextMarkedCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" Foreground="{DynamicResource TextPrimary}" ToolTip="Next Marked" Width="28" Height="22" Padding="0" FontSize="10"/>
+                            <Button Content="⬆" Command="{Binding PrevMarkedCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" Foreground="{DynamicResource TextPrimary}" ToolTip="Previous Marked" Width="28" Height="22" Padding="0" FontSize="10"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -119,14 +126,14 @@
                         </Border>
                     </StackPanel>
 
-                    <Button Command="{Binding OpenJiraCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" ToolTip="Open JIRA" Width="40" Height="40" Padding="0">
-                        <Image Source="/Resources/jira.ico" Width="22" Height="22" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <Button Command="{Binding OpenJiraCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" ToolTip="Open JIRA" Width="28" Height="28" Padding="0">
+                        <Image Source="/Resources/jira.ico" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Button>
-                    <Button Command="{Binding OpenKibanaCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" ToolTip="Open Kibana" Width="40" Height="40" Padding="0">
-                        <Image Source="/Resources/kibana.ico" Width="22" Height="22" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <Button Command="{Binding OpenKibanaCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" ToolTip="Open Kibana" Width="28" Height="28" Padding="0">
+                        <Image Source="/Resources/kibana.ico" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Button>
-                    <Button Command="{Binding OpenOutlookCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" ToolTip="Send Email" Width="40" Height="40" Padding="0">
-                        <Image Source="/Resources/outlook.ico" Width="22" Height="22" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <Button Command="{Binding OpenOutlookCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" ToolTip="Send Email" Width="28" Height="28" Padding="0">
+                        <Image Source="/Resources/outlook.ico" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Button>
                 </StackPanel>
             </Grid>
@@ -142,9 +149,6 @@
                                 <DataTrigger Binding="{Binding SelectedIndex, ElementName=LeftPanelTabs}" Value="1">
                                     <Setter Property="Width" Value="Auto"/>
                                 </DataTrigger>
-                                <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="7">
-                                    <Setter Property="Width" Value="0"/>
-                                </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </ColumnDefinition.Style>
@@ -157,15 +161,6 @@
             </Grid.ColumnDefinitions>
 
             <Grid Grid.Column="0" MinWidth="220" Background="{DynamicResource BgPanel}">
-                <Grid.Style>
-                    <Style TargetType="Grid">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="7">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Grid.Style>
 
                 <TabControl x:Name="LeftPanelTabs" Background="Transparent" BorderThickness="0" Margin="0" Padding="0" SelectedIndex="{Binding LeftTabIndex}">
 
@@ -495,17 +490,7 @@
                 </TabControl>
             </Grid>
 
-            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent" ShowsPreview="True">
-                <GridSplitter.Style>
-                    <Style TargetType="GridSplitter">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="7">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </GridSplitter.Style>
-            </GridSplitter>
+            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent" ShowsPreview="True"/>
 
             <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
@@ -698,32 +683,9 @@
                                 </DataGrid.Columns>
                             </DataGrid>
 
-                            <views:VisualTimelineView 
+                            <views:VisualTimelineView
                   DataContext="{Binding VisualTimelineVM}"
                   Visibility="{Binding DataContext.IsVisualMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-
-                            <Border HorizontalAlignment="Right"
-                                    VerticalAlignment="Top"
-                                    Margin="0,8,20,0"
-                                    Panel.ZIndex="999"
-                                    Background="{DynamicResource BgCard}"
-                                    BorderBrush="{DynamicResource BorderColor}"
-                                    BorderThickness="1"
-                                    CornerRadius="8"
-                                    Padding="4">
-                                <Border.Effect>
-                                    <DropShadowEffect Color="Black" Opacity="0.15" BlurRadius="5" ShadowDepth="2"/>
-                                </Border.Effect>
-                                <StackPanel Orientation="Horizontal">
-                                    <RadioButton GroupName="ViewMode" Content="TEXT VIEW"
-                                                 IsChecked="{Binding IsVisualMode, Converter={StaticResource InverseBooleanConverter}}"
-                                                 Style="{StaticResource ViewModeRadioButton}"/>
-                                    <RadioButton GroupName="ViewMode" Content="VISUAL MODE"
-                                                 IsChecked="{Binding IsVisualMode}"
-                                                 Style="{StaticResource ViewModeRadioButton}"
-                                                 Margin="4,0,0,0"/>
-                                </StackPanel>
-                            </Border>
 
                         </Grid>
                     </TabItem>
@@ -1083,33 +1045,144 @@
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
 
+                            <!-- File Selection ComboBox -->
                             <Border Grid.Row="0" Background="{DynamicResource BgPanel}" Padding="10" Margin="0,0,0,5" CornerRadius="4">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Select File:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" Margin="0,0,10,0" FontWeight="Bold"/>
-                                    <ComboBox ItemsSource="{Binding ConfigurationFiles}" 
-                                              SelectedItem="{Binding SelectedConfigFile}"
-                                              Width="300"
+                                    <TextBlock Text="Select File:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" Margin="0,0,10,0" FontWeight="Normal"/>
+                                    <ComboBox ItemsSource="{Binding ConfigurationFiles}"
+                                              SelectedItem="{Binding SelectedConfigFile, Mode=TwoWay}"
+                                              Width="350"
                                               Height="30"
                                               VerticalContentAlignment="Center"
-                                              Padding="5,0"/>
+                                              Background="{DynamicResource BgDark}"
+                                              Foreground="{DynamicResource TextPrimary}"
+                                              BorderBrush="{DynamicResource BorderColor}"
+                                              BorderThickness="1"
+                                              Padding="5,0">
+                                        <ComboBox.Resources>
+                                            <Style TargetType="Popup">
+                                                <Setter Property="AllowsTransparency" Value="True"/>
+                                            </Style>
+                                        </ComboBox.Resources>
+                                        <ComboBox.ItemContainerStyle>
+                                            <Style TargetType="ComboBoxItem">
+                                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                                <Setter Property="Background" Value="{DynamicResource BgDark}"/>
+                                                <Setter Property="Padding" Value="8,4"/>
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsHighlighted" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                                        <Setter Property="Foreground" Value="White"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ComboBox.ItemContainerStyle>
+                                    </ComboBox>
                                 </StackPanel>
                             </Border>
 
-                            <TextBox Grid.Row="1" 
-                                     Text="{Binding ConfigFileContent}" 
-                                     IsReadOnly="True"
-                                     FontFamily="Consolas, Courier New"
-                                     FontSize="13"
-                                     Background="{DynamicResource BgDark}" 
-                                     Foreground="{DynamicResource TextPrimary}" 
-                                     BorderThickness="0" 
-                                     VerticalScrollBarVisibility="Auto" 
-                                     HorizontalScrollBarVisibility="Auto"
-                                     AcceptsReturn="True"
-                                     Padding="10"/>
+                            <!-- Search Box -->
+                            <Border Grid.Row="1" Background="{DynamicResource BgPanel}" Padding="10" Margin="0,0,0,5" CornerRadius="4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Search:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" Margin="0,0,10,0" FontWeight="Normal"/>
+                                    <TextBox Text="{Binding ConfigSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="350"
+                                             Height="28"
+                                             VerticalContentAlignment="Center"
+                                             Background="{DynamicResource BgDark}"
+                                             Foreground="{DynamicResource TextPrimary}"
+                                             BorderBrush="{DynamicResource BorderColor}"
+                                             BorderThickness="1"
+                                             Padding="5,0"
+                                             FontFamily="Consolas, Courier New"
+                                             FontSize="12"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Content Area: TreeView for DB files, TextBox for JSON files -->
+                            <Grid Grid.Row="2">
+                                <!-- DB Browser style TreeView for SQLite Database files -->
+                                <Grid Visibility="{Binding IsDbFileSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Column Headers -->
+                                    <Border Grid.Row="0" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="350"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Name" Foreground="{DynamicResource TextSecondary}" FontWeight="SemiBold" Padding="25,8,5,8" FontFamily="Segoe UI" FontSize="12"/>
+                                            <TextBlock Grid.Column="1" Text="Type" Foreground="{DynamicResource TextSecondary}" FontWeight="SemiBold" Padding="5,8" FontFamily="Segoe UI" FontSize="12"/>
+                                            <TextBlock Grid.Column="2" Text="Schema" Foreground="{DynamicResource TextSecondary}" FontWeight="SemiBold" Padding="5,8" FontFamily="Segoe UI" FontSize="12"/>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- TreeView with columns - Virtualization disabled to fix scrolling issues -->
+                                    <TreeView Grid.Row="1"
+                                              ItemsSource="{Binding DbTreeNodes}"
+                                              Background="{DynamicResource BgDark}"
+                                              BorderThickness="0"
+                                              Padding="0"
+                                              VirtualizingPanel.IsVirtualizing="False"
+                                              ScrollViewer.CanContentScroll="False">
+                                        <TreeView.Resources>
+                                            <!-- Remove all selection highlighting -->
+                                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="Transparent"/>
+                                            <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="Transparent"/>
+                                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="{Binding Color, Source={StaticResource TextPrimary}}"/>
+                                            <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="{Binding Color, Source={StaticResource TextPrimary}}"/>
+                                        </TreeView.Resources>
+                                        <TreeView.ItemContainerStyle>
+                                            <Style TargetType="TreeViewItem">
+                                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                                <Setter Property="Visibility" Value="{Binding IsVisible, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="BorderThickness" Value="0"/>
+                                                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                            </Style>
+                                        </TreeView.ItemContainerStyle>
+                                        <TreeView.ItemTemplate>
+                                            <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                                <Grid Width="800">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="330"/>
+                                                        <ColumnDefinition Width="100"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding Name}" Foreground="{DynamicResource TextPrimary}" FontFamily="Segoe UI" FontSize="11" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Type}" Foreground="#64B5F6" FontFamily="Consolas" FontSize="10" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding Schema}" Foreground="{DynamicResource TextSecondary}" FontFamily="Consolas" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                </Grid>
+                                            </HierarchicalDataTemplate>
+                                        </TreeView.ItemTemplate>
+                                    </TreeView>
+                                </Grid>
+
+                                <!-- TextBox for JSON/Config files -->
+                                <TextBox Text="{Binding ConfigFileContent}"
+                                         IsReadOnly="True"
+                                         FontFamily="Consolas, Courier New"
+                                         FontSize="12"
+                                         FontWeight="Normal"
+                                         Background="{DynamicResource BgDark}"
+                                         Foreground="{DynamicResource TextPrimary}"
+                                         BorderThickness="0"
+                                         VerticalScrollBarVisibility="Auto"
+                                         HorizontalScrollBarVisibility="Auto"
+                                         AcceptsReturn="True"
+                                         Padding="10"
+                                         Visibility="{Binding IsDbFileSelected, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                            </Grid>
                         </Grid>
                     </TabItem>
                     <TabItem Header="SETUP INFO">
@@ -1119,9 +1192,6 @@
                                  BorderThickness="0" VerticalScrollBarVisibility="Auto" Padding="10"/>
                     </TabItem>
 
-                    <TabItem Header="GRAPHS" Padding="0" Margin="0">
-                        <views:GraphsView DataContext="{Binding GraphsVM}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0"/>
-                    </TabItem>
                 </TabControl>
 
                 <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Center" Background="#444" ShowsPreview="True">
@@ -1199,51 +1269,36 @@
                 </Border>
 
                 <Border Grid.Row="3" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" Padding="15,8">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="7">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
                     <Grid>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <Button Content="🔍 Edit Filters..." Command="{Binding OpenFilterWindowCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgCard}"/>
                             <Button Content="🎨 Color Rules..." Command="{Binding OpenColoringWindowCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgCard}"/>
                             <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="10,4"/>
-                            <CheckBox Content="APPLY FILTER OUT" IsChecked="{Binding IsFilterOutActive}" 
+                            <CheckBox Content="APPLY FILTER OUT" IsChecked="{Binding IsFilterOutActive}"
                                       ToolTip="Uncheck to reveal hidden logs" VerticalAlignment="Center" Margin="10,0,15,0" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/>
-                            <CheckBox Content="APPLY FILTER" IsChecked="{Binding IsFilterActive}" 
+                            <CheckBox Content="APPLY FILTER" IsChecked="{Binding IsFilterActive}"
                                       VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/>
+                            <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="10,4"/>
+                            <Border Background="{DynamicResource BgCard}" CornerRadius="8" Padding="4" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
+                                    Visibility="{Binding IsPLCTabSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton GroupName="ViewMode" Content="TEXT"
+                                                 IsChecked="{Binding IsVisualMode, Converter={StaticResource InverseBooleanConverter}}"
+                                                 Style="{StaticResource ViewModeRadioButton}"/>
+                                    <RadioButton GroupName="ViewMode" Content="VISUAL"
+                                                 IsChecked="{Binding IsVisualMode}"
+                                                 Style="{StaticResource ViewModeRadioButton}"
+                                                 Margin="4,0,0,0"/>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </Grid>
                 </Border>
             </Grid>
 
-            <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent" ShowsPreview="True">
-                <GridSplitter.Style>
-                    <Style TargetType="GridSplitter">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="7">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </GridSplitter.Style>
-            </GridSplitter>
+            <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent" ShowsPreview="True"/>
 
             <Border Grid.Column="4" Width="200" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1,0,0,0" Padding="15">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="7">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
                 <DockPanel>
                     <TextBlock Text="SAVED CONFIGURATIONS" Foreground="{DynamicResource TextSecondary}" FontWeight="Bold" FontSize="11" Margin="0,0,0,15" DockPanel.Dock="Top"/>
 
