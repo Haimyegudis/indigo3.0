@@ -40,8 +40,10 @@ namespace IndiLogs_3._0.Services
             return await Task.Run(() =>
             {
                 var session = new LogSessionData();
-                // אתחול המילון
+                // אתחול כל המילונים
                 session.ConfigurationFiles = new Dictionary<string, string>();
+                session.DatabaseFiles = new Dictionary<string, byte[]>();
+                session.WindowsEventFiles = new Dictionary<string, byte[]>();
 
                 if (filePaths == null || filePaths.Length == 0) return session;
 
@@ -120,6 +122,7 @@ namespace IndiLogs_3._0.Services
                                                     if (!session.DatabaseFiles.ContainsKey(fileNameOnly))
                                                     {
                                                         session.DatabaseFiles.Add(fileNameOnly, dbBytes);
+                                                        Debug.WriteLine($"✅ Loaded DB file: {fileNameOnly} ({dbBytes.Length} bytes)");
                                                     }
                                                 }
                                             }
@@ -133,6 +136,7 @@ namespace IndiLogs_3._0.Services
                                                     if (!session.ConfigurationFiles.ContainsKey(fileNameOnly))
                                                     {
                                                         session.ConfigurationFiles.Add(fileNameOnly, content);
+                                                        Debug.WriteLine($"✅ Loaded config file: {fileNameOnly}");
                                                     }
                                                 }
                                             }
@@ -140,6 +144,35 @@ namespace IndiLogs_3._0.Services
                                         catch (Exception ex)
                                         {
                                             Debug.WriteLine($"Failed to read config file {entry.Name}: {ex.Message}");
+                                        }
+                                        continue;
+                                    }
+
+                                    // 1.5. זיהוי קבצי Windows Events (EVTX)
+                                    bool isDiagnosticsFile = (lowerName.Contains("/diagnosticslogs/") ||
+                                                              lowerName.Contains("\\diagnosticslogs\\")) &&
+                                                             entry.Name.EndsWith(".evtx", StringComparison.OrdinalIgnoreCase);
+
+                                    if (isDiagnosticsFile)
+                                    {
+                                        try
+                                        {
+                                            string fileNameOnly = Path.GetFileName(entry.Name);
+
+                                            // Read as binary for EVTX files
+                                            using (var ms = CopyToMemory(entry))
+                                            {
+                                                byte[] evtxBytes = ms.ToArray();
+                                                if (!session.WindowsEventFiles.ContainsKey(fileNameOnly))
+                                                {
+                                                    session.WindowsEventFiles.Add(fileNameOnly, evtxBytes);
+                                                    Debug.WriteLine($"✅ Loaded EVTX file: {fileNameOnly} ({evtxBytes.Length} bytes)");
+                                                }
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            Debug.WriteLine($"Failed to read EVTX file {entry.Name}: {ex.Message}");
                                         }
                                         continue;
                                     }
@@ -204,6 +237,12 @@ namespace IndiLogs_3._0.Services
                                         filesToProcess.Add(entryData);
                                     }
                                 }
+
+                                Debug.WriteLine($"📦 ZIP Summary:");
+                                Debug.WriteLine($"   Config files: {session.ConfigurationFiles.Count}");
+                                Debug.WriteLine($"   Database files: {session.DatabaseFiles.Count}");
+                                Debug.WriteLine($"   EVTX files: {session.WindowsEventFiles.Count}");
+                                Debug.WriteLine($"   Log files to process: {filesToProcess.Count}");
 
                                 int totalFiles = filesToProcess.Count;
                                 int processedCount = 0;

@@ -22,6 +22,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using System.Data.SQLite;
+using System.Diagnostics.Eventing.Reader;
 
 namespace IndiLogs_3._0.ViewModels
 {
@@ -41,7 +42,63 @@ namespace IndiLogs_3._0.ViewModels
                 if (value) InitializeVisualMode();
             }
         }
+        private ObservableCollection<string> _windowsEventFiles;
+        public ObservableCollection<string> WindowsEventFiles
+        {
+            get => _windowsEventFiles;
+            set { _windowsEventFiles = value; OnPropertyChanged(); }
+        }
 
+        private string _selectedWindowsEventFile;
+        public string SelectedWindowsEventFile
+        {
+            get => _selectedWindowsEventFile;
+            set
+            {
+                _selectedWindowsEventFile = value;
+                OnPropertyChanged();
+                if (!string.IsNullOrEmpty(value))
+                    LoadWindowsEvents(value);
+            }
+        }
+      
+        private ObservableCollection<WindowsEvent> _windowsEvents;
+        public ObservableCollection<WindowsEvent> WindowsEvents
+        {
+            get => _windowsEvents;
+            set { _windowsEvents = value; OnPropertyChanged(); }
+        }
+
+        private ObservableCollection<WindowsEvent> _windowsEventsFiltered;
+        public ObservableCollection<WindowsEvent> WindowsEventsFiltered
+        {
+            get => _windowsEventsFiltered;
+            set { _windowsEventsFiltered = value; OnPropertyChanged(); }
+        }
+
+        private string _windowsEventSearchText;
+        public string WindowsEventSearchText
+        {
+            get => _windowsEventSearchText;
+            set
+            {
+                _windowsEventSearchText = value;
+                OnPropertyChanged();
+                FilterWindowsEvents();
+            }
+        }
+
+        private string _selectedEventLevelFilter = "All";
+        public string SelectedEventLevelFilter
+        {
+            get => _selectedEventLevelFilter;
+            set
+            {
+                _selectedEventLevelFilter = value;
+                OnPropertyChanged();
+                FilterWindowsEvents();
+            }
+        }
         public ICommand ToggleVisualModeCommand { get; }
 
         public ObservableCollection<LogEntry> MarkedAppLogs { get; set; }
@@ -242,10 +299,15 @@ namespace IndiLogs_3._0.ViewModels
                     _selectedSession = value;
                     OnPropertyChanged();
                     SwitchToSession(_selectedSession);
+
+                    // 👇 הוסף את זה כאן
+                    if (value != null)
+                    {
+                        LoadWindowsEventFiles();
+                    }
                 }
             }
         }
-
         private bool _isMarkedLogsCombined;
         public bool IsMarkedLogsCombined
         {
@@ -644,6 +706,10 @@ namespace IndiLogs_3._0.ViewModels
             _isDarkMode = Properties.Settings.Default.IsDarkMode;
             ApplyTheme(_isDarkMode);
             LoadSavedConfigurations();
+
+            WindowsEventFiles = new ObservableCollection<string>();
+            WindowsEvents = new ObservableCollection<WindowsEvent>();
+            WindowsEventsFiltered = new ObservableCollection<WindowsEvent>();
         }
 
         private void OnSearchTimerTick(object sender, EventArgs e)
@@ -660,7 +726,316 @@ namespace IndiLogs_3._0.ViewModels
                 VisualTimelineVM.LoadData(logsToUse.ToList(), Events);
             }
         }
+        private void LoadWindowsEventFiles()
+        {
+            Debug.WriteLine("=== LoadWindowsEventFiles STARTED ===");
 
+            try
+            {
+                if (SelectedSession == null)
+                {
+                    Debug.WriteLine("❌ SelectedSession is NULL");
+                    StatusMessage = "No session selected";
+                    return;
+                }
+
+                Debug.WriteLine($"✅ SelectedSession exists: {SelectedSession.FileName}");
+
+                // 🔍 בדיקה קריטית - האם יש מילון?
+                if (SelectedSession.WindowsEventFiles == null)
+                {
+                    Debug.WriteLine("❌❌❌ WindowsEventFiles Dictionary is NULL!");
+                }
+                else
+                {
+                    Debug.WriteLine($"✅ WindowsEventFiles Dictionary EXISTS");
+                    Debug.WriteLine($"📊 Count: {SelectedSession.WindowsEventFiles.Count}");
+
+                    if (SelectedSession.WindowsEventFiles.Count > 0)
+                    {
+                        Debug.WriteLine($"📦 Files in dictionary:");
+                        foreach (var key in SelectedSession.WindowsEventFiles.Keys)
+                        {
+                            Debug.WriteLine($"   - {key} ({SelectedSession.WindowsEventFiles[key].Length} bytes)");
+                        }
+                    }
+                }
+
+                WindowsEventFiles.Clear();
+
+                // Check if we have EVTX files in memory (from ZIP)
+                if (SelectedSession.WindowsEventFiles != null && SelectedSession.WindowsEventFiles.Count > 0)
+                {
+                    Debug.WriteLine($"📦 Found {SelectedSession.WindowsEventFiles.Count} EVTX files in session memory");
+
+                    foreach (var kvp in SelectedSession.WindowsEventFiles)
+                    {
+                        WindowsEventFiles.Add(kvp.Key);
+                        Debug.WriteLine($"   ➕ Added file: {kvp.Key}");
+                    }
+
+                    if (WindowsEventFiles.Count > 0)
+                    {
+                        SelectedWindowsEventFile = WindowsEventFiles[0];
+                        Debug.WriteLine($"✅ Selected first file: {WindowsEventFiles[0]}");
+                        StatusMessage = $"Found {WindowsEventFiles.Count} event log files";
+                    }
+
+                    Debug.WriteLine("=== LoadWindowsEventFiles FINISHED (from memory) ===\n");
+                    return;
+                }
+
+                // If not in memory, try to find on disk (for non-ZIP files)
+                Debug.WriteLine($"💾 Trying to find files on disk...");
+                Debug.WriteLine($"   FilePath: {SelectedSession.FilePath}");
+
+                var sessionDir = Path.GetDirectoryName(SelectedSession.FilePath);
+                Debug.WriteLine($"   Session Directory: {sessionDir}");
+
+                var diagnosticsPath = Path.Combine(sessionDir, "DiagnosticsLogs");
+                Debug.WriteLine($"   DiagnosticsLogs Path: {diagnosticsPath}");
+
+                if (!Directory.Exists(diagnosticsPath))
+                {
+                    Debug.WriteLine($"❌ DiagnosticsLogs folder NOT FOUND");
+                    StatusMessage = "No Windows Event files found";
+                    Debug.WriteLine("=== LoadWindowsEventFiles FINISHED (no files) ===\n");
+                    return;
+                }
+
+                var evtxFiles = Directory.GetFiles(diagnosticsPath, "*.evtx");
+                Debug.WriteLine($"📁 Found {evtxFiles.Length} EVTX files on disk");
+
+                foreach (var file in evtxFiles)
+                {
+                    var fileName = Path.GetFileName(file);
+                    WindowsEventFiles.Add(fileName);
+                    Debug.WriteLine($"   ➕ Added file: {fileName}");
+                }
+
+                if (WindowsEventFiles.Count > 0)
+                {
+                    SelectedWindowsEventFile = WindowsEventFiles[0];
+                    Debug.WriteLine($"✅ Selected first file: {WindowsEventFiles[0]}");
+                    StatusMessage = $"Found {WindowsEventFiles.Count} event log files";
+                }
+                else
+                {
+                    Debug.WriteLine($"⚠️ No EVTX files found");
+                    StatusMessage = "No EVTX files found";
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"❌❌❌ EXCEPTION in LoadWindowsEventFiles:");
+                Debug.WriteLine($"   Message: {ex.Message}");
+                Debug.WriteLine($"   StackTrace: {ex.StackTrace}");
+                StatusMessage = $"Error loading Windows Event files: {ex.Message}";
+            }
+
+            Debug.WriteLine("=== LoadWindowsEventFiles FINISHED ===\n");
+        }
+        private void LoadWindowsEvents(string fileName)
+        {
+            Task.Run(() =>
+            {
+                try
+                {
+                    IsBusy = true;
+                    StatusMessage = $"Loading {fileName}...";
+                    Debug.WriteLine($"=== LoadWindowsEvents: {fileName} ===");
+
+                    var events = new List<WindowsEvent>();
+                    string tempFilePath = null;
+
+                    try
+                    {
+                        // Check if file is in memory (from ZIP)
+                        if (SelectedSession.WindowsEventFiles != null &&
+                            SelectedSession.WindowsEventFiles.ContainsKey(fileName))
+                        {
+                            Debug.WriteLine($"📦 Loading from memory (ZIP)");
+
+                            // Write to temp file - EventLogReader needs a file path
+                            tempFilePath = Path.Combine(Path.GetTempPath(), $"indilogs_evtx_{Guid.NewGuid()}.evtx");
+                            File.WriteAllBytes(tempFilePath, SelectedSession.WindowsEventFiles[fileName]);
+
+                            Debug.WriteLine($"   Temp file: {tempFilePath}");
+                        }
+                        else
+                        {
+                            // Try to load from disk
+                            Debug.WriteLine($"💾 Loading from disk");
+                            var sessionDir = Path.GetDirectoryName(SelectedSession.FilePath);
+                            var diagnosticsPath = Path.Combine(sessionDir, "DiagnosticsLogs");
+                            tempFilePath = Path.Combine(diagnosticsPath, fileName);
+
+                            Debug.WriteLine($"   File path: {tempFilePath}");
+
+                            if (!File.Exists(tempFilePath))
+                            {
+                                Debug.WriteLine($"❌ File not found!");
+                                StatusMessage = "File not found";
+                                return;
+                            }
+                        }
+
+                        Debug.WriteLine($"📖 Reading EVTX file...");
+
+                        // Use EventLogReader for EVTX files
+                        var query = new EventLogQuery(tempFilePath, PathType.FilePath);
+
+                        using (var reader = new EventLogReader(query))
+                        {
+                            EventRecord eventRecord;
+                            int count = 0;
+
+                            while ((eventRecord = reader.ReadEvent()) != null && count < 10000)
+                            {
+                                count++;
+
+                                using (eventRecord)
+                                {
+                                    try
+                                    {
+                                        var evt = new WindowsEvent
+                                        {
+                                            EventId = eventRecord.Id.ToString(),
+                                            TimeCreated = eventRecord.TimeCreated ?? DateTime.MinValue,
+                                            Source = eventRecord.ProviderName ?? "Unknown"
+                                        };
+
+                                        if (eventRecord.Level.HasValue)
+                                        {
+                                            evt.Level = eventRecord.Level.Value switch
+                                            {
+                                                0 => "Info",
+                                                1 => "Critical",
+                                                2 => "Error",
+                                                3 => "Warning",
+                                                4 => "Info",
+                                                5 => "Verbose",
+                                                _ => "Unknown"
+                                            };
+                                        }
+                                        else
+                                        {
+                                            evt.Level = "Info";
+                                        }
+
+                                        evt.Category = eventRecord.TaskDisplayName ?? "";
+
+                                        try
+                                        {
+                                            evt.Message = eventRecord.FormatDescription() ?? $"Event {evt.EventId}";
+                                        }
+                                        catch
+                                        {
+                                            var props = eventRecord.Properties;
+                                            if (props != null && props.Count > 0)
+                                            {
+                                                evt.Message = string.Join(" | ", props.Select(p => p.Value?.ToString()));
+                                            }
+                                            else
+                                            {
+                                                evt.Message = $"Event {evt.EventId} from {evt.Source}";
+                                            }
+                                        }
+
+                                        events.Add(evt);
+                                    }
+                                    catch
+                                    {
+                                        continue;
+                                    }
+                                }
+                            }
+
+                            Debug.WriteLine($"✅ Read {events.Count} events");
+                        }
+                    }
+                    finally
+                    {
+                        // Clean up temp file if we created one
+                        if (tempFilePath != null &&
+                            tempFilePath.StartsWith(Path.GetTempPath()) &&
+                            File.Exists(tempFilePath))
+                        {
+                            try
+                            {
+                                File.Delete(tempFilePath);
+                                Debug.WriteLine($"🗑️ Deleted temp file");
+                            }
+                            catch { }
+                        }
+                    }
+
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        WindowsEvents.Clear();
+                        foreach (var evt in events.OrderByDescending(e => e.TimeCreated))
+                        {
+                            WindowsEvents.Add(evt);
+                        }
+
+                        FilterWindowsEvents();
+                        StatusMessage = $"Loaded {events.Count:N0} Windows events from {fileName}";
+                        Debug.WriteLine($"=== LoadWindowsEvents FINISHED ===\n");
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"❌ LoadWindowsEvents EXCEPTION: {ex.Message}");
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        StatusMessage = $"Error loading events: {ex.Message}";
+                    });
+                }
+                finally
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        IsBusy = false;
+                    });
+                }
+            });
+        }
+
+        // Filter Windows Events
+        private void FilterWindowsEvents()
+        {
+            if (WindowsEvents == null)
+            {
+                WindowsEventsFiltered?.Clear();
+                return;
+            }
+
+            var filtered = WindowsEvents.AsEnumerable();
+
+            // Filter by level
+            if (!string.IsNullOrEmpty(SelectedEventLevelFilter) && SelectedEventLevelFilter != "All")
+            {
+                filtered = filtered.Where(e => e.Level == SelectedEventLevelFilter);
+            }
+
+            // Filter by search text
+            if (!string.IsNullOrWhiteSpace(WindowsEventSearchText))
+            {
+                var search = WindowsEventSearchText.ToLower();
+                filtered = filtered.Where(e =>
+                    (e.EventId?.ToLower().Contains(search) ?? false) ||
+                    (e.Source?.ToLower().Contains(search) ?? false) ||
+                    (e.Message?.ToLower().Contains(search) ?? false) ||
+                    (e.Category?.ToLower().Contains(search) ?? false)
+                );
+            }
+
+            WindowsEventsFiltered.Clear();
+            foreach (var evt in filtered)
+            {
+                WindowsEventsFiltered.Add(evt);
+            }
+        }
         private async void ProcessFiles(string[] filePaths)
         {
             StopLiveMonitoring();
@@ -2378,9 +2753,9 @@ namespace IndiLogs_3._0.ViewModels
             try { string exePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "IoRecorderViewer.exe"); if (File.Exists(exePath)) Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true, WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory }); else MessageBox.Show($"File not found:\n{exePath}", "Error", MessageBoxButton.OK, MessageBoxImage.Error); }
             catch (Exception ex) { MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error); }
         }
-        public void OnFilesDropped(string[] files) { if (files != null && files.Length > 0) ProcessFiles(files); }
+        public void OnFilesDropped(string[] files) { if (files != null && files.Length > 0) ProcessFiles(files); LoadWindowsEventFiles(); }
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
-}
+} 

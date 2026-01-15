@@ -339,11 +339,7 @@ namespace IndiLogs_3._0
                             _tabPanelWidths[_previousTabIndex] = leftPanelColumn.Width.Value;
                         }
 
-                        // For GRAPHS tab (index 7), set width to 0 explicitly
-                        if (newTabIndex == 7)
-                        {
-                            leftPanelColumn.Width = new GridLength(0);
-                        }
+                    
                         else
                         {
                             // Restore width for other tabs (or use default)

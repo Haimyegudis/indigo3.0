@@ -7,6 +7,7 @@ namespace IndiLogs_3._0.Models
 {
     public class LogSessionData
     {
+
         public List<LogEntry> Logs { get; set; } = new List<LogEntry>();
         public List<LogEntry> AppDevLogs { get; set; } = new List<LogEntry>();
 
@@ -20,6 +21,7 @@ namespace IndiLogs_3._0.Models
 
         // Binary DB files (SQLite) - stored as byte arrays
         public Dictionary<string, byte[]> DatabaseFiles { get; set; } = new Dictionary<string, byte[]>();
+        public Dictionary<string, byte[]> WindowsEventFiles { get; set; } = new Dictionary<string, byte[]>();
 
         public List<EventEntry> Events { get; set; } = new List<EventEntry>();
         public List<BitmapImage> Screenshots { get; set; } = new List<BitmapImage>();

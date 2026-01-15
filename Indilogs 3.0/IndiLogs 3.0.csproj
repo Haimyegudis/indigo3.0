@@ -210,6 +210,7 @@
     <Compile Include="Models\StateEntry.cs" />
     <Compile Include="Models\TimelineMarker.cs" />
     <Compile Include="Models\TimelineState.cs" />
+    <Compile Include="Models\Windowsevent.cs" />
     <Compile Include="Services\Analysis\StateFailureAnalyzer.cs" />
     <Compile Include="Services\Analysis\UniversalStateFailureAnalyzer.cs" />
     <Compile Include="ViewModels\VisualTimelineViewModel.cs" />
@@ -221,9 +222,6 @@
     </Compile>
     <Compile Include="Views\FloatingChartWindow.xaml.cs">
       <DependentUpon>FloatingChartWindow.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\GraphsView.xaml.cs">
-      <DependentUpon>GraphsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\IndigoInvadersWindow.xaml.cs">
       <DependentUpon>IndigoInvadersWindow.xaml</DependentUpon>
@@ -346,10 +344,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\FloatingChartWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\GraphsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
