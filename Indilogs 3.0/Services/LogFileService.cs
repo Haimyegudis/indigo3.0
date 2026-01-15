@@ -1,5 +1,6 @@
-﻿using IndiLogs_3._0.Models;
+﻿using DocumentFormat.OpenXml.ExtendedProperties;
 using Indigo.Infra.ICL.Core.Logging;
+using IndiLogs_3._0.Models;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -149,34 +150,40 @@ namespace IndiLogs_3._0.Services
                                     }
 
                                     // 1.5. זיהוי קבצי Windows Events (EVTX)
-                                    bool isDiagnosticsFile = (lowerName.Contains("/diagnosticslogs/") ||
-                                                              lowerName.Contains("\\diagnosticslogs\\")) &&
-                                                             entry.Name.EndsWith(".evtx", StringComparison.OrdinalIgnoreCase);
+                                    // 1.5. זיהוי קבצי Windows Events (EVTX) - כל קובץ EVTX בכל מיקום
+                                    bool isEvtxFile = entry.Name.EndsWith(".evtx", StringComparison.OrdinalIgnoreCase);
 
-                                    if (isDiagnosticsFile)
+                                    if (isEvtxFile)
                                     {
                                         try
                                         {
                                             string fileNameOnly = Path.GetFileName(entry.Name);
+                                            Debug.WriteLine($"🔍 Found EVTX file in ZIP: {entry.FullName} -> {fileNameOnly}");
 
                                             // Read as binary for EVTX files
                                             using (var ms = CopyToMemory(entry))
                                             {
                                                 byte[] evtxBytes = ms.ToArray();
-                                                if (!session.WindowsEventFiles.ContainsKey(fileNameOnly))
+
+                                                // Use unique key if filename already exists
+                                                string uniqueKey = fileNameOnly;
+                                                int counter = 1;
+                                                while (session.WindowsEventFiles.ContainsKey(uniqueKey))
                                                 {
-                                                    session.WindowsEventFiles.Add(fileNameOnly, evtxBytes);
-                                                    Debug.WriteLine($"✅ Loaded EVTX file: {fileNameOnly} ({evtxBytes.Length} bytes)");
+                                                    uniqueKey = $"{Path.GetFileNameWithoutExtension(fileNameOnly)}_{counter}{Path.GetExtension(fileNameOnly)}";
+                                                    counter++;
                                                 }
+
+                                                session.WindowsEventFiles.Add(uniqueKey, evtxBytes);
+                                                Debug.WriteLine($"✅ Loaded EVTX file: {uniqueKey} ({evtxBytes.Length:N0} bytes)");
                                             }
                                         }
                                         catch (Exception ex)
                                         {
-                                            Debug.WriteLine($"Failed to read EVTX file {entry.Name}: {ex.Message}");
+                                            Debug.WriteLine($"❌ Failed to read EVTX file {entry.Name}: {ex.Message}");
                                         }
                                         continue;
                                     }
-
                                     // 2. לוגים ראשיים
                                     if (entry.Name.IndexOf("engineGroupA.file", StringComparison.OrdinalIgnoreCase) >= 0)
                                     {

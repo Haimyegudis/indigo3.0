@@ -1286,16 +1286,19 @@
                             <Border Grid.Row="0" Background="{DynamicResource BgPanel}" Padding="10" Margin="0,0,0,5" CornerRadius="4">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="📄 Select Event Log:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" Margin="0,0,10,0" FontWeight="SemiBold"/>
-
                                     <ComboBox x:Name="EventFileComboBox"
-                  ItemsSource="{Binding WindowsEventFiles}"
-                  SelectedItem="{Binding SelectedWindowsEventFile, Mode=TwoWay}"
-                  Width="350"
-                  Height="30"
-                  VerticalContentAlignment="Center"
-                  Padding="8,0"
-                  FontSize="12">
-
+          ItemsSource="{Binding WindowsEventFiles}"
+          SelectedItem="{Binding SelectedWindowsEventFile, Mode=TwoWay}"
+          Width="350"
+          Height="30"
+          VerticalContentAlignment="Center"
+          Padding="8,0"
+          FontSize="12">
+                                        <ComboBox.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <VirtualizingStackPanel/>
+                                            </ItemsPanelTemplate>
+                                        </ComboBox.ItemsPanel>
                                         <!-- Simple and working style -->
                                         <ComboBox.Resources>
                                             <!-- Popup background -->
@@ -1304,13 +1307,19 @@
                                         </ComboBox.Resources>
 
                                         <ComboBox.Style>
-                                            <Style TargetType="ComboBox">
+                                            <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
                                                 <Setter Property="Background" Value="{DynamicResource BgDark}"/>
                                                 <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                                                 <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
                                                 <Setter Property="BorderThickness" Value="1"/>
-                                                <Setter Property="HorizontalContentAlignment" Value="Left"/>
-                                                <Setter Property="VerticalContentAlignment" Value="Center"/>
+
+                                                <!-- Show placeholder when null -->
+                                                <Style.Triggers>
+                                                    <Trigger Property="SelectedItem" Value="{x:Null}">
+                                                        <Setter Property="Text" Value="-- Select Event Log File --"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
                                             </Style>
                                         </ComboBox.Style>
 

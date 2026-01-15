@@ -741,26 +741,6 @@ namespace IndiLogs_3._0.ViewModels
 
                 Debug.WriteLine($"✅ SelectedSession exists: {SelectedSession.FileName}");
 
-                // 🔍 בדיקה קריטית - האם יש מילון?
-                if (SelectedSession.WindowsEventFiles == null)
-                {
-                    Debug.WriteLine("❌❌❌ WindowsEventFiles Dictionary is NULL!");
-                }
-                else
-                {
-                    Debug.WriteLine($"✅ WindowsEventFiles Dictionary EXISTS");
-                    Debug.WriteLine($"📊 Count: {SelectedSession.WindowsEventFiles.Count}");
-
-                    if (SelectedSession.WindowsEventFiles.Count > 0)
-                    {
-                        Debug.WriteLine($"📦 Files in dictionary:");
-                        foreach (var key in SelectedSession.WindowsEventFiles.Keys)
-                        {
-                            Debug.WriteLine($"   - {key} ({SelectedSession.WindowsEventFiles[key].Length} bytes)");
-                        }
-                    }
-                }
-
                 WindowsEventFiles.Clear();
 
                 // Check if we have EVTX files in memory (from ZIP)
@@ -774,13 +754,11 @@ namespace IndiLogs_3._0.ViewModels
                         Debug.WriteLine($"   ➕ Added file: {kvp.Key}");
                     }
 
-                    if (WindowsEventFiles.Count > 0)
-                    {
-                        SelectedWindowsEventFile = WindowsEventFiles[0];
-                        Debug.WriteLine($"✅ Selected first file: {WindowsEventFiles[0]}");
-                        StatusMessage = $"Found {WindowsEventFiles.Count} event log files";
-                    }
+                    // 👇 זה השינוי - אל תבחר קובץ אוטומטית
+                    // SelectedWindowsEventFile = WindowsEventFiles[0]; // ❌ הסר את זה
+                    SelectedWindowsEventFile = null; // ✅ הוסף את זה במקום
 
+                    StatusMessage = $"Found {WindowsEventFiles.Count} event log files - Select one to view";
                     Debug.WriteLine("=== LoadWindowsEventFiles FINISHED (from memory) ===\n");
                     return;
                 }
@@ -815,9 +793,11 @@ namespace IndiLogs_3._0.ViewModels
 
                 if (WindowsEventFiles.Count > 0)
                 {
-                    SelectedWindowsEventFile = WindowsEventFiles[0];
-                    Debug.WriteLine($"✅ Selected first file: {WindowsEventFiles[0]}");
-                    StatusMessage = $"Found {WindowsEventFiles.Count} event log files";
+                    // 👇 זה השינוי - אל תבחר קובץ אוטומטית
+                    // SelectedWindowsEventFile = WindowsEventFiles[0]; // ❌ הסר את זה
+                    SelectedWindowsEventFile = null; // ✅ הוסף את זה במקום
+
+                    StatusMessage = $"Found {WindowsEventFiles.Count} event log files - Select one to view";
                 }
                 else
                 {
@@ -837,6 +817,13 @@ namespace IndiLogs_3._0.ViewModels
         }
         private void LoadWindowsEvents(string fileName)
         {
+            if (string.IsNullOrEmpty(fileName))
+            {
+                WindowsEventsFiltered?.Clear();
+                WindowsEvents?.Clear();
+                return;
+            }
+
             Task.Run(() =>
             {
                 try
@@ -847,6 +834,7 @@ namespace IndiLogs_3._0.ViewModels
 
                     var events = new List<WindowsEvent>();
                     string tempFilePath = null;
+                    bool isTemporary = false;
 
                     try
                     {
@@ -859,8 +847,9 @@ namespace IndiLogs_3._0.ViewModels
                             // Write to temp file - EventLogReader needs a file path
                             tempFilePath = Path.Combine(Path.GetTempPath(), $"indilogs_evtx_{Guid.NewGuid()}.evtx");
                             File.WriteAllBytes(tempFilePath, SelectedSession.WindowsEventFiles[fileName]);
+                            isTemporary = true;
 
-                            Debug.WriteLine($"   Temp file: {tempFilePath}");
+                            Debug.WriteLine($"   Temp file: {tempFilePath} ({new FileInfo(tempFilePath).Length:N0} bytes)");
                         }
                         else
                         {
@@ -875,7 +864,10 @@ namespace IndiLogs_3._0.ViewModels
                             if (!File.Exists(tempFilePath))
                             {
                                 Debug.WriteLine($"❌ File not found!");
-                                StatusMessage = "File not found";
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    StatusMessage = "File not found";
+                                });
                                 return;
                             }
                         }
@@ -885,18 +877,44 @@ namespace IndiLogs_3._0.ViewModels
                         // Use EventLogReader for EVTX files
                         var query = new EventLogQuery(tempFilePath, PathType.FilePath);
 
+                        int successCount = 0;
+                        int errorCount = 0;
+                        int totalAttempts = 0;
+
                         using (var reader = new EventLogReader(query))
                         {
-                            EventRecord eventRecord;
-                            int count = 0;
-
-                            while ((eventRecord = reader.ReadEvent()) != null && count < 10000)
+                            while (totalAttempts < 50000) // Safety limit
                             {
-                                count++;
+                                totalAttempts++;
+                                EventRecord eventRecord = null;
 
-                                using (eventRecord)
+                                try
                                 {
-                                    try
+                                    // Try to read next event
+                                    eventRecord = reader.ReadEvent();
+                                    if (eventRecord == null)
+                                    {
+                                        Debug.WriteLine($"✅ Reached end of events");
+                                        break; // No more events
+                                    }
+                                }
+                                catch (Exception readEx)
+                                {
+                                    errorCount++;
+                                    Debug.WriteLine($"⚠️ Error reading event #{totalAttempts}: {readEx.Message}");
+
+                                    if (errorCount > 1000)
+                                    {
+                                        Debug.WriteLine($"❌ Too many read errors ({errorCount}), stopping");
+                                        break;
+                                    }
+                                    continue;
+                                }
+
+                                // Now process the event we read
+                                try
+                                {
+                                    using (eventRecord)
                                     {
                                         var evt = new WindowsEvent
                                         {
@@ -905,6 +923,7 @@ namespace IndiLogs_3._0.ViewModels
                                             Source = eventRecord.ProviderName ?? "Unknown"
                                         };
 
+                                        // Parse level
                                         if (eventRecord.Level.HasValue)
                                         {
                                             evt.Level = eventRecord.Level.Value switch
@@ -925,70 +944,110 @@ namespace IndiLogs_3._0.ViewModels
 
                                         evt.Category = eventRecord.TaskDisplayName ?? "";
 
+                                        // Try to get message - this often fails
                                         try
                                         {
-                                            evt.Message = eventRecord.FormatDescription() ?? $"Event {evt.EventId}";
+                                            evt.Message = eventRecord.FormatDescription();
+                                            if (string.IsNullOrWhiteSpace(evt.Message))
+                                            {
+                                                throw new Exception("Empty message");
+                                            }
+                                        }
+                                        catch (EventLogNotFoundException)
+                                        {
+                                            // Provider not found - build message from properties
+                                            evt.Message = BuildMessageFromProperties(eventRecord);
                                         }
                                         catch
                                         {
-                                            var props = eventRecord.Properties;
-                                            if (props != null && props.Count > 0)
-                                            {
-                                                evt.Message = string.Join(" | ", props.Select(p => p.Value?.ToString()));
-                                            }
-                                            else
-                                            {
-                                                evt.Message = $"Event {evt.EventId} from {evt.Source}";
-                                            }
+                                            // Any other error - build message from properties
+                                            evt.Message = BuildMessageFromProperties(eventRecord);
                                         }
 
                                         events.Add(evt);
+                                        successCount++;
+
+                                        // Progress update every 100 events
+                                        if (successCount % 100 == 0)
+                                        {
+                                            Application.Current.Dispatcher.Invoke(() =>
+                                            {
+                                                StatusMessage = $"Loading: {successCount:N0} events (skipped: {errorCount})";
+                                            });
+                                        }
                                     }
-                                    catch
+                                }
+                                catch (Exception parseEx)
+                                {
+                                    errorCount++;
+
+                                    // Only log every 100th error to avoid spam
+                                    if (errorCount % 100 == 0)
                                     {
-                                        continue;
+                                        Debug.WriteLine($"⚠️ Error processing event (total errors: {errorCount}): {parseEx.Message}");
                                     }
+
+                                    if (errorCount > 5000)
+                                    {
+                                        Debug.WriteLine($"❌ Too many parse errors ({errorCount}), stopping");
+                                        break;
+                                    }
+                                    continue;
                                 }
                             }
 
-                            Debug.WriteLine($"✅ Read {events.Count} events");
+                            Debug.WriteLine($"✅ Successfully parsed {successCount:N0} events (Errors/Skipped: {errorCount:N0})");
                         }
                     }
                     finally
                     {
                         // Clean up temp file if we created one
-                        if (tempFilePath != null &&
-                            tempFilePath.StartsWith(Path.GetTempPath()) &&
-                            File.Exists(tempFilePath))
+                        if (isTemporary && tempFilePath != null && File.Exists(tempFilePath))
                         {
                             try
                             {
                                 File.Delete(tempFilePath);
                                 Debug.WriteLine($"🗑️ Deleted temp file");
                             }
-                            catch { }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine($"⚠️ Could not delete temp file: {ex.Message}");
+                            }
                         }
                     }
 
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         WindowsEvents.Clear();
-                        foreach (var evt in events.OrderByDescending(e => e.TimeCreated))
+
+                        if (events.Count > 0)
                         {
-                            WindowsEvents.Add(evt);
+                            foreach (var evt in events.OrderByDescending(e => e.TimeCreated))
+                            {
+                                WindowsEvents.Add(evt);
+                            }
+
+                            FilterWindowsEvents();
+                            StatusMessage = $"✅ Loaded {events.Count:N0} events from {fileName}";
+                        }
+                        else
+                        {
+                            StatusMessage = $"⚠️ No events could be read from {fileName}";
                         }
 
-                        FilterWindowsEvents();
-                        StatusMessage = $"Loaded {events.Count:N0} Windows events from {fileName}";
                         Debug.WriteLine($"=== LoadWindowsEvents FINISHED ===\n");
                     });
                 }
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"❌ LoadWindowsEvents EXCEPTION: {ex.Message}");
+                    Debug.WriteLine($"   Stack: {ex.StackTrace}");
+
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        StatusMessage = $"Error loading events: {ex.Message}";
+                        StatusMessage = $"Error: {ex.Message}";
+                        MessageBox.Show($"Failed to load Windows Events:\n\n{ex.Message}",
+                            "Event Log Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                     });
                 }
                 finally
@@ -1001,6 +1060,34 @@ namespace IndiLogs_3._0.ViewModels
             });
         }
 
+        // Helper method to build message from event properties
+        private string BuildMessageFromProperties(EventRecord eventRecord)
+        {
+            try
+            {
+                var props = eventRecord.Properties;
+                if (props != null && props.Count > 0)
+                {
+                    var propValues = props
+                        .Where(p => p.Value != null)
+                        .Select(p => p.Value.ToString())
+                        .Where(v => !string.IsNullOrWhiteSpace(v))
+                        .Take(5); // Limit to first 5 properties
+
+                    string propsText = string.Join(" | ", propValues);
+                    if (!string.IsNullOrEmpty(propsText))
+                    {
+                        return propsText;
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore errors in fallback
+            }
+
+            return $"Event {eventRecord.Id} from {eventRecord.ProviderName ?? "Unknown"}";
+        }
         // Filter Windows Events
         private void FilterWindowsEvents()
         {
