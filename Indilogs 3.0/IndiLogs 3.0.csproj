@@ -203,9 +203,7 @@
     <Compile Include="Converters\ArrayConverter.cs" />
     <Compile Include="Converters\BoolToVisibilityConverter.cs" />
     <Compile Include="Converters\InverseBooleanConverter.cs" />
-    <Compile Include="Converters\OxyColorToBrushConverter.cs" />
     <Compile Include="Models\DbTreeNode.cs" />
-    <Compile Include="Models\GraphModels.cs" />
     <Compile Include="Models\LoggerNode.cs" />
     <Compile Include="Models\StateEntry.cs" />
     <Compile Include="Models\TimelineMarker.cs" />
@@ -219,9 +217,6 @@
     </Compile>
     <Compile Include="Views\Exportprogresswindow.xaml.cs">
       <DependentUpon>Exportprogresswindow.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\FloatingChartWindow.xaml.cs">
-      <DependentUpon>FloatingChartWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\IndigoInvadersWindow.xaml.cs">
       <DependentUpon>IndigoInvadersWindow.xaml</DependentUpon>
@@ -268,7 +263,6 @@
     <Compile Include="Views\SaveConfigWindow.xaml.cs">
       <DependentUpon>SaveConfigWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Services\GraphService.cs" />
     <Compile Include="Services\ILogAnalyzer.cs" />
     <Compile Include="Services\LogColoringService.cs" />
     <Compile Include="Services\LogFileService.cs" />
@@ -289,7 +283,6 @@
       <DependentUpon>ExportConfigurationWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="ViewModels\ExportConfigurationViewModel.cs" />
-    <Compile Include="ViewModels\GraphsViewModel.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
     <Compile Include="ViewModels\RelayCommand.cs" />
     <Compile Include="App.xaml.cs">
@@ -340,10 +333,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\FilterWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\FloatingChartWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

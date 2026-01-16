@@ -387,7 +387,8 @@ namespace IndiLogs_3._0.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"ParseLogStream Error: {ex.Message}");
+                Debug.WriteLine($"ParseLogStream Error: {ex.GetType().Name} - {ex.Message}");
+                Debug.WriteLine($"Stack: {ex.StackTrace}");
             }
             return (allLogs, transitions, failures);
         }

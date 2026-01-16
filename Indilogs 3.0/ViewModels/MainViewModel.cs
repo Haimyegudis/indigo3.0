@@ -162,12 +162,15 @@ namespace IndiLogs_3._0.ViewModels
         private string _treeShowOnlyLogger = null;
         private string _treeShowOnlyPrefix = null;
 
-        // Live Monitoring
+        // Live Monitoring - Load last 2 minutes initially, then update cache every 5 seconds
         private CancellationTokenSource _liveCts;
         private string _liveFilePath;
-        private int _totalLogsReadFromFile;
-        private long _lastKnownFileSize;
-        private const int POLLING_INTERVAL_MS = 3000;
+        private int _lastParsedLogCount = 0; // Track number of logs parsed
+        private const int POLLING_INTERVAL_MS = 10000; // Check every 10 seconds
+        private const int UI_UPDATE_BATCH_SIZE = 500; // Show 500 logs at a time
+        private const int INITIAL_LOAD_MINUTES = 1; // Load last 1 minute initially (faster)
+        private const int POLLING_READ_BYTES = 5 * 1024 * 1024; // Read 5MB on each poll to ensure complete logs
+        private readonly object _collectionLock = new object(); // Thread safety for filter operations
 
         // Collections
         private IEnumerable<LogEntry> _logs;
@@ -561,7 +564,6 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand OpenJiraCommand { get; }
         public ICommand OpenKibanaCommand { get; }
         public ICommand OpenOutlookCommand { get; }
-        public ICommand OpenGraphViewerCommand { get; }
         public ICommand ToggleSearchCommand { get; }
         public ICommand CloseSearchCommand { get; }
         public ICommand OpenFilterWindowCommand { get; }
@@ -653,7 +655,6 @@ namespace IndiLogs_3._0.ViewModels
             OpenJiraCommand = new RelayCommand(o => OpenUrl("https://hp-jira.external.hp.com/secure/Dashboard.jspa"));
             OpenKibanaCommand = new RelayCommand(OpenKibana);
             OpenOutlookCommand = new RelayCommand(OpenOutlook);
-            OpenGraphViewerCommand = new RelayCommand(OpenGraphViewer);
 
             OpenMarkedLogsWindowCommand = new RelayCommand(o => { OpenMarkedLogsWindow(o); IsExplorerMenuOpen = false; });
             OpenStatesWindowCommand = new RelayCommand(o => { OpenStatesWindow(o); IsExplorerMenuOpen = false; });
@@ -754,11 +755,16 @@ namespace IndiLogs_3._0.ViewModels
                         Debug.WriteLine($"   ➕ Added file: {kvp.Key}");
                     }
 
-                    // 👇 זה השינוי - אל תבחר קובץ אוטומטית
-                    // SelectedWindowsEventFile = WindowsEventFiles[0]; // ❌ הסר את זה
-                    SelectedWindowsEventFile = null; // ✅ הוסף את זה במקום
-
-                    StatusMessage = $"Found {WindowsEventFiles.Count} event log files - Select one to view";
+                    // Auto-select first file to load it immediately
+                    if (WindowsEventFiles.Count > 0)
+                    {
+                        SelectedWindowsEventFile = WindowsEventFiles[0];
+                        StatusMessage = $"Loading {WindowsEventFiles[0]}...";
+                    }
+                    else
+                    {
+                        StatusMessage = "No event log files found";
+                    }
                     Debug.WriteLine("=== LoadWindowsEventFiles FINISHED (from memory) ===\n");
                     return;
                 }
@@ -793,11 +799,16 @@ namespace IndiLogs_3._0.ViewModels
 
                 if (WindowsEventFiles.Count > 0)
                 {
-                    // 👇 זה השינוי - אל תבחר קובץ אוטומטית
-                    // SelectedWindowsEventFile = WindowsEventFiles[0]; // ❌ הסר את זה
-                    SelectedWindowsEventFile = null; // ✅ הוסף את זה במקום
-
-                    StatusMessage = $"Found {WindowsEventFiles.Count} event log files - Select one to view";
+                    // Auto-select first file to load it immediately
+                    if (WindowsEventFiles.Count > 0)
+                    {
+                        SelectedWindowsEventFile = WindowsEventFiles[0];
+                        StatusMessage = $"Loading {WindowsEventFiles[0]}...";
+                    }
+                    else
+                    {
+                        StatusMessage = "No event log files found";
+                    }
                 }
                 else
                 {
@@ -881,6 +892,9 @@ namespace IndiLogs_3._0.ViewModels
                         int errorCount = 0;
                         int totalAttempts = 0;
 
+                        // Cache providers that don't have metadata available to avoid repeated exceptions
+                        var unavailableProviders = new HashSet<string>();
+
                         using (var reader = new EventLogReader(query))
                         {
                             while (totalAttempts < 50000) // Safety limit
@@ -914,67 +928,96 @@ namespace IndiLogs_3._0.ViewModels
                                 // Now process the event we read
                                 try
                                 {
-                                    using (eventRecord)
-                                    {
-                                        var evt = new WindowsEvent
-                                        {
-                                            EventId = eventRecord.Id.ToString(),
-                                            TimeCreated = eventRecord.TimeCreated ?? DateTime.MinValue,
-                                            Source = eventRecord.ProviderName ?? "Unknown"
-                                        };
+                                    var evt = new WindowsEvent();
 
-                                        // Parse level
-                                        if (eventRecord.Level.HasValue)
+                                    try
+                                    {
+                                        evt.EventId = eventRecord.Id.ToString();
+                                        evt.TimeCreated = eventRecord.TimeCreated ?? DateTime.MinValue;
+                                        evt.Source = eventRecord.ProviderName ?? "Unknown";
+
+                                        // Parse level - wrap in try/catch as this can throw
+                                        try
                                         {
-                                            evt.Level = eventRecord.Level.Value switch
+                                            if (eventRecord.Level.HasValue)
                                             {
-                                                0 => "Info",
-                                                1 => "Critical",
-                                                2 => "Error",
-                                                3 => "Warning",
-                                                4 => "Info",
-                                                5 => "Verbose",
-                                                _ => "Unknown"
-                                            };
+                                                evt.Level = eventRecord.Level.Value switch
+                                                {
+                                                    0 => "Info",
+                                                    1 => "Critical",
+                                                    2 => "Error",
+                                                    3 => "Warning",
+                                                    4 => "Info",
+                                                    5 => "Verbose",
+                                                    _ => "Unknown"
+                                                };
+                                            }
+                                            else
+                                            {
+                                                evt.Level = "Info";
+                                            }
                                         }
-                                        else
+                                        catch
                                         {
                                             evt.Level = "Info";
                                         }
 
-                                        evt.Category = eventRecord.TaskDisplayName ?? "";
-
-                                        // Try to get message - this often fails
+                                        // Category - can throw
                                         try
                                         {
-                                            evt.Message = eventRecord.FormatDescription();
-                                            if (string.IsNullOrWhiteSpace(evt.Message))
-                                            {
-                                                throw new Exception("Empty message");
-                                            }
-                                        }
-                                        catch (EventLogNotFoundException)
-                                        {
-                                            // Provider not found - build message from properties
-                                            evt.Message = BuildMessageFromProperties(eventRecord);
+                                            evt.Category = eventRecord.TaskDisplayName ?? "";
                                         }
                                         catch
                                         {
-                                            // Any other error - build message from properties
+                                            evt.Category = "";
+                                        }
+
+                                        // Try to get message - use cache to avoid repeated exceptions
+                                        string providerName = eventRecord.ProviderName ?? "Unknown";
+
+                                        if (unavailableProviders.Contains(providerName))
+                                        {
+                                            // Skip FormatDescription() for providers we know don't have metadata
                                             evt.Message = BuildMessageFromProperties(eventRecord);
+                                        }
+                                        else
+                                        {
+                                            try
+                                            {
+                                                evt.Message = eventRecord.FormatDescription();
+                                                if (string.IsNullOrWhiteSpace(evt.Message))
+                                                {
+                                                    throw new Exception("Empty message");
+                                                }
+                                            }
+                                            catch (EventLogNotFoundException)
+                                            {
+                                                // Provider not found - cache it and build message from properties
+                                                unavailableProviders.Add(providerName);
+                                                evt.Message = BuildMessageFromProperties(eventRecord);
+                                            }
+                                            catch
+                                            {
+                                                // Any other error - build message from properties
+                                                evt.Message = BuildMessageFromProperties(eventRecord);
+                                            }
                                         }
 
                                         events.Add(evt);
                                         successCount++;
 
-                                        // Progress update every 100 events
-                                        if (successCount % 100 == 0)
+                                        // Progress update every 500 events (less frequent for better performance)
+                                        if (successCount % 500 == 0)
                                         {
                                             Application.Current.Dispatcher.Invoke(() =>
                                             {
-                                                StatusMessage = $"Loading: {successCount:N0} events (skipped: {errorCount})";
+                                                StatusMessage = $"Loading: {successCount:N0} events";
                                             });
                                         }
+                                    }
+                                    finally
+                                    {
+                                        eventRecord?.Dispose();
                                     }
                                 }
                                 catch (Exception parseEx)
@@ -997,6 +1040,10 @@ namespace IndiLogs_3._0.ViewModels
                             }
 
                             Debug.WriteLine($"✅ Successfully parsed {successCount:N0} events (Errors/Skipped: {errorCount:N0})");
+                            if (unavailableProviders.Count > 0)
+                            {
+                                Debug.WriteLine($"ℹ️ {unavailableProviders.Count} providers had no metadata available");
+                            }
                         }
                     }
                     finally
@@ -1081,9 +1128,13 @@ namespace IndiLogs_3._0.ViewModels
                     }
                 }
             }
+            catch (EventLogNotFoundException)
+            {
+                // Provider metadata not available - return basic info
+            }
             catch
             {
-                // Ignore errors in fallback
+                // Ignore other errors in fallback
             }
 
             return $"Event {eventRecord.Id} from {eventRecord.ProviderName ?? "Unknown"}";
@@ -1125,6 +1176,36 @@ namespace IndiLogs_3._0.ViewModels
         }
         private async void ProcessFiles(string[] filePaths)
         {
+            // Check if this is a live log file (active file being written to)
+            if (filePaths.Length == 1 && File.Exists(filePaths[0]))
+            {
+                var filePath = filePaths[0];
+                var fileName = Path.GetFileName(filePath);
+                var ext = Path.GetExtension(filePath).ToLower();
+
+                // Detect live log files: .log or .file extension, or specific patterns like "no-sn.engineGroupA.file"
+                if (ext == ".log" || ext == ".file" ||
+                    fileName.IndexOf("engineGroup", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    fileName.IndexOf("no-sn", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    // Check if file is actively being written (might grow)
+                    try
+                    {
+                        using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        {
+                            // If we can open with ReadWrite sharing, it's likely a live file
+                            // Start live monitoring instead of loading as static file
+                            StartLiveMonitoring(filePath);
+                            return;
+                        }
+                    }
+                    catch
+                    {
+                        // If file is locked or not accessible, treat as static file
+                    }
+                }
+            }
+
             StopLiveMonitoring();
             IsBusy = true;
             StatusMessage = "Processing files...";
@@ -1650,86 +1731,32 @@ namespace IndiLogs_3._0.ViewModels
                 }
             });
         }
-        private async Task FetchNewData(long currentFileLength)
-        {
-            List<LogEntry> newItems = null;
-            await Task.Run(() =>
-            {
-                try
-                {
-                    using (var fs = new FileStream(_liveFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                    {
-                        using (var ms = new MemoryStream())
-                        {
-                            fs.CopyTo(ms);
-                            ms.Position = 0;
-                            var result = _logService.ParseLogStream(ms);
-                            var allLogs = result.AllLogs;
-
-                            int totalCount = allLogs.Count;
-                            int newLogsCount = totalCount - _totalLogsReadFromFile;
-
-                            if (newLogsCount > 0)
-                            {
-                                newItems = allLogs.Skip(_totalLogsReadFromFile).ToList();
-                                _totalLogsReadFromFile = totalCount;
-                                _lastKnownFileSize = currentFileLength;
-                            }
-                            else
-                            {
-                                _lastKnownFileSize = currentFileLength;
-                            }
-                        }
-                    }
-                }
-                catch { }
-            });
-
-            if (newItems != null && newItems.Count > 0)
-            {
-                await _coloringService.ApplyDefaultColorsAsync(newItems, false);
-                if (_savedColoringRules.Count > 0)
-                    await _coloringService.ApplyCustomColoringAsync(newItems, _savedColoringRules);
-                newItems.Reverse();
-
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    _liveLogsCollection.InsertRange(0, newItems);
-                    List<LogEntry> itemsForFilteredTab = newItems.Where(IsDefaultLog).ToList();
-                    if (itemsForFilteredTab != null && itemsForFilteredTab.Count > 0)
-                    {
-                        FilteredLogs.InsertRange(0, itemsForFilteredTab);
-                        SelectedLog = FilteredLogs[0];
-                    }
-                });
-            }
-        }
 
         private void LiveClear(object obj)
         {
+            Debug.WriteLine("LiveClear called");
             IsRunning = false;
-            if (_allLogsCache != null) _allLogsCache.Clear();
-            FilteredLogs.Clear();
-            Task.Run(async () =>
+
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                if (!File.Exists(_liveFilePath)) return;
-                try
+                lock (_collectionLock)
                 {
-                    using (var fs = new FileStream(_liveFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                    {
-                        using (var ms = new MemoryStream())
-                        {
-                            await fs.CopyToAsync(ms);
-                            ms.Position = 0;
-                            var result = _logService.ParseLogStream(ms);
-                            _totalLogsReadFromFile = result.AllLogs.Count;
-                            _lastKnownFileSize = fs.Length;
-                        }
-                    }
+                    if (_allLogsCache != null) _allLogsCache.Clear();
+                    FilteredLogs.Clear();
+                    SelectedLog = null;
                 }
-                catch { }
             });
-            StatusMessage = "Cleared. Press Play to resume from now.";
+
+            if (IsLiveMode)
+            {
+                IsRunning = true;
+                StatusMessage = "Cleared. Monitoring continues...";
+                Debug.WriteLine("LiveClear: Cleared UI, monitoring continues");
+            }
+            else
+            {
+                StatusMessage = "Logs cleared.";
+            }
         }
 
         private void ClearLogs(object obj)
@@ -2291,21 +2318,125 @@ namespace IndiLogs_3._0.ViewModels
                 AppDevLogsFiltered.ReplaceAll(resultList);
             });
         }
-        private void StartLiveMonitoring(string path)
+        private async void StartLiveMonitoring(string path)
         {
             ClearLogs(null);
             LoadedFiles.Add(Path.GetFileName(path));
             _liveFilePath = path;
-            _lastKnownFileSize = 0;
-            _totalLogsReadFromFile = 0;
+
             _liveLogsCollection = new ObservableRangeCollection<LogEntry>();
             _allLogsCache = _liveLogsCollection;
             Logs = _liveLogsCollection;
             IsLiveMode = true;
-            IsRunning = true;
             WindowTitle = "IndiLogs 3.0 - LIVE MONITORING";
-            _liveCts = new CancellationTokenSource();
-            Task.Run(() => PollingLoop(_liveCts.Token));
+
+            IsBusy = true;
+            StatusMessage = "Loading last 1 minute of logs...";
+            IsRunning = false;
+
+            try
+            {
+                Debug.WriteLine($">>> StartLiveMonitoring: Loading last {INITIAL_LOAD_MINUTES} minutes");
+
+                // Parse only LAST 20MB of file for faster initial load
+                const long INITIAL_READ_BYTES = 20 * 1024 * 1024; // 20MB
+                List<LogEntry> allLogs = null;
+                List<LogEntry> recentLogs = null;
+
+                await Task.Run(() =>
+                {
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        long fileSize = fs.Length;
+
+                        // Read only last 20MB or entire file if smaller
+                        long bytesToRead = Math.Min(fileSize, INITIAL_READ_BYTES);
+                        long startPos = fileSize - bytesToRead;
+
+                        Debug.WriteLine($">>> File size: {fileSize:N0} bytes, reading last {bytesToRead:N0} bytes");
+
+                        fs.Seek(startPos, SeekOrigin.Begin);
+
+                        using (var ms = new MemoryStream())
+                        {
+                            fs.CopyTo(ms);
+                            ms.Position = 0;
+
+                            var result = _logService.ParseLogStream(ms);
+                            allLogs = result.AllLogs;
+
+                            sw.Stop();
+                            Debug.WriteLine($">>> Parsed {allLogs?.Count ?? 0} logs from last {bytesToRead:N0} bytes in {sw.ElapsedMilliseconds:N0}ms");
+
+                            if (allLogs != null && allLogs.Count > 0)
+                            {
+                                _lastParsedLogCount = allLogs.Count; // Save for polling
+
+                                // Show only last 1 minute
+                                DateTime lastLogTime = allLogs[allLogs.Count - 1].Date;
+                                DateTime cutoffTime = lastLogTime.AddMinutes(-INITIAL_LOAD_MINUTES);
+                                recentLogs = allLogs.Where(log => log.Date >= cutoffTime).ToList();
+
+                                Debug.WriteLine($">>> Showing {recentLogs.Count:N0} logs from last {INITIAL_LOAD_MINUTES} min");
+                            }
+                        }
+                    }
+                });
+
+                if (recentLogs != null && recentLogs.Count > 0)
+                {
+                    // Apply colors
+                    await _coloringService.ApplyDefaultColorsAsync(recentLogs, false);
+
+                    // Add to UI in BATCHES to prevent freezing
+                    Debug.WriteLine($">>> Adding {recentLogs.Count:N0} logs to UI in batches of {UI_UPDATE_BATCH_SIZE}");
+
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        // Add all to cache using AddRange (fast)
+                        var reversedLogs = recentLogs.AsEnumerable().Reverse().ToList();
+                        _liveLogsCollection.AddRange(reversedLogs);
+
+                        // In LIVE mode, show ALL logs (don't filter)
+                        // User can apply filters manually if needed
+                        FilteredLogs.AddRange(reversedLogs);
+                        if (FilteredLogs.Count > 0)
+                        {
+                            SelectedLog = FilteredLogs[0];
+                        }
+
+                        StatusMessage = $"Live: {FilteredLogs.Count:N0} logs shown (last {INITIAL_LOAD_MINUTES} min)";
+                        Debug.WriteLine($">>> Added {FilteredLogs.Count:N0} logs to UI");
+                    });
+                }
+                else
+                {
+                    Debug.WriteLine(">>> No logs parsed from file");
+                    StatusMessage = "No logs found in file - will keep monitoring for new logs";
+                }
+
+                IsBusy = false;
+
+                // NOW start polling (every 5 seconds)
+                IsRunning = true;
+                _liveCts = new CancellationTokenSource();
+                Task.Run(() => PollingLoop(_liveCts.Token));
+
+                Debug.WriteLine($">>> Live monitoring started - polling every 5 seconds");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"StartLiveMonitoring error: {ex.GetType().Name} - {ex.Message}");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+                IsBusy = false;
+                StatusMessage = $"Error loading file: {ex.Message}";
+
+                // Still start polling - maybe file will be accessible next time
+                IsRunning = true;
+                _liveCts = new CancellationTokenSource();
+                Task.Run(() => PollingLoop(_liveCts.Token));
+            }
         }
         private void StopLiveMonitoring()
         {
@@ -2313,6 +2444,7 @@ namespace IndiLogs_3._0.ViewModels
             IsLiveMode = false;
             IsRunning = false;
             _liveFilePath = null;
+            _lastParsedLogCount = 0;
             WindowTitle = "IndiLogs 3.0";
         }
         private async Task PollingLoop(CancellationToken token)
@@ -2323,19 +2455,99 @@ namespace IndiLogs_3._0.ViewModels
                 {
                     if (IsRunning && File.Exists(_liveFilePath))
                     {
-                        FileInfo fi = new FileInfo(_liveFilePath);
-                        long currentLen = fi.Length;
-                        if (currentLen > _lastKnownFileSize) await FetchNewData(currentLen);
-                        else if (currentLen < _lastKnownFileSize) { _lastKnownFileSize = 0; _totalLogsReadFromFile = 0; }
+                        Debug.WriteLine($"[{DateTime.Now:HH:mm:ss}] Polling for new logs...");
+                        await RefreshLogs();
                     }
                 }
-                catch (Exception ex) { Debug.WriteLine($"Polling Error: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Polling Error: {ex.Message}");
+                }
+
                 try { await Task.Delay(POLLING_INTERVAL_MS, token); }
                 catch (TaskCanceledException) { break; }
             }
         }
-        private void LivePlay(object obj) { IsRunning = true; StatusMessage = "Live monitoring active."; }
-        private void LivePause(object obj) { IsRunning = false; StatusMessage = "Live monitoring paused."; }
+
+        private async Task RefreshLogs()
+        {
+            try
+            {
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+
+                // Parse entire file again
+                List<LogEntry> allLogs = await Task.Run(() =>
+                {
+                    using (var fs = new FileStream(_liveFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    using (var ms = new MemoryStream())
+                    {
+                        fs.CopyTo(ms);
+                        ms.Position = 0;
+                        var result = _logService.ParseLogStream(ms);
+                        return result.AllLogs;
+                    }
+                });
+
+                sw.Stop();
+                Debug.WriteLine($"  Parsed {allLogs?.Count ?? 0} logs in {sw.ElapsedMilliseconds}ms (previous: {_lastParsedLogCount})");
+
+                if (allLogs != null && allLogs.Count > _lastParsedLogCount)
+                {
+                    // Get only NEW logs (from end of list)
+                    var newLogs = allLogs.Skip(_lastParsedLogCount).ToList();
+                    Debug.WriteLine($"  Found {newLogs.Count} NEW logs");
+
+                    _lastParsedLogCount = allLogs.Count; // Update count
+
+                    // Apply coloring
+                    await _coloringService.ApplyDefaultColorsAsync(newLogs, false);
+                    if (_savedColoringRules.Count > 0)
+                        await _coloringService.ApplyCustomColoringAsync(newLogs, _savedColoringRules);
+
+                    // Add new logs to UI at TOP (newest first)
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        lock (_collectionLock)
+                        {
+                            // Add to cache at top (reverse order = newest first)
+                            for (int i = newLogs.Count - 1; i >= 0; i--)
+                            {
+                                _liveLogsCollection.Insert(0, newLogs[i]);
+                            }
+
+                            // Add to UI at top (reverse order = newest first)
+                            for (int i = newLogs.Count - 1; i >= 0; i--)
+                            {
+                                FilteredLogs.Insert(0, newLogs[i]);
+                            }
+
+                            if (SelectedLog == null && FilteredLogs.Count > 0)
+                                SelectedLog = FilteredLogs[0];
+
+                            StatusMessage = $"Live: {FilteredLogs.Count:N0} logs (+{newLogs.Count} new)";
+                        }
+                    });
+
+                    Debug.WriteLine($"  Added {newLogs.Count} new logs to UI");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"RefreshLogs error: {ex.Message}");
+            }
+        }
+        private void LivePlay(object obj)
+        {
+            Debug.WriteLine($"LivePlay called - IsLiveMode: {IsLiveMode}, _liveFilePath: {_liveFilePath}");
+            IsRunning = true;
+            StatusMessage = "Live monitoring active.";
+        }
+        private void LivePause(object obj)
+        {
+            Debug.WriteLine($"LivePause called");
+            IsRunning = false;
+            StatusMessage = "Live monitoring paused.";
+        }
         private void LoadFile(object obj)
         {
             var dialog = new OpenFileDialog { Multiselect = true, Filter = "All Supported|*.zip;*.log|Log Files (*.log)|*.log|Log Archives (*.zip)|*.zip|All files (*.*)|*.*" };
@@ -2398,7 +2610,17 @@ namespace IndiLogs_3._0.ViewModels
                     else
                     {
                         _mainFilterRoot = newRoot;
-                        if (hasAdvanced) { var res = _allLogsCache.Where(l => EvaluateFilterNode(l, _mainFilterRoot)).ToList(); _lastFilteredCache = res; }
+                        if (hasAdvanced)
+                        {
+                            // Thread-safe enumeration: create a copy of the collection before filtering
+                            List<LogEntry> cacheCopy;
+                            lock (_collectionLock)
+                            {
+                                cacheCopy = _allLogsCache.ToList();
+                            }
+                            var res = cacheCopy.Where(l => EvaluateFilterNode(l, _mainFilterRoot)).ToList();
+                            _lastFilteredCache = res;
+                        }
                         else _lastFilteredCache.Clear();
                     }
                 });
@@ -2835,11 +3057,6 @@ namespace IndiLogs_3._0.ViewModels
         private void OpenUrl(string url) { try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); } catch { } }
         private void OpenOutlook(object obj) { try { Process.Start("outlook.exe", "/c ipm.note"); } catch { OpenUrl("mailto:"); } }
         private void OpenKibana(object obj) { }
-        private void OpenGraphViewer(object obj)
-        {
-            try { string exePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "IoRecorderViewer.exe"); if (File.Exists(exePath)) Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true, WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory }); else MessageBox.Show($"File not found:\n{exePath}", "Error", MessageBoxButton.OK, MessageBoxImage.Error); }
-            catch (Exception ex) { MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error); }
-        }
         public void OnFilesDropped(string[] files) { if (files != null && files.Length > 0) ProcessFiles(files); LoadWindowsEventFiles(); }
 
         public event PropertyChangedEventHandler PropertyChanged;

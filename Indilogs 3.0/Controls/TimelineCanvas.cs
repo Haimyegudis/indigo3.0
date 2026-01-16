@@ -340,6 +340,7 @@ namespace IndiLogs_3._0.Controls
             else if (_isDragging && States != null && States.Any())
             {
                 double dx = _currentMousePos.X - _dragStart.X;
+                if (States == null || !States.Any()) return;
                 DateTime min = States.Min(s => s.StartTime);
                 DateTime max = States.Max(s => s.EndTime);
                 double totalSec = (max - min).TotalSeconds;
@@ -358,6 +359,7 @@ namespace IndiLogs_3._0.Controls
                 double width = x2 - x1;
                 if (width > 10)
                 {
+                    if (States == null || !States.Any()) return;
                     DateTime min = States.Min(s => s.StartTime);
                     DateTime max = States.Max(s => s.EndTime);
                     double totalSec = (max - min).TotalSeconds;
@@ -375,11 +377,12 @@ namespace IndiLogs_3._0.Controls
 
         private void OnMouseWheel(object sender, MouseWheelEventArgs e)
         {
-            if (States == null) return;
+            if (States == null || !States.Any()) return;
             Point mousePos = e.GetPosition(this);
             DateTime min = States.Min(s => s.StartTime);
             DateTime max = States.Max(s => s.EndTime);
             double totalSec = (max - min).TotalSeconds;
+            if (totalSec <= 0) return; // Prevent division by zero
             double mouseTimeBefore = XToSeconds(mousePos.X, ActualWidth, totalSec);
             double zoomFactor = e.Delta > 0 ? 1.2 : 0.8;
             ViewScale *= zoomFactor;
