@@ -173,6 +173,7 @@ namespace IndiLogs_3._0.ViewModels
         private const int UI_UPDATE_BATCH_SIZE = 500; // Show 500 logs at a time
         private const int POLLING_READ_BYTES = 5 * 1024 * 1024; // Read 5MB on each poll to ensure complete logs
         private CancellationTokenSource _liveCts;
+        private CustomLiveLogReader _customReader;
         private int _lastParsedLogCount = 0; // Track number of logs we've already shown
         private const int POLLING_INTERVAL_MS = 5000; // Check every 5 seconds
         private const int INITIAL_LOAD_MINUTES = 2; // Load last 2 minutes initially
@@ -2191,6 +2192,21 @@ namespace IndiLogs_3._0.ViewModels
         }
         private void UpdateMainLogsFilter(bool show)
         {
+            // === תיקון לבעיית הטאבים ב-Live Mode ===
+            // אם אנחנו ב-Live, הטאב הראשי (Logs) חייב להישאר מחובר ל-Collection החי.
+            // אסור להחליף אותו ב-List סטטי (ToList), כי זה מנתק את העדכונים.
+            if (IsLiveMode)
+            {
+                if (Logs != _liveLogsCollection)
+                {
+                    Logs = _liveLogsCollection;
+                }
+                // במצב Live, הסינון חל רק על FilteredLogs (בטאב השני).
+                // הטאב הראשי תמיד מציג את הכל.
+                return;
+            }
+            // ========================================
+
             bool isActive = _isMainFilterActive;
             IEnumerable<LogEntry> currentLogs;
             bool hasSearchText = !string.IsNullOrWhiteSpace(SearchText) && SearchText.Length >= 2;
@@ -2324,144 +2340,129 @@ namespace IndiLogs_3._0.ViewModels
                 AppDevLogsFiltered.ReplaceAll(resultList);
             });
         }
-        private async void StartLiveMonitoring(string path)
+        // Indilogs 3.0/ViewModels/MainViewModel.cs
+
+        private void StartLiveMonitoring(string path)
         {
+            // ניקוי
+            StopLiveMonitoring();
             ClearLogs(null);
+
+            // הגדרות UI
             LoadedFiles.Add(Path.GetFileName(path));
             _liveFilePath = path;
-
             _liveLogsCollection = new ObservableRangeCollection<LogEntry>();
             _allLogsCache = _liveLogsCollection;
             Logs = _liveLogsCollection;
+
             IsLiveMode = true;
-            WindowTitle = "IndiLogs 3.0 - LIVE MONITORING";
+            IsRunning = true;
+            WindowTitle = "IndiLogs 3.0 - LIVE MONITORING (Custom)";
 
-            IsBusy = true;
-            StatusMessage = "Loading logs (this may take a moment)...";
-            IsRunning = false;
+            // אתחול המנגנון החדש
+            _liveCts = new CancellationTokenSource();
+            _customReader = new CustomLiveLogReader();
 
-            try
+            // רישום לאירועים
+            _customReader.OnStatusChanged += (msg) =>
             {
-                Debug.WriteLine($">>> StartLiveMonitoring: FULL FILE READ");
+                Application.Current.Dispatcher.Invoke(() => StatusMessage = msg);
+            };
 
-                List<LogEntry> allLogs = null;
-                List<LogEntry> recentLogs = null;
+            // בתוך StartLiveMonitoring, החלף את הרישום ל-OnLogsReceived:
 
-                // ====================================================================
-                // קרא את כל הקובץ מההתחלה (אין ברירה)
-                // ====================================================================
-                await Task.Run(() =>
+            _customReader.OnLogsReceived += (newLogs) =>
+            {
+                Task.Run(async () =>
                 {
-                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    // 1. החלת צבעים (דיפולטיים + מותאמים אישית אם יש)
+                    await _coloringService.ApplyDefaultColorsAsync(newLogs, false);
 
-                    using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    // אם יש חוקי צביעה מותאמים אישית פעילים
+                    if (_mainColoringRules != null && _mainColoringRules.Any())
                     {
-                        long fileSize = fs.Length;
-                        _lastFileSize = fileSize;
-
-                        Debug.WriteLine($">>> File size: {fileSize:N0} bytes");
-                        Debug.WriteLine($">>> Reading ENTIRE file from start (no seeking)...");
-
-                        using (var ms = new MemoryStream())
-                        {
-                            // קרא את כל הקובץ
-                            fs.CopyTo(ms);
-                            ms.Position = 0;
-
-                            Debug.WriteLine($">>> Parsing {ms.Length:N0} bytes with IndigoLogsReader...");
-
-                            var result = _logService.ParseLogStream(ms);
-                            allLogs = result.AllLogs;
-
-                            sw.Stop();
-                            Debug.WriteLine($">>> Parsed {allLogs?.Count ?? 0} total logs in {sw.ElapsedMilliseconds:N0}ms");
-
-                            if (allLogs != null && allLogs.Count > 0)
-                            {
-                                _lastParsedLogCount = allLogs.Count;
-
-                                // סנן רק את ה-2 דקות אחרונות לתצוגה
-                                DateTime lastLogTime = allLogs[allLogs.Count - 1].Date;
-                                DateTime cutoffTime = lastLogTime.AddMinutes(-2);
-                                recentLogs = allLogs.Where(log => log.Date >= cutoffTime).ToList();
-
-                                Debug.WriteLine($">>> Last log time: {lastLogTime:yyyy-MM-dd HH:mm:ss.fff}");
-                                Debug.WriteLine($">>> Cutoff time: {cutoffTime:yyyy-MM-dd HH:mm:ss.fff}");
-                                Debug.WriteLine($">>> Total in memory: {allLogs.Count:N0} logs");
-                                Debug.WriteLine($">>> Showing recent: {recentLogs.Count:N0} logs (last 2 min)");
-                            }
-                            else
-                            {
-                                Debug.WriteLine($"❌ No logs parsed!");
-                                _lastParsedLogCount = 0;
-                            }
-                        }
+                        await _coloringService.ApplyCustomColoringAsync(newLogs, _mainColoringRules);
                     }
-                });
 
-                if (allLogs != null && allLogs.Count > 0)
-                {
-                    Debug.WriteLine($">>> Applying colors to ALL {allLogs.Count:N0} logs...");
-
-                    // צבע את כל הלוגים
-                    await _coloringService.ApplyDefaultColorsAsync(allLogs, false);
-
-                    // שמור את כל הלוגים בcache (בזיכרון)
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        _liveLogsCollection.AddRange(allLogs.OrderByDescending(l => l.Date));
-
-                        Debug.WriteLine($">>> Cache loaded: {_liveLogsCollection.Count:N0} logs");
-                    });
-
-                    // הצג רק את האחרונים בUI
-                    if (recentLogs != null && recentLogs.Count > 0)
-                    {
-                        Debug.WriteLine($">>> Adding {recentLogs.Count:N0} recent logs to UI...");
-
-                        Application.Current.Dispatcher.Invoke(() =>
+                        lock (_collectionLock)
                         {
-                            var reversedLogs = recentLogs.AsEnumerable().Reverse().ToList();
-                            FilteredLogs.AddRange(reversedLogs);
-
-                            if (FilteredLogs.Count > 0)
+                            foreach (var log in newLogs) // שומרים על סדר כרונולוגי
                             {
-                                SelectedLog = FilteredLogs[0];
+                                // א. הוספה תמיד לטאב הראשי (PLC) ולזיכרון
+                                _liveLogsCollection.Insert(0, log);
+
+                                // ב. הוספה לטאב המסונן (PLC FILTERED) רק אם עומד בתנאים!
+                                if (ShouldShowInFilteredView(log))
+                                {
+                                    FilteredLogs.Insert(0, log);
+                                }
                             }
 
-                            StatusMessage = $"Live: {FilteredLogs.Count:N0} shown (last 2 min) | {_liveLogsCollection.Count:N0} total in memory";
-                            Debug.WriteLine($">>> ✅ UI shows {FilteredLogs.Count:N0} logs, {_liveLogsCollection.Count:N0} in cache");
-                        });
+                            StatusMessage = $"Live: {FilteredLogs.Count:N0} filtered / {_liveLogsCollection.Count:N0} total";
+                        }
+                    });
+                });
+            };
+
+            // הפעלה ברקע
+            Task.Run(() => _customReader.StartMonitoring(path, _liveCts.Token));
+        }
+        private bool ShouldShowInFilteredView(LogEntry log)
+        {
+            // 1. בדיקת Negative Filters (Filter Out) - תמיד פעיל אם מוגדר
+            if (_isMainFilterOutActive && _negativeFilters.Any())
+            {
+                foreach (var f in _negativeFilters)
+                {
+                    if (f.StartsWith("THREAD:"))
+                    {
+                        if (log.ThreadName != null && log.ThreadName.IndexOf(f.Substring(7), StringComparison.OrdinalIgnoreCase) >= 0)
+                            return false;
+                    }
+                    else
+                    {
+                        if (log.Message != null && log.Message.IndexOf(f, StringComparison.OrdinalIgnoreCase) >= 0)
+                            return false;
                     }
                 }
-                else
-                {
-                    Debug.WriteLine("❌ No logs to display!");
-                    StatusMessage = "No logs found - monitoring for new logs...";
-                }
-
-                IsBusy = false;
-                IsRunning = true;
-
-                // התחל FileSystemWatcher
-                StartFileWatcher(path);
-
-                Debug.WriteLine($">>> ✅ Live monitoring started");
             }
-            catch (Exception ex)
+
+            // 2. האם יש פילטרים פעילים? (חיפוש, עצים, Threads)
+            bool hasSearch = !string.IsNullOrWhiteSpace(SearchText);
+            bool hasActiveFilter = _isMainFilterActive || hasSearch || _activeThreadFilters.Any();
+
+            // 3. אם אין שום פילטר פעיל -> השתמש בלוגיקה הדיפולטית (Default Colors/Filter)
+            // זה מה שגורם לטאב "PLC Filtered" להיראות כמו בטעינה רגילה
+            if (!hasActiveFilter)
             {
-                Debug.WriteLine($"❌ StartLiveMonitoring error: {ex.Message}");
-                Debug.WriteLine($"   Stack: {ex.StackTrace}");
-
-                IsBusy = false;
-                StatusMessage = $"Error: {ex.Message}";
-
-                // עדיין התחל FileSystemWatcher
-                StartFileWatcher(path);
+                return IsDefaultLog(log);
             }
+
+            // 4. בדיקת פילטרים פעילים
+
+            // Thread Filter
+            if (_activeThreadFilters.Any())
+            {
+                if (!_activeThreadFilters.Contains(log.ThreadName)) return false;
+            }
+
+            // Search Text
+            if (hasSearch)
+            {
+                if (log.Message == null || log.Message.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) < 0)
+                    return false;
+            }
+
+            // Advanced Tree / Condition Filter
+            if (_mainFilterRoot != null && _mainFilterRoot.Children != null && _mainFilterRoot.Children.Count > 0)
+            {
+                if (!EvaluateFilterNode(log, _mainFilterRoot)) return false;
+            }
+
+            return true;
         }
-
-
         private void StartFileWatcher(string filePath)
         {
             try
@@ -2684,24 +2685,13 @@ namespace IndiLogs_3._0.ViewModels
 
         private void StopLiveMonitoring()
         {
-            if (_fileWatcher != null)
-            {
-                Debug.WriteLine($">>> Stopping FileSystemWatcher");
-                _fileWatcher.EnableRaisingEvents = false;
-                _fileWatcher.Dispose();
-                _fileWatcher = null;
-            }
+            _liveCts?.Cancel();
+            _liveCts = null;
+            _customReader = null;
 
             IsLiveMode = false;
             IsRunning = false;
-            _liveFilePath = null;
-            _lastParsedLogCount = 0;
-            _lastFileSize = 0;
-            _isRefreshActive = false;
-            _lastFileCheckTime = DateTime.MinValue;
-            WindowTitle = "IndiLogs 3.0";
-
-            Debug.WriteLine(">>> Live monitoring stopped");
+            StatusMessage = "Live monitoring stopped.";
         }
 
 
@@ -2751,167 +2741,68 @@ namespace IndiLogs_3._0.ViewModels
 
 
 
+        // Indilogs 3.0/ViewModels/MainViewModel.cs
+
         private async Task RefreshLogs()
         {
-            // למנוע refreshים מקבילים
-            if (_isRefreshActive)
-            {
-                Debug.WriteLine($"  ⏸️ Refresh skipped (previous still running)");
-                return;
-            }
-
+            if (_isRefreshActive) return;
             _isRefreshActive = true;
-            Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] >>> RefreshLogs STARTED");
 
             try
             {
-                // בדוק אם הקובץ קיים
-                if (!File.Exists(_liveFilePath))
+                // בדיקה מהירה אם הקובץ באמת גדל
+                long currentLength = new FileInfo(_liveFilePath).Length;
+                if (currentLength <= _lastStreamPosition)
                 {
-                    Debug.WriteLine($"  ❌ File not found: {_liveFilePath}");
+                    _isRefreshActive = false;
                     return;
                 }
 
-                var sw = System.Diagnostics.Stopwatch.StartNew();
-
-                // בדוק גודל קובץ
-                long currentFileSize;
-                try
+                await Task.Run(() =>
                 {
-                    var fileInfo = new FileInfo(_liveFilePath);
-                    currentFileSize = fileInfo.Length;
-                    Debug.WriteLine($"  Current file size: {currentFileSize:N0} bytes (was {_lastFileSize:N0})");
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"  ❌ Cannot access file: {ex.Message}");
-                    return;
-                }
-
-                // בדוק אם הקובץ גדל
-                const long MIN_GROWTH = 1024; // 1KB לפחות
-                long growth = currentFileSize - _lastFileSize;
-
-                if (growth < MIN_GROWTH)
-                {
-                    Debug.WriteLine($"  ℹ️ File grew by only {growth:N0} bytes - skipping parse");
-                    return;
-                }
-
-                _lastFileSize = currentFileSize;
-                Debug.WriteLine($"  File grew by {growth:N0} bytes - parsing entire file...");
-
-                // Parse את כל הקובץ מההתחלה
-                List<LogEntry> allLogs = null;
-
-                try
-                {
-                    allLogs = await Task.Run(() =>
+                    using (var fs = new FileStream(_liveFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                     {
-                        using (var fs = new FileStream(_liveFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                        using (var ms = new MemoryStream())
+                        // 1. קפיצה למיקום האחרון הידוע
+                        fs.Seek(_lastStreamPosition, SeekOrigin.Begin);
+
+                        // 2. קריאת הדלתא (הלוגים החדשים בלבד)
+                        var newLogs = _logService.ParseLogStreamPartial(fs);
+
+                        // 3. עדכון המיקום לפעם הבאה
+                        _lastStreamPosition = fs.Position;
+                        _lastFileSize = fs.Length;
+
+                        if (newLogs.Count > 0)
                         {
-                            Debug.WriteLine($"  Copying {fs.Length:N0} bytes to memory...");
-                            fs.CopyTo(ms);
-                            ms.Position = 0;
+                            // צביעה
+                            _coloringService.ApplyDefaultColorsAsync(newLogs, false).Wait();
 
-                            Debug.WriteLine($"  Parsing with IndigoLogsReader...");
-                            var result = _logService.ParseLogStream(ms);
-
-                            Debug.WriteLine($"  Parse complete: {result.AllLogs?.Count ?? 0} logs");
-                            return result.AllLogs;
+                            // עדכון UI
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                lock (_collectionLock)
+                                {
+                                    foreach (var log in newLogs.OrderByDescending(l => l.Date))
+                                    {
+                                        FilteredLogs.Insert(0, log);       // הוספה לראש התצוגה
+                                        _liveLogsCollection.Insert(0, log); // הוספה לראש ה-Cache
+                                    }
+                                    StatusMessage = $"Live: {FilteredLogs.Count:N0} logs (+{newLogs.Count} new)";
+                                }
+                            });
                         }
-                    });
-                }
-                catch (Exception parseEx)
-                {
-                    Debug.WriteLine($"  ❌ Parse error: {parseEx.Message}");
-                    return;
-                }
-
-                sw.Stop();
-                Debug.WriteLine($"  Parsed {allLogs?.Count ?? 0} total logs in {sw.ElapsedMilliseconds:N0}ms");
-
-                if (allLogs == null || allLogs.Count == 0)
-                {
-                    Debug.WriteLine($"  ⚠️ No logs returned!");
-                    return;
-                }
-
-                Debug.WriteLine($"  Previous count: {_lastParsedLogCount}, New count: {allLogs.Count}");
-
-                if (allLogs.Count > _lastParsedLogCount)
-                {
-                    // קבל רק לוגים חדשים
-                    var newLogs = allLogs.Skip(_lastParsedLogCount).ToList();
-                    Debug.WriteLine($"  Found {newLogs.Count:N0} NEW logs");
-
-                    if (newLogs.Count == 0)
-                    {
-                        Debug.WriteLine($"  ⚠️ No new logs after Skip!");
-                        return;
                     }
-
-                    // עדכן count
-                    _lastParsedLogCount = allLogs.Count;
-
-                    // צבע
-                    Debug.WriteLine($"  Applying colors to {newLogs.Count:N0} new logs...");
-                    await _coloringService.ApplyDefaultColorsAsync(newLogs, false);
-                    if (_savedColoringRules != null && _savedColoringRules.Count > 0)
-                        await _coloringService.ApplyCustomColoringAsync(newLogs, _savedColoringRules);
-
-                    // הוסף ל-UI
-                    Debug.WriteLine($"  Adding {newLogs.Count:N0} logs to UI...");
-
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        lock (_collectionLock)
-                        {
-                            // הוסף ל-cache
-                            foreach (var log in newLogs.OrderByDescending(l => l.Date))
-                            {
-                                _liveLogsCollection.Insert(0, log);
-                            }
-
-                            // הוסף ל-UI
-                            foreach (var log in newLogs.OrderByDescending(l => l.Date))
-                            {
-                                FilteredLogs.Insert(0, log);
-                            }
-
-                            if (SelectedLog == null && FilteredLogs.Count > 0)
-                                SelectedLog = FilteredLogs[0];
-
-                            StatusMessage = $"Live: {FilteredLogs.Count:N0} shown (+{newLogs.Count} new) | {_liveLogsCollection.Count:N0} total";
-                        }
-                    });
-
-                    Debug.WriteLine($"  ✅ Added {newLogs.Count:N0} new logs (Total: {_liveLogsCollection.Count:N0})");
-                }
-                else if (allLogs.Count < _lastParsedLogCount)
-                {
-                    Debug.WriteLine($"  ⚠️ Log count DECREASED! {_lastParsedLogCount} → {allLogs.Count}");
-                    Debug.WriteLine($"     File might have been truncated or recreated");
-                    _lastParsedLogCount = allLogs.Count;
-                }
-                else
-                {
-                    Debug.WriteLine($"  ℹ️ No new logs (still at {_lastParsedLogCount:N0})");
-                }
+                });
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"❌ RefreshLogs error: {ex.Message}");
-                Debug.WriteLine($"   Stack: {ex.StackTrace}");
+                Debug.WriteLine($"RefreshLogs Error: {ex.Message}");
             }
             finally
             {
                 _isRefreshActive = false;
-                Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] >>> RefreshLogs FINISHED");
             }
         }
-
 
         // ============================================================================
         // STEP 4: REPLACE StopLiveMonitoring() METHOD (around line 1601)

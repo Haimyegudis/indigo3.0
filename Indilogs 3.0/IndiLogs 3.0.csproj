@@ -212,6 +212,7 @@
     <Compile Include="Models\Windowsevent.cs" />
     <Compile Include="Services\Analysis\StateFailureAnalyzer.cs" />
     <Compile Include="Services\Analysis\UniversalStateFailureAnalyzer.cs" />
+    <Compile Include="Services\CustomLiveLogReader.cs" />
     <Compile Include="ViewModels\VisualTimelineViewModel.cs" />
     <Compile Include="Views\ColorPaletteWindow.xaml.cs">
       <DependentUpon>ColorPaletteWindow.xaml</DependentUpon>

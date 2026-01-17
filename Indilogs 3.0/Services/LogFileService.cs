@@ -343,7 +343,49 @@ namespace IndiLogs_3._0.Services
                 return session;
             });
         }
+        // Indilogs 3.0/Services/LogFileService.cs
 
+        public List<LogEntry> ParseLogStreamPartial(Stream stream)
+        {
+            var newLogs = new List<LogEntry>();
+
+            try
+            {
+                // ⚠️ קריטי: אנחנו לא מאפסים את stream.Position ל-0!
+                // הקריאה תתבצע מהמקום בו הסמן נמצא כרגע (אחרי ה-Seek).
+
+                var logReader = new IndigoLogsReader(stream);
+
+                // שימוש בלוגיקה ששלחת: קריאה סדרתית מהנקודה הנוכחית
+                while (logReader.MoveToNext())
+                {
+                    if (logReader.Current != null)
+                    {
+                        var entry = new LogEntry
+                        {
+                            // המרות בסיסיות ל-Model שלך
+                            Level = logReader.Current.Level?.ToString() ?? "Info",
+                            Date = logReader.Current.Time,
+                            Message = logReader.Current.Message ?? "",
+                            ThreadName = logReader.Current.ThreadName ?? "",
+                            Logger = logReader.Current.LoggerName ?? "",
+
+                            // שליפת שדות נוספים לפי המיפוי ששלחת
+                            ProcessName = logReader.Current["ProcessName"]?.ToString() ?? "",
+                            // ניתן להוסיף כאן עוד שדות ל-LogEntry אם תרצה (PID, FlowId וכו')
+                        };
+
+                        newLogs.Add(entry);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ParseLogStreamPartial Error: {ex.Message}");
+            }
+
+            return newLogs;
+        }
         public (List<LogEntry> AllLogs, List<LogEntry> Transitions, List<LogEntry> Failures) ParseLogStream(Stream stream)
         {
             var allLogs = new List<LogEntry>();
