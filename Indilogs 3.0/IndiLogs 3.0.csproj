@@ -209,7 +209,6 @@
     <Compile Include="Models\StateEntry.cs" />
     <Compile Include="Models\TimelineMarker.cs" />
     <Compile Include="Models\TimelineState.cs" />
-    <Compile Include="Models\Windowsevent.cs" />
     <Compile Include="Services\Analysis\StateFailureAnalyzer.cs" />
     <Compile Include="Services\Analysis\UniversalStateFailureAnalyzer.cs" />
     <Compile Include="Services\CustomLiveLogReader.cs" />
