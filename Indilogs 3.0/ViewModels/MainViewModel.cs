@@ -28,6 +28,8 @@ namespace IndiLogs_3._0.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {
+
+    
         // --- Properties & Fields ---
         public VisualTimelineViewModel VisualTimelineVM { get; set; } = new VisualTimelineViewModel();
 
@@ -100,13 +102,18 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
         public ICommand ToggleVisualModeCommand { get; }
-
+        private FileSystemWatcher _fileWatcher = null;
+        private bool _isBackgroundLoadingActive = false;
+        private bool _isRefreshActive = false;
+        private DateTime _lastFileCheckTime = DateTime.MinValue;
+        private long _lastFileSize = 0;
+        private long _lastStreamPosition = 0;  // ← NEW: Save stream position!
+        private const int MIN_REFRESH_INTERVAL_MS = 5000;
         public ObservableCollection<LogEntry> MarkedAppLogs { get; set; }
-
         private readonly LogFileService _logService;
         private readonly LogColoringService _coloringService;
         private readonly CsvExportService _csvService;
-
+        private bool _isPollingActive = false;
         // Windows Instances
         private StatesWindow _statesWindow;
         private AnalysisReportWindow _analysisWindow;
@@ -161,17 +168,15 @@ namespace IndiLogs_3._0.ViewModels
         private HashSet<string> _treeHiddenPrefixes = new HashSet<string>();
         private string _treeShowOnlyLogger = null;
         private string _treeShowOnlyPrefix = null;
-
-        // Live Monitoring - Load last 2 minutes initially, then update cache every 5 seconds
-        private CancellationTokenSource _liveCts;
         private string _liveFilePath;
-        private int _lastParsedLogCount = 0; // Track number of logs parsed
-        private const int POLLING_INTERVAL_MS = 10000; // Check every 10 seconds
+        // Live Monitoring - Load last 2 minutes initially, then update cache every 5 seconds
         private const int UI_UPDATE_BATCH_SIZE = 500; // Show 500 logs at a time
-        private const int INITIAL_LOAD_MINUTES = 1; // Load last 1 minute initially (faster)
         private const int POLLING_READ_BYTES = 5 * 1024 * 1024; // Read 5MB on each poll to ensure complete logs
-        private readonly object _collectionLock = new object(); // Thread safety for filter operations
-
+        private CancellationTokenSource _liveCts;
+        private int _lastParsedLogCount = 0; // Track number of logs we've already shown
+        private const int POLLING_INTERVAL_MS = 5000; // Check every 5 seconds
+        private const int INITIAL_LOAD_MINUTES = 2; // Load last 2 minutes initially
+        private readonly object _collectionLock = new object();
         // Collections
         private IEnumerable<LogEntry> _logs;
         public IEnumerable<LogEntry> Logs
@@ -1206,7 +1211,6 @@ namespace IndiLogs_3._0.ViewModels
                 }
             }
 
-            StopLiveMonitoring();
             IsBusy = true;
             StatusMessage = "Processing files...";
 
@@ -1749,12 +1753,14 @@ namespace IndiLogs_3._0.ViewModels
 
             if (IsLiveMode)
             {
+                // DON'T reset _lastParsedLogCount - keep tracking where we are in file
                 IsRunning = true;
                 StatusMessage = "Cleared. Monitoring continues...";
                 Debug.WriteLine("LiveClear: Cleared UI, monitoring continues");
             }
             else
             {
+                _lastParsedLogCount = 0;
                 StatusMessage = "Logs cleared.";
             }
         }
@@ -2331,211 +2337,587 @@ namespace IndiLogs_3._0.ViewModels
             WindowTitle = "IndiLogs 3.0 - LIVE MONITORING";
 
             IsBusy = true;
-            StatusMessage = "Loading last 1 minute of logs...";
+            StatusMessage = "Loading logs (this may take a moment)...";
             IsRunning = false;
 
             try
             {
-                Debug.WriteLine($">>> StartLiveMonitoring: Loading last {INITIAL_LOAD_MINUTES} minutes");
+                Debug.WriteLine($">>> StartLiveMonitoring: FULL FILE READ");
 
-                // Parse only LAST 20MB of file for faster initial load
-                const long INITIAL_READ_BYTES = 20 * 1024 * 1024; // 20MB
                 List<LogEntry> allLogs = null;
                 List<LogEntry> recentLogs = null;
 
+                // ====================================================================
+                // קרא את כל הקובץ מההתחלה (אין ברירה)
+                // ====================================================================
                 await Task.Run(() =>
                 {
                     var sw = System.Diagnostics.Stopwatch.StartNew();
+
                     using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                     {
                         long fileSize = fs.Length;
+                        _lastFileSize = fileSize;
 
-                        // Read only last 20MB or entire file if smaller
-                        long bytesToRead = Math.Min(fileSize, INITIAL_READ_BYTES);
-                        long startPos = fileSize - bytesToRead;
+                        Debug.WriteLine($">>> File size: {fileSize:N0} bytes");
+                        Debug.WriteLine($">>> Reading ENTIRE file from start (no seeking)...");
 
-                        Debug.WriteLine($">>> File size: {fileSize:N0} bytes, reading last {bytesToRead:N0} bytes");
+                        using (var ms = new MemoryStream())
+                        {
+                            // קרא את כל הקובץ
+                            fs.CopyTo(ms);
+                            ms.Position = 0;
 
-                        fs.Seek(startPos, SeekOrigin.Begin);
+                            Debug.WriteLine($">>> Parsing {ms.Length:N0} bytes with IndigoLogsReader...");
 
+                            var result = _logService.ParseLogStream(ms);
+                            allLogs = result.AllLogs;
+
+                            sw.Stop();
+                            Debug.WriteLine($">>> Parsed {allLogs?.Count ?? 0} total logs in {sw.ElapsedMilliseconds:N0}ms");
+
+                            if (allLogs != null && allLogs.Count > 0)
+                            {
+                                _lastParsedLogCount = allLogs.Count;
+
+                                // סנן רק את ה-2 דקות אחרונות לתצוגה
+                                DateTime lastLogTime = allLogs[allLogs.Count - 1].Date;
+                                DateTime cutoffTime = lastLogTime.AddMinutes(-2);
+                                recentLogs = allLogs.Where(log => log.Date >= cutoffTime).ToList();
+
+                                Debug.WriteLine($">>> Last log time: {lastLogTime:yyyy-MM-dd HH:mm:ss.fff}");
+                                Debug.WriteLine($">>> Cutoff time: {cutoffTime:yyyy-MM-dd HH:mm:ss.fff}");
+                                Debug.WriteLine($">>> Total in memory: {allLogs.Count:N0} logs");
+                                Debug.WriteLine($">>> Showing recent: {recentLogs.Count:N0} logs (last 2 min)");
+                            }
+                            else
+                            {
+                                Debug.WriteLine($"❌ No logs parsed!");
+                                _lastParsedLogCount = 0;
+                            }
+                        }
+                    }
+                });
+
+                if (allLogs != null && allLogs.Count > 0)
+                {
+                    Debug.WriteLine($">>> Applying colors to ALL {allLogs.Count:N0} logs...");
+
+                    // צבע את כל הלוגים
+                    await _coloringService.ApplyDefaultColorsAsync(allLogs, false);
+
+                    // שמור את כל הלוגים בcache (בזיכרון)
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        _liveLogsCollection.AddRange(allLogs.OrderByDescending(l => l.Date));
+
+                        Debug.WriteLine($">>> Cache loaded: {_liveLogsCollection.Count:N0} logs");
+                    });
+
+                    // הצג רק את האחרונים בUI
+                    if (recentLogs != null && recentLogs.Count > 0)
+                    {
+                        Debug.WriteLine($">>> Adding {recentLogs.Count:N0} recent logs to UI...");
+
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            var reversedLogs = recentLogs.AsEnumerable().Reverse().ToList();
+                            FilteredLogs.AddRange(reversedLogs);
+
+                            if (FilteredLogs.Count > 0)
+                            {
+                                SelectedLog = FilteredLogs[0];
+                            }
+
+                            StatusMessage = $"Live: {FilteredLogs.Count:N0} shown (last 2 min) | {_liveLogsCollection.Count:N0} total in memory";
+                            Debug.WriteLine($">>> ✅ UI shows {FilteredLogs.Count:N0} logs, {_liveLogsCollection.Count:N0} in cache");
+                        });
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine("❌ No logs to display!");
+                    StatusMessage = "No logs found - monitoring for new logs...";
+                }
+
+                IsBusy = false;
+                IsRunning = true;
+
+                // התחל FileSystemWatcher
+                StartFileWatcher(path);
+
+                Debug.WriteLine($">>> ✅ Live monitoring started");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"❌ StartLiveMonitoring error: {ex.Message}");
+                Debug.WriteLine($"   Stack: {ex.StackTrace}");
+
+                IsBusy = false;
+                StatusMessage = $"Error: {ex.Message}";
+
+                // עדיין התחל FileSystemWatcher
+                StartFileWatcher(path);
+            }
+        }
+
+
+        private void StartFileWatcher(string filePath)
+        {
+            try
+            {
+                if (_fileWatcher != null)
+                {
+                    _fileWatcher.EnableRaisingEvents = false;
+                    _fileWatcher.Dispose();
+                    _fileWatcher = null;
+                }
+
+                string directory = Path.GetDirectoryName(filePath);
+                string fileName = Path.GetFileName(filePath);
+
+                Debug.WriteLine($">>> Starting FileSystemWatcher for: {fileName}");
+
+                _fileWatcher = new FileSystemWatcher(directory, fileName);
+                _fileWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size;
+                _fileWatcher.Changed += OnFileChanged;
+                _fileWatcher.EnableRaisingEvents = true;
+
+                Debug.WriteLine($">>> ✅ FileSystemWatcher started");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"❌ FileSystemWatcher error: {ex.Message}");
+                Debug.WriteLine($"   No live monitoring - FileSystemWatcher failed");
+            }
+        }
+        private void OnFileChanged(object sender, FileSystemEventArgs e)
+        {
+            var now = DateTime.Now;
+
+            // חזק יותר: 5 שניות מינימום בין refreshים
+            if ((now - _lastFileCheckTime).TotalMilliseconds < MIN_REFRESH_INTERVAL_MS)
+            {
+                Debug.WriteLine($"[{now:HH:mm:ss.fff}] 🔇 File change IGNORED (throttled)");
+                return;
+            }
+
+            _lastFileCheckTime = now;
+            Debug.WriteLine($"[{now:HH:mm:ss.fff}] 📢 File changed - triggering refresh");
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await RefreshLogs();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"❌ OnFileChanged error: {ex.Message}");
+                }
+            });
+        }
+
+        private async Task RefreshLogsOptimized()
+        {
+            if (_isRefreshActive) return;
+
+            _isRefreshActive = true;
+            Debug.WriteLine($">>> RefreshLogsOptimized STARTED");
+
+            try
+            {
+                await Task.Delay(100); // Wait for write to complete
+
+                long currentFileSize;
+                try
+                {
+                    var fileInfo = new FileInfo(_liveFilePath);
+                    currentFileSize = fileInfo.Length;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"  ❌ Cannot access file: {ex.Message}");
+                    return;
+                }
+
+                const long MIN_GROWTH = 5120; // 5KB
+                long growth = currentFileSize - _lastFileSize;
+
+                if (growth < MIN_GROWTH)
+                {
+                    Debug.WriteLine($"  ℹ️ File grew by only {growth:N0} bytes - skipping");
+                    return;
+                }
+
+                _lastFileSize = currentFileSize;
+                Debug.WriteLine($"  File grew by {growth:N0} bytes");
+
+                // ================================================================
+                // STRATEGY 1: Try to seek to last position (FAST!)
+                // ================================================================
+                Debug.WriteLine($"  🎯 Attempting OPTIMIZED read from position {_lastStreamPosition:N0}...");
+
+                bool optimizedSuccess = false;
+                List<LogEntry> newLogs = null;
+
+                try
+                {
+                    newLogs = await Task.Run(() =>
+                    {
+                        using (var fs = new FileStream(_liveFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        {
+                            // Try seeking to last known position
+                            if (_lastStreamPosition > 0 && _lastStreamPosition < fs.Length)
+                            {
+                                Debug.WriteLine($"    Seeking to position {_lastStreamPosition:N0}...");
+                                fs.Seek(_lastStreamPosition, SeekOrigin.Begin);
+
+                                Debug.WriteLine($"    Creating reader from seeked position...");
+                                var result = _logService.ParseLogStream(fs);
+
+                                if (result.AllLogs != null && result.AllLogs.Count > 0)
+                                {
+                                    Debug.WriteLine($"    ✅ SUCCESS! Parsed {result.AllLogs.Count:N0} new logs from seeked position!");
+
+                                    // Update position
+                                    _lastStreamPosition = fs.Position;
+
+                                    optimizedSuccess = true;
+                                    return result.AllLogs;
+                                }
+                                else
+                                {
+                                    Debug.WriteLine($"    ⚠️ No logs from seeked position, falling back...");
+                                }
+                            }
+
+                            return null;
+                        }
+                    });
+                }
+                catch (Exception seekEx)
+                {
+                    Debug.WriteLine($"    ❌ Seek strategy failed: {seekEx.Message}");
+                }
+
+                // ================================================================
+                // STRATEGY 2: Fallback - parse entire file (SLOW)
+                // ================================================================
+                if (!optimizedSuccess || newLogs == null)
+                {
+                    Debug.WriteLine($"  ⚙️ Falling back to full file parse...");
+
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+
+                    newLogs = await Task.Run(() =>
+                    {
+                        using (var fs = new FileStream(_liveFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                         using (var ms = new MemoryStream())
                         {
                             fs.CopyTo(ms);
                             ms.Position = 0;
 
                             var result = _logService.ParseLogStream(ms);
-                            allLogs = result.AllLogs;
+                            var allLogs = result.AllLogs;
 
-                            sw.Stop();
-                            Debug.WriteLine($">>> Parsed {allLogs?.Count ?? 0} logs from last {bytesToRead:N0} bytes in {sw.ElapsedMilliseconds:N0}ms");
-
-                            if (allLogs != null && allLogs.Count > 0)
+                            if (allLogs != null && allLogs.Count > _lastParsedLogCount)
                             {
-                                _lastParsedLogCount = allLogs.Count; // Save for polling
+                                var deltaLogs = allLogs.Skip(_lastParsedLogCount).ToList();
+                                _lastParsedLogCount = allLogs.Count;
+                                _lastStreamPosition = fs.Position; // Update position
 
-                                // Show only last 1 minute
-                                DateTime lastLogTime = allLogs[allLogs.Count - 1].Date;
-                                DateTime cutoffTime = lastLogTime.AddMinutes(-INITIAL_LOAD_MINUTES);
-                                recentLogs = allLogs.Where(log => log.Date >= cutoffTime).ToList();
-
-                                Debug.WriteLine($">>> Showing {recentLogs.Count:N0} logs from last {INITIAL_LOAD_MINUTES} min");
+                                return deltaLogs;
                             }
+
+                            return null;
                         }
-                    }
-                });
-
-                if (recentLogs != null && recentLogs.Count > 0)
-                {
-                    // Apply colors
-                    await _coloringService.ApplyDefaultColorsAsync(recentLogs, false);
-
-                    // Add to UI in BATCHES to prevent freezing
-                    Debug.WriteLine($">>> Adding {recentLogs.Count:N0} logs to UI in batches of {UI_UPDATE_BATCH_SIZE}");
-
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        // Add all to cache using AddRange (fast)
-                        var reversedLogs = recentLogs.AsEnumerable().Reverse().ToList();
-                        _liveLogsCollection.AddRange(reversedLogs);
-
-                        // In LIVE mode, show ALL logs (don't filter)
-                        // User can apply filters manually if needed
-                        FilteredLogs.AddRange(reversedLogs);
-                        if (FilteredLogs.Count > 0)
-                        {
-                            SelectedLog = FilteredLogs[0];
-                        }
-
-                        StatusMessage = $"Live: {FilteredLogs.Count:N0} logs shown (last {INITIAL_LOAD_MINUTES} min)";
-                        Debug.WriteLine($">>> Added {FilteredLogs.Count:N0} logs to UI");
                     });
-                }
-                else
-                {
-                    Debug.WriteLine(">>> No logs parsed from file");
-                    StatusMessage = "No logs found in file - will keep monitoring for new logs";
+
+                    sw.Stop();
+                    Debug.WriteLine($"  Full parse took {sw.ElapsedMilliseconds:N0}ms");
                 }
 
-                IsBusy = false;
-
-                // NOW start polling (every 5 seconds)
-                IsRunning = true;
-                _liveCts = new CancellationTokenSource();
-                Task.Run(() => PollingLoop(_liveCts.Token));
-
-                Debug.WriteLine($">>> Live monitoring started - polling every 5 seconds");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"StartLiveMonitoring error: {ex.GetType().Name} - {ex.Message}");
-                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
-                IsBusy = false;
-                StatusMessage = $"Error loading file: {ex.Message}";
-
-                // Still start polling - maybe file will be accessible next time
-                IsRunning = true;
-                _liveCts = new CancellationTokenSource();
-                Task.Run(() => PollingLoop(_liveCts.Token));
-            }
-        }
-        private void StopLiveMonitoring()
-        {
-            if (_liveCts != null) { _liveCts.Cancel(); _liveCts = null; }
-            IsLiveMode = false;
-            IsRunning = false;
-            _liveFilePath = null;
-            _lastParsedLogCount = 0;
-            WindowTitle = "IndiLogs 3.0";
-        }
-        private async Task PollingLoop(CancellationToken token)
-        {
-            while (!token.IsCancellationRequested)
-            {
-                try
+                // ================================================================
+                // Add new logs to UI
+                // ================================================================
+                if (newLogs != null && newLogs.Count > 0)
                 {
-                    if (IsRunning && File.Exists(_liveFilePath))
-                    {
-                        Debug.WriteLine($"[{DateTime.Now:HH:mm:ss}] Polling for new logs...");
-                        await RefreshLogs();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Polling Error: {ex.Message}");
-                }
-
-                try { await Task.Delay(POLLING_INTERVAL_MS, token); }
-                catch (TaskCanceledException) { break; }
-            }
-        }
-
-        private async Task RefreshLogs()
-        {
-            try
-            {
-                var sw = System.Diagnostics.Stopwatch.StartNew();
-
-                // Parse entire file again
-                List<LogEntry> allLogs = await Task.Run(() =>
-                {
-                    using (var fs = new FileStream(_liveFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                    using (var ms = new MemoryStream())
-                    {
-                        fs.CopyTo(ms);
-                        ms.Position = 0;
-                        var result = _logService.ParseLogStream(ms);
-                        return result.AllLogs;
-                    }
-                });
-
-                sw.Stop();
-                Debug.WriteLine($"  Parsed {allLogs?.Count ?? 0} logs in {sw.ElapsedMilliseconds}ms (previous: {_lastParsedLogCount})");
-
-                if (allLogs != null && allLogs.Count > _lastParsedLogCount)
-                {
-                    // Get only NEW logs (from end of list)
-                    var newLogs = allLogs.Skip(_lastParsedLogCount).ToList();
-                    Debug.WriteLine($"  Found {newLogs.Count} NEW logs");
-
-                    _lastParsedLogCount = allLogs.Count; // Update count
-
-                    // Apply coloring
                     await _coloringService.ApplyDefaultColorsAsync(newLogs, false);
-                    if (_savedColoringRules.Count > 0)
+                    if (_savedColoringRules != null && _savedColoringRules.Count > 0)
                         await _coloringService.ApplyCustomColoringAsync(newLogs, _savedColoringRules);
 
-                    // Add new logs to UI at TOP (newest first)
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         lock (_collectionLock)
                         {
-                            // Add to cache at top (reverse order = newest first)
-                            for (int i = newLogs.Count - 1; i >= 0; i--)
+                            foreach (var log in newLogs.OrderByDescending(l => l.Date))
                             {
-                                _liveLogsCollection.Insert(0, newLogs[i]);
-                            }
-
-                            // Add to UI at top (reverse order = newest first)
-                            for (int i = newLogs.Count - 1; i >= 0; i--)
-                            {
-                                FilteredLogs.Insert(0, newLogs[i]);
+                                _liveLogsCollection.Insert(0, log);
+                                FilteredLogs.Insert(0, log);
                             }
 
                             if (SelectedLog == null && FilteredLogs.Count > 0)
                                 SelectedLog = FilteredLogs[0];
 
-                            StatusMessage = $"Live: {FilteredLogs.Count:N0} logs (+{newLogs.Count} new)";
+                            StatusMessage = $"Live: {FilteredLogs.Count:N0} shown (+{newLogs.Count} new) | {_liveLogsCollection.Count:N0} total";
                         }
                     });
 
-                    Debug.WriteLine($"  Added {newLogs.Count} new logs to UI");
+                    string method = optimizedSuccess ? "OPTIMIZED SEEK" : "full parse";
+                    Debug.WriteLine($"  ✅ Added {newLogs.Count:N0} new logs via {method}");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"RefreshLogs error: {ex.Message}");
+                Debug.WriteLine($"❌ RefreshLogsOptimized error: {ex.Message}");
+            }
+            finally
+            {
+                _isRefreshActive = false;
+                Debug.WriteLine($">>> RefreshLogsOptimized FINISHED");
             }
         }
+
+
+
+
+        private void StopLiveMonitoring()
+        {
+            if (_fileWatcher != null)
+            {
+                Debug.WriteLine($">>> Stopping FileSystemWatcher");
+                _fileWatcher.EnableRaisingEvents = false;
+                _fileWatcher.Dispose();
+                _fileWatcher = null;
+            }
+
+            IsLiveMode = false;
+            IsRunning = false;
+            _liveFilePath = null;
+            _lastParsedLogCount = 0;
+            _lastFileSize = 0;
+            _isRefreshActive = false;
+            _lastFileCheckTime = DateTime.MinValue;
+            WindowTitle = "IndiLogs 3.0";
+
+            Debug.WriteLine(">>> Live monitoring stopped");
+        }
+
+
+
+
+
+        private async Task PollingLoop(CancellationToken token)
+        {
+            Debug.WriteLine($">>> PollingLoop STARTED");
+
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    if (IsRunning && !string.IsNullOrEmpty(_liveFilePath) && File.Exists(_liveFilePath))
+                    {
+                        Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Polling trigger...");
+                        await RefreshLogs();
+                    }
+                    else
+                    {
+                        if (!IsRunning)
+                            Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Polling skipped (paused)");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"❌ PollingLoop error: {ex.Message}");
+                }
+
+                try
+                {
+                    Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Waiting {POLLING_INTERVAL_MS}ms...");
+                    await Task.Delay(POLLING_INTERVAL_MS, token);
+                }
+                catch (TaskCanceledException)
+                {
+                    Debug.WriteLine($">>> PollingLoop CANCELLED");
+                    break;
+                }
+            }
+
+            Debug.WriteLine($">>> PollingLoop EXITED");
+        }
+
+
+
+
+
+        private async Task RefreshLogs()
+        {
+            // למנוע refreshים מקבילים
+            if (_isRefreshActive)
+            {
+                Debug.WriteLine($"  ⏸️ Refresh skipped (previous still running)");
+                return;
+            }
+
+            _isRefreshActive = true;
+            Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] >>> RefreshLogs STARTED");
+
+            try
+            {
+                // בדוק אם הקובץ קיים
+                if (!File.Exists(_liveFilePath))
+                {
+                    Debug.WriteLine($"  ❌ File not found: {_liveFilePath}");
+                    return;
+                }
+
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+
+                // בדוק גודל קובץ
+                long currentFileSize;
+                try
+                {
+                    var fileInfo = new FileInfo(_liveFilePath);
+                    currentFileSize = fileInfo.Length;
+                    Debug.WriteLine($"  Current file size: {currentFileSize:N0} bytes (was {_lastFileSize:N0})");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"  ❌ Cannot access file: {ex.Message}");
+                    return;
+                }
+
+                // בדוק אם הקובץ גדל
+                const long MIN_GROWTH = 1024; // 1KB לפחות
+                long growth = currentFileSize - _lastFileSize;
+
+                if (growth < MIN_GROWTH)
+                {
+                    Debug.WriteLine($"  ℹ️ File grew by only {growth:N0} bytes - skipping parse");
+                    return;
+                }
+
+                _lastFileSize = currentFileSize;
+                Debug.WriteLine($"  File grew by {growth:N0} bytes - parsing entire file...");
+
+                // Parse את כל הקובץ מההתחלה
+                List<LogEntry> allLogs = null;
+
+                try
+                {
+                    allLogs = await Task.Run(() =>
+                    {
+                        using (var fs = new FileStream(_liveFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        using (var ms = new MemoryStream())
+                        {
+                            Debug.WriteLine($"  Copying {fs.Length:N0} bytes to memory...");
+                            fs.CopyTo(ms);
+                            ms.Position = 0;
+
+                            Debug.WriteLine($"  Parsing with IndigoLogsReader...");
+                            var result = _logService.ParseLogStream(ms);
+
+                            Debug.WriteLine($"  Parse complete: {result.AllLogs?.Count ?? 0} logs");
+                            return result.AllLogs;
+                        }
+                    });
+                }
+                catch (Exception parseEx)
+                {
+                    Debug.WriteLine($"  ❌ Parse error: {parseEx.Message}");
+                    return;
+                }
+
+                sw.Stop();
+                Debug.WriteLine($"  Parsed {allLogs?.Count ?? 0} total logs in {sw.ElapsedMilliseconds:N0}ms");
+
+                if (allLogs == null || allLogs.Count == 0)
+                {
+                    Debug.WriteLine($"  ⚠️ No logs returned!");
+                    return;
+                }
+
+                Debug.WriteLine($"  Previous count: {_lastParsedLogCount}, New count: {allLogs.Count}");
+
+                if (allLogs.Count > _lastParsedLogCount)
+                {
+                    // קבל רק לוגים חדשים
+                    var newLogs = allLogs.Skip(_lastParsedLogCount).ToList();
+                    Debug.WriteLine($"  Found {newLogs.Count:N0} NEW logs");
+
+                    if (newLogs.Count == 0)
+                    {
+                        Debug.WriteLine($"  ⚠️ No new logs after Skip!");
+                        return;
+                    }
+
+                    // עדכן count
+                    _lastParsedLogCount = allLogs.Count;
+
+                    // צבע
+                    Debug.WriteLine($"  Applying colors to {newLogs.Count:N0} new logs...");
+                    await _coloringService.ApplyDefaultColorsAsync(newLogs, false);
+                    if (_savedColoringRules != null && _savedColoringRules.Count > 0)
+                        await _coloringService.ApplyCustomColoringAsync(newLogs, _savedColoringRules);
+
+                    // הוסף ל-UI
+                    Debug.WriteLine($"  Adding {newLogs.Count:N0} logs to UI...");
+
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        lock (_collectionLock)
+                        {
+                            // הוסף ל-cache
+                            foreach (var log in newLogs.OrderByDescending(l => l.Date))
+                            {
+                                _liveLogsCollection.Insert(0, log);
+                            }
+
+                            // הוסף ל-UI
+                            foreach (var log in newLogs.OrderByDescending(l => l.Date))
+                            {
+                                FilteredLogs.Insert(0, log);
+                            }
+
+                            if (SelectedLog == null && FilteredLogs.Count > 0)
+                                SelectedLog = FilteredLogs[0];
+
+                            StatusMessage = $"Live: {FilteredLogs.Count:N0} shown (+{newLogs.Count} new) | {_liveLogsCollection.Count:N0} total";
+                        }
+                    });
+
+                    Debug.WriteLine($"  ✅ Added {newLogs.Count:N0} new logs (Total: {_liveLogsCollection.Count:N0})");
+                }
+                else if (allLogs.Count < _lastParsedLogCount)
+                {
+                    Debug.WriteLine($"  ⚠️ Log count DECREASED! {_lastParsedLogCount} → {allLogs.Count}");
+                    Debug.WriteLine($"     File might have been truncated or recreated");
+                    _lastParsedLogCount = allLogs.Count;
+                }
+                else
+                {
+                    Debug.WriteLine($"  ℹ️ No new logs (still at {_lastParsedLogCount:N0})");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"❌ RefreshLogs error: {ex.Message}");
+                Debug.WriteLine($"   Stack: {ex.StackTrace}");
+            }
+            finally
+            {
+                _isRefreshActive = false;
+                Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] >>> RefreshLogs FINISHED");
+            }
+        }
+
+
+        // ============================================================================
+        // STEP 4: REPLACE StopLiveMonitoring() METHOD (around line 1601)
+        // ============================================================================
+
+
         private void LivePlay(object obj)
         {
             Debug.WriteLine($"LivePlay called - IsLiveMode: {IsLiveMode}, _liveFilePath: {_liveFilePath}");

@@ -203,6 +203,7 @@
     <Compile Include="Converters\ArrayConverter.cs" />
     <Compile Include="Converters\BoolToVisibilityConverter.cs" />
     <Compile Include="Converters\InverseBooleanConverter.cs" />
+    <Compile Include="IndigoLogsReaderExplorer.cs" />
     <Compile Include="Models\DbTreeNode.cs" />
     <Compile Include="Models\LoggerNode.cs" />
     <Compile Include="Models\StateEntry.cs" />

@@ -10,7 +10,6 @@
         <FontWeight x:Key="ContentFontWeight">Normal</FontWeight>
 
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-        <converters:OxyColorToBrushConverter x:Key="OxyColorToBrushConverter"/>
         <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
 
 
