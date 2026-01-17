@@ -14,10 +14,31 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
+
 namespace IndiLogs_3._0.Services
 {
     public class LogFileService
     {
+        // --- אופטימיזציה: מחלקת StringPool לאיחוד מחרוזות ---
+        public class StringPool
+        {
+            private readonly Dictionary<string, string> _cache = new Dictionary<string, string>();
+
+            public string Intern(string value)
+            {
+                // אם הערך ריק או null, אין מה לשמור ב-Cache
+                if (string.IsNullOrEmpty(value)) return value;
+
+                // אם המחרוזת כבר קיימת, החזר את הרפרנס הקיים
+                if (_cache.TryGetValue(value, out var existing)) return existing;
+
+                // אחרת, שמור אותה והחזר אותה
+                _cache[value] = value;
+                return value;
+            }
+        }
+        // ------------------------------------------------------
+
         // Regex לפרסור לוגים של אפליקציה
         private readonly Regex _appDevRegex = new Regex(
             @"(?<Timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})\x1e" +
@@ -40,6 +61,9 @@ namespace IndiLogs_3._0.Services
         {
             return await Task.Run(() =>
             {
+                // יצירת Pool אחד לכל הסשן
+                var stringPool = new StringPool();
+
                 var session = new LogSessionData();
                 // אתחול כל המילונים
                 session.ConfigurationFiles = new Dictionary<string, string>();
@@ -98,7 +122,7 @@ namespace IndiLogs_3._0.Services
                                     bool shouldProcess = false;
                                     var entryData = new ZipEntryData { Name = entry.Name };
 
-                                    // 1. זיהוי קבצי Configuration - בודק אם הנתיב מכיל תיקיית Configuration
+                                    // 1. זיהוי קבצי Configuration
                                     bool isConfigFile = lowerName.Contains("/configuration/") ||
                                                         lowerName.Contains("\\configuration\\") ||
                                                         lowerName.Contains("\\configuration/") ||
@@ -112,10 +136,8 @@ namespace IndiLogs_3._0.Services
                                         {
                                             string fileNameOnly = Path.GetFileName(entry.Name);
 
-                                            // Check if this is a SQLite database file
                                             if (fileNameOnly.EndsWith(".db", StringComparison.OrdinalIgnoreCase))
                                             {
-                                                // Read as binary for SQLite databases
                                                 using (var ms = CopyToMemory(entry))
                                                 {
                                                     byte[] dbBytes = ms.ToArray();
@@ -128,7 +150,6 @@ namespace IndiLogs_3._0.Services
                                             }
                                             else
                                             {
-                                                // Read as text for JSON and other text files
                                                 using (var ms = CopyToMemory(entry))
                                                 using (var r = new StreamReader(ms))
                                                 {
@@ -209,15 +230,21 @@ namespace IndiLogs_3._0.Services
                                     }
                                 }
 
-                                Debug.WriteLine($"📦 ZIP Summary:");
-                                Debug.WriteLine($"   Config files: {session.ConfigurationFiles.Count}");
-                                Debug.WriteLine($"   Database files: {session.DatabaseFiles.Count}");
-                                Debug.WriteLine($"   Log files to process: {filesToProcess.Count}");
-
                                 int totalFiles = filesToProcess.Count;
                                 int processedCount = 0;
 
-                                Parallel.ForEach(filesToProcess, item =>
+                                // עיבוד מקבילי - מעבירים את ה-stringPool לכל ה-Threads
+                                // הערה: StringPool אינו ThreadSafe כברירת מחדל אם כותבים אליו במקביל ללא נעילה,
+                                // אך כאן אנו קוראים ConcurrentBag. ליתר ביטחון ב-LoadSession מרובה קבצים,
+                                // עדיף להשתמש ב-lock בתוך StringPool או שכל Thread ייצור Pool מקומי קטן (פחות יעיל לזיכרון).
+                                // *תיקון*: הגישה הבטוחה ביותר כאן היא להשתמש ב-lock בתוך ה-Intern או לוותר על המקביליות בפרסור
+                                // למען הזיכרון. למען הפשטות והביצועים כאן, נשתמש ב-Pool יחיד עם lock פנימי במידה ונרצה,
+                                // או שנריץ סדרתי. בקוד הנוכחי נריץ Parallel אבל נגן על ה-Pool (או נניח שאין התנגשות קריטית).
+                                // *שיפור*: בשביל לא לפגוע בביצועים, נשתמש ב-ConcurrentDictionary בתוך StringPool במימוש אמיתי,
+                                // או שנריץ לולאה רגילה. כאן אני אשנה ללולאה רגילה (לא Parallel) עבור הקבצים,
+                                // כי ה-IO הוא הצוואר בקבוק והזיכרון חשוב יותר.
+
+                                foreach (var item in filesToProcess) // שיניתי מ-Parallel ל-foreach רגיל לבטיחות ה-Pool
                                 {
                                     try
                                     {
@@ -225,14 +252,15 @@ namespace IndiLogs_3._0.Services
                                         {
                                             if (item.Type == FileType.MainLog)
                                             {
-                                                var result = ParseLogStream(item.Stream);
+                                                // מעבירים את ה-Pool
+                                                var result = ParseLogStream(item.Stream, stringPool);
                                                 foreach (var l in result.AllLogs) logsBag.Add(l);
                                                 foreach (var t in result.Transitions) transitionsBag.Add(t);
                                                 foreach (var f in result.Failures) failuresBag.Add(f);
                                             }
                                             else if (item.Type == FileType.AppDevLog)
                                             {
-                                                var logs = ParseAppDevLogStream(item.Stream);
+                                                var logs = ParseAppDevLogStream(item.Stream, stringPool);
                                                 foreach (var l in logs) appDevLogsBag.Add(l);
                                             }
                                             else if (item.Type == FileType.EventsCsv)
@@ -248,16 +276,16 @@ namespace IndiLogs_3._0.Services
                                     }
                                     finally
                                     {
-                                        int c = Interlocked.Increment(ref processedCount);
-                                        if (c % 3 == 0)
+                                        processedCount++;
+                                        if (processedCount % 3 == 0)
                                         {
-                                            double ratio = (double)c / totalFiles;
+                                            double ratio = (double)processedCount / totalFiles;
                                             double fileProg = (0.5 + (ratio * 0.5)) * currentFileSize;
                                             double totalP = ((processedBytesGlobal + fileProg) / totalBytesAllFiles) * 100;
-                                            progress?.Report((Math.Min(99, totalP), $"Parsing files: {c}/{totalFiles}"));
+                                            progress?.Report((Math.Min(99, totalP), $"Parsing files: {processedCount}/{totalFiles}"));
                                         }
                                     }
-                                });
+                                }
                             }
                         }
                         else
@@ -271,12 +299,12 @@ namespace IndiLogs_3._0.Services
 
                                 if (filePath.IndexOf("APPDEV", StringComparison.OrdinalIgnoreCase) >= 0)
                                 {
-                                    var logs = ParseAppDevLogStream(ms);
+                                    var logs = ParseAppDevLogStream(ms, stringPool);
                                     foreach (var l in logs) appDevLogsBag.Add(l);
                                 }
                                 else
                                 {
-                                    var result = ParseLogStream(ms);
+                                    var result = ParseLogStream(ms, stringPool);
                                     foreach (var l in result.AllLogs) logsBag.Add(l);
                                     foreach (var t in result.Transitions) transitionsBag.Add(t);
                                     foreach (var f in result.Failures) failuresBag.Add(f);
@@ -289,12 +317,24 @@ namespace IndiLogs_3._0.Services
                     progress?.Report((98, "Finalizing..."));
 
                     session.VersionsInfo = $"SW: {detectedSwVersion} | PLC: {detectedPlcVersion}";
+
+                    // המרה ל-List סופי
                     session.Logs = logsBag.OrderByDescending(x => x.Date).ToList();
                     session.StateTransitions = transitionsBag.OrderBy(x => x.Date).ToList();
                     session.CriticalFailureEvents = failuresBag.OrderBy(x => x.Date).ToList();
                     session.AppDevLogs = appDevLogsBag.OrderByDescending(x => x.Date).ToList();
                     session.Events = eventsBag.OrderByDescending(x => x.Time).ToList();
                     session.Screenshots = screenshotsBag.ToList();
+
+                    // --- אופטימיזציה: ניקוי אגרסיבי ---
+                    logsBag = null;
+                    transitionsBag = null;
+                    failuresBag = null;
+                    appDevLogsBag = null;
+                    // מאלץ GC לנקות את כל המחרוזות הזמניות שלא נכנסו ל-Pool ואת ה-Streams
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    // -----------------------------------
 
                     progress?.Report((100, "Done"));
                 }
@@ -306,11 +346,9 @@ namespace IndiLogs_3._0.Services
                 return session;
             });
         }
-        // Indilogs 3.0/Services/LogFileService.cs
-        // וודא שהפונקציה מחזירה List<LogEntry> ושגם ה-results מוגדר כך
+
         public List<EventEntry> ParseEventsCsv(Stream stream)
         {
-
             var list = new List<EventEntry>();
             try
             {
@@ -324,12 +362,11 @@ namespace IndiLogs_3._0.Services
                     int timeIdx = Array.FindIndex(headers, h => h.IndexOf("Time", StringComparison.OrdinalIgnoreCase) >= 0);
                     int nameIdx = Array.FindIndex(headers, h => h.IndexOf("Name", StringComparison.OrdinalIgnoreCase) >= 0);
 
-                    // לוגיקת CSV מקוצרת לחיסכון במקום (הקוד המקורי שלך היה תקין)
                     while (!reader.EndOfStream)
                     {
                         var line = reader.ReadLine();
                         if (string.IsNullOrWhiteSpace(line)) continue;
-                        var parts = SplitCsvLine(line); // ודא שיש לך את פונקציית העזר הזו למטה
+                        var parts = SplitCsvLine(line);
 
                         if (parts.Count > timeIdx && DateTime.TryParse(parts[timeIdx].Trim('"'), out DateTime time))
                         {
@@ -345,34 +382,36 @@ namespace IndiLogs_3._0.Services
             catch (Exception ex) { Debug.WriteLine($"ParseEventsCsv Error: {ex.Message}"); }
             return list;
         }
+
         public List<LogEntry> ParseLogStreamPartial(Stream stream)
         {
+            // פונקציה זו משמשת ל-Live Monitoring (קבצים קטנים יחסית),
+            // לכן אפשר ליצור Pool מקומי אם רוצים, או לוותר עליו.
+            // לצורך עקביות, ניצור מקומי.
+            var pool = new StringPool();
             var newLogs = new List<LogEntry>();
 
             try
             {
-                // ⚠️ קריטי: אנחנו לא מאפסים את stream.Position ל-0!
-                // הקריאה תתבצע מהמקום בו הסמן נמצא כרגע (אחרי ה-Seek).
-
                 var logReader = new IndigoLogsReader(stream);
 
-                // שימוש בלוגיקה ששלחת: קריאה סדרתית מהנקודה הנוכחית
                 while (logReader.MoveToNext())
                 {
                     if (logReader.Current != null)
                     {
+                        string processName = logReader.Current["ProcessName"]?.ToString();
+
                         var entry = new LogEntry
                         {
-                            // המרות בסיסיות ל-Model שלך
-                            Level = logReader.Current.Level?.ToString() ?? "Info",
+                            // שימוש ב-Intern
+                            Level = pool.Intern(logReader.Current.Level?.ToString() ?? "Info"),
                             Date = logReader.Current.Time,
-                            Message = logReader.Current.Message ?? "",
-                            ThreadName = logReader.Current.ThreadName ?? "",
-                            Logger = logReader.Current.LoggerName ?? "",
+                            Message = pool.Intern(logReader.Current.Message ?? ""),
+                            ThreadName = pool.Intern(logReader.Current.ThreadName ?? ""),
+                            Logger = pool.Intern(logReader.Current.LoggerName ?? ""),
 
-                            // שליפת שדות נוספים לפי המיפוי ששלחת
-                            ProcessName = logReader.Current["ProcessName"]?.ToString() ?? "",
-                            // ניתן להוסיף כאן עוד שדות ל-LogEntry אם תרצה (PID, FlowId וכו')
+                            // אופטימיזציה: null אם ריק
+                            ProcessName = string.IsNullOrEmpty(processName) ? null : pool.Intern(processName)
                         };
 
                         newLogs.Add(entry);
@@ -386,8 +425,12 @@ namespace IndiLogs_3._0.Services
 
             return newLogs;
         }
-        public (List<LogEntry> AllLogs, List<LogEntry> Transitions, List<LogEntry> Failures) ParseLogStream(Stream stream)
+
+        public (List<LogEntry> AllLogs, List<LogEntry> Transitions, List<LogEntry> Failures) ParseLogStream(Stream stream, StringPool pool = null)
         {
+            // אם לא הועבר Pool (למשל בקריאות ישנות), צור אחד מקומי
+            pool = pool ?? new StringPool();
+
             var allLogs = new List<LogEntry>();
             var transitions = new List<LogEntry>();
             var failures = new List<LogEntry>();
@@ -401,18 +444,22 @@ namespace IndiLogs_3._0.Services
                 {
                     if (reader.Current != null)
                     {
+                        string processName = reader.Current["ProcessName"]?.ToString();
+
                         var entry = new LogEntry
                         {
-                            Level = reader.Current.Level?.ToString() ?? "Info",
+                            // --- אופטימיזציה: שימוש ב-StringPool ---
+                            Level = pool.Intern(reader.Current.Level?.ToString() ?? "Info"),
                             Date = reader.Current.Time,
-                            Message = reader.Current.Message ?? "",
-                            ThreadName = reader.Current.ThreadName ?? "",
-                            Logger = reader.Current.LoggerName ?? "",
-                            ProcessName = reader.Current["ProcessName"]?.ToString() ?? ""
+                            Message = pool.Intern(reader.Current.Message ?? ""),
+                            ThreadName = pool.Intern(reader.Current.ThreadName ?? ""),
+                            Logger = pool.Intern(reader.Current.LoggerName ?? ""),
+                            ProcessName = string.IsNullOrEmpty(processName) ? null : pool.Intern(processName)
                         };
 
                         allLogs.Add(entry);
 
+                        // לוגיקה לזיהוי מעברים - נשארת זהה
                         if (entry.ThreadName == "Manager" &&
                             entry.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) &&
                             entry.Message.Contains("->"))
@@ -435,8 +482,9 @@ namespace IndiLogs_3._0.Services
             return (allLogs, transitions, failures);
         }
 
-        private List<LogEntry> ParseAppDevLogStream(Stream stream)
+        private List<LogEntry> ParseAppDevLogStream(Stream stream, StringPool pool = null)
         {
+            pool = pool ?? new StringPool();
             var list = new List<LogEntry>();
             try
             {
@@ -454,7 +502,7 @@ namespace IndiLogs_3._0.Services
                         {
                             if (buffer.Length > 0)
                             {
-                                var logEntry = ProcessAppDevBuffer(buffer.ToString());
+                                var logEntry = ProcessAppDevBuffer(buffer.ToString(), pool);
                                 if (logEntry != null) list.Add(logEntry);
                                 buffer.Clear();
                             }
@@ -464,7 +512,7 @@ namespace IndiLogs_3._0.Services
 
                     if (buffer.Length > 0)
                     {
-                        var logEntry = ProcessAppDevBuffer(buffer.ToString());
+                        var logEntry = ProcessAppDevBuffer(buffer.ToString(), pool);
                         if (logEntry != null) list.Add(logEntry);
                     }
                 }
@@ -476,7 +524,7 @@ namespace IndiLogs_3._0.Services
             return list;
         }
 
-        private LogEntry ProcessAppDevBuffer(string rawText)
+        private LogEntry ProcessAppDevBuffer(string rawText, StringPool pool)
         {
             var match = _appDevRegex.Match(rawText);
             if (!match.Success) return null;
@@ -499,16 +547,16 @@ namespace IndiLogs_3._0.Services
             return new LogEntry
             {
                 Date = date,
-                ThreadName = match.Groups["Thread"].Value,
-                Level = match.Groups["Level"].Value.ToUpper(),
-                Logger = match.Groups["Logger"].Value,
-                Message = message,
-                ProcessName = "APP",
-                Method = match.Groups["Location"].Value
+                // --- אופטימיזציה: שימוש ב-StringPool ---
+                ThreadName = pool.Intern(match.Groups["Thread"].Value),
+                Level = pool.Intern(match.Groups["Level"].Value.ToUpper()),
+                Logger = pool.Intern(match.Groups["Logger"].Value),
+                Message = pool.Intern(message),
+                ProcessName = pool.Intern("APP"),
+                Method = pool.Intern(match.Groups["Location"].Value)
             };
         }
 
-        
         private List<string> SplitCsvLine(string line)
         {
             var result = new List<string>();

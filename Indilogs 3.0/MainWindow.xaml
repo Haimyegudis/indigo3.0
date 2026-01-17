@@ -509,15 +509,27 @@
                     </Border.Effect>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="🔍" VerticalAlignment="Center" Margin="5,0,5,0" Foreground="{DynamicResource TextSecondary}"/>
-                        <TextBox x:Name="SearchTextBox" 
-                                 Width="250" 
-                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
-                                 Background="Transparent" Foreground="{DynamicResource TextPrimary}" 
+                        <TextBox x:Name="SearchTextBox"
+                                 Width="250"
+                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 Background="Transparent"
                                  BorderBrush="Transparent" BorderThickness="0"
                                  Padding="2" VerticalContentAlignment="Center"
                                  CaretBrush="{DynamicResource PrimaryColor}"
-                                 IsVisibleChanged="SearchTextBox_IsVisibleChanged"/>
-                        <Button Content="✕" Command="{Binding CloseSearchCommand}" 
+                                 IsVisibleChanged="SearchTextBox_IsVisibleChanged"
+                                 ToolTip="{Binding SearchSyntaxError}">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSearchSyntaxValid}" Value="False">
+                                            <Setter Property="Foreground" Value="#FF6B6B"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
+                        <Button Content="✕" Command="{Binding CloseSearchCommand}"
                                 Style="{DynamicResource ModernBtn}" Width="24" Height="24" Padding="0" Margin="5,0,0,0"
                                 Background="Transparent"
                                 ToolTip="Close (Esc)"/>

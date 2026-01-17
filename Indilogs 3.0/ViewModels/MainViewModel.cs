@@ -353,9 +353,71 @@ namespace IndiLogs_3._0.ViewModels
                 {
                     _searchText = value;
                     OnPropertyChanged();
+                    ValidateSearchSyntax();
                     _searchDebounceTimer.Stop();
                     _searchDebounceTimer.Start();
                 }
+            }
+        }
+
+        private bool _isSearchSyntaxValid = true;
+        public bool IsSearchSyntaxValid
+        {
+            get => _isSearchSyntaxValid;
+            set
+            {
+                if (_isSearchSyntaxValid != value)
+                {
+                    _isSearchSyntaxValid = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private string _searchSyntaxError;
+        public string SearchSyntaxError
+        {
+            get => _searchSyntaxError;
+            set
+            {
+                if (_searchSyntaxError != value)
+                {
+                    _searchSyntaxError = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private void ValidateSearchSyntax()
+        {
+            if (string.IsNullOrWhiteSpace(SearchText))
+            {
+                IsSearchSyntaxValid = true;
+                SearchSyntaxError = null;
+                return;
+            }
+
+            // Only validate if it has boolean operators
+            if (QueryParserService.HasBooleanOperators(SearchText))
+            {
+                var parser = new QueryParserService();
+                var result = parser.Parse(SearchText, out string errorMessage);
+
+                if (result == null)
+                {
+                    IsSearchSyntaxValid = false;
+                    SearchSyntaxError = errorMessage;
+                }
+                else
+                {
+                    IsSearchSyntaxValid = true;
+                    SearchSyntaxError = null;
+                }
+            }
+            else
+            {
+                IsSearchSyntaxValid = true;
+                SearchSyntaxError = null;
             }
         }
 
@@ -1686,7 +1748,7 @@ namespace IndiLogs_3._0.ViewModels
                 {
                     Logs = _liveLogsCollection;
                 }
-                // במצב Live, הפילטור קורה רק בטאב ה-Filtered (FilteredLogs), 
+                // במצב Live, הפילטור קורה רק בטאב ה-Filtered (FilteredLogs),
                 // הטאב הראשי (Logs) תמיד מציג את הכל (Raw Data).
                 return;
             }
@@ -1707,7 +1769,31 @@ namespace IndiLogs_3._0.ViewModels
                     currentLogs = currentLogs.Where(l => _activeThreadFilters.Contains(l.ThreadName));
 
                 if (hasSearchText)
-                    currentLogs = currentLogs.Where(l => l.Message != null && l.Message.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0);
+                {
+                    // Smart Boolean Search: Check if query has special operators
+                    if (QueryParserService.HasBooleanOperators(SearchText))
+                    {
+                        var parser = new QueryParserService();
+                        var filterTree = parser.Parse(SearchText, out string errorMessage);
+
+                        if (filterTree != null)
+                        {
+                            // Use smart filtering with parsed tree
+                            currentLogs = currentLogs.Where(l => EvaluateFilterNode(l, filterTree));
+                        }
+                        else
+                        {
+                            // Parsing failed - show error in status (optional) and fall back to simple search
+                            // You can optionally show the error: StatusMessage = $"Search syntax error: {errorMessage}";
+                            currentLogs = currentLogs.Where(l => l.Message != null && l.Message.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0);
+                        }
+                    }
+                    else
+                    {
+                        // Simple search for maximum performance
+                        currentLogs = currentLogs.Where(l => l.Message != null && l.Message.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0);
+                    }
+                }
             }
             else
             {
@@ -1782,23 +1868,61 @@ namespace IndiLogs_3._0.ViewModels
             if (!string.IsNullOrWhiteSpace(SearchText))
             {
                 string search = SearchText;
-                query = query.Where(l =>
+
+                // Smart Boolean Search for App Logs
+                if (QueryParserService.HasBooleanOperators(SearchText))
                 {
-                    if (l.Message == null) return false;
+                    var parser = new QueryParserService();
+                    var filterTree = parser.Parse(SearchText, out string errorMessage);
 
-                    if (l.Message.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
-                        return true;
-
-                    int dataIndex = l.Message.IndexOf("DATA:", StringComparison.OrdinalIgnoreCase);
-                    if (dataIndex >= 0)
+                    if (filterTree != null)
                     {
-                        string dataSection = l.Message.Substring(dataIndex + 5);
-                        if (dataSection.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
-                            return true;
+                        // Use smart filtering with parsed tree
+                        query = query.Where(l => EvaluateFilterNode(l, filterTree));
                     }
+                    else
+                    {
+                        // Parsing failed - fall back to simple search
+                        query = query.Where(l =>
+                        {
+                            if (l.Message == null) return false;
 
-                    return false;
-                });
+                            if (l.Message.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
+                                return true;
+
+                            int dataIndex = l.Message.IndexOf("DATA:", StringComparison.OrdinalIgnoreCase);
+                            if (dataIndex >= 0)
+                            {
+                                string dataSection = l.Message.Substring(dataIndex + 5);
+                                if (dataSection.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
+                                    return true;
+                            }
+
+                            return false;
+                        });
+                    }
+                }
+                else
+                {
+                    // Simple search for maximum performance
+                    query = query.Where(l =>
+                    {
+                        if (l.Message == null) return false;
+
+                        if (l.Message.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
+                            return true;
+
+                        int dataIndex = l.Message.IndexOf("DATA:", StringComparison.OrdinalIgnoreCase);
+                        if (dataIndex >= 0)
+                        {
+                            string dataSection = l.Message.Substring(dataIndex + 5);
+                            if (dataSection.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
+                                return true;
+                        }
+
+                        return false;
+                    });
+                }
             }
             if (_isAppFilterOutActive && _negativeFilters.Any())
             {
