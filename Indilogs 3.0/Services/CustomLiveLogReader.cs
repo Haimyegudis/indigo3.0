@@ -16,7 +16,7 @@ namespace IndiLogs_3._0.Services
         public event Action<string> OnStatusChanged;
 
         private const int BATCH_SIZE_LIMIT = 2000;
-        private DateTime _lastLogTime = DateTime.MinValue;
+        private DateTime _lastLogTime = DateTime.MinValue; // מעקב אחרי הזמן האחרון שהוצג
 
         public async Task StartMonitoring(string filePath, CancellationToken token)
         {
@@ -36,6 +36,7 @@ namespace IndiLogs_3._0.Services
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"[LiveMonitor] Critical Loop Error: {ex.Message}");
+                    OnStatusChanged?.Invoke($"Error: {ex.Message}. Retrying in 2s...");
                     await Task.Delay(2000, token);
                 }
             }
@@ -49,18 +50,22 @@ namespace IndiLogs_3._0.Services
                 Debug.WriteLine("[LiveMonitor] Stream Opened.");
 
                 // --- שלב הסנכרון (Re-Sync) ---
+                // אם כבר יש לנו זמן אחרון (כלומר אנחנו אחרי קריסה/התאוששות), נרוץ מהר עד אליו
                 if (_lastLogTime != DateTime.MinValue)
                 {
-                    OnStatusChanged?.Invoke("Syncing...");
-                    // סריקה מהירה עד לנקודה האחרונה הידועה
+                    OnStatusChanged?.Invoke("Re-syncing stream...");
+                    Debug.WriteLine($"[LiveMonitor] Re-syncing to match time > {_lastLogTime:HH:mm:ss.fff}...");
+
                     while (!token.IsCancellationRequested)
                     {
                         bool hasMore = false;
                         try { hasMore = reader.MoveToNext(); } catch { break; }
                         if (!hasMore) break;
 
+                        // דילוג מהיר ללא הקצאת זיכרון
                         if (reader.Current != null && reader.Current.Time > _lastLogTime)
                         {
+                            // מצאנו את נקודת ההמשך!
                             var log = MapToLogEntry(reader);
                             if (log != null)
                             {
@@ -79,12 +84,15 @@ namespace IndiLogs_3._0.Services
                     long tailThreshold = Math.Max(0, fs.Length - (2 * 1024 * 1024));
                     var buffer = new Queue<LogEntry>(BATCH_SIZE_LIMIT);
 
+                    OnStatusChanged?.Invoke("Scanning file...");
+
                     while (!token.IsCancellationRequested)
                     {
                         bool hasMore = false;
                         try { hasMore = reader.MoveToNext(); } catch { break; }
                         if (!hasMore) break;
 
+                        // אופטימיזציה: דילוג על כל ההתחלה
                         if (fs.Position < tailThreshold) continue;
 
                         var log = MapToLogEntry(reader);
@@ -92,7 +100,7 @@ namespace IndiLogs_3._0.Services
                         {
                             buffer.Enqueue(log);
                             if (buffer.Count > BATCH_SIZE_LIMIT) buffer.Dequeue();
-                            _lastLogTime = log.Date;
+                            _lastLogTime = log.Date; // עדכון הזמן
                         }
                     }
 
@@ -104,13 +112,14 @@ namespace IndiLogs_3._0.Services
                 }
 
                 // --- שלב האזנה שוטפת (Tail -f) ---
+                long lastKnownPosition = fs.Position;
                 int stuckCounter = 0;
-                long lastKnownLength = fs.Length;
 
                 while (!token.IsCancellationRequested)
                 {
                     var newBatch = new List<LogEntry>();
 
+                    // קריאת חדשים
                     while (true)
                     {
                         bool success = false;
@@ -120,7 +129,7 @@ namespace IndiLogs_3._0.Services
                         var log = MapToLogEntry(reader);
                         if (log != null)
                         {
-                            // מניעת כפילויות
+                            // סינון כפילויות במקרה של חפיפה במילי-שניות
                             if (log.Date > _lastLogTime || (log.Date == _lastLogTime && !string.IsNullOrEmpty(log.Message)))
                             {
                                 newBatch.Add(log);
@@ -133,29 +142,22 @@ namespace IndiLogs_3._0.Services
                     if (newBatch.Count > 0)
                     {
                         OnLogsReceived?.Invoke(newBatch);
+                        lastKnownPosition = fs.Position;
                         stuckCounter = 0; // איפוס מונה תקלות
-                        lastKnownLength = fs.Length;
                     }
                     else
                     {
-                        // --- לוגיקת תקיעה משופרת ורגועה ---
-                        long currentLen = new FileInfo(filePath).Length; // בדיקה מול הדיסק
-
-                        // אם הקובץ גדל משמעותית (מעל 100KB) וה-Reader לא זז
-                        if (currentLen > fs.Position + 102400)
+                        // --- זיהוי תקיעה והתאוששות ---
+                        // אם הקובץ גדל משמעותית וה-Reader לא קורא כלום
+                        if (fs.Length > fs.Position)
                         {
                             stuckCounter++;
-                            // מחכים 10 שניות (10 איטרציות) לפני שמכריזים על תקיעה
-                            if (stuckCounter > 10)
+                            // מחכים קצת כדי לוודא שזו לא סתם כתיבה איטית
+                            if (stuckCounter > 2)
                             {
-                                Debug.WriteLine($"[LiveMonitor] STUCK DETECTED (Persistent). Restarting Reader.");
-                                return; // יציאה ל-Re-Sync
+                                Debug.WriteLine($"[LiveMonitor] STUCK DETECTED! (FileLen: {fs.Length} > Pos: {fs.Position}). Triggering Full Re-open.");
+                                return; // יציאה מהלולאה -> תגרום ל-StartMonitoring לקרוא ל-MonitorLoop מחדש
                             }
-                        }
-                        else
-                        {
-                            // אם ההפרש קטן, כנראה זה Buffering, נאפס את המונה
-                            stuckCounter = 0;
                         }
                     }
 

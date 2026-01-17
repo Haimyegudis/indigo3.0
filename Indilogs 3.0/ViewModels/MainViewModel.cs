@@ -2192,20 +2192,20 @@ namespace IndiLogs_3._0.ViewModels
         }
         private void UpdateMainLogsFilter(bool show)
         {
-            // === תיקון לבעיית הטאבים ב-Live Mode ===
-            // אם אנחנו ב-Live, הטאב הראשי (Logs) חייב להישאר מחובר ל-Collection החי.
-            // אסור להחליף אותו ב-List סטטי (ToList), כי זה מנתק את העדכונים.
+            // --- תיקון קריטי ל-Live Monitoring ---
+            // אם אנחנו במצב Live, אסור להחליף את Logs ברשימה סטטית!
+            // אנחנו חייבים להישאר מחוברים ל-_liveLogsCollection שמתעדכן ברקע.
             if (IsLiveMode)
             {
                 if (Logs != _liveLogsCollection)
                 {
                     Logs = _liveLogsCollection;
                 }
-                // במצב Live, הסינון חל רק על FilteredLogs (בטאב השני).
-                // הטאב הראשי תמיד מציג את הכל.
+                // במצב Live, הפילטור קורה רק בטאב ה-Filtered (FilteredLogs), 
+                // הטאב הראשי (Logs) תמיד מציג את הכל (Raw Data).
                 return;
             }
-            // ========================================
+            // --------------------------------------
 
             bool isActive = _isMainFilterActive;
             IEnumerable<LogEntry> currentLogs;
