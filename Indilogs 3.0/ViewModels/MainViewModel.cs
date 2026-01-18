@@ -97,6 +97,11 @@ namespace IndiLogs_3._0.ViewModels
         private List<ColoringCondition> _mainColoringRules = new List<ColoringCondition>();
         private List<ColoringCondition> _appColoringRules = new List<ColoringCondition>();
 
+        // Case File & Annotations
+        private Dictionary<LogEntry, LogAnnotation> _logAnnotations = new Dictionary<LogEntry, LogAnnotation>();
+        private CaseFile _currentCase = null;
+        private string _currentCaseFilePath = null;
+
         // Tree Filter State
         private LoggerNode _selectedTreeItem;
         public LoggerNode SelectedTreeItem
@@ -302,6 +307,8 @@ namespace IndiLogs_3._0.ViewModels
             get => _isBusy;
             set { _isBusy = value; OnPropertyChanged(); }
         }
+
+        private bool _isLoadingCase = false;
 
         private double _currentProgress;
         public double CurrentProgress
@@ -705,6 +712,11 @@ namespace IndiLogs_3._0.ViewModels
             });
 
             LivePlayCommand = new RelayCommand(LivePlay);
+
+            // Case File Commands
+            AddAnnotationCommand = new RelayCommand(AddAnnotation);
+            SaveCaseCommand = new RelayCommand(SaveCase);
+            LoadCaseCommand = new RelayCommand(LoadCase);
             LivePauseCommand = new RelayCommand(LivePause);
             LiveClearCommand = new RelayCommand(LiveClear);
 
@@ -1506,10 +1518,15 @@ namespace IndiLogs_3._0.ViewModels
         }
         private void SwitchToSession(LogSessionData session)
         {
-            _isMainFilterActive = false;
-            _isAppFilterActive = false;
-            _isMainFilterOutActive = false;
-            _isAppFilterOutActive = false;
+            // Don't reset filters/search when loading a case file
+            if (!_isLoadingCase)
+            {
+                _isMainFilterActive = false;
+                _isAppFilterActive = false;
+                _isMainFilterOutActive = false;
+                _isAppFilterOutActive = false;
+            }
+
             if (session == null) return;
             IsBusy = true;
 
@@ -1541,9 +1558,13 @@ namespace IndiLogs_3._0.ViewModels
 
             OnPropertyChanged(nameof(ConfigurationFiles));
 
-            var defaultFilteredLogs = session.Logs.Where(l => IsDefaultLog(l)).ToList();
-            FilteredLogs.ReplaceAll(defaultFilteredLogs);
-            if (FilteredLogs.Count > 0) SelectedLog = FilteredLogs[0];
+            // Don't reset filtered logs when loading a case - will be set by ApplyCaseSettings
+            if (!_isLoadingCase)
+            {
+                var defaultFilteredLogs = session.Logs.Where(l => IsDefaultLog(l)).ToList();
+                FilteredLogs.ReplaceAll(defaultFilteredLogs);
+                if (FilteredLogs.Count > 0) SelectedLog = FilteredLogs[0];
+            }
 
             Events = new ObservableCollection<EventEntry>(session.Events); OnPropertyChanged(nameof(Events));
             Screenshots = new ObservableCollection<BitmapImage>(session.Screenshots); OnPropertyChanged(nameof(Screenshots));
@@ -1559,21 +1580,25 @@ namespace IndiLogs_3._0.ViewModels
             _allAppLogsCache = session.AppDevLogs ?? new List<LogEntry>();
             BuildLoggerTree(_allAppLogsCache);
 
-            SearchText = "";
-            IsFilterActive = false;
-            IsFilterOutActive = false;
-            _isTimeFocusActive = false;
-            _isAppTimeFocusActive = false;
+            // Don't reset search/filters when loading a case - will be restored by ApplyCaseSettings
+            if (!_isLoadingCase)
+            {
+                SearchText = "";
+                IsFilterActive = false;
+                IsFilterOutActive = false;
+                _isTimeFocusActive = false;
+                _isAppTimeFocusActive = false;
 
-            _negativeFilters.Clear();
-            _activeThreadFilters.Clear();
+                _negativeFilters.Clear();
+                _activeThreadFilters.Clear();
 
-            _mainFilterRoot = null;
-            _appFilterRoot = null;
-            _lastFilteredAppCache = null;
-            _lastFilteredCache.Clear();
+                _mainFilterRoot = null;
+                _appFilterRoot = null;
+                _lastFilteredAppCache = null;
+                _lastFilteredCache.Clear();
 
-            ResetTreeFilters();
+                ResetTreeFilters();
+            }
 
             ApplyAppLogsFilter();
             IsBusy = false;
@@ -1705,7 +1730,11 @@ namespace IndiLogs_3._0.ViewModels
         }
         private void ViewLogDetails(object parameter)
         {
-            if (parameter is LogEntry log) new LogDetailsWindow(log).Show();
+            if (parameter is LogEntry log)
+            {
+                var annotation = GetAnnotation(log);
+                new LogDetailsWindow(log, annotation).Show();
+            }
         }
         public async void SortAppLogs(string sortBy, bool ascending)
         {
@@ -2940,6 +2969,340 @@ namespace IndiLogs_3._0.ViewModels
         private void OpenOutlook(object obj) { try { Process.Start("outlook.exe", "/c ipm.note"); } catch { OpenUrl("mailto:"); } }
         private void OpenKibana(object obj) { }
         public void OnFilesDropped(string[] files) { if (files != null && files.Length > 0) ProcessFiles(files); }
+
+        // ============================================================================
+        // CASE FILE & ANNOTATIONS
+        // ============================================================================
+
+        public ICommand AddAnnotationCommand { get; }
+        public ICommand SaveCaseCommand { get; }
+        public ICommand LoadCaseCommand { get; }
+
+        /// <summary>
+        /// Gets annotation for a specific log entry, or null if none exists
+        /// </summary>
+        public LogAnnotation GetAnnotation(LogEntry log)
+        {
+            if (log == null) return null;
+            return _logAnnotations.TryGetValue(log, out var annotation) ? annotation : null;
+        }
+
+        /// <summary>
+        /// Adds or updates annotation for a log entry
+        /// </summary>
+        private void AddAnnotation(object parameter)
+        {
+            if (parameter is LogEntry log)
+            {
+                // Prompt user for comment
+                var window = new Views.AnnotationWindow(GetAnnotation(log)?.Content ?? "");
+                if (window.ShowDialog() == true)
+                {
+                    // Save custom color if exists, otherwise use default yellow
+                    string color = "#FFFF00";
+                    if (log.CustomColor.HasValue)
+                    {
+                        color = log.CustomColor.Value.ToString();
+                    }
+
+                    var annotation = new LogAnnotation
+                    {
+                        TargetLog = CreateLogTarget(log),
+                        Content = window.AnnotationText,
+                        Color = color,
+                        Author = Environment.UserName,
+                        CreatedAt = DateTime.Now
+                    };
+
+                    _logAnnotations[log] = annotation;
+
+                    // Mark log as having annotation for visual indicator
+                    log.HasAnnotation = true;
+
+                    StatusMessage = "Annotation added";
+                }
+            }
+        }
+
+        /// <summary>
+        /// Creates a soft link target for a log entry
+        /// </summary>
+        private LogTarget CreateLogTarget(LogEntry log)
+        {
+            return new LogTarget
+            {
+                Timestamp = log.Date,
+                Logger = log.Logger,
+                Thread = log.ThreadName,
+                Level = log.Level,
+                Snippet = log.Message?.Length > 100 ? log.Message.Substring(0, 100) : log.Message
+            };
+        }
+
+        /// <summary>
+        /// Finds a log entry matching the soft link target
+        /// </summary>
+        private LogEntry FindLogByTarget(LogTarget target, IEnumerable<LogEntry> logs)
+        {
+            if (target == null || logs == null) return null;
+
+            // Try exact match first
+            var exactMatch = logs.FirstOrDefault(l =>
+                l.Date == target.Timestamp &&
+                l.Logger == target.Logger &&
+                l.ThreadName == target.Thread);
+
+            if (exactMatch != null) return exactMatch;
+
+            // Fallback: find closest by timestamp with same logger/thread
+            var timeTolerance = TimeSpan.FromMilliseconds(100);
+            return logs.FirstOrDefault(l =>
+                Math.Abs((l.Date - target.Timestamp).TotalMilliseconds) < timeTolerance.TotalMilliseconds &&
+                l.Logger == target.Logger &&
+                l.ThreadName == target.Thread &&
+                (!string.IsNullOrEmpty(target.Snippet) && !string.IsNullOrEmpty(l.Message) &&
+                 l.Message.StartsWith(target.Snippet.Substring(0, Math.Min(50, target.Snippet.Length)))));
+        }
+
+        /// <summary>
+        /// Saves current investigation state to a .indi-case file
+        /// </summary>
+        private void SaveCase(object parameter)
+        {
+            try
+            {
+                var dialog = new SaveFileDialog
+                {
+                    Filter = "IndiLogs Case File (*.indi-case)|*.indi-case",
+                    DefaultExt = ".indi-case",
+                    FileName = $"Investigation_{DateTime.Now:yyyyMMdd_HHmmss}.indi-case"
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    var caseFile = new CaseFile
+                    {
+                        Meta = new CaseMetadata
+                        {
+                            Author = Environment.UserName,
+                            CreatedAt = DateTime.Now,
+                            Description = "Investigation case file"
+                        },
+                        ViewState = new CaseViewState
+                        {
+                            ActiveFilters = _mainFilterRoot?.DeepClone(),
+                            QuickSearchText = SearchText,
+                            SelectedTab = SelectedTabIndex == 0 ? "MAIN" : SelectedTabIndex == 1 ? "FILTERED" : "APP",
+                            ActiveThreadFilters = _activeThreadFilters.ToList(),
+                            NegativeFilters = _negativeFilters.ToList()
+                        },
+                        Annotations = _logAnnotations.Values.ToList()
+                    };
+
+                    // Add resources (log files)
+                    if (SelectedSession != null && !string.IsNullOrEmpty(SelectedSession.FilePath))
+                    {
+                        var fileInfo = new FileInfo(SelectedSession.FilePath);
+                        if (fileInfo.Exists)
+                        {
+                            caseFile.Resources.Add(new CaseResource
+                            {
+                                FileName = fileInfo.Name,
+                                Size = fileInfo.Length,
+                                LastModified = fileInfo.LastWriteTime
+                            });
+                        }
+                    }
+
+                    var json = JsonConvert.SerializeObject(caseFile, Formatting.Indented);
+                    File.WriteAllText(dialog.FileName, json);
+
+                    _currentCaseFilePath = dialog.FileName;
+                    _currentCase = caseFile;
+
+                    StatusMessage = $"Case saved: {Path.GetFileName(dialog.FileName)}";
+                    MessageBox.Show("Case file saved successfully!", "Save Case", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error saving case: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Loads an investigation case from a .indi-case file
+        /// </summary>
+        private void LoadCase(object parameter)
+        {
+            try
+            {
+                var dialog = new OpenFileDialog
+                {
+                    Filter = "IndiLogs Case File (*.indi-case)|*.indi-case",
+                    DefaultExt = ".indi-case"
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    var json = File.ReadAllText(dialog.FileName);
+                    var caseFile = JsonConvert.DeserializeObject<CaseFile>(json);
+
+                    if (caseFile == null)
+                    {
+                        MessageBox.Show("Invalid case file format.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+
+                    // Check if log files exist and collect paths
+                    var logFilesToLoad = new List<string>();
+                    bool filesFound = true;
+
+                    foreach (var resource in caseFile.Resources)
+                    {
+                        var caseDir = Path.GetDirectoryName(dialog.FileName);
+                        var logPath = Path.Combine(caseDir, resource.FileName);
+
+                        if (!File.Exists(logPath))
+                        {
+                            var result = MessageBox.Show(
+                                $"Log file not found: {resource.FileName}\n\nWould you like to locate it manually?",
+                                "File Not Found",
+                                MessageBoxButton.YesNo,
+                                MessageBoxImage.Question);
+
+                            if (result == MessageBoxResult.Yes)
+                            {
+                                var fileDialog = new OpenFileDialog
+                                {
+                                    Filter = "Log Files (*.file;*.log;*.zip)|*.file;*.log;*.zip|All Files (*.*)|*.*",
+                                    FileName = resource.FileName
+                                };
+
+                                if (fileDialog.ShowDialog() == true)
+                                {
+                                    logPath = fileDialog.FileName;
+                                }
+                                else
+                                {
+                                    filesFound = false;
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                filesFound = false;
+                                break;
+                            }
+                        }
+
+                        logFilesToLoad.Add(logPath);
+                    }
+
+                    if (filesFound && logFilesToLoad.Count > 0)
+                    {
+                        StatusMessage = "Loading case files...";
+                        _isLoadingCase = true;
+
+                        // Clear all existing sessions to start fresh
+                        LoadedSessions.Clear();
+                        SelectedSession = null;
+
+                        // Load log files first
+                        ProcessFiles(logFilesToLoad.ToArray());
+
+                        // Wait for files to load, then apply case settings
+                        // Using longer delay to ensure logs are fully loaded
+                        Task.Delay(3000).ContinueWith(_ =>
+                        {
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                StatusMessage = "Applying case settings...";
+                                ApplyCaseSettings(caseFile);
+                                _isLoadingCase = false;
+                            });
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading case: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Applies case settings after logs are loaded
+        /// </summary>
+        private void ApplyCaseSettings(CaseFile caseFile)
+        {
+            if (caseFile == null) return;
+
+            _currentCaseFilePath = null;
+            _currentCase = caseFile;
+
+            // Restore annotations first (re-bind to actual log entries)
+            _logAnnotations.Clear();
+            int annotationsRestored = 0;
+
+            if (caseFile.Annotations != null && _allLogsCache != null)
+            {
+                var allLogs = _allLogsCache.ToList();
+                foreach (var annotation in caseFile.Annotations)
+                {
+                    var matchingLog = FindLogByTarget(annotation.TargetLog, allLogs);
+                    if (matchingLog != null)
+                    {
+                        _logAnnotations[matchingLog] = annotation;
+                        matchingLog.HasAnnotation = true;
+
+                        // Restore custom color if it exists
+                        if (!string.IsNullOrEmpty(annotation.Color) && annotation.Color != "#FFFF00")
+                        {
+                            try
+                            {
+                                var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(annotation.Color);
+                                matchingLog.CustomColor = color;
+                            }
+                            catch { }
+                        }
+
+                        annotationsRestored++;
+                    }
+                }
+            }
+
+            // Restore view state
+            if (caseFile.ViewState != null)
+            {
+                _mainFilterRoot = caseFile.ViewState.ActiveFilters;
+                SearchText = caseFile.ViewState.QuickSearchText ?? "";
+                _activeThreadFilters = caseFile.ViewState.ActiveThreadFilters ?? new List<string>();
+                _negativeFilters = caseFile.ViewState.NegativeFilters ?? new List<string>();
+
+                // Set filter active flags
+                if (_mainFilterRoot != null && _mainFilterRoot.Children.Count > 0)
+                    _isMainFilterActive = true;
+
+                if (_negativeFilters.Any())
+                    _isMainFilterOutActive = true;
+
+                if (caseFile.ViewState.SelectedTab == "APP")
+                    SelectedTabIndex = 2;
+                else if (caseFile.ViewState.SelectedTab == "FILTERED")
+                    SelectedTabIndex = 1;
+                else
+                    SelectedTabIndex = 0;
+            }
+
+            // Update the UI - this will apply all filters
+            UpdateMainLogsFilter(true);
+            OnPropertyChanged(nameof(IsFilterActive));
+
+            StatusMessage = $"Case loaded: {annotationsRestored} annotations restored";
+            MessageBox.Show($"Case loaded successfully!\n\nAnnotations: {annotationsRestored}/{caseFile.Annotations?.Count ?? 0}",
+                "Load Case", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

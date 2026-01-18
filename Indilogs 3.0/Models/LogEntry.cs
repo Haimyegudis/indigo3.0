@@ -47,12 +47,33 @@ namespace IndiLogs_3._0.Models
             }
         }
 
+        private bool _hasAnnotation;
+        public bool HasAnnotation
+        {
+            get => _hasAnnotation;
+            set
+            {
+                if (_hasAnnotation != value)
+                {
+                    _hasAnnotation = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(RowBackground));
+                    OnPropertyChanged(nameof(AnnotationIcon));
+                }
+            }
+        }
+
+        public string AnnotationIcon => HasAnnotation ? "📌" : "";
+
         public Brush RowBackground
         {
             get
             {
                 if (IsMarked)
                     return new SolidColorBrush(Color.FromRgb(204, 153, 255));
+
+                if (HasAnnotation)
+                    return new SolidColorBrush(Color.FromRgb(255, 255, 200)); // Yellow
 
                 if (CustomColor.HasValue)
                     return new SolidColorBrush(CustomColor.Value);

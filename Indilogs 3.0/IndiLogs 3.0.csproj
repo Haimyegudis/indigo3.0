@@ -250,11 +250,15 @@
     </Compile>
     <Compile Include="Models\ConditionModels.cs" />
     <Compile Include="Models\EventEntry.cs" />
+    <Compile Include="Models\CaseFile.cs" />
     <Compile Include="Models\ExportPreset.cs" />
     <Compile Include="Models\FilterNode.cs" />
     <Compile Include="Models\LogSessionData.cs" />
     <Compile Include="Models\LogEntry.cs" />
     <Compile Include="Models\SavedConfiguration.cs" />
+    <Compile Include="Views\AnnotationWindow.xaml.cs">
+      <DependentUpon>AnnotationWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\ColoringWindow.xaml.cs">
       <DependentUpon>ColoringWindow.xaml</DependentUpon>
     </Compile>
@@ -325,6 +329,10 @@
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\AnnotationWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\ColoringWindow.xaml">
       <SubType>Designer</SubType>

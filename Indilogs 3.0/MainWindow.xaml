@@ -269,9 +269,27 @@
                                                 <TextBlock Text="📊 Export CSV"/>
                                             </Viewbox>
                                         </Button>
-                                        <Button Command="{Binding RunAnalysisCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}">
+                                        <Button Command="{Binding RunAnalysisCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5">
                                             <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
                                                 <TextBlock Text="⚙ Run Analysis"/>
+                                            </Viewbox>
+                                        </Button>
+
+                                        <Separator Margin="0,10,0,10" Background="{DynamicResource BorderColor}"/>
+
+                                        <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                                            <TextBlock Text="Case File" FontWeight="Bold" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" FontSize="11"/>
+                                        </DockPanel>
+
+                                        <Button Command="{Binding SaveCaseCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="💾 Save Case"/>
+                                            </Viewbox>
+                                        </Button>
+
+                                        <Button Command="{Binding LoadCaseCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="📂 Load Case"/>
                                             </Viewbox>
                                         </Button>
                                     </StackPanel>
@@ -568,6 +586,10 @@
 
                                 <DataGrid.ContextMenu>
                                     <ContextMenu>
+                                        <MenuItem Command="{Binding PlacementTarget.DataContext.AddAnnotationCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  Header="📌 Add Comment"/>
+                                        <Separator/>
                                         <MenuItem Command="{Binding PlacementTarget.DataContext.FilterContextCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Header="Time Focus Filter"/>
                                         <Separator/>
                                         <MenuItem Header="Filter Out (Message)..." Command="{Binding FilterOutCommand}"/>
@@ -581,6 +603,15 @@
                                 </DataGrid.InputBindings>
 
                                 <DataGrid.Columns>
+                                    <DataGridTextColumn Header="" Binding="{Binding AnnotationIcon}" Width="30">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                <Setter Property="FontSize" Value="14"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
                                     <DataGridTextColumn Header="Lvl" Binding="{Binding Level}" Width="50" FontWeight="Bold">
                                         <DataGridTextColumn.ElementStyle>
                                             <Style TargetType="TextBlock">
@@ -850,12 +881,25 @@
                                 </DataGrid.InputBindings>
                                 <DataGrid.ContextMenu>
                                     <ContextMenu>
+                                        <MenuItem Command="{Binding PlacementTarget.DataContext.AddAnnotationCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  Header="📌 Add Comment"/>
+                                        <Separator/>
                                         <MenuItem Command="{Binding PlacementTarget.DataContext.FilterContextCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Header="Time Focus Filter"/>
                                         <Separator/>
                                         <MenuItem Header="Filter Out (Message)..." Command="{Binding FilterOutCommand}"/>
                                     </ContextMenu>
                                 </DataGrid.ContextMenu>
                                 <DataGrid.Columns>
+                                    <DataGridTextColumn Header="" Binding="{Binding AnnotationIcon}" Width="30" CanUserSort="False">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                <Setter Property="FontSize" Value="14"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
                                     <DataGridTextColumn Header="Lvl" Binding="{Binding Level}" Width="60" FontWeight="Bold" CanUserSort="True" SortMemberPath="Level">
                                         <DataGridTextColumn.ElementStyle>
                                             <Style TargetType="TextBlock">
