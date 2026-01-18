@@ -650,7 +650,7 @@ namespace IndiLogs_3._0.ViewModels
             _csvService = new CsvExportService();
             _logService = new LogFileService();
             _coloringService = new LogColoringService();
-
+            _isTimeSyncEnabled = false;
             ToggleVisualModeCommand = new RelayCommand(o => IsVisualMode = !IsVisualMode);
 
             TreeShowThisCommand = new RelayCommand(ExecuteTreeShowThis);
@@ -3539,7 +3539,10 @@ namespace IndiLogs_3._0.ViewModels
         public void RequestSyncScroll(DateTime targetTime, string sourceGrid)
         {
             if (!IsTimeSyncEnabled || _isSyncScrolling)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] Skipped - Enabled: {IsTimeSyncEnabled}, Syncing: {_isSyncScrolling}");
                 return;
+            }
 
             _isSyncScrolling = true;
 
@@ -3552,22 +3555,27 @@ namespace IndiLogs_3._0.ViewModels
                 IList<LogEntry> targetCollection = null;
                 string targetGrid = null;
 
+                System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] Source: {sourceGrid}, Target time: {adjustedTime:HH:mm:ss.fff}");
+
                 if (sourceGrid == "PLC" || sourceGrid == "PLCFiltered")
                 {
                     // Source is PLC, sync to APP
-                    targetCollection = AppDevLogsFiltered;
-                    targetGrid = "APP";
+                    if (AppDevLogsFiltered != null && AppDevLogsFiltered.Count > 0)
+                    {
+                        targetCollection = AppDevLogsFiltered;
+                        targetGrid = "APP";
+                    }
                 }
                 else if (sourceGrid == "APP")
                 {
                     // Source is APP, sync to PLC
-                    // Use FilteredLogs if PLC FILTERED tab is selected, otherwise use main Logs
-                    if (SelectedTabIndex == 1)
+                    // Use FilteredLogs if available and active, otherwise use main Logs
+                    if (FilteredLogs != null && FilteredLogs.Count > 0 && SelectedTabIndex == 1)
                     {
                         targetCollection = FilteredLogs;
                         targetGrid = "PLCFiltered";
                     }
-                    else
+                    else if (Logs != null && (Logs as IList<LogEntry>)?.Count > 0)
                     {
                         targetCollection = Logs as IList<LogEntry>;
                         targetGrid = "PLC";
@@ -3575,25 +3583,26 @@ namespace IndiLogs_3._0.ViewModels
                 }
 
                 if (targetCollection == null || targetCollection.Count == 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] No target collection available");
                     return;
+                }
 
-                // Find nearest log entry
-                // Note: Binary search only works on sorted collections
-                // Using linear search for now since APP logs may not be sorted
+                System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] Target grid: {targetGrid}, Collection size: {targetCollection.Count}");
+
+                // Find nearest log entry (using linear search for now - works on filtered/unfiltered)
                 int nearestIndex = LinearSearchNearest(targetCollection, adjustedTime);
 
                 if (nearestIndex >= 0)
                 {
                     LogEntry nearestLog = targetCollection[nearestIndex];
-
-                    // Check if the match is within acceptable range (e.g., 1 minute)
                     TimeSpan timeDiff = (nearestLog.Date - adjustedTime).Duration();
 
+                    System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] Found match at index {nearestIndex}: {nearestLog.Date:HH:mm:ss.fff} (diff: {timeDiff.TotalSeconds:F1}s)");
+
+                    // Only sync if the match is within acceptable range (60 seconds)
                     if (timeDiff.TotalSeconds <= 60)
                     {
-                        // DEBUG: Show sync info
-                        System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] {sourceGrid} -> {targetGrid}: {adjustedTime:HH:mm:ss.fff} -> {nearestLog.Date:HH:mm:ss.fff} (diff: {timeDiff.TotalSeconds:F1}s)");
-
                         // Trigger scroll to the found log entry
                         RequestScrollToLog?.Invoke(nearestLog);
 
@@ -3608,14 +3617,13 @@ namespace IndiLogs_3._0.ViewModels
                         // Show notification that no correlated logs found nearby
                         Application.Current?.Dispatcher?.Invoke(() =>
                         {
-                            StatusMessage = $"⚠ No correlated logs found nearby (closest: {timeDiff.TotalSeconds:F0}s away)";
+                            StatusMessage = $"⚠ No correlated logs within 60s (closest: {timeDiff.TotalSeconds:F0}s)";
                         });
                     }
                 }
                 else
                 {
-                    // DEBUG: No match found at all
-                    System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] {sourceGrid} -> {targetGrid}: No match found for {adjustedTime:HH:mm:ss.fff}");
+                    System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] No match found");
                 }
             }
             finally
@@ -3623,7 +3631,6 @@ namespace IndiLogs_3._0.ViewModels
                 _isSyncScrolling = false;
             }
         }
-
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

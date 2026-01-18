@@ -95,10 +95,11 @@
                             <Button Content="⬆" Command="{Binding PrevMarkedCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" Foreground="{DynamicResource TextPrimary}" ToolTip="Previous Marked" Width="28" Height="22" Padding="0" FontSize="10"/>
 
                             <!-- Time-Sync Scrolling Toggle -->
+                            <!-- Time-Sync Scrolling Toggle -->
                             <Button Command="{Binding ToggleTimeSyncCommand}" Style="{DynamicResource ModernBtn}"
-                                    Background="#3B82F6" ToolTip="Toggle Time-Sync Scrolling (Sync PLC and APP logs by timestamp)"
-                                    Width="28" Height="22" Padding="0" x:Name="TimeSyncButton">
-                                <TextBlock Text="🔗" FontSize="11" Foreground="White"/>
+        Background="Transparent" ToolTip="Toggle Time-Sync Scrolling (Sync PLC and APP logs by timestamp)"
+        Width="28" Height="22" Padding="0" x:Name="TimeSyncButton">
+                                <TextBlock Text="🔗" FontSize="11" Foreground="{DynamicResource TextSecondary}"/>
                             </Button>
                         </StackPanel>
                     </Border>
@@ -741,15 +742,16 @@
                     </TabItem>
                     <TabItem Header="PLC (FILTERED)">
                         <DataGrid x:Name="FilteredLogsGrid" ItemsSource="{Binding FilteredLogs}" SelectedItem="{Binding SelectedLog}"
-                                  FontSize="{Binding GridFontSize}"
-                                  FontFamily="{DynamicResource ContentFontFamily}"
-                                  FontWeight="{DynamicResource ContentFontWeight}"
-                                  AutoGenerateColumns="False" IsReadOnly="True"
-                                  RowStyle="{DynamicResource LogRowStyle}"
-                                  SelectionMode="Extended"
-                                  SelectionUnit="FullRow"
-                                  HorizontalScrollBarVisibility="Auto"
-                                  RequestBringIntoView="DataGrid_RequestBringIntoView">
+          FontSize="{Binding GridFontSize}"
+          FontFamily="{DynamicResource ContentFontFamily}"
+          FontWeight="{DynamicResource ContentFontWeight}"
+          AutoGenerateColumns="False" IsReadOnly="True"
+          RowStyle="{DynamicResource LogRowStyle}"
+          SelectionMode="Extended"
+          SelectionUnit="FullRow"
+          HorizontalScrollBarVisibility="Auto"
+          RequestBringIntoView="DataGrid_RequestBringIntoView"
+          Loaded="DataGrid_Loaded">
                             <DataGrid.InputBindings>
                                 <MouseBinding Gesture="LeftDoubleClick" Command="{Binding ViewLogDetailsCommand}" CommandParameter="{Binding SelectedLog}" />
                             </DataGrid.InputBindings>
@@ -871,17 +873,18 @@
                             </Border>
 
                             <DataGrid Grid.Row="1" x:Name="AppLogsGrid"
-                                      ItemsSource="{Binding AppDevLogsFiltered}"
-                                      SelectedItem="{Binding SelectedLog}"
-                                      Sorting="AppLogsGrid_Sorting"
-                                      FontSize="{Binding GridFontSize}"
-                                      FontFamily="{DynamicResource ContentFontFamily}"
-                                      FontWeight="{DynamicResource ContentFontWeight}"
-                                      AutoGenerateColumns="False" IsReadOnly="True"
-                                      RowStyle="{DynamicResource LogRowStyle}"
-                                      SelectionMode="Extended" SelectionUnit="FullRow"
-                                      HorizontalScrollBarVisibility="Auto"
-                                      RequestBringIntoView="DataGrid_RequestBringIntoView">
+          ItemsSource="{Binding AppDevLogsFiltered}"
+          SelectedItem="{Binding SelectedLog}"
+          Sorting="AppLogsGrid_Sorting"
+          FontSize="{Binding GridFontSize}"
+          FontFamily="{DynamicResource ContentFontFamily}"
+          FontWeight="{DynamicResource ContentFontWeight}"
+          AutoGenerateColumns="False" IsReadOnly="True"
+          RowStyle="{DynamicResource LogRowStyle}"
+          SelectionMode="Extended" SelectionUnit="FullRow"
+          HorizontalScrollBarVisibility="Auto"
+          RequestBringIntoView="DataGrid_RequestBringIntoView"
+          Loaded="DataGrid_Loaded">
                                 <DataGrid.InputBindings>
                                     <KeyBinding Key="Space" Command="{Binding MarkRowCommand}" />
                                     <MouseBinding Gesture="LeftDoubleClick" Command="{Binding ViewLogDetailsCommand}" CommandParameter="{Binding SelectedLog}" />
