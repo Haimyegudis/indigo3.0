@@ -565,6 +565,33 @@ namespace IndiLogs_3._0.ViewModels
             set { _isConfigMenuOpen = value; OnPropertyChanged(); }
         }
 
+        // Time-Sync Scrolling
+        private bool _isTimeSyncEnabled;
+        public bool IsTimeSyncEnabled
+        {
+            get => _isTimeSyncEnabled;
+            set
+            {
+                _isTimeSyncEnabled = value;
+                OnPropertyChanged();
+                System.Diagnostics.Debug.WriteLine($"========================================");
+                System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] Feature is now: {(value ? "ENABLED ✓" : "DISABLED ✗")}");
+                System.Diagnostics.Debug.WriteLine($"========================================");
+
+                // Also show in status bar
+                StatusMessage = value ? "🔗 Time-Sync ENABLED" : "⛓ Time-Sync DISABLED";
+            }
+        }
+
+        private bool _isSyncScrolling = false;
+        private int _timeSyncOffsetSeconds = 0;
+
+        public int TimeSyncOffsetSeconds
+        {
+            get => _timeSyncOffsetSeconds;
+            set { _timeSyncOffsetSeconds = value; OnPropertyChanged(); }
+        }
+
         // --- Commands ---
         public ICommand LoadCommand { get; }
         public ICommand ClearCommand { get; }
@@ -616,6 +643,7 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand FilterAppErrorsCommand { get; }
         public ICommand OpenVisualAnalysisCommand { get; }
         public ICommand ResetTimeFocusCommand { get; }
+        public ICommand ToggleTimeSyncCommand { get; }
 
         public MainViewModel()
         {
@@ -655,6 +683,7 @@ namespace IndiLogs_3._0.ViewModels
 
             ToggleExplorerMenuCommand = new RelayCommand(o => IsExplorerMenuOpen = !IsExplorerMenuOpen);
             ToggleConfigMenuCommand = new RelayCommand(o => IsConfigMenuOpen = !IsConfigMenuOpen);
+            ToggleTimeSyncCommand = new RelayCommand(o => IsTimeSyncEnabled = !IsTimeSyncEnabled);
 
             LoadCommand = new RelayCommand(LoadFile);
             ClearCommand = new RelayCommand(o => { ClearLogs(o); IsExplorerMenuOpen = false; });
@@ -3384,6 +3413,215 @@ namespace IndiLogs_3._0.ViewModels
                     $"🚫 Filter Out: {_negativeFilters.Count}",
                     "Case Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
             });
+        }
+
+        // ==================== TIME-SYNC SCROLLING METHODS ====================
+
+        /// <summary>
+        /// Linear search for the nearest log entry by timestamp
+        /// Works on both sorted and unsorted collections (O(N))
+        /// </summary>
+        private int LinearSearchNearest(IList<LogEntry> collection, DateTime targetTime)
+        {
+            if (collection == null || collection.Count == 0)
+            {
+                System.Diagnostics.Debug.WriteLine("[LINEAR SEARCH] Collection is null or empty");
+                return -1;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[LINEAR SEARCH] Searching {collection.Count} entries for {targetTime:HH:mm:ss.fff}");
+
+            int nearestIndex = 0;
+            TimeSpan minDiff = (collection[0].Date - targetTime).Duration();
+
+            for (int i = 1; i < collection.Count; i++)
+            {
+                TimeSpan currentDiff = (collection[i].Date - targetTime).Duration();
+                if (currentDiff < minDiff)
+                {
+                    minDiff = currentDiff;
+                    nearestIndex = i;
+                }
+
+                // Early exit if we found an exact match
+                if (minDiff.TotalMilliseconds < 1)
+                    break;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[LINEAR SEARCH] Found nearest at index {nearestIndex}: {collection[nearestIndex].Date:HH:mm:ss.fff} (diff: {minDiff.TotalSeconds:F3}s)");
+
+            return nearestIndex;
+        }
+
+        /// <summary>
+        /// Binary search for the nearest log entry by timestamp
+        /// WARNING: This assumes the collection is sorted by Date!
+        /// </summary>
+        private int BinarySearchNearest(IList<LogEntry> collection, DateTime targetTime)
+        {
+            if (collection == null || collection.Count == 0)
+            {
+                System.Diagnostics.Debug.WriteLine("[BINARY SEARCH] Collection is null or empty");
+                return -1;
+            }
+
+            // DEBUG: Check if collection is sorted
+            bool isSorted = true;
+            for (int i = 1; i < Math.Min(10, collection.Count); i++)
+            {
+                if (collection[i].Date < collection[i - 1].Date)
+                {
+                    isSorted = false;
+                    break;
+                }
+            }
+            System.Diagnostics.Debug.WriteLine($"[BINARY SEARCH] Collection count: {collection.Count}, First 10 sorted: {isSorted}");
+            System.Diagnostics.Debug.WriteLine($"[BINARY SEARCH] Range: {collection[0].Date:HH:mm:ss.fff} to {collection[collection.Count - 1].Date:HH:mm:ss.fff}");
+            System.Diagnostics.Debug.WriteLine($"[BINARY SEARCH] Target: {targetTime:HH:mm:ss.fff}");
+
+            int left = 0;
+            int right = collection.Count - 1;
+
+            // Check bounds
+            if (targetTime <= collection[0].Date)
+            {
+                System.Diagnostics.Debug.WriteLine($"[BINARY SEARCH] Target before first entry, returning 0");
+                return 0;
+            }
+            if (targetTime >= collection[right].Date)
+            {
+                System.Diagnostics.Debug.WriteLine($"[BINARY SEARCH] Target after last entry, returning {right}");
+                return right;
+            }
+
+            // Binary search
+            while (left <= right)
+            {
+                int mid = left + (right - left) / 2;
+                DateTime midTime = collection[mid].Date;
+
+                if (midTime == targetTime)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[BINARY SEARCH] Exact match at index {mid}");
+                    return mid;
+                }
+
+                if (midTime < targetTime)
+                    left = mid + 1;
+                else
+                    right = mid - 1;
+            }
+
+            // At this point, left is the index of the first element greater than targetTime
+            // and right is the index of the last element less than targetTime
+            // Return the closer one
+            if (left >= collection.Count)
+            {
+                System.Diagnostics.Debug.WriteLine($"[BINARY SEARCH] Left out of bounds, returning {right}");
+                return right;
+            }
+
+            DateTime leftTime = collection[left].Date;
+            DateTime rightTime = collection[right].Date;
+
+            TimeSpan leftDiff = (leftTime - targetTime).Duration();
+            TimeSpan rightDiff = (targetTime - rightTime).Duration();
+
+            int result = leftDiff < rightDiff ? left : right;
+            System.Diagnostics.Debug.WriteLine($"[BINARY SEARCH] Nearest match at index {result} ({collection[result].Date:HH:mm:ss.fff})");
+
+            return result;
+        }
+
+        /// <summary>
+        /// Request synchronization scroll from one grid to another based on timestamp
+        /// </summary>
+        public void RequestSyncScroll(DateTime targetTime, string sourceGrid)
+        {
+            if (!IsTimeSyncEnabled || _isSyncScrolling)
+                return;
+
+            _isSyncScrolling = true;
+
+            try
+            {
+                // Apply time offset if configured
+                DateTime adjustedTime = targetTime.AddSeconds(TimeSyncOffsetSeconds);
+
+                // Determine target collection based on source
+                IList<LogEntry> targetCollection = null;
+                string targetGrid = null;
+
+                if (sourceGrid == "PLC" || sourceGrid == "PLCFiltered")
+                {
+                    // Source is PLC, sync to APP
+                    targetCollection = AppDevLogsFiltered;
+                    targetGrid = "APP";
+                }
+                else if (sourceGrid == "APP")
+                {
+                    // Source is APP, sync to PLC
+                    // Use FilteredLogs if PLC FILTERED tab is selected, otherwise use main Logs
+                    if (SelectedTabIndex == 1)
+                    {
+                        targetCollection = FilteredLogs;
+                        targetGrid = "PLCFiltered";
+                    }
+                    else
+                    {
+                        targetCollection = Logs as IList<LogEntry>;
+                        targetGrid = "PLC";
+                    }
+                }
+
+                if (targetCollection == null || targetCollection.Count == 0)
+                    return;
+
+                // Find nearest log entry
+                // Note: Binary search only works on sorted collections
+                // Using linear search for now since APP logs may not be sorted
+                int nearestIndex = LinearSearchNearest(targetCollection, adjustedTime);
+
+                if (nearestIndex >= 0)
+                {
+                    LogEntry nearestLog = targetCollection[nearestIndex];
+
+                    // Check if the match is within acceptable range (e.g., 1 minute)
+                    TimeSpan timeDiff = (nearestLog.Date - adjustedTime).Duration();
+
+                    if (timeDiff.TotalSeconds <= 60)
+                    {
+                        // DEBUG: Show sync info
+                        System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] {sourceGrid} -> {targetGrid}: {adjustedTime:HH:mm:ss.fff} -> {nearestLog.Date:HH:mm:ss.fff} (diff: {timeDiff.TotalSeconds:F1}s)");
+
+                        // Trigger scroll to the found log entry
+                        RequestScrollToLog?.Invoke(nearestLog);
+
+                        // Update status with sync info
+                        Application.Current?.Dispatcher?.Invoke(() =>
+                        {
+                            StatusMessage = $"🔗 Synced {sourceGrid} ↔ {targetGrid} (±{timeDiff.TotalSeconds:F1}s)";
+                        });
+                    }
+                    else
+                    {
+                        // Show notification that no correlated logs found nearby
+                        Application.Current?.Dispatcher?.Invoke(() =>
+                        {
+                            StatusMessage = $"⚠ No correlated logs found nearby (closest: {timeDiff.TotalSeconds:F0}s away)";
+                        });
+                    }
+                }
+                else
+                {
+                    // DEBUG: No match found at all
+                    System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] {sourceGrid} -> {targetGrid}: No match found for {adjustedTime:HH:mm:ss.fff}");
+                }
+            }
+            finally
+            {
+                _isSyncScrolling = false;
+            }
         }
 
 

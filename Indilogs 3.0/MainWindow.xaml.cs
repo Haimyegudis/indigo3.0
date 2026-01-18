@@ -52,6 +52,32 @@ namespace IndiLogs_3._0
             if (DataContext is MainViewModel vm)
             {
                 vm.RequestScrollToLog += MapsToLogRow;
+                vm.PropertyChanged += ViewModel_PropertyChanged;
+            }
+        }
+
+        private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(MainViewModel.IsTimeSyncEnabled) && DataContext is MainViewModel vm)
+            {
+                UpdateTimeSyncButtonVisual(vm.IsTimeSyncEnabled);
+            }
+        }
+
+        private void UpdateTimeSyncButtonVisual(bool isEnabled)
+        {
+            if (TimeSyncButton != null)
+            {
+                TimeSyncButton.Background = isEnabled ?
+                    new SolidColorBrush((Color)ColorConverter.ConvertFromString("#3B82F6")) :
+                    new SolidColorBrush(Colors.Transparent);
+
+                if (TimeSyncButton.Content is TextBlock textBlock)
+                {
+                    textBlock.Foreground = isEnabled ?
+                        new SolidColorBrush(Colors.White) :
+                        (Brush)FindResource("TextPrimary");
+                }
             }
         }
 
@@ -74,19 +100,74 @@ namespace IndiLogs_3._0
 
         private void MapsToLogRow(LogEntry log)
         {
-            if (MainLogsGrid == null || log == null || !MainLogsGrid.Items.Contains(log)) return;
+            if (log == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[SCROLL TO LOG] Log is null");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] Attempting to scroll to: {log.Date:HH:mm:ss.fff}");
+
+            DataGrid targetGrid = null;
+
+            // Determine which grid to scroll based on which contains the log
+            if (MainLogsGrid != null && MainLogsGrid.Items.Contains(log))
+            {
+                targetGrid = MainLogsGrid;
+                System.Diagnostics.Debug.WriteLine("[SCROLL TO LOG] Target: MainLogsGrid");
+            }
+            else if (FilteredLogsGrid != null && FilteredLogsGrid.Items.Contains(log))
+            {
+                targetGrid = FilteredLogsGrid;
+                System.Diagnostics.Debug.WriteLine("[SCROLL TO LOG] Target: FilteredLogsGrid");
+            }
+            else if (AppLogsGrid != null && AppLogsGrid.Items.Contains(log))
+            {
+                targetGrid = AppLogsGrid;
+                System.Diagnostics.Debug.WriteLine("[SCROLL TO LOG] Target: AppLogsGrid");
+            }
+
+            if (targetGrid == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] No grid found! MainLogsGrid={MainLogsGrid != null}, FilteredLogsGrid={FilteredLogsGrid != null}, AppLogsGrid={AppLogsGrid != null}");
+                return;
+            }
+
             try
             {
-                MainLogsGrid.SelectedItem = log;
+                // Find the index of the log in the grid
+                int logIndex = targetGrid.Items.IndexOf(log);
+                if (logIndex < 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] Log not found in grid items");
+                    return;
+                }
+
+                // Get the ScrollViewer
+                var scrollViewer = FindVisualChild<ScrollViewer>(targetGrid);
+                if (scrollViewer == null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] ScrollViewer not found");
+                    return;
+                }
 
                 // Allow scrolling only for this specific programmatic action
                 _isProgrammaticScroll = true;
-                MainLogsGrid.ScrollIntoView(log);
+
+                // Scroll to the exact vertical position (make this log the FIRST visible row)
+                scrollViewer.ScrollToVerticalOffset(logIndex);
+
+                // Also select the item
+                targetGrid.SelectedItem = log;
+
                 _isProgrammaticScroll = false;
+
+                System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] Successfully scrolled to index {logIndex} in {targetGrid.Name}");
             }
-            catch
+            catch (Exception ex)
             {
                 _isProgrammaticScroll = false;
+                System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] Error: {ex.Message}");
             }
         }
 
@@ -168,6 +249,12 @@ namespace IndiLogs_3._0
                             // User initiated scroll - remember this position
                             _lastUserHorizontalOffset = scrollViewer.HorizontalOffset;
                         }
+
+                        // Time-Sync: Trigger sync on vertical scroll
+                        if (args.VerticalChange != 0 && _isUserScrolling && !_isProgrammaticScroll)
+                        {
+                            TriggerTimeSyncScroll(grid);
+                        }
                     };
 
                     // Detect user-initiated scrolling
@@ -179,6 +266,55 @@ namespace IndiLogs_3._0
                     };
                 }
             }
+        }
+
+        private void TriggerTimeSyncScroll(DataGrid sourceGrid)
+        {
+            if (!(DataContext is MainViewModel vm) || !vm.IsTimeSyncEnabled)
+                return;
+
+            // Get the first visible item in the grid
+            var scrollViewer = FindVisualChild<ScrollViewer>(sourceGrid);
+            if (scrollViewer == null)
+                return;
+
+            // Calculate which row is at the top of the viewport
+            int firstVisibleIndex = (int)scrollViewer.VerticalOffset;
+            if (firstVisibleIndex < 0 || firstVisibleIndex >= sourceGrid.Items.Count)
+                return;
+
+            var firstVisibleItem = sourceGrid.Items[firstVisibleIndex];
+            if (!(firstVisibleItem is LogEntry logEntry))
+                return;
+
+            // Determine which grid this is
+            string gridName = sourceGrid.Name;
+            if (string.IsNullOrEmpty(gridName))
+            {
+                // Try to identify by items source
+                if (sourceGrid.ItemsSource == vm.Logs)
+                    gridName = "PLC";
+                else if (sourceGrid.ItemsSource == vm.FilteredLogs)
+                    gridName = "PLCFiltered";
+                else if (sourceGrid.ItemsSource == vm.AppDevLogsFiltered)
+                    gridName = "APP";
+            }
+            else
+            {
+                // Parse the name (MainLogsGrid, FilteredLogsGrid, AppLogsGrid)
+                if (gridName.Contains("Main"))
+                    gridName = "PLC";
+                else if (gridName.Contains("Filtered"))
+                    gridName = "PLCFiltered";
+                else if (gridName.Contains("App"))
+                    gridName = "APP";
+            }
+
+            // DEBUG: Log the scroll trigger
+            System.Diagnostics.Debug.WriteLine($"[TIME-SYNC TRIGGER] Grid: {gridName}, Time: {logEntry.Date:HH:mm:ss.fff}, Index: {firstVisibleIndex}");
+
+            // Trigger the sync
+            vm.RequestSyncScroll(logEntry.Date, gridName);
         }
 
         // Helper to find child in visual tree

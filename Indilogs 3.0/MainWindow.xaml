@@ -93,6 +93,13 @@
                             </Button>
                             <Button Content="⬇" Command="{Binding NextMarkedCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" Foreground="{DynamicResource TextPrimary}" ToolTip="Next Marked" Width="28" Height="22" Padding="0" FontSize="10"/>
                             <Button Content="⬆" Command="{Binding PrevMarkedCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" Foreground="{DynamicResource TextPrimary}" ToolTip="Previous Marked" Width="28" Height="22" Padding="0" FontSize="10"/>
+
+                            <!-- Time-Sync Scrolling Toggle -->
+                            <Button Command="{Binding ToggleTimeSyncCommand}" Style="{DynamicResource ModernBtn}"
+                                    Background="#3B82F6" ToolTip="Toggle Time-Sync Scrolling (Sync PLC and APP logs by timestamp)"
+                                    Width="28" Height="22" Padding="0" x:Name="TimeSyncButton">
+                                <TextBlock Text="🔗" FontSize="11" Foreground="White"/>
+                            </Button>
                         </StackPanel>
                     </Border>
                 </StackPanel>
