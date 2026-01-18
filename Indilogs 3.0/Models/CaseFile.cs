@@ -14,12 +14,18 @@ namespace IndiLogs_3._0.Models
         public CaseViewState ViewState { get; set; }
         public List<LogAnnotation> Annotations { get; set; }
 
+        // Coloring rules for main and app logs
+        public List<ColoringCondition> MainColoringRules { get; set; }
+        public List<ColoringCondition> AppColoringRules { get; set; }
+
         public CaseFile()
         {
             Meta = new CaseMetadata();
             Resources = new List<CaseResource>();
             ViewState = new CaseViewState();
             Annotations = new List<LogAnnotation>();
+            MainColoringRules = new List<ColoringCondition>();
+            AppColoringRules = new List<ColoringCondition>();
         }
     }
 

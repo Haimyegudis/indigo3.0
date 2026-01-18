@@ -739,7 +739,7 @@ namespace IndiLogs_3._0.ViewModels
                 VisualTimelineVM.LoadData(logsToUse.ToList(), Events);
             }
         }
-        private async void ProcessFiles(string[] filePaths)
+        private async void ProcessFiles(string[] filePaths, Action<LogSessionData> onLoadComplete = null)
         {
             // Check if this is a live log file (active file being written to)
             if (filePaths.Length == 1 && File.Exists(filePaths[0]))
@@ -796,14 +796,14 @@ namespace IndiLogs_3._0.ViewModels
                 LoadedSessions.Add(newSession);
                 SelectedSession = newSession;
 
-                // Configuration files are loaded from ZIP in SwitchToSession() via SelectedSession setter
-                // No need to call LoadConfigurationFiles here - it would clear ZIP-loaded files
-
                 CurrentProgress = 100;
                 StatusMessage = "Logs Loaded. Running Analysis in Background...";
                 IsBusy = false;
 
                 StartBackgroundAnalysis(newSession);
+
+                // ✅ קריאה ל-callback אחרי טעינה מוצלחת
+                onLoadComplete?.Invoke(newSession);
             }
             catch (Exception ex)
             {
@@ -3096,6 +3096,9 @@ namespace IndiLogs_3._0.ViewModels
                             ActiveThreadFilters = _activeThreadFilters.ToList(),
                             NegativeFilters = _negativeFilters.ToList()
                         },
+                        // ✅ שמירת חוקי צביעה
+                        MainColoringRules = _mainColoringRules ?? new List<ColoringCondition>(),
+                        AppColoringRules = _appColoringRules ?? new List<ColoringCondition>(),
                         Annotations = _logAnnotations.Values.ToList()
                     };
 
@@ -3121,7 +3124,12 @@ namespace IndiLogs_3._0.ViewModels
                     _currentCase = caseFile;
 
                     StatusMessage = $"Case saved: {Path.GetFileName(dialog.FileName)}";
-                    MessageBox.Show("Case file saved successfully!", "Save Case", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show($"Case file saved successfully!\n\n" +
+                                  $"Filters: {(_mainFilterRoot != null ? "✓" : "✗")}\n" +
+                                  $"Coloring Rules: {_mainColoringRules?.Count ?? 0} (Main) + {_appColoringRules?.Count ?? 0} (App)\n" +
+                                  $"Annotations: {caseFile.Annotations.Count}\n" +
+                                  $"Search: {(string.IsNullOrEmpty(SearchText) ? "✗" : "✓")}",
+                                  "Case Saved", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)
@@ -3129,6 +3137,7 @@ namespace IndiLogs_3._0.ViewModels
                 MessageBox.Show($"Error saving case: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
 
         /// <summary>
         /// Loads an investigation case from a .indi-case file
@@ -3157,16 +3166,18 @@ namespace IndiLogs_3._0.ViewModels
                     // Check if log files exist and collect paths
                     var logFilesToLoad = new List<string>();
                     bool filesFound = true;
+                    var caseDir = Path.GetDirectoryName(dialog.FileName);
 
                     foreach (var resource in caseFile.Resources)
                     {
-                        var caseDir = Path.GetDirectoryName(dialog.FileName);
                         var logPath = Path.Combine(caseDir, resource.FileName);
 
                         if (!File.Exists(logPath))
                         {
                             var result = MessageBox.Show(
-                                $"Log file not found: {resource.FileName}\n\nWould you like to locate it manually?",
+                                $"Log file not found: {resource.FileName}\n\n" +
+                                $"Expected location: {caseDir}\n\n" +
+                                $"Would you like to locate it manually?",
                                 "File Not Found",
                                 MessageBoxButton.YesNo,
                                 MessageBoxImage.Question);
@@ -3176,7 +3187,8 @@ namespace IndiLogs_3._0.ViewModels
                                 var fileDialog = new OpenFileDialog
                                 {
                                     Filter = "Log Files (*.file;*.log;*.zip)|*.file;*.log;*.zip|All Files (*.*)|*.*",
-                                    FileName = resource.FileName
+                                    FileName = resource.FileName,
+                                    Title = $"Locate: {resource.FileName}"
                                 };
 
                                 if (fileDialog.ShowDialog() == true)
@@ -3208,40 +3220,74 @@ namespace IndiLogs_3._0.ViewModels
                         LoadedSessions.Clear();
                         SelectedSession = null;
 
-                        // Load log files first
-                        ProcessFiles(logFilesToLoad.ToArray());
-
-                        // Wait for files to load, then apply case settings
-                        // Using longer delay to ensure logs are fully loaded
-                        Task.Delay(3000).ContinueWith(_ =>
+                        // ✅ טעינת הלוגים עם callback
+                        ProcessFiles(logFilesToLoad.ToArray(), session =>
                         {
+                            // Callback נקרא אחרי שהלוגים נטענו בהצלחה
                             Application.Current.Dispatcher.Invoke(() =>
                             {
                                 StatusMessage = "Applying case settings...";
                                 ApplyCaseSettings(caseFile);
                                 _isLoadingCase = false;
+                                StatusMessage = "Case loaded successfully!";
                             });
                         });
+                    }
+                    else
+                    {
+                        MessageBox.Show(
+                            "Case cannot be loaded without the log files.\n\n" +
+                            "Please ensure the log files are in the same folder as the .indi-case file,\n" +
+                            "or select them manually when prompted.",
+                            "Missing Log Files",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
                     }
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error loading case: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _isLoadingCase = false;
             }
         }
 
         /// <summary>
         /// Applies case settings after logs are loaded
         /// </summary>
-        private void ApplyCaseSettings(CaseFile caseFile)
+        private async void ApplyCaseSettings(CaseFile caseFile)
         {
             if (caseFile == null) return;
 
             _currentCaseFilePath = null;
             _currentCase = caseFile;
 
-            // Restore annotations first (re-bind to actual log entries)
+            IsBusy = true;
+            StatusMessage = "Applying case settings...";
+
+            // ✅ 1. החזרת חוקי צביעה תחילה
+            _mainColoringRules = caseFile.MainColoringRules ?? new List<ColoringCondition>();
+            _appColoringRules = caseFile.AppColoringRules ?? new List<ColoringCondition>();
+
+            // החלת צבעים על כל הלוגים
+            await Task.Run(async () =>
+            {
+                if (_allLogsCache != null)
+                {
+                    await _coloringService.ApplyDefaultColorsAsync(_allLogsCache, false);
+                    if (_mainColoringRules.Any())
+                        await _coloringService.ApplyCustomColoringAsync(_allLogsCache, _mainColoringRules);
+                }
+
+                if (_allAppLogsCache != null)
+                {
+                    await _coloringService.ApplyDefaultColorsAsync(_allAppLogsCache, true);
+                    if (_appColoringRules.Any())
+                        await _coloringService.ApplyCustomColoringAsync(_allAppLogsCache, _appColoringRules);
+                }
+            });
+
+            // ✅ 2. Restore annotations (re-bind to actual log entries)
             _logAnnotations.Clear();
             int annotationsRestored = 0;
 
@@ -3272,7 +3318,7 @@ namespace IndiLogs_3._0.ViewModels
                 }
             }
 
-            // Restore view state
+            // ✅ 3. Restore view state (filters, search, etc.)
             if (caseFile.ViewState != null)
             {
                 _mainFilterRoot = caseFile.ViewState.ActiveFilters;
@@ -3287,6 +3333,17 @@ namespace IndiLogs_3._0.ViewModels
                 if (_negativeFilters.Any())
                     _isMainFilterOutActive = true;
 
+                // ✅ החלת הפילטרים
+                if (_isMainFilterActive && _mainFilterRoot != null)
+                {
+                    await Task.Run(() =>
+                    {
+                        var res = _allLogsCache.Where(l => EvaluateFilterNode(l, _mainFilterRoot)).ToList();
+                        _lastFilteredCache = res;
+                    });
+                }
+
+                // Switch to the correct tab
                 if (caseFile.ViewState.SelectedTab == "APP")
                     SelectedTabIndex = 2;
                 else if (caseFile.ViewState.SelectedTab == "FILTERED")
@@ -3295,14 +3352,40 @@ namespace IndiLogs_3._0.ViewModels
                     SelectedTabIndex = 0;
             }
 
-            // Update the UI - this will apply all filters
-            UpdateMainLogsFilter(true);
-            OnPropertyChanged(nameof(IsFilterActive));
+            // ✅ 4. רענון תצוגה
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                // Refresh all log backgrounds to show colors
+                if (Logs != null)
+                    foreach (var log in Logs)
+                        log.OnPropertyChanged("RowBackground");
 
-            StatusMessage = $"Case loaded: {annotationsRestored} annotations restored";
-            MessageBox.Show($"Case loaded successfully!\n\nAnnotations: {annotationsRestored}/{caseFile.Annotations?.Count ?? 0}",
-                "Load Case", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (AppDevLogsFiltered != null)
+                    foreach (var log in AppDevLogsFiltered)
+                        log.OnPropertyChanged("RowBackground");
+
+                // Update the UI with filters
+                UpdateMainLogsFilter(_isMainFilterActive);
+                ApplyAppLogsFilter();
+
+                OnPropertyChanged(nameof(IsFilterActive));
+                OnPropertyChanged(nameof(IsFilterOutActive));
+
+                IsBusy = false;
+                StatusMessage = $"Case loaded: {annotationsRestored} annotations restored";
+
+                MessageBox.Show(
+                    $"Case loaded successfully!\n\n" +
+                    $"📝 Annotations: {annotationsRestored}/{caseFile.Annotations?.Count ?? 0}\n" +
+                    $"🎨 Coloring Rules: {_mainColoringRules.Count} (Main) + {_appColoringRules.Count} (App)\n" +
+                    $"🔍 Filters: {(_mainFilterRoot != null && _mainFilterRoot.Children.Count > 0 ? "Active" : "None")}\n" +
+                    $"🔎 Search: {(string.IsNullOrEmpty(SearchText) ? "None" : $"\"{SearchText}\"")}\n" +
+                    $"🧵 Thread Filters: {_activeThreadFilters.Count}\n" +
+                    $"🚫 Filter Out: {_negativeFilters.Count}",
+                    "Case Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
+            });
         }
+
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
