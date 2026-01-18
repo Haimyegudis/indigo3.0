@@ -7,7 +7,20 @@ namespace IndiLogs_3._0.Models
 {
     public class LogEntry : INotifyPropertyChanged
     {
+
         public event PropertyChangedEventHandler PropertyChanged;
+        private bool _isAnnotationExpanded;
+        public bool IsAnnotationExpanded
+        {
+            get => _isAnnotationExpanded;
+            set
+            {
+                _isAnnotationExpanded = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(AnnotationIcon));
+            }
+        }
+        public string AnnotationContent { get; set; }
 
         public string Level { get; set; }
         public DateTime Date { get; set; }
@@ -63,8 +76,14 @@ namespace IndiLogs_3._0.Models
             }
         }
 
-        public string AnnotationIcon => HasAnnotation ? "📌" : "";
-
+        public string AnnotationIcon
+        {
+            get
+            {
+                if (!HasAnnotation) return "";
+                return IsAnnotationExpanded ? "📌" : "📎"; // Different icon when expanded
+            }
+        }
         public Brush RowBackground
         {
             get

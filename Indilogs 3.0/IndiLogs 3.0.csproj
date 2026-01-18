@@ -213,6 +213,9 @@
     <Compile Include="Services\Analysis\UniversalStateFailureAnalyzer.cs" />
     <Compile Include="Services\CustomLiveLogReader.cs" />
     <Compile Include="ViewModels\VisualTimelineViewModel.cs" />
+    <Compile Include="Views\BrowseTableWindow.xaml.cs">
+      <DependentUpon>BrowseTableWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\ColorPaletteWindow.xaml.cs">
       <DependentUpon>ColorPaletteWindow.xaml</DependentUpon>
     </Compile>
@@ -302,6 +305,10 @@
     <Compile Include="Views\VisualTimelineView.xaml.cs">
       <DependentUpon>VisualTimelineView.xaml</DependentUpon>
     </Compile>
+    <Page Include="Views\BrowseTableWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Views\Exportprogresswindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

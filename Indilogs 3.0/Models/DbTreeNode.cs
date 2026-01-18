@@ -36,6 +36,9 @@ namespace IndiLogs_3._0.Models
         // Node type: "Root", "Table", "Column", "DataRow"
         public string NodeType { get; set; }
 
+        // Store reference to parent database file name
+        public string DatabaseFileName { get; set; }
+
         // For data rows - stores the actual row data as key-value pairs
         public ObservableCollection<DbFieldValue> FieldValues { get; set; } = new ObservableCollection<DbFieldValue>();
 

@@ -42,6 +42,22 @@ namespace IndiLogs_3._0.ViewModels
                 if (value) InitializeVisualMode();
             }
         }
+
+        public ICommand BrowseTableCommand { get; }
+        public ICommand ToggleAnnotationCommand { get; }
+        public ICommand CloseAnnotationCommand { get; }
+        public ICommand ToggleAllAnnotationsCommand { get; }
+        private bool _showAllAnnotations = true;
+        public bool ShowAllAnnotations
+        {
+            get => _showAllAnnotations;
+            set
+            {
+                _showAllAnnotations = value;
+                OnPropertyChanged();
+                UpdateAllAnnotationsVisibility();
+            }
+        }
         public ICommand ToggleVisualModeCommand { get; }
         private FileSystemWatcher _fileWatcher = null;
         private bool _isBackgroundLoadingActive = false;
@@ -96,6 +112,11 @@ namespace IndiLogs_3._0.ViewModels
         private FilterNode _appFilterRoot = null;
         private List<ColoringCondition> _mainColoringRules = new List<ColoringCondition>();
         private List<ColoringCondition> _appColoringRules = new List<ColoringCondition>();
+
+        BrowseTableCommand = new RelayCommand(BrowseTable, CanBrowseTable);
+        ToggleAnnotationCommand = new RelayCommand(ToggleAnnotation);
+        CloseAnnotationCommand = new RelayCommand(CloseAnnotation);
+        ToggleAllAnnotationsCommand = new RelayCommand(o => ShowAllAnnotations = !ShowAllAnnotations);
 
         // Case File & Annotations
         private Dictionary<LogEntry, LogAnnotation> _logAnnotations = new Dictionary<LogEntry, LogAnnotation>();
@@ -885,7 +906,81 @@ namespace IndiLogs_3._0.ViewModels
                 StatusMessage = $"Error loading config files: {ex.Message}";
             }
         }
+        private bool CanBrowseTable(object parameter)
+        {
+            if (parameter is DbTreeNode node)
+            {
+                return node.NodeType == "Table" && SelectedSession?.DatabaseFiles != null && !string.IsNullOrEmpty(node.DatabaseFileName);
+            }
+            return false;
+        }
 
+        private void BrowseTable(object parameter)
+        {
+            if (parameter is DbTreeNode node && node.NodeType == "Table")
+            {
+                if (SelectedSession?.DatabaseFiles == null || string.IsNullOrEmpty(node.DatabaseFileName))
+                {
+                    MessageBox.Show("No database file available.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (!SelectedSession.DatabaseFiles.ContainsKey(node.DatabaseFileName))
+                {
+                    MessageBox.Show($"Database file '{node.DatabaseFileName}' not found in session.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                try
+                {
+                    var dbBytes = SelectedSession.DatabaseFiles[node.DatabaseFileName];
+                    var window = new Views.BrowseTableWindow(node.Name, dbBytes);
+                    window.Owner = Application.Current.MainWindow;
+                    window.Show();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error opening table browser: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void ToggleAnnotation(object parameter)
+        {
+            if (parameter is LogEntry log && log.HasAnnotation)
+            {
+                log.IsAnnotationExpanded = !log.IsAnnotationExpanded;
+            }
+        }
+
+        private void CloseAnnotation(object parameter)
+        {
+            if (parameter is LogEntry log)
+            {
+                log.IsAnnotationExpanded = false;
+            }
+        }
+
+        private void UpdateAllAnnotationsVisibility()
+        {
+            if (_allLogsCache != null)
+            {
+                foreach (var log in _allLogsCache.Where(l => l.HasAnnotation))
+                {
+                    if (!ShowAllAnnotations)
+                        log.IsAnnotationExpanded = false;
+                }
+            }
+
+            if (_allAppLogsCache != null)
+            {
+                foreach (var log in _allAppLogsCache.Where(l => l.HasAnnotation))
+                {
+                    if (!ShowAllAnnotations)
+                        log.IsAnnotationExpanded = false;
+                }
+            }
+        }
         private void LoadSelectedFileContent()
         {
             ConfigSearchText = ""; // Reset search when changing files
@@ -1068,7 +1163,8 @@ namespace IndiLogs_3._0.ViewModels
                     var root = new DbTreeNode
                     {
                         NodeType = "Root",
-                        IsExpanded = true
+                        IsExpanded = true,
+                        DatabaseFileName = SelectedConfigFile // ✅ Store DB file name
                     };
 
                     using (var connection = new SQLiteConnection($"Data Source={tempDbPath};Read Only=True;"))
@@ -1098,7 +1194,8 @@ namespace IndiLogs_3._0.ViewModels
                                 Name = tableName,
                                 Schema = tableSql,
                                 NodeType = "Table",
-                                IsExpanded = false
+                                IsExpanded = false,
+                                DatabaseFileName = SelectedConfigFile // ✅ Store DB file name
                             };
 
                             // Get column info using PRAGMA
@@ -3047,6 +3144,8 @@ namespace IndiLogs_3._0.ViewModels
 
                     // Mark log as having annotation for visual indicator
                     log.HasAnnotation = true;
+                    log.AnnotationContent = window.AnnotationText; // ✅ Store content for display
+                    log.IsAnnotationExpanded = true; // ✅ Auto-expand when adding
 
                     StatusMessage = "Annotation added";
                 }
@@ -3330,6 +3429,8 @@ namespace IndiLogs_3._0.ViewModels
                     {
                         _logAnnotations[matchingLog] = annotation;
                         matchingLog.HasAnnotation = true;
+                        matchingLog.AnnotationContent = annotation.Content; // ✅ Store content
+                        matchingLog.IsAnnotationExpanded = false; // Start collapsed
 
                         // Restore custom color if it exists
                         if (!string.IsNullOrEmpty(annotation.Color) && annotation.Color != "#FFFF00")
