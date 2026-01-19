@@ -95,11 +95,17 @@
                             <Button Content="⬆" Command="{Binding PrevMarkedCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" Foreground="{DynamicResource TextPrimary}" ToolTip="Previous Marked" Width="28" Height="22" Padding="0" FontSize="10"/>
 
                             <!-- Time-Sync Scrolling Toggle -->
-                            <!-- Time-Sync Scrolling Toggle -->
                             <Button Command="{Binding ToggleTimeSyncCommand}" Style="{DynamicResource ModernBtn}"
         Background="Transparent" ToolTip="Toggle Time-Sync Scrolling (Sync PLC and APP logs by timestamp)"
         Width="28" Height="22" Padding="0" x:Name="TimeSyncButton">
                                 <TextBlock Text="🔗" FontSize="11" Foreground="{DynamicResource TextSecondary}"/>
+                            </Button>
+
+                            <!-- Toggle All Annotations -->
+                            <Button Command="{Binding ToggleAllAnnotationsCommand}" Style="{DynamicResource ModernBtn}"
+        Background="Transparent" ToolTip="Show/Hide All Annotations"
+        Width="28" Height="22" Padding="0">
+                                <TextBlock Text="💬" FontSize="11" Foreground="{DynamicResource TextSecondary}"/>
                             </Button>
                         </StackPanel>
                     </Border>
@@ -579,7 +585,8 @@
                   HorizontalScrollBarVisibility="Auto"
                   PreviewKeyDown="MainLogsGrid_PreviewKeyDown"
                   RequestBringIntoView="DataGrid_RequestBringIntoView"
-                  Loaded="DataGrid_Loaded">
+                  Loaded="DataGrid_Loaded"
+                  LoadingRow="DataGrid_LoadingRow">
 
                                 <DataGrid.Style>
                                     <Style TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
@@ -591,6 +598,29 @@
                                         </Style.Triggers>
                                     </Style>
                                 </DataGrid.Style>
+
+                                <DataGrid.RowDetailsTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#FFFFEB3B"
+                                                BorderBrush="{DynamicResource PrimaryColor}"
+                                                BorderThickness="0,1,0,0"
+                                                Padding="40,8,10,8">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="📌 "
+                                                           FontSize="14"
+                                                           VerticalAlignment="Top"
+                                                           Margin="0,0,8,0"
+                                                           Foreground="Black"/>
+                                                <TextBlock Text="{Binding AnnotationContent}"
+                                                           TextWrapping="Wrap"
+                                                           Foreground="Black"
+                                                           FontFamily="{StaticResource ContentFontFamily}"
+                                                           FontSize="12"
+                                                           FontStyle="Italic"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGrid.RowDetailsTemplate>
 
                                 <DataGrid.ContextMenu>
                                     <ContextMenu>
@@ -611,15 +641,37 @@
                                 </DataGrid.InputBindings>
 
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="" Binding="{Binding AnnotationIcon}" Width="30">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="VerticalAlignment" Value="Center"/>
-                                                <Setter Property="HorizontalAlignment" Value="Center"/>
-                                                <Setter Property="FontSize" Value="14"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
+                                    <DataGridTemplateColumn Header="" Width="30">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="{Binding AnnotationIcon}"
+                                                        Command="{Binding DataContext.ToggleAnnotationCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                        CommandParameter="{Binding}"
+                                                        Background="Transparent"
+                                                        BorderThickness="0"
+                                                        Cursor="Hand"
+                                                        FontSize="14"
+                                                        Padding="0"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        ToolTip="Click to show/hide annotation"
+                                                        Visibility="{Binding HasAnnotation, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button">
+                                                            <Setter Property="Background" Value="Transparent"/>
+                                                            <Setter Property="Template">
+                                                                <Setter.Value>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <ContentPresenter/>
+                                                                    </ControlTemplate>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </Style>
+                                                    </Button.Style>
+                                                </Button>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
                                     <DataGridTextColumn Header="Lvl" Binding="{Binding Level}" Width="50" FontWeight="Bold">
                                         <DataGridTextColumn.ElementStyle>
                                             <Style TargetType="TextBlock">
@@ -884,7 +936,32 @@
           SelectionMode="Extended" SelectionUnit="FullRow"
           HorizontalScrollBarVisibility="Auto"
           RequestBringIntoView="DataGrid_RequestBringIntoView"
-          Loaded="DataGrid_Loaded">
+          Loaded="DataGrid_Loaded"
+          LoadingRow="DataGrid_LoadingRow">
+
+                                <DataGrid.RowDetailsTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#FFFFEB3B"
+                                                BorderBrush="{DynamicResource PrimaryColor}"
+                                                BorderThickness="0,1,0,0"
+                                                Padding="40,8,10,8">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="📌 "
+                                                           FontSize="14"
+                                                           VerticalAlignment="Top"
+                                                           Margin="0,0,8,0"
+                                                           Foreground="Black"/>
+                                                <TextBlock Text="{Binding AnnotationContent}"
+                                                           TextWrapping="Wrap"
+                                                           Foreground="Black"
+                                                           FontFamily="{StaticResource ContentFontFamily}"
+                                                           FontSize="12"
+                                                           FontStyle="Italic"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGrid.RowDetailsTemplate>
+
                                 <DataGrid.InputBindings>
                                     <KeyBinding Key="Space" Command="{Binding MarkRowCommand}" />
                                     <MouseBinding Gesture="LeftDoubleClick" Command="{Binding ViewLogDetailsCommand}" CommandParameter="{Binding SelectedLog}" />
@@ -901,15 +978,37 @@
                                     </ContextMenu>
                                 </DataGrid.ContextMenu>
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="" Binding="{Binding AnnotationIcon}" Width="30" CanUserSort="False">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="VerticalAlignment" Value="Center"/>
-                                                <Setter Property="HorizontalAlignment" Value="Center"/>
-                                                <Setter Property="FontSize" Value="14"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
+                                    <DataGridTemplateColumn Header="" Width="30" CanUserSort="False">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="{Binding AnnotationIcon}"
+                                                        Command="{Binding DataContext.ToggleAnnotationCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                        CommandParameter="{Binding}"
+                                                        Background="Transparent"
+                                                        BorderThickness="0"
+                                                        Cursor="Hand"
+                                                        FontSize="14"
+                                                        Padding="0"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        ToolTip="Click to show/hide annotation"
+                                                        Visibility="{Binding HasAnnotation, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button">
+                                                            <Setter Property="Background" Value="Transparent"/>
+                                                            <Setter Property="Template">
+                                                                <Setter.Value>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <ContentPresenter/>
+                                                                    </ControlTemplate>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </Style>
+                                                    </Button.Style>
+                                                </Button>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
                                     <DataGridTextColumn Header="Lvl" Binding="{Binding Level}" Width="60" FontWeight="Bold" CanUserSort="True" SortMemberPath="Level">
                                         <DataGridTextColumn.ElementStyle>
                                             <Style TargetType="TextBlock">

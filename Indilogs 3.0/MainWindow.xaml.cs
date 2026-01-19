@@ -196,6 +196,17 @@ namespace IndiLogs_3._0
 
 
 
+        private void DataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+        {
+            if (e.Row.Item is LogEntry log)
+            {
+                // Show row details if annotation exists and should be expanded
+                e.Row.DetailsVisibility = (log.HasAnnotation && log.IsAnnotationExpanded)
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+            }
+        }
+
         private void DataGrid_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs e)
         {
             // If this event wasn't triggered by our code (MapsToLogRow), suppress it.

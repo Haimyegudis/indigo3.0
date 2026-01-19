@@ -1,102 +1,129 @@
-﻿using DocumentFormat.OpenXml.Drawing.Charts;
-using DocumentFormat.OpenXml.Wordprocessing;
-using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SQLite;
+using System.IO;
+using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Forms;
+using Microsoft.Win32;
 
-< Window x: Class = "IndiLogs_3._0.Views.BrowseTableWindow"
-        xmlns = "http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns: x = "http://schemas.microsoft.com/winfx/2006/xaml"
-        Title = "Browse Table Data"
-        Height = "600" Width = "1000"
-        WindowStartupLocation = "CenterOwner"
-        Background = "{DynamicResource BgDark}" >
-    < Grid >
-        < Grid.RowDefinitions >
-            < RowDefinition Height = "Auto" />
-            < RowDefinition Height = "*" />
-            < RowDefinition Height = "Auto" />
-        </ Grid.RowDefinitions >
+namespace IndiLogs_3._0.Views
+{
+    public partial class BrowseTableWindow : Window
+    {
+        private readonly string _tableName;
+        private readonly byte[] _dbBytes;
+        private DataTable _dataTable;
 
-        < !--Header-- >
-        < Border Grid.Row = "0" Background = "{DynamicResource BgPanel}" Padding = "15" BorderBrush = "{DynamicResource BorderColor}" BorderThickness = "0,0,0,1" >
-            < StackPanel >
-                < TextBlock x: Name = "TableNameText" FontWeight = "Bold" FontSize = "16" Foreground = "{DynamicResource TextPrimary}" />
-                < TextBlock x: Name = "RowCountText" FontSize = "12" Foreground = "{DynamicResource TextSecondary}" Margin = "0,5,0,0" />
-            </ StackPanel >
-        </ Border >
+        public BrowseTableWindow(string tableName, byte[] dbBytes)
+        {
+            InitializeComponent();
+            _tableName = tableName;
+            _dbBytes = dbBytes;
+            LoadTableData();
+        }
 
-        < !--Data Grid-- >
-        < DataGrid Grid.Row = "1"
-                  x: Name = "DataBrowserGrid"
-                  AutoGenerateColumns = "True"
-                  IsReadOnly = "True"
-                  Background = "{DynamicResource BgDark}"
-                  Foreground = "{DynamicResource TextPrimary}"
-                  BorderThickness = "0"
-                  RowBackground = "{DynamicResource BgPanel}"
-                  AlternatingRowBackground = "{DynamicResource BgCard}"
-                  GridLinesVisibility = "All"
-                  HorizontalGridLinesBrush = "{DynamicResource BorderColor}"
-                  VerticalGridLinesBrush = "{DynamicResource BorderColor}"
-                  HeadersVisibility = "Column"
-                  CanUserAddRows = "False"
-                  CanUserDeleteRows = "False"
-                  CanUserReorderColumns = "True"
-                  CanUserResizeColumns = "True"
-                  CanUserResizeRows = "False"
-                  CanUserSortColumns = "True"
-                  SelectionMode = "Extended"
-                  SelectionUnit = "CellOrRowHeader"
-                  VerticalScrollBarVisibility = "Auto"
-                  HorizontalScrollBarVisibility = "Auto" >
-            < DataGrid.ColumnHeaderStyle >
-                < Style TargetType = "DataGridColumnHeader" >
-                    < Setter Property = "Background" Value = "{DynamicResource BgPanel}" />
-                    < Setter Property = "Foreground" Value = "{DynamicResource TextSecondary}" />
-                    < Setter Property = "FontWeight" Value = "SemiBold" />
-                    < Setter Property = "FontSize" Value = "12" />
-                    < Setter Property = "Padding" Value = "10,8" />
-                    < Setter Property = "BorderBrush" Value = "{DynamicResource BorderColor}" />
-                    < Setter Property = "BorderThickness" Value = "0,0,1,1" />
-                    < Setter Property = "HorizontalContentAlignment" Value = "Left" />
-                </ Style >
-            </ DataGrid.ColumnHeaderStyle >
-            < DataGrid.CellStyle >
-                < Style TargetType = "DataGridCell" >
-                    < Setter Property = "Padding" Value = "10,5" />
-                    < Setter Property = "BorderThickness" Value = "0,0,1,0" />
-                    < Setter Property = "BorderBrush" Value = "{DynamicResource BorderColor}" />
-                    < Setter Property = "Background" Value = "Transparent" />
-                    < Setter Property = "Foreground" Value = "{DynamicResource TextPrimary}" />
-                    < Setter Property = "FontFamily" Value = "Consolas, Courier New" />
-                    < Setter Property = "FontSize" Value = "11" />
-                    < Style.Triggers >
-                        < Trigger Property = "IsSelected" Value = "True" >
-                            < Setter Property = "Background" Value = "{DynamicResource PrimaryColor}" />
-                            < Setter Property = "Foreground" Value = "White" />
-                        </ Trigger >
-                    </ Style.Triggers >
-                </ Style >
-            </ DataGrid.CellStyle >
-        </ DataGrid >
+        private void LoadTableData()
+        {
+            try
+            {
+                // Create a temporary database file
+                string tempDbPath = Path.Combine(Path.GetTempPath(), $"temp_browse_{Guid.NewGuid()}.db");
+                File.WriteAllBytes(tempDbPath, _dbBytes);
 
-        < !--Footer-- >
-        < Border Grid.Row = "2" Background = "{DynamicResource BgPanel}" Padding = "15" BorderBrush = "{DynamicResource BorderColor}" BorderThickness = "0,1,0,0" >
-            < StackPanel Orientation = "Horizontal" HorizontalAlignment = "Right" >
-                < Button Content = "Export to CSV" Width = "120" Height = "30"
-                        Background = "{DynamicResource BgCard}"
-                        Foreground = "{DynamicResource TextPrimary}"
-                        BorderBrush = "{DynamicResource BorderColor}"
-                        Margin = "0,0,10,0"
-                        Click = "ExportButton_Click" />
-                < Button Content = "Close" Width = "100" Height = "30"
-                        Background = "{DynamicResource BgCard}"
-                        Foreground = "{DynamicResource TextPrimary}"
-                        BorderBrush = "{DynamicResource BorderColor}"
-                        Click = "CloseButton_Click" />
-            </ StackPanel >
-        </ Border >
-    </ Grid >
-</ Window >
+                using (var connection = new SQLiteConnection($"Data Source={tempDbPath};Version=3;"))
+                {
+                    connection.Open();
+
+                    // Load table data
+                    string query = $"SELECT rowid AS ID, * FROM \"{_tableName}\"";
+                    using (var adapter = new SQLiteDataAdapter(query, connection))
+                    {
+                        _dataTable = new DataTable();
+                        adapter.Fill(_dataTable);
+                    }
+
+                    connection.Close();
+                }
+
+                // Clean up temp file
+                try { File.Delete(tempDbPath); } catch { }
+
+                // Set data to grid
+                DataBrowserGrid.ItemsSource = _dataTable.DefaultView;
+
+                // Update header info
+                TableNameText.Text = $"Table: {_tableName}";
+                RowCountText.Text = $"{_dataTable.Rows.Count} rows × {_dataTable.Columns.Count} columns";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading table data: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ExportButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var dialog = new SaveFileDialog
+                {
+                    Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
+                    FileName = $"{_tableName}.csv",
+                    DefaultExt = ".csv"
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    ExportToCsv(dialog.FileName);
+                    MessageBox.Show($"Data exported successfully to:\n{dialog.FileName}",
+                        "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error exporting data: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ExportToCsv(string filePath)
+        {
+            var sb = new StringBuilder();
+
+            // Write headers
+            var headers = _dataTable.Columns.Cast<DataColumn>().Select(col => col.ColumnName);
+            sb.AppendLine(string.Join(",", headers.Select(h => EscapeCsvValue(h))));
+
+            // Write rows
+            foreach (DataRow row in _dataTable.Rows)
+            {
+                var values = row.ItemArray.Select(val => EscapeCsvValue(val?.ToString() ?? ""));
+                sb.AppendLine(string.Join(",", values));
+            }
+
+            File.WriteAllText(filePath, sb.ToString(), Encoding.UTF8);
+        }
+
+        private string EscapeCsvValue(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return "";
+
+            if (value.Contains(",") || value.Contains("\"") || value.Contains("\n"))
+            {
+                return $"\"{value.Replace("\"", "\"\"")}\"";
+            }
+
+            return value;
+        }
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+    }
+}

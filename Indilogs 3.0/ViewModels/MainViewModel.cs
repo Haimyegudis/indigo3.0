@@ -3,6 +3,7 @@ using IndiLogs_3._0.Models.Analysis;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Analysis;
 using IndiLogs_3._0.Views;
+using IndiLogs_3._0.ViewModels.Components;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using System;
@@ -27,8 +28,13 @@ namespace IndiLogs_3._0.ViewModels
     public class MainViewModel : INotifyPropertyChanged
     {
 
-    
-        // --- Properties & Fields ---
+
+        // --- Child ViewModels (Composition Pattern) ---
+        public LogSessionViewModel SessionVM { get; private set; }
+        public FilterSearchViewModel FilterVM { get; private set; }
+        public LiveMonitoringViewModel LiveVM { get; private set; }
+        public CaseManagementViewModel CaseVM { get; private set; }
+        public ConfigExplorerViewModel ConfigVM { get; private set; }
         public VisualTimelineViewModel VisualTimelineVM { get; set; } = new VisualTimelineViewModel();
 
         private bool _isVisualMode;
@@ -47,36 +53,16 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand ToggleAnnotationCommand { get; }
         public ICommand CloseAnnotationCommand { get; }
         public ICommand ToggleAllAnnotationsCommand { get; }
-        private bool _showAllAnnotations = true;
-        public bool ShowAllAnnotations
-        {
-            get => _showAllAnnotations;
-            set
-            {
-                _showAllAnnotations = value;
-                OnPropertyChanged();
-                UpdateAllAnnotationsVisibility();
-            }
-        }
         public ICommand ToggleVisualModeCommand { get; }
-        private FileSystemWatcher _fileWatcher = null;
-        private bool _isBackgroundLoadingActive = false;
-        private bool _isRefreshActive = false;
-        private DateTime _lastFileCheckTime = DateTime.MinValue;
-        private long _lastFileSize = 0;
-        private long _lastStreamPosition = 0;  // ← NEW: Save stream position!
-        private const int MIN_REFRESH_INTERVAL_MS = 5000;
-        public ObservableCollection<LogEntry> MarkedAppLogs { get; set; }
+        // Live monitoring fields moved to LiveVM
+        public ObservableCollection<LogEntry> MarkedAppLogs => CaseVM?.MarkedAppLogs;
         private readonly LogFileService _logService;
         private readonly LogColoringService _coloringService;
         private readonly CsvExportService _csvService;
-        private bool _isPollingActive = false;
+
         // Windows Instances
         private StatesWindow _statesWindow;
         private AnalysisReportWindow _analysisWindow;
-        private MarkedLogsWindow _markedMainLogsWindow;
-        private MarkedLogsWindow _markedAppLogsWindow;
-        private MarkedLogsWindow _combinedMarkedWindow;
         private bool _isAnalysisRunning;
         private ExportConfigurationWindow _exportConfigWindow = null;
         public bool IsAnalysisRunning
@@ -85,153 +71,221 @@ namespace IndiLogs_3._0.ViewModels
             set { _isAnalysisRunning = value; OnPropertyChanged(); }
         }
         // State Flags
-        private bool _isMainFilterActive;
-        private bool _isAppFilterActive;
-        private bool _isMainFilterOutActive;
-        private bool _isAppFilterOutActive;
-        private bool _isAppTimeFocusActive;
-        private bool _isTimeFocusActive = false;
-
-        // Timers
-        private DispatcherTimer _searchDebounceTimer;
-
-        // Caches
-        private ObservableRangeCollection<LogEntry> _liveLogsCollection;
+        // Caches (moved to SessionVM, kept for backwards compatibility)
         private IList<LogEntry> _allLogsCache;
         private IList<LogEntry> _allAppLogsCache;
-        private IList<LogEntry> _lastFilteredCache = new List<LogEntry>();
-        private List<LogEntry> _lastFilteredAppCache;
 
-        // Filters
-        private List<string> _negativeFilters = new List<string>();
-        private List<string> _activeThreadFilters = new List<string>();
+        // Coloring
         private List<ColoringCondition> _savedColoringRules = new List<ColoringCondition>();
-        private FilterNode _savedFilterRoot = null;
-
-        private FilterNode _mainFilterRoot = null;
-        private FilterNode _appFilterRoot = null;
-        private List<ColoringCondition> _mainColoringRules = new List<ColoringCondition>();
-        private List<ColoringCondition> _appColoringRules = new List<ColoringCondition>();
-
-        BrowseTableCommand = new RelayCommand(BrowseTable, CanBrowseTable);
-        ToggleAnnotationCommand = new RelayCommand(ToggleAnnotation);
-        CloseAnnotationCommand = new RelayCommand(CloseAnnotation);
-        ToggleAllAnnotationsCommand = new RelayCommand(o => ShowAllAnnotations = !ShowAllAnnotations);
-
-        // Case File & Annotations
-        private Dictionary<LogEntry, LogAnnotation> _logAnnotations = new Dictionary<LogEntry, LogAnnotation>();
-        private CaseFile _currentCase = null;
-        private string _currentCaseFilePath = null;
-
-        // Tree Filter State
-        private LoggerNode _selectedTreeItem;
-        public LoggerNode SelectedTreeItem
+        // Coloring rules moved to CaseVM
+        public List<ColoringCondition> MainColoringRules
         {
-            get => _selectedTreeItem;
-            set { _selectedTreeItem = value; OnPropertyChanged(); }
+            get => CaseVM?.MainColoringRules;
+            set { if (CaseVM != null) CaseVM.MainColoringRules = value; }
+        }
+        public List<ColoringCondition> AppColoringRules
+        {
+            get => CaseVM?.AppColoringRules;
+            set { if (CaseVM != null) CaseVM.AppColoringRules = value; }
         }
 
-        private HashSet<string> _treeHiddenLoggers = new HashSet<string>();
-        private HashSet<string> _treeHiddenPrefixes = new HashSet<string>();
-        private string _treeShowOnlyLogger = null;
-        private string _treeShowOnlyPrefix = null;
-        private string _liveFilePath;
-        // Live Monitoring - Load last 2 minutes initially, then update cache every 5 seconds
+        // Case File & Annotations (delegated to CaseVM)
+        public Dictionary<LogEntry, LogAnnotation> LogAnnotations => CaseVM?.LogAnnotations;
+        // Live Monitoring fields moved to LiveVM
         private const int UI_UPDATE_BATCH_SIZE = 500; // Show 500 logs at a time
-        private const int POLLING_READ_BYTES = 5 * 1024 * 1024; // Read 5MB on each poll to ensure complete logs
-        private CancellationTokenSource _liveCts;
-        private CustomLiveLogReader _customReader;
-        private int _lastParsedLogCount = 0; // Track number of logs we've already shown
-        private const int POLLING_INTERVAL_MS = 5000; // Check every 5 seconds
-        private const int INITIAL_LOAD_MINUTES = 2; // Load last 2 minutes initially
         private readonly object _collectionLock = new object();
-        // Collections
-        private IEnumerable<LogEntry> _logs;
+        // Collections - delegate to SessionVM
         public IEnumerable<LogEntry> Logs
         {
-            get => _logs;
-            set { _logs = value; OnPropertyChanged(); }
+            get => SessionVM?.Logs;
+            set { if (SessionVM != null) SessionVM.Logs = value; OnPropertyChanged(); }
         }
-        public ObservableRangeCollection<LogEntry> FilteredLogs { get; set; }
+        // Delegate these to FilterVM
+        public ObservableRangeCollection<LogEntry> FilteredLogs => FilterVM?.FilteredLogs;
+        public ObservableRangeCollection<LogEntry> AppDevLogsFiltered => FilterVM?.AppDevLogsFiltered;
+        public ObservableCollection<LoggerNode> LoggerTreeRoot => FilterVM?.LoggerTreeRoot;
 
-        private ObservableRangeCollection<LogEntry> _appDevLogsFiltered;
-        public ObservableRangeCollection<LogEntry> AppDevLogsFiltered
+        // Delegate these to SessionVM
+        public IList<LogEntry> AllLogsCache => SessionVM?.AllLogsCache;
+        public IList<LogEntry> AllAppLogsCache => SessionVM?.AllAppLogsCache;
+        public ObservableCollection<EventEntry> Events => SessionVM?.Events;
+        public ObservableCollection<BitmapImage> Screenshots => SessionVM?.Screenshots;
+        public ObservableCollection<string> LoadedFiles => SessionVM?.LoadedFiles;
+        public ObservableCollection<LogSessionData> LoadedSessions => SessionVM?.LoadedSessions;
+
+        public LogSessionData SelectedSession
         {
-            get => _appDevLogsFiltered;
-            set { _appDevLogsFiltered = value; OnPropertyChanged(); }
+            get => SessionVM?.SelectedSession;
+            set { if (SessionVM != null) SessionVM.SelectedSession = value; }
         }
 
-        public ObservableCollection<LoggerNode> LoggerTreeRoot { get; set; }
-        public ObservableCollection<EventEntry> Events { get; set; }
-        public ObservableCollection<BitmapImage> Screenshots { get; set; }
-        public ObservableCollection<string> LoadedFiles { get; set; }
-        public ObservableCollection<LogSessionData> LoadedSessions { get; set; }
-        public ObservableCollection<SavedConfiguration> SavedConfigs { get; set; }
-        public ObservableCollection<LogEntry> MarkedLogs { get; set; }
+        public double CurrentProgress
+        {
+            get => SessionVM?.CurrentProgress ?? 0;
+            set { if (SessionVM != null) SessionVM.CurrentProgress = value; }
+        }
+
+        public string StatusMessage
+        {
+            get => SessionVM?.StatusMessage;
+            set { if (SessionVM != null) SessionVM.StatusMessage = value; }
+        }
+
+        public bool IsBusy
+        {
+            get => SessionVM?.IsBusy ?? false;
+            set { if (SessionVM != null) SessionVM.IsBusy = value; }
+        }
+
+        // Delegate these to FilterVM (additional)
+        public string SearchText
+        {
+            get => FilterVM?.SearchText;
+            set { if (FilterVM != null) FilterVM.SearchText = value; }
+        }
+
+        public bool IsSearchPanelVisible
+        {
+            get => FilterVM?.IsSearchPanelVisible ?? false;
+            set { if (FilterVM != null) FilterVM.IsSearchPanelVisible = value; }
+        }
+
+        public LoggerNode SelectedTreeItem => FilterVM?.SelectedTreeItem;
+        public bool IsMainFilterActive => FilterVM?.IsMainFilterActive ?? false;
+        public bool IsAppFilterActive => FilterVM?.IsAppFilterActive ?? false;
+        public bool IsMainFilterOutActive => FilterVM?.IsMainFilterOutActive ?? false;
+        public bool IsAppFilterOutActive => FilterVM?.IsAppFilterOutActive ?? false;
+        public bool IsTimeFocusActive => FilterVM?.IsTimeFocusActive ?? false;
+        public bool IsAppTimeFocusActive => FilterVM?.IsAppTimeFocusActive ?? false;
+
+        // Filter state delegates
+        public FilterNode MainFilterRoot
+        {
+            get => FilterVM?.MainFilterRoot;
+            set { if (FilterVM != null) FilterVM.MainFilterRoot = value; }
+        }
+        public FilterNode AppFilterRoot
+        {
+            get => FilterVM?.AppFilterRoot;
+            set { if (FilterVM != null) FilterVM.AppFilterRoot = value; }
+        }
+        public FilterNode SavedFilterRoot
+        {
+            get => FilterVM?.SavedFilterRoot;
+            set { if (FilterVM != null) FilterVM.SavedFilterRoot = value; }
+        }
+        public List<string> NegativeFilters => FilterVM?.NegativeFilters;
+        public List<string> ActiveThreadFilters => FilterVM?.ActiveThreadFilters;
+        public List<LogEntry> LastFilteredCache
+        {
+            get => FilterVM?.LastFilteredCache;
+            set { if (FilterVM != null) FilterVM.LastFilteredCache = value; }
+        }
+        public List<LogEntry> LastFilteredAppCache
+        {
+            get => FilterVM?.LastFilteredAppCache;
+            set { if (FilterVM != null) FilterVM.LastFilteredAppCache = value; }
+        }
+        public HashSet<string> TreeHiddenLoggers => FilterVM?.TreeHiddenLoggers;
+        public HashSet<string> TreeHiddenPrefixes => FilterVM?.TreeHiddenPrefixes;
+        public string TreeShowOnlyLogger
+        {
+            get => FilterVM?.TreeShowOnlyLogger;
+            set { if (FilterVM != null) FilterVM.TreeShowOnlyLogger = value; }
+        }
+        public string TreeShowOnlyPrefix
+        {
+            get => FilterVM?.TreeShowOnlyPrefix;
+            set { if (FilterVM != null) FilterVM.TreeShowOnlyPrefix = value; }
+        }
+
+        // Delegate these to LiveVM
+        public bool IsLiveMode
+        {
+            get => LiveVM?.IsLiveMode ?? false;
+            set { if (LiveVM != null) LiveVM.IsLiveMode = value; }
+        }
+        public bool IsRunning
+        {
+            get => LiveVM?.IsRunning ?? false;
+            set { if (LiveVM != null) LiveVM.IsRunning = value; }
+        }
+        public bool IsPaused => LiveVM?.IsPaused ?? false;
+
+        // Delegate these to CaseVM
+        public ObservableCollection<SavedConfiguration> SavedConfigs
+        {
+            get => CaseVM?.SavedConfigs;
+            set { /* Read-only collection, no setter needed */ }
+        }
+        public ObservableCollection<LogEntry> MarkedLogs
+        {
+            get => CaseVM?.MarkedLogs;
+            set { /* Read-only collection, no setter needed */ }
+        }
+        public SavedConfiguration SelectedConfig
+        {
+            get => CaseVM?.SelectedConfig;
+            set { if (CaseVM != null) CaseVM.SelectedConfig = value; }
+        }
+        public bool IsMarkedLogsCombined
+        {
+            get => CaseVM?.IsMarkedLogsCombined ?? false;
+            set { if (CaseVM != null) CaseVM.IsMarkedLogsCombined = value; }
+        }
+        public bool ShowAllAnnotations
+        {
+            get => CaseVM?.ShowAllAnnotations ?? false;
+            set { if (CaseVM != null) CaseVM.ShowAllAnnotations = value; }
+        }
+
+        // Delegate these to ConfigVM
+        public ObservableCollection<string> ConfigurationFiles => ConfigVM?.ConfigurationFiles;
+        public string SelectedConfigFile
+        {
+            get => ConfigVM?.SelectedConfigFile;
+            set { if (ConfigVM != null) ConfigVM.SelectedConfigFile = value; }
+        }
+        public string ConfigFileContent
+        {
+            get => ConfigVM?.ConfigFileContent;
+            set { if (ConfigVM != null) ConfigVM.ConfigFileContent = value; }
+        }
+        public string FilteredConfigContent => ConfigVM?.FilteredConfigContent;
+        public string ConfigSearchText
+        {
+            get => ConfigVM?.ConfigSearchText;
+            set { if (ConfigVM != null) ConfigVM.ConfigSearchText = value; }
+        }
+        public ObservableCollection<DbTreeNode> DbTreeNodes => ConfigVM?.DbTreeNodes;
+        public bool IsDbFileSelected
+        {
+            get => ConfigVM?.IsDbFileSelected ?? false;
+            set { if (ConfigVM != null) ConfigVM.IsDbFileSelected = value; }
+        }
+        public bool IsExplorerMenuOpen
+        {
+            get => ConfigVM?.IsExplorerMenuOpen ?? false;
+            set { if (ConfigVM != null) ConfigVM.IsExplorerMenuOpen = value; }
+        }
+        public bool IsConfigMenuOpen
+        {
+            get => ConfigVM?.IsConfigMenuOpen ?? false;
+            set { if (ConfigVM != null) ConfigVM.IsConfigMenuOpen = value; }
+        }
         public ObservableCollection<string> AvailableFonts { get; set; }
         public ObservableCollection<string> TimeUnits { get; } = new ObservableCollection<string> { "Seconds", "Minutes" };
 
-        // --- NEW CONFIG & DB PROPERTIES ---
-        public ObservableCollection<string> ConfigurationFiles { get; set; } = new ObservableCollection<string>();
-        private Dictionary<string, string> _configFilesPathMap = new Dictionary<string, string>();
-
-        private string _selectedConfigFile;
-        public string SelectedConfigFile
-        {
-            get => _selectedConfigFile;
-            set
-            {
-                if (_selectedConfigFile != value)
-                {
-                    _selectedConfigFile = value;
-                    OnPropertyChanged();
-                    LoadSelectedFileContent();
-                }
-            }
-        }
-
-        private string _configFileContent;
-        public string ConfigFileContent
-        {
-            get => _configFileContent;
-            set { _configFileContent = value; OnPropertyChanged(); }
-        }
-
-        // Tree view for SQLite databases
-        private ObservableCollection<DbTreeNode> _dbTreeNodes = new ObservableCollection<DbTreeNode>();
-        public ObservableCollection<DbTreeNode> DbTreeNodes
-        {
-            get => _dbTreeNodes;
-            set { _dbTreeNodes = value; OnPropertyChanged(); }
-        }
-
-        private bool _isDbFileSelected;
-        public bool IsDbFileSelected
-        {
-            get => _isDbFileSelected;
-            set { _isDbFileSelected = value; OnPropertyChanged(); }
-        }
-
-        // Search in config tab
-        private string _configSearchText = "";
-        public string ConfigSearchText
-        {
-            get => _configSearchText;
-            set
-            {
-                if (_configSearchText != value)
-                {
-                    _configSearchText = value;
-                    OnPropertyChanged();
-                    FilterConfigContent();
-                }
-            }
-        }
-
-        private ObservableCollection<DbTreeNode> _allDbTreeNodes = new ObservableCollection<DbTreeNode>();
-        // ----------------------------------
 
         public event Action<LogEntry> RequestScrollToLog;
+
+        /// <summary>
+        /// Public method to trigger scroll to log event from child ViewModels
+        /// </summary>
+        public void ScrollToLog(LogEntry log)
+        {
+            RequestScrollToLog?.Invoke(log);
+        }
 
         // --- SELECTED TAB INDEX ---
         private int _selectedTabIndex;
@@ -264,35 +318,6 @@ namespace IndiLogs_3._0.ViewModels
         // PLC tab is index 0 (PLC LOGS) or 1 (PLC FILTERED)
         public bool IsPLCTabSelected => _selectedTabIndex == 0 || _selectedTabIndex == 1;
 
-        private LogSessionData _selectedSession;
-        public LogSessionData SelectedSession
-        {
-            get => _selectedSession;
-            set
-            {
-                if (_selectedSession != value)
-                {
-                    _selectedSession = value;
-                    OnPropertyChanged();
-                    SwitchToSession(_selectedSession);
-
-                }
-            }
-        }
-        private bool _isMarkedLogsCombined;
-        public bool IsMarkedLogsCombined
-        {
-            get => _isMarkedLogsCombined;
-            set
-            {
-                if (_isMarkedLogsCombined != value)
-                {
-                    _isMarkedLogsCombined = value;
-                    OnPropertyChanged();
-                    CloseAllMarkedWindows();
-                }
-            }
-        }
 
         private int _leftTabIndex;
         public int LeftTabIndex
@@ -322,27 +347,11 @@ namespace IndiLogs_3._0.ViewModels
             set { _pressConfig = value; OnPropertyChanged(); }
         }
 
-        private bool _isBusy;
-        public bool IsBusy
+        private string _versionsInfo;
+        public string VersionsInfo
         {
-            get => _isBusy;
-            set { _isBusy = value; OnPropertyChanged(); }
-        }
-
-        private bool _isLoadingCase = false;
-
-        private double _currentProgress;
-        public double CurrentProgress
-        {
-            get => _currentProgress;
-            set { _currentProgress = value; OnPropertyChanged(); }
-        }
-
-        private string _statusMessage;
-        public string StatusMessage
-        {
-            get => _statusMessage;
-            set { _statusMessage = value; OnPropertyChanged(); }
+            get => _versionsInfo;
+            set { _versionsInfo = value; OnPropertyChanged(); }
         }
 
         private LogEntry _selectedLog;
@@ -352,41 +361,9 @@ namespace IndiLogs_3._0.ViewModels
             set { _selectedLog = value; OnPropertyChanged(); }
         }
 
-        private SavedConfiguration _selectedConfig;
-        public SavedConfiguration SelectedConfig
-        {
-            get => _selectedConfig;
-            set { _selectedConfig = value; OnPropertyChanged(); }
-        }
 
-        private bool _isSearchPanelVisible;
-        public bool IsSearchPanelVisible
-        {
-            get => _isSearchPanelVisible;
-            set
-            {
-                _isSearchPanelVisible = value;
-                OnPropertyChanged();
-                if (!value) SearchText = string.Empty;
-            }
-        }
+        // Delegate to FilterVM
 
-        private string _searchText;
-        public string SearchText
-        {
-            get => _searchText;
-            set
-            {
-                if (_searchText != value)
-                {
-                    _searchText = value;
-                    OnPropertyChanged();
-                    ValidateSearchSyntax();
-                    _searchDebounceTimer.Stop();
-                    _searchDebounceTimer.Start();
-                }
-            }
-        }
 
         private bool _isSearchSyntaxValid = true;
         public bool IsSearchSyntaxValid
@@ -451,25 +428,25 @@ namespace IndiLogs_3._0.ViewModels
 
         public bool IsFilterActive
         {
-            get => SelectedTabIndex == 2 ? _isAppFilterActive : _isMainFilterActive;
+            get => SelectedTabIndex == 2 ? IsAppFilterActive : IsMainFilterActive;
             set
             {
                 if (SelectedTabIndex == 2)
                 {
-                    if (_isAppFilterActive != value)
+                    if (FilterVM != null && FilterVM.IsAppFilterActive != value)
                     {
-                        _isAppFilterActive = value;
+                        FilterVM.IsAppFilterActive = value;
                         OnPropertyChanged();
                         ApplyAppLogsFilter();
                     }
                 }
                 else
                 {
-                    if (_isMainFilterActive != value)
+                    if (FilterVM != null && FilterVM.IsMainFilterActive != value)
                     {
-                        _isMainFilterActive = value;
+                        FilterVM.IsMainFilterActive = value;
                         OnPropertyChanged();
-                        UpdateMainLogsFilter(_isMainFilterActive);
+                        UpdateMainLogsFilter(value);
                     }
                 }
             }
@@ -477,44 +454,30 @@ namespace IndiLogs_3._0.ViewModels
 
         public bool IsFilterOutActive
         {
-            get => SelectedTabIndex == 2 ? _isAppFilterOutActive : _isMainFilterOutActive;
+            get => SelectedTabIndex == 2 ? IsAppFilterOutActive : IsMainFilterOutActive;
             set
             {
                 if (SelectedTabIndex == 2)
                 {
-                    if (_isAppFilterOutActive != value)
+                    if (FilterVM != null && FilterVM.IsAppFilterOutActive != value)
                     {
-                        _isAppFilterOutActive = value;
+                        FilterVM.IsAppFilterOutActive = value;
                         OnPropertyChanged();
                         ApplyAppLogsFilter();
                     }
                 }
                 else
                 {
-                    if (_isMainFilterOutActive != value)
+                    if (FilterVM != null && FilterVM.IsMainFilterOutActive != value)
                     {
-                        _isMainFilterOutActive = value;
+                        FilterVM.IsMainFilterOutActive = value;
                         OnPropertyChanged();
-                        UpdateMainLogsFilter(_isMainFilterActive);
+                        UpdateMainLogsFilter(FilterVM.IsMainFilterActive);
                     }
                 }
             }
         }
 
-        private bool _isLiveMode;
-        public bool IsLiveMode
-        {
-            get => _isLiveMode;
-            set { _isLiveMode = value; OnPropertyChanged(); }
-        }
-
-        private bool _isRunning;
-        public bool IsRunning
-        {
-            get => _isRunning;
-            set { _isRunning = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsPaused)); }
-        }
-        public bool IsPaused => !IsRunning;
 
         private string _selectedFont = "Segoe UI";
         public string SelectedFont
@@ -572,19 +535,6 @@ namespace IndiLogs_3._0.ViewModels
             set { _selectedTimeUnit = value; OnPropertyChanged(); }
         }
 
-        private bool _isExplorerMenuOpen;
-        public bool IsExplorerMenuOpen
-        {
-            get => _isExplorerMenuOpen;
-            set { _isExplorerMenuOpen = value; OnPropertyChanged(); }
-        }
-
-        private bool _isConfigMenuOpen;
-        public bool IsConfigMenuOpen
-        {
-            get => _isConfigMenuOpen;
-            set { _isConfigMenuOpen = value; OnPropertyChanged(); }
-        }
 
         // Time-Sync Scrolling
         private bool _isTimeSyncEnabled;
@@ -672,42 +622,136 @@ namespace IndiLogs_3._0.ViewModels
             _logService = new LogFileService();
             _coloringService = new LogColoringService();
             _isTimeSyncEnabled = false;
+
+            // Initialize child ViewModels
+            SessionVM = new LogSessionViewModel(this, _logService, _coloringService);
+            FilterVM = new FilterSearchViewModel(this, SessionVM);
+            CaseVM = new CaseManagementViewModel(this, SessionVM, FilterVM);
+            LiveVM = new LiveMonitoringViewModel(this, SessionVM, FilterVM, CaseVM, _logService, _coloringService);
+            ConfigVM = new ConfigExplorerViewModel(this, SessionVM);
+
+            // Set dependencies after all ViewModels are created (circular dependency resolution)
+            SessionVM.SetDependencies(FilterVM, CaseVM, ConfigVM, LiveVM);
+
+            // Subscribe to child ViewModel property changes to relay notifications to UI
+            SessionVM.PropertyChanged += (s, e) =>
+            {
+                switch (e.PropertyName)
+                {
+                    case nameof(SessionVM.Logs):
+                        OnPropertyChanged(nameof(Logs));
+                        break;
+                    case nameof(SessionVM.AllLogsCache):
+                        OnPropertyChanged(nameof(AllLogsCache));
+                        break;
+                    case nameof(SessionVM.AllAppLogsCache):
+                        OnPropertyChanged(nameof(AllAppLogsCache));
+                        break;
+                    case nameof(SessionVM.Events):
+                        OnPropertyChanged(nameof(Events));
+                        break;
+                    case nameof(SessionVM.Screenshots):
+                        OnPropertyChanged(nameof(Screenshots));
+                        break;
+                    case nameof(SessionVM.LoadedFiles):
+                        OnPropertyChanged(nameof(LoadedFiles));
+                        break;
+                    case nameof(SessionVM.LoadedSessions):
+                        OnPropertyChanged(nameof(LoadedSessions));
+                        break;
+                    case nameof(SessionVM.SelectedSession):
+                        OnPropertyChanged(nameof(SelectedSession));
+                        break;
+                    case nameof(SessionVM.CurrentProgress):
+                        OnPropertyChanged(nameof(CurrentProgress));
+                        break;
+                    case nameof(SessionVM.StatusMessage):
+                        OnPropertyChanged(nameof(StatusMessage));
+                        break;
+                    case nameof(SessionVM.IsBusy):
+                        OnPropertyChanged(nameof(IsBusy));
+                        break;
+                }
+            };
+
+            FilterVM.PropertyChanged += (s, e) =>
+            {
+                switch (e.PropertyName)
+                {
+                    case nameof(FilterVM.FilteredLogs):
+                        OnPropertyChanged(nameof(FilteredLogs));
+                        break;
+                    case nameof(FilterVM.AppDevLogsFiltered):
+                        OnPropertyChanged(nameof(AppDevLogsFiltered));
+                        break;
+                    case nameof(FilterVM.SearchText):
+                        OnPropertyChanged(nameof(SearchText));
+                        break;
+                    case nameof(FilterVM.IsSearchPanelVisible):
+                        OnPropertyChanged(nameof(IsSearchPanelVisible));
+                        break;
+                    case nameof(FilterVM.LoggerTreeRoot):
+                        OnPropertyChanged(nameof(LoggerTreeRoot));
+                        break;
+                    case nameof(FilterVM.SelectedTreeItem):
+                        OnPropertyChanged(nameof(SelectedTreeItem));
+                        break;
+                    case nameof(FilterVM.IsMainFilterActive):
+                        OnPropertyChanged(nameof(IsMainFilterActive));
+                        break;
+                    case nameof(FilterVM.IsAppFilterActive):
+                        OnPropertyChanged(nameof(IsAppFilterActive));
+                        break;
+                }
+            };
+
+            LiveVM.PropertyChanged += (s, e) =>
+            {
+                switch (e.PropertyName)
+                {
+                    case nameof(LiveVM.IsLiveMode):
+                        OnPropertyChanged(nameof(IsLiveMode));
+                        break;
+                    case nameof(LiveVM.IsRunning):
+                        OnPropertyChanged(nameof(IsRunning));
+                        OnPropertyChanged(nameof(IsPaused));
+                        break;
+                    case nameof(LiveVM.IsPaused):
+                        OnPropertyChanged(nameof(IsPaused));
+                        break;
+                }
+            };
+
             ToggleVisualModeCommand = new RelayCommand(o => IsVisualMode = !IsVisualMode);
 
-            TreeShowThisCommand = new RelayCommand(ExecuteTreeShowThis);
-            TreeHideThisCommand = new RelayCommand(ExecuteTreeHideThis);
-            TreeShowOnlyThisCommand = new RelayCommand(ExecuteTreeShowOnlyThis);
-            TreeShowWithChildrenCommand = new RelayCommand(ExecuteTreeShowWithChildren);
-            TreeHideWithChildrenCommand = new RelayCommand(ExecuteTreeHideWithChildren);
-            TreeShowAllCommand = new RelayCommand(ExecuteTreeShowAll);
+            // Delegate to FilterVM
+            TreeShowThisCommand = FilterVM.TreeShowThisCommand;
+            TreeHideThisCommand = FilterVM.TreeHideThisCommand;
+            TreeShowOnlyThisCommand = FilterVM.TreeShowOnlyThisCommand;
+            TreeShowWithChildrenCommand = FilterVM.TreeShowWithChildrenCommand;
+            TreeHideWithChildrenCommand = FilterVM.TreeHideWithChildrenCommand;
+            TreeShowAllCommand = FilterVM.TreeShowAllCommand;
             OpenIndigoInvadersCommand = new RelayCommand(OpenIndigoInvaders);
 
-            _allLogsCache = new List<LogEntry>();
-            Logs = new List<LogEntry>();
-            LoadedSessions = new ObservableCollection<LogSessionData>();
-            FilteredLogs = new ObservableRangeCollection<LogEntry>();
-            AppDevLogsFiltered = new ObservableRangeCollection<LogEntry>();
-            LoggerTreeRoot = new ObservableCollection<LoggerNode>();
-            Events = new ObservableCollection<EventEntry>();
-            Screenshots = new ObservableCollection<BitmapImage>();
-            LoadedFiles = new ObservableCollection<string>();
+            // These are now managed by SessionVM and FilterVM
+            _allLogsCache = SessionVM.AllLogsCache;
             SavedConfigs = new ObservableCollection<SavedConfiguration>();
             MarkedLogs = new ObservableCollection<LogEntry>();
-            MarkedAppLogs = new ObservableCollection<LogEntry>();
             AvailableFonts = new ObservableCollection<string>();
             if (Fonts.SystemFontFamilies != null)
                 foreach (var font in Fonts.SystemFontFamilies.OrderBy(f => f.Source)) AvailableFonts.Add(font.Source);
 
-            _searchDebounceTimer = new DispatcherTimer();
-            _searchDebounceTimer.Interval = TimeSpan.FromMilliseconds(500);
-            _searchDebounceTimer.Tick += OnSearchTimerTick;
-
             ToggleExplorerMenuCommand = new RelayCommand(o => IsExplorerMenuOpen = !IsExplorerMenuOpen);
             ToggleConfigMenuCommand = new RelayCommand(o => IsConfigMenuOpen = !IsConfigMenuOpen);
             ToggleTimeSyncCommand = new RelayCommand(o => IsTimeSyncEnabled = !IsTimeSyncEnabled);
+            BrowseTableCommand = ConfigVM.BrowseTableCommand;
+            ToggleAnnotationCommand = new RelayCommand(ToggleAnnotation);
+            CloseAnnotationCommand = new RelayCommand(CloseAnnotation);
+            ToggleAllAnnotationsCommand = new RelayCommand(o => ShowAllAnnotations = !ShowAllAnnotations);
 
-            LoadCommand = new RelayCommand(LoadFile);
-            ClearCommand = new RelayCommand(o => { ClearLogs(o); IsExplorerMenuOpen = false; });
+            // Delegate to SessionVM
+            LoadCommand = SessionVM.LoadCommand;
+            ClearCommand = new RelayCommand(o => { SessionVM.ClearCommand.Execute(o); IsExplorerMenuOpen = false; });
             MarkRowCommand = new RelayCommand(MarkRow);
             NextMarkedCommand = new RelayCommand(GoToNextMarked);
             PrevMarkedCommand = new RelayCommand(GoToPrevMarked);
@@ -722,22 +766,23 @@ namespace IndiLogs_3._0.ViewModels
             ExportParsedDataCommand = new RelayCommand(o => { ExportParsedData(o); IsExplorerMenuOpen = false; });
             RunAnalysisCommand = new RelayCommand(o => { RunAnalysis(o); IsExplorerMenuOpen = false; });
 
-            ToggleSearchCommand = new RelayCommand(o => { IsSearchPanelVisible = !IsSearchPanelVisible; });
-            CloseSearchCommand = new RelayCommand(o => { IsSearchPanelVisible = false; SearchText = ""; });
-
-            OpenFilterWindowCommand = new RelayCommand(OpenFilterWindow);
-            OpenColoringWindowCommand = new RelayCommand(OpenColoringWindow);
+            // Delegate to FilterVM
+            ToggleSearchCommand = FilterVM.ToggleSearchCommand;
+            CloseSearchCommand = FilterVM.CloseSearchCommand;
+            OpenFilterWindowCommand = FilterVM.OpenFilterWindowCommand;
+            OpenColoringWindowCommand = CaseVM.OpenColoringWindowCommand;
 
             SaveConfigCommand = new RelayCommand(o => { SaveConfiguration(o); IsConfigMenuOpen = false; });
             LoadConfigCommand = new RelayCommand(o => { LoadConfigurationFromFile(o); IsConfigMenuOpen = false; });
             RemoveConfigCommand = new RelayCommand(o => { RemoveConfiguration(o); IsConfigMenuOpen = false; }, o => SelectedConfig != null);
             ApplyConfigCommand = new RelayCommand(ApplyConfiguration);
 
-            FilterOutCommand = new RelayCommand(FilterOut);
-            FilterOutThreadCommand = new RelayCommand(FilterOutThread);
-            OpenThreadFilterCommand = new RelayCommand(OpenThreadFilter);
-            FilterContextCommand = new RelayCommand(FilterContext);
-            UndoFilterOutCommand = new RelayCommand(UndoFilterOut);
+            // Delegate to FilterVM
+            FilterOutCommand = FilterVM.FilterOutCommand;
+            FilterOutThreadCommand = FilterVM.FilterOutThreadCommand;
+            OpenThreadFilterCommand = FilterVM.OpenThreadFilterCommand;
+            FilterContextCommand = FilterVM.FilterContextCommand;
+            UndoFilterOutCommand = FilterVM.UndoFilterOutCommand;
 
             ResetTimeFocusCommand = new RelayCommand(ResetTimeFocus);
 
@@ -761,14 +806,15 @@ namespace IndiLogs_3._0.ViewModels
                 else GridFontSize = Math.Max(8, GridFontSize - 1);
             });
 
-            LivePlayCommand = new RelayCommand(LivePlay);
+            // Delegate to LiveVM
+            LivePlayCommand = LiveVM.LivePlayCommand;
+            LivePauseCommand = LiveVM.LivePauseCommand;
+            LiveClearCommand = LiveVM.LiveClearCommand;
 
             // Case File Commands
             AddAnnotationCommand = new RelayCommand(AddAnnotation);
             SaveCaseCommand = new RelayCommand(SaveCase);
             LoadCaseCommand = new RelayCommand(LoadCase);
-            LivePauseCommand = new RelayCommand(LivePause);
-            LiveClearCommand = new RelayCommand(LiveClear);
 
             _isDarkMode = Properties.Settings.Default.IsDarkMode;
             ApplyTheme(_isDarkMode);
@@ -777,282 +823,28 @@ namespace IndiLogs_3._0.ViewModels
 
         private void OnSearchTimerTick(object sender, EventArgs e)
         {
-            _searchDebounceTimer.Stop();
+            // Search debounce timer is now in FilterVM
             ToggleFilterView(IsFilterActive);
         }
 
         private void InitializeVisualMode()
         {
-            var logsToUse = _allLogsCache ?? Logs;
+            var logsToUse = SessionVM.AllLogsCache ?? Logs;
             if (VisualTimelineVM != null)
             {
                 VisualTimelineVM.LoadData(logsToUse.ToList(), Events);
             }
         }
-        private async void ProcessFiles(string[] filePaths, Action<LogSessionData> onLoadComplete = null)
-        {
-            // Check if this is a live log file (active file being written to)
-            if (filePaths.Length == 1 && File.Exists(filePaths[0]))
-            {
-                var filePath = filePaths[0];
-                var fileName = Path.GetFileName(filePath);
-                var ext = Path.GetExtension(filePath).ToLower();
+        // Delegate to SessionVM
+        public void ProcessFiles(string[] filePaths, Action<LogSessionData> onLoadComplete = null)
+            => SessionVM?.ProcessFiles(filePaths, onLoadComplete);
 
-                // Detect live log files: .log or .file extension, or specific patterns like "no-sn.engineGroupA.file"
-                if (ext == ".log" || ext == ".file" ||
-                    fileName.IndexOf("engineGroup", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    fileName.IndexOf("no-sn", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    // Check if file is actively being written (might grow)
-                    try
-                    {
-                        using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                        {
-                            // If we can open with ReadWrite sharing, it's likely a live file
-                            // Start live monitoring instead of loading as static file
-                            StartLiveMonitoring(filePath);
-                            return;
-                        }
-                    }
-                    catch
-                    {
-                        // If file is locked or not accessible, treat as static file
-                    }
-                }
-            }
 
-            IsBusy = true;
-            StatusMessage = "Processing files...";
+        // Delegate to CaseVM
+        private void ToggleAnnotation(object parameter) => CaseVM?.ToggleAnnotationCommand.Execute(parameter);
 
-            try
-            {
-                var progress = new Progress<(double Percent, string Message)>(update =>
-                {
-                    CurrentProgress = update.Percent;
-                    StatusMessage = update.Message;
-                });
-
-                var newSession = await _logService.LoadSessionAsync(filePaths, progress);
-
-                newSession.FileName = System.IO.Path.GetFileName(filePaths[0]);
-                if (filePaths.Length > 1) newSession.FileName += $" (+{filePaths.Length - 1})";
-                newSession.FilePath = filePaths[0];
-
-                StatusMessage = "Applying Colors...";
-                await _coloringService.ApplyDefaultColorsAsync(newSession.Logs, false);
-                if (newSession.AppDevLogs != null && newSession.AppDevLogs.Any())
-                    await _coloringService.ApplyDefaultColorsAsync(newSession.AppDevLogs, true);
-
-                LoadedSessions.Add(newSession);
-                SelectedSession = newSession;
-
-                CurrentProgress = 100;
-                StatusMessage = "Logs Loaded. Running Analysis in Background...";
-                IsBusy = false;
-
-                StartBackgroundAnalysis(newSession);
-
-                // ✅ קריאה ל-callback אחרי טעינה מוצלחת
-                onLoadComplete?.Invoke(newSession);
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Error: {ex.Message}";
-                MessageBox.Show($"Error loading files: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                IsBusy = false;
-            }
-        }
-
-        // --- NEW CONFIG METHODS ---
-        private void LoadConfigurationFiles(string rootPath)
-        {
-            ConfigurationFiles.Clear();
-            _configFilesPathMap.Clear();
-            ConfigFileContent = string.Empty;
-
-            try
-            {
-                string configDir = Path.Combine(rootPath, "Configuration");
-                // Fallback check if rootPath IS the config dir or similar structure
-                if (!Directory.Exists(configDir))
-                {
-                    // Check if we are inside a subfolder and need to go up
-                    var parent = Directory.GetParent(rootPath);
-                    if (parent != null)
-                    {
-                        var siblingConfig = Path.Combine(parent.FullName, "Configuration");
-                        if (Directory.Exists(siblingConfig)) configDir = siblingConfig;
-                    }
-                }
-
-                if (Directory.Exists(configDir))
-                {
-                    var files = Directory.GetFiles(configDir, "*.*")
-                                         .Where(s => s.EndsWith(".json", StringComparison.OrdinalIgnoreCase) || s.EndsWith(".db", StringComparison.OrdinalIgnoreCase));
-
-                    foreach (var file in files)
-                    {
-                        string fileName = Path.GetFileName(file);
-                        ConfigurationFiles.Add(fileName);
-                        _configFilesPathMap[fileName] = file;
-                    }
-
-                    if (ConfigurationFiles.Count > 0)
-                        SelectedConfigFile = ConfigurationFiles[0];
-                }
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Error loading config files: {ex.Message}";
-            }
-        }
-        private bool CanBrowseTable(object parameter)
-        {
-            if (parameter is DbTreeNode node)
-            {
-                return node.NodeType == "Table" && SelectedSession?.DatabaseFiles != null && !string.IsNullOrEmpty(node.DatabaseFileName);
-            }
-            return false;
-        }
-
-        private void BrowseTable(object parameter)
-        {
-            if (parameter is DbTreeNode node && node.NodeType == "Table")
-            {
-                if (SelectedSession?.DatabaseFiles == null || string.IsNullOrEmpty(node.DatabaseFileName))
-                {
-                    MessageBox.Show("No database file available.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                if (!SelectedSession.DatabaseFiles.ContainsKey(node.DatabaseFileName))
-                {
-                    MessageBox.Show($"Database file '{node.DatabaseFileName}' not found in session.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                try
-                {
-                    var dbBytes = SelectedSession.DatabaseFiles[node.DatabaseFileName];
-                    var window = new Views.BrowseTableWindow(node.Name, dbBytes);
-                    window.Owner = Application.Current.MainWindow;
-                    window.Show();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error opening table browser: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-        }
-
-        private void ToggleAnnotation(object parameter)
-        {
-            if (parameter is LogEntry log && log.HasAnnotation)
-            {
-                log.IsAnnotationExpanded = !log.IsAnnotationExpanded;
-            }
-        }
-
-        private void CloseAnnotation(object parameter)
-        {
-            if (parameter is LogEntry log)
-            {
-                log.IsAnnotationExpanded = false;
-            }
-        }
-
-        private void UpdateAllAnnotationsVisibility()
-        {
-            if (_allLogsCache != null)
-            {
-                foreach (var log in _allLogsCache.Where(l => l.HasAnnotation))
-                {
-                    if (!ShowAllAnnotations)
-                        log.IsAnnotationExpanded = false;
-                }
-            }
-
-            if (_allAppLogsCache != null)
-            {
-                foreach (var log in _allAppLogsCache.Where(l => l.HasAnnotation))
-                {
-                    if (!ShowAllAnnotations)
-                        log.IsAnnotationExpanded = false;
-                }
-            }
-        }
-        private void LoadSelectedFileContent()
-        {
-            ConfigSearchText = ""; // Reset search when changing files
-
-            if (string.IsNullOrEmpty(SelectedConfigFile) || SelectedSession == null)
-            {
-                ConfigFileContent = "";
-                IsDbFileSelected = false;
-                DbTreeNodes.Clear();
-                return;
-            }
-
-            try
-            {
-                // Check if this is a SQLite database file
-                if (SelectedConfigFile.EndsWith(".db", StringComparison.OrdinalIgnoreCase))
-                {
-                    IsDbFileSelected = true;
-                    ConfigFileContent = ""; // Clear text content for DB files
-
-                    if (SelectedSession.DatabaseFiles != null &&
-                        SelectedSession.DatabaseFiles.ContainsKey(SelectedConfigFile))
-                    {
-                        // Load DB async to prevent UI freeze
-                        _ = LoadSqliteToTreeAsync(SelectedSession.DatabaseFiles[SelectedConfigFile]);
-                    }
-                    else
-                    {
-                        DbTreeNodes.Clear();
-                    }
-                    return;
-                }
-
-                // For non-DB files, clear tree and show text
-                IsDbFileSelected = false;
-                DbTreeNodes.Clear();
-
-                // Handle JSON/text configuration files
-                if (SelectedSession.ConfigurationFiles == null ||
-                    !SelectedSession.ConfigurationFiles.ContainsKey(SelectedConfigFile))
-                {
-                    ConfigFileContent = "";
-                    return;
-                }
-
-                string content = SelectedSession.ConfigurationFiles[SelectedConfigFile];
-
-                // Try to format JSON for better readability
-                try
-                {
-                    if (SelectedConfigFile.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ||
-                        content.TrimStart().StartsWith("{") ||
-                        content.TrimStart().StartsWith("["))
-                    {
-                        dynamic parsedJson = JsonConvert.DeserializeObject(content);
-                        ConfigFileContent = JsonConvert.SerializeObject(parsedJson, Formatting.Indented);
-                    }
-                    else
-                    {
-                        ConfigFileContent = content;
-                    }
-                }
-                catch
-                {
-                    ConfigFileContent = content;
-                }
-            }
-            catch (Exception ex)
-            {
-                ConfigFileContent = $"Error displaying file content: {ex.Message}";
-            }
-        }
+        // Delegate to CaseVM
+        private void CloseAnnotation(object parameter) => CaseVM?.CloseAnnotationCommand.Execute(parameter);
 
         private string LoadSqliteContent(byte[] dbBytes)
         {
@@ -1141,174 +933,6 @@ namespace IndiLogs_3._0.ViewModels
             return sb.ToString();
         }
 
-        private async Task LoadSqliteToTreeAsync(byte[] dbBytes)
-        {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                DbTreeNodes.Clear();
-                _allDbTreeNodes.Clear();
-            });
-
-            DbTreeNode tablesRoot = null;
-            string tempDbPath = null;
-
-            try
-            {
-                // Do all DB work on background thread
-                tablesRoot = await Task.Run(() =>
-                {
-                    tempDbPath = Path.Combine(Path.GetTempPath(), $"indilogs_temp_{Guid.NewGuid()}.db");
-                    File.WriteAllBytes(tempDbPath, dbBytes);
-
-                    var root = new DbTreeNode
-                    {
-                        NodeType = "Root",
-                        IsExpanded = true,
-                        DatabaseFileName = SelectedConfigFile // ✅ Store DB file name
-                    };
-
-                    using (var connection = new SQLiteConnection($"Data Source={tempDbPath};Read Only=True;"))
-                    {
-                        connection.Open();
-
-                        // Get all tables with their CREATE statements
-                        var tablesInfo = new List<(string name, string sql)>();
-                        using (var cmd = new SQLiteCommand("SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name;", connection))
-                        using (var reader = cmd.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                string name = reader.GetString(0);
-                                string sql = reader.IsDBNull(1) ? "" : reader.GetString(1);
-                                tablesInfo.Add((name, sql));
-                            }
-                        }
-
-                        root.Name = $"Tables ({tablesInfo.Count})";
-
-                        foreach (var (tableName, tableSql) in tablesInfo)
-                        {
-                            // Table node with schema
-                            var tableNode = new DbTreeNode
-                            {
-                                Name = tableName,
-                                Schema = tableSql,
-                                NodeType = "Table",
-                                IsExpanded = false,
-                                DatabaseFileName = SelectedConfigFile // ✅ Store DB file name
-                            };
-
-                            // Get column info using PRAGMA
-                            using (var cmd = new SQLiteCommand($"PRAGMA table_info([{tableName}])", connection))
-                            using (var reader = cmd.ExecuteReader())
-                            {
-                                while (reader.Read())
-                                {
-                                    // cid, name, type, notnull, dflt_value, pk
-                                    string colName = reader.GetString(1);
-                                    string colType = reader.IsDBNull(2) ? "" : reader.GetString(2);
-                                    bool notNull = reader.GetInt32(3) == 1;
-                                    bool isPk = reader.GetInt32(5) == 1;
-
-                                    // Build schema description
-                                    string schemaDesc = $"\"{colName}\" {colType}";
-                                    if (notNull) schemaDesc += " NOT NULL";
-                                    if (isPk) schemaDesc += " PRIMARY KEY";
-
-                                    var columnNode = new DbTreeNode
-                                    {
-                                        Name = colName,
-                                        Type = colType,
-                                        Schema = schemaDesc,
-                                        NodeType = "Column"
-                                    };
-
-                                    tableNode.Children.Add(columnNode);
-                                }
-                            }
-
-                            root.Children.Add(tableNode);
-                        }
-                    }
-
-                    // Cleanup temp file
-                    if (tempDbPath != null && File.Exists(tempDbPath))
-                    {
-                        try { File.Delete(tempDbPath); } catch { }
-                    }
-
-                    return root;
-                });
-
-                // Update UI on main thread
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    DbTreeNodes.Add(tablesRoot);
-                    _allDbTreeNodes.Add(tablesRoot);
-                });
-            }
-            catch (Exception ex)
-            {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    DbTreeNodes.Add(new DbTreeNode { Name = $"Error: {ex.Message}", NodeType = "Error" });
-                });
-            }
-        }
-
-        private void FilterConfigContent()
-        {
-            if (string.IsNullOrWhiteSpace(ConfigSearchText))
-            {
-                // No filter - show all nodes
-                foreach (var node in DbTreeNodes)
-                {
-                    SetNodeVisibility(node, true);
-                }
-                return;
-            }
-
-            string searchLower = ConfigSearchText.ToLower();
-
-            foreach (var tableNode in DbTreeNodes)
-            {
-                bool tableHasMatch = FilterTreeNode(tableNode, searchLower);
-                tableNode.IsVisible = tableHasMatch;
-            }
-        }
-
-        private bool FilterTreeNode(DbTreeNode node, string searchLower)
-        {
-            bool selfMatches = (node.Name?.ToLower().Contains(searchLower) == true) ||
-                               (node.Type?.ToLower().Contains(searchLower) == true) ||
-                               (node.Schema?.ToLower().Contains(searchLower) == true);
-
-            bool anyChildMatches = false;
-            foreach (var child in node.Children)
-            {
-                bool childMatches = FilterTreeNode(child, searchLower);
-                if (childMatches) anyChildMatches = true;
-            }
-
-            bool isVisible = selfMatches || anyChildMatches;
-            node.IsVisible = isVisible;
-
-            if (isVisible && node.Children.Count > 0)
-            {
-                node.IsExpanded = true;
-            }
-
-            return isVisible;
-        }
-
-        private void SetNodeVisibility(DbTreeNode node, bool visible)
-        {
-            node.IsVisible = visible;
-            foreach (var child in node.Children)
-            {
-                SetNodeVisibility(child, visible);
-            }
-        }
 
         private List<StateEntry> CalculateStatesInternal(IEnumerable<LogEntry> logs)
         {
@@ -1395,7 +1019,7 @@ namespace IndiLogs_3._0.ViewModels
             return statesList.OrderByDescending(s => s.StartTime).ToList();
         }
 
-        private void StartBackgroundAnalysis(LogSessionData session)
+        public void StartBackgroundAnalysis(LogSessionData session)
         {
             IsAnalysisRunning = true;
 
@@ -1431,47 +1055,46 @@ namespace IndiLogs_3._0.ViewModels
             {
                 lock (_collectionLock)
                 {
-                    if (_allLogsCache != null) _allLogsCache.Clear();
-                    FilteredLogs.Clear();
+                    if (SessionVM.AllLogsCache != null) SessionVM.AllLogsCache.Clear();
+                    FilteredLogs?.Clear();
                     SelectedLog = null;
                 }
             });
 
             if (IsLiveMode)
             {
-                // DON'T reset _lastParsedLogCount - keep tracking where we are in file
+                // Live monitoring continues - state managed by LiveVM
                 IsRunning = true;
                 StatusMessage = "Cleared. Monitoring continues...";
                 Debug.WriteLine("LiveClear: Cleared UI, monitoring continues");
             }
             else
             {
-                _lastParsedLogCount = 0;
                 StatusMessage = "Logs cleared.";
             }
         }
 
         private void ClearLogs(object obj)
         {
-            MarkedLogs.Clear(); MarkedAppLogs.Clear();
-            _isMainFilterActive = false; _isAppFilterActive = false;
-            _isMainFilterOutActive = false; _isAppFilterOutActive = false;
-            _isAppTimeFocusActive = false; _lastFilteredAppCache = null;
-            _isTimeFocusActive = false;
-            if (_allLogsCache != null) _allLogsCache.Clear();
-            _lastFilteredCache.Clear(); _negativeFilters.Clear(); _activeThreadFilters.Clear();
-            Logs = new List<LogEntry>(); FilteredLogs.Clear(); AppDevLogsFiltered.Clear();
-            LoggerTreeRoot.Clear(); Events.Clear(); Screenshots.Clear();
+            CaseVM?.ClearMarkedLogs();
+            FilterVM.IsMainFilterActive = false; FilterVM.IsAppFilterActive = false;
+            FilterVM.IsMainFilterOutActive = false; FilterVM.IsAppFilterOutActive = false;
+            FilterVM.IsAppTimeFocusActive = false; FilterVM.LastFilteredAppCache = null;
+            FilterVM.IsTimeFocusActive = false;
+            SessionVM.AllLogsCache?.Clear();
+            if (FilterVM.LastFilteredCache != null) FilterVM.LastFilteredCache.Clear();
+            FilterVM.NegativeFilters.Clear();
+            FilterVM.ActiveThreadFilters.Clear();
+            Logs = new List<LogEntry>(); FilteredLogs?.Clear(); AppDevLogsFiltered?.Clear();
+            LoggerTreeRoot?.Clear(); Events.Clear(); Screenshots.Clear();
             LoadedFiles.Clear(); CurrentProgress = 0; SetupInfo = ""; PressConfig = ""; ScreenshotZoom = 400;
             IsFilterOutActive = false; LoadedSessions.Clear(); SelectedSession = null;
-            _allAppLogsCache = null;
+            SessionVM.AllAppLogsCache = null;
             ResetTreeFilters();
 
-            // --- CLEAR NEW PROPERTIES ---
-            ConfigurationFiles.Clear();
-            ConfigFileContent = "";
-            _configFilesPathMap.Clear();
-            // ----------------------------
+            // --- CLEAR CONFIG EXPLORER ---
+            ConfigVM.ClearConfigurationFiles();
+            // -----------------------------
 
             VisualTimelineVM?.Clear();
             IsVisualMode = false;
@@ -1513,18 +1136,18 @@ namespace IndiLogs_3._0.ViewModels
                 VisualTimelineVM.SelectedState = null;
             }
 
-            _isTimeFocusActive = false;
-            _isAppTimeFocusActive = false;
-            _lastFilteredCache.Clear();
-            _lastFilteredAppCache = null;
-            _savedFilterRoot = null;
+            FilterVM.IsTimeFocusActive = false;
+            FilterVM.IsAppTimeFocusActive = false;
+            FilterVM.LastFilteredCache.Clear();
+            FilterVM.LastFilteredAppCache = null;
+            FilterVM.SavedFilterRoot = null;
             SearchText = string.Empty;
-            _isMainFilterActive = false;
-            _isAppFilterActive = false;
-            _isMainFilterOutActive = false;
-            _isAppFilterOutActive = false;
-            _activeThreadFilters.Clear();
-            _negativeFilters.Clear();
+            FilterVM.IsMainFilterActive = false;
+            FilterVM.IsAppFilterActive = false;
+            FilterVM.IsMainFilterOutActive = false;
+            FilterVM.IsAppFilterOutActive = false;
+            FilterVM.ActiveThreadFilters.Clear();
+            FilterVM.NegativeFilters.Clear();
             ResetTreeFilters();
 
             OnPropertyChanged(nameof(IsFilterActive));
@@ -1581,30 +1204,30 @@ namespace IndiLogs_3._0.ViewModels
                     DateTime start = state.StartTime;
                     DateTime end = state.EndTime ?? DateTime.MaxValue;
 
-                    if (_allLogsCache != null)
+                    if (SessionVM.AllLogsCache != null)
                     {
-                        var timeSlice = _allLogsCache.Where(l => l.Date >= start && l.Date <= end).OrderByDescending(l => l.Date).ToList();
+                        var timeSlice = SessionVM.AllLogsCache.Where(l => l.Date >= start && l.Date <= end).OrderByDescending(l => l.Date).ToList();
                         var smartFiltered = timeSlice.Where(l => IsDefaultLog(l)).ToList();
 
                         Application.Current.Dispatcher.Invoke(() =>
                         {
-                            _lastFilteredCache = timeSlice;
-                            _savedFilterRoot = null;
-                            _isTimeFocusActive = true;
-                            _isMainFilterActive = true;
+                            FilterVM.LastFilteredCache = timeSlice;
+                            FilterVM.SavedFilterRoot = null;
+                            FilterVM.IsTimeFocusActive = true;
+                            FilterVM.IsMainFilterActive = true;
                             SelectedTabIndex = 0;
                             UpdateMainLogsFilter(true);
-                            if (FilteredLogs != null)
+                            if (FilterVM?.FilteredLogs != null)
                             {
-                                FilteredLogs.ReplaceAll(smartFiltered);
-                                if (FilteredLogs.Count > 0) SelectedLog = FilteredLogs[0];
+                                FilterVM.FilteredLogs.ReplaceAll(smartFiltered);
+                                if (FilterVM.FilteredLogs.Count > 0) SelectedLog = FilterVM.FilteredLogs[0];
                             }
                             OnPropertyChanged(nameof(IsFilterActive));
                             StatusMessage = $"State: {state.StateName} | Main: {timeSlice.Count}, Filtered: {smartFiltered.Count}";
 
                             if (IsVisualMode && VisualTimelineVM != null)
                             {
-                                VisualTimelineVM.LoadData(_allLogsCache, Events);
+                                VisualTimelineVM.LoadData(SessionVM.AllLogsCache.ToList(), Events);
                                 VisualTimelineVM.FocusOnState(state.StateName);
                             }
 
@@ -1620,18 +1243,18 @@ namespace IndiLogs_3._0.ViewModels
         }
         private void FilterAppErrors(object obj)
         {
-            if (_allAppLogsCache == null || !_allAppLogsCache.Any()) return;
+            if (SessionVM.AllAppLogsCache == null || !SessionVM.AllAppLogsCache.Any()) return;
             IsBusy = true;
             StatusMessage = "Filtering App Errors...";
             Task.Run(() =>
             {
-                var errors = _allAppLogsCache.Where(l => l.Level != null && l.Level.Equals("Error", StringComparison.OrdinalIgnoreCase)).OrderByDescending(l => l.Date).ToList();
+                var errors = SessionVM.AllAppLogsCache.Where(l => l.Level != null && l.Level.Equals("Error", StringComparison.OrdinalIgnoreCase)).OrderByDescending(l => l.Date).ToList();
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    AppDevLogsFiltered.ReplaceAll(errors);
+                    FilterVM?.AppDevLogsFiltered?.ReplaceAll(errors);
                     IsBusy = false;
                     StatusMessage = $"Showing {errors.Count} Errors";
-                    _isAppFilterActive = true;
+                    FilterVM.IsAppFilterActive = true;
                     OnPropertyChanged(nameof(IsFilterActive));
                 });
             });
@@ -1642,146 +1265,18 @@ namespace IndiLogs_3._0.ViewModels
             invadersWindow.Owner = Application.Current.MainWindow;
             invadersWindow.ShowDialog();
         }
-        private void SwitchToSession(LogSessionData session)
-        {
-            // Don't reset filters/search when loading a case file
-            if (!_isLoadingCase)
-            {
-                _isMainFilterActive = false;
-                _isAppFilterActive = false;
-                _isMainFilterOutActive = false;
-                _isAppFilterOutActive = false;
-            }
-
-            if (session == null) return;
-            IsBusy = true;
-
-            _allLogsCache = session.Logs;
-            Logs = session.Logs;
-
-            ConfigurationFiles.Clear();
-            // Add JSON/text configuration files
-            if (session.ConfigurationFiles != null)
-            {
-                foreach (var kvp in session.ConfigurationFiles)
-                {
-                    ConfigurationFiles.Add(kvp.Key);
-                }
-            }
-            // Add SQLite database files
-            if (session.DatabaseFiles != null)
-            {
-                foreach (var kvp in session.DatabaseFiles)
-                {
-                    ConfigurationFiles.Add(kvp.Key);
-                }
-            }
-
-            if (ConfigurationFiles.Count > 0)
-                SelectedConfigFile = ConfigurationFiles[0];
-            else
-                SelectedConfigFile = null;
-
-            OnPropertyChanged(nameof(ConfigurationFiles));
-
-            // Don't reset filtered logs when loading a case - will be set by ApplyCaseSettings
-            if (!_isLoadingCase)
-            {
-                var defaultFilteredLogs = session.Logs.Where(l => IsDefaultLog(l)).ToList();
-                FilteredLogs.ReplaceAll(defaultFilteredLogs);
-                if (FilteredLogs.Count > 0) SelectedLog = FilteredLogs[0];
-            }
-
-            Events = new ObservableCollection<EventEntry>(session.Events); OnPropertyChanged(nameof(Events));
-            Screenshots = new ObservableCollection<BitmapImage>(session.Screenshots); OnPropertyChanged(nameof(Screenshots));
-            MarkedLogs = session.MarkedLogs; OnPropertyChanged(nameof(MarkedLogs));
-            SetupInfo = session.SetupInfo;
-            PressConfig = session.PressConfiguration;
-
-            if (!string.IsNullOrEmpty(session.VersionsInfo))
-                WindowTitle = $"IndiLogs 3.0 - {session.FileName} ({session.VersionsInfo})";
-            else
-                WindowTitle = $"IndiLogs 3.0 - {session.FileName}";
-
-            _allAppLogsCache = session.AppDevLogs ?? new List<LogEntry>();
-            BuildLoggerTree(_allAppLogsCache);
-
-            // Don't reset search/filters when loading a case - will be restored by ApplyCaseSettings
-            if (!_isLoadingCase)
-            {
-                SearchText = "";
-                IsFilterActive = false;
-                IsFilterOutActive = false;
-                _isTimeFocusActive = false;
-                _isAppTimeFocusActive = false;
-
-                _negativeFilters.Clear();
-                _activeThreadFilters.Clear();
-
-                _mainFilterRoot = null;
-                _appFilterRoot = null;
-                _lastFilteredAppCache = null;
-                _lastFilteredCache.Clear();
-
-                ResetTreeFilters();
-            }
-
-            ApplyAppLogsFilter();
-            IsBusy = false;
-        }
-        private void BuildLoggerTree(IEnumerable<LogEntry> logs)
-        {
-            LoggerTreeRoot.Clear();
-            if (logs == null || !logs.Any()) return;
-
-            int totalCount = logs.Count();
-            var rootNode = new LoggerNode { Name = "All Loggers", FullPath = "", IsExpanded = true, Count = totalCount };
-
-            var loggerGroups = logs.GroupBy(l => l.Logger)
-                                   .Select(g => new { Name = g.Key, Count = g.Count() })
-                                   .ToList();
-
-            foreach (var group in loggerGroups)
-            {
-                if (string.IsNullOrEmpty(group.Name)) continue;
-                var parts = group.Name.Split('.');
-                AddNodeRecursive(rootNode, parts, 0, "", group.Count);
-            }
-
-            foreach (var child in rootNode.Children)
-            {
-                LoggerTreeRoot.Add(child);
-            }
-        }
-        private void AddNodeRecursive(LoggerNode parent, string[] parts, int index, string currentPath, int count)
-        {
-            if (index >= parts.Length) return;
-
-            string part = parts[index];
-            string newPath = string.IsNullOrEmpty(currentPath) ? part : $"{currentPath}.{part}";
-
-            var child = parent.Children.FirstOrDefault(c => c.Name == part);
-            if (child == null)
-            {
-                child = new LoggerNode { Name = part, FullPath = newPath };
-                int insertIdx = 0;
-                while (insertIdx < parent.Children.Count && string.Compare(parent.Children[insertIdx].Name, part) < 0)
-                    insertIdx++;
-                parent.Children.Insert(insertIdx, child);
-            }
-
-            child.Count += count;
-            AddNodeRecursive(child, parts, index + 1, newPath, count);
-        }
+        // SwitchToSession is now implemented in LogSessionViewModel and called automatically when SelectedSession changes
+        // Delegate to FilterVM
+        private void BuildLoggerTree(IEnumerable<LogEntry> logs) => FilterVM?.BuildLoggerTree(logs);
         private void ExecuteTreeShowThis(object obj)
         {
             if (obj is LoggerNode node)
             {
-                _treeShowOnlyLogger = null;
-                _treeShowOnlyPrefix = null;
-                _treeHiddenLoggers.Remove(node.FullPath);
+                FilterVM.TreeShowOnlyLogger = null;
+                FilterVM.TreeShowOnlyPrefix = null;
+                FilterVM.TreeHiddenLoggers.Remove(node.FullPath);
                 node.IsHidden = false;
-                _isAppFilterActive = true;
+                FilterVM.IsAppFilterActive = true;
                 OnPropertyChanged(nameof(IsFilterActive));
                 ToggleFilterView(true);
             }
@@ -1790,11 +1285,11 @@ namespace IndiLogs_3._0.ViewModels
         {
             if (obj is LoggerNode node)
             {
-                _treeShowOnlyLogger = null;
-                _treeShowOnlyPrefix = null;
-                _treeHiddenLoggers.Add(node.FullPath);
+                FilterVM.TreeShowOnlyLogger = null;
+                FilterVM.TreeShowOnlyPrefix = null;
+                FilterVM.TreeHiddenLoggers.Add(node.FullPath);
                 node.IsHidden = true;
-                _isAppFilterActive = true;
+                FilterVM.IsAppFilterActive = true;
                 OnPropertyChanged(nameof(IsFilterActive));
                 ToggleFilterView(true);
             }
@@ -1804,8 +1299,8 @@ namespace IndiLogs_3._0.ViewModels
             if (obj is LoggerNode node)
             {
                 ResetTreeFilters();
-                _treeShowOnlyLogger = node.FullPath;
-                _isAppFilterActive = true;
+                FilterVM.TreeShowOnlyLogger = node.FullPath;
+                FilterVM.IsAppFilterActive = true;
                 OnPropertyChanged(nameof(IsFilterActive));
                 ToggleFilterView(true);
             }
@@ -1815,8 +1310,8 @@ namespace IndiLogs_3._0.ViewModels
             if (obj is LoggerNode node)
             {
                 ResetTreeFilters();
-                _treeShowOnlyPrefix = node.FullPath;
-                _isAppFilterActive = true;
+                FilterVM.TreeShowOnlyPrefix = node.FullPath;
+                FilterVM.IsAppFilterActive = true;
                 OnPropertyChanged(nameof(IsFilterActive));
                 ToggleFilterView(true);
             }
@@ -1825,11 +1320,11 @@ namespace IndiLogs_3._0.ViewModels
         {
             if (obj is LoggerNode node)
             {
-                _treeShowOnlyLogger = null;
-                _treeShowOnlyPrefix = null;
-                _treeHiddenPrefixes.Add(node.FullPath);
+                FilterVM.TreeShowOnlyLogger = null;
+                FilterVM.TreeShowOnlyPrefix = null;
+                FilterVM.TreeHiddenPrefixes.Add(node.FullPath);
                 node.IsHidden = true;
-                _isAppFilterActive = true;
+                FilterVM.IsAppFilterActive = true;
                 OnPropertyChanged(nameof(IsFilterActive));
                 ToggleFilterView(true);
             }
@@ -1837,16 +1332,16 @@ namespace IndiLogs_3._0.ViewModels
         private void ExecuteTreeShowAll(object obj)
         {
             ResetTreeFilters();
-            _isAppFilterActive = false;
+            FilterVM.IsAppFilterActive = false;
             OnPropertyChanged(nameof(IsFilterActive));
             ToggleFilterView(false);
         }
-        private void ResetTreeFilters()
+        public void ResetTreeFilters()
         {
-            _treeHiddenLoggers.Clear();
-            _treeHiddenPrefixes.Clear();
-            _treeShowOnlyLogger = null;
-            _treeShowOnlyPrefix = null;
+            FilterVM.TreeHiddenLoggers.Clear();
+            FilterVM.TreeHiddenPrefixes.Clear();
+            FilterVM.TreeShowOnlyLogger = null;
+            FilterVM.TreeShowOnlyPrefix = null;
             foreach (var node in LoggerTreeRoot) ResetVisualHiddenState(node);
         }
         private void ResetVisualHiddenState(LoggerNode node)
@@ -1887,752 +1382,33 @@ namespace IndiLogs_3._0.ViewModels
                 });
             });
         }
-        private void ToggleFilterView(bool show)
-        {
-            UpdateMainLogsFilter(show);
-            ApplyAppLogsFilter();
-        }
-        private void UpdateMainLogsFilter(bool show)
-        {
-            // --- תיקון קריטי ל-Live Monitoring ---
-            // אם אנחנו במצב Live, אסור להחליף את Logs ברשימה סטטית!
-            // אנחנו חייבים להישאר מחוברים ל-_liveLogsCollection שמתעדכן ברקע.
-            if (IsLiveMode)
-            {
-                if (Logs != _liveLogsCollection)
-                {
-                    Logs = _liveLogsCollection;
-                }
-                // במצב Live, הפילטור קורה רק בטאב ה-Filtered (FilteredLogs),
-                // הטאב הראשי (Logs) תמיד מציג את הכל (Raw Data).
-                return;
-            }
-            // --------------------------------------
-
-            bool isActive = _isMainFilterActive;
-            IEnumerable<LogEntry> currentLogs;
-            bool hasSearchText = !string.IsNullOrWhiteSpace(SearchText) && SearchText.Length >= 2;
-
-            if (isActive || hasSearchText)
-            {
-                if ((_mainFilterRoot != null && _mainFilterRoot.Children != null && _mainFilterRoot.Children.Count > 0) || _isTimeFocusActive)
-                    currentLogs = _lastFilteredCache ?? new List<LogEntry>();
-                else
-                    currentLogs = _allLogsCache;
-
-                if (_activeThreadFilters.Any())
-                    currentLogs = currentLogs.Where(l => _activeThreadFilters.Contains(l.ThreadName));
-
-                if (hasSearchText)
-                {
-                    // Smart Boolean Search: Check if query has special operators
-                    if (QueryParserService.HasBooleanOperators(SearchText))
-                    {
-                        var parser = new QueryParserService();
-                        var filterTree = parser.Parse(SearchText, out string errorMessage);
-
-                        if (filterTree != null)
-                        {
-                            // Use smart filtering with parsed tree
-                            currentLogs = currentLogs.Where(l => EvaluateFilterNode(l, filterTree));
-                        }
-                        else
-                        {
-                            // Parsing failed - show error in status (optional) and fall back to simple search
-                            // You can optionally show the error: StatusMessage = $"Search syntax error: {errorMessage}";
-                            currentLogs = currentLogs.Where(l => l.Message != null && l.Message.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0);
-                        }
-                    }
-                    else
-                    {
-                        // Simple search for maximum performance
-                        currentLogs = currentLogs.Where(l => l.Message != null && l.Message.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0);
-                    }
-                }
-            }
-            else
-            {
-                currentLogs = _allLogsCache;
-            }
-
-            if (_isMainFilterOutActive && _negativeFilters.Any())
-            {
-                currentLogs = currentLogs.Where(l =>
-                {
-                    foreach (var f in _negativeFilters)
-                    {
-                        if (f.StartsWith("THREAD:"))
-                        {
-                            if (l.ThreadName != null && l.ThreadName.IndexOf(f.Substring(7), StringComparison.OrdinalIgnoreCase) >= 0) return false;
-                        }
-                        else
-                        {
-                            if (l.Message != null && l.Message.IndexOf(f, StringComparison.OrdinalIgnoreCase) >= 0) return false;
-                        }
-                    }
-                    return true;
-                });
-            }
-            Logs = currentLogs.ToList();
-        }
-        private void ApplyAppLogsFilter()
-        {
-            if (_allAppLogsCache == null) return;
-            if (!_isAppFilterActive && string.IsNullOrWhiteSpace(SearchText))
-            {
-                AppDevLogsFiltered.ReplaceAll(_allAppLogsCache);
-                return;
-            }
-            var source = _allAppLogsCache;
-            if (_isAppFilterActive && _isAppTimeFocusActive && _lastFilteredAppCache != null)
-            {
-                source = _lastFilteredAppCache;
-            }
-            var query = source.AsParallel().AsOrdered();
-            if (_isAppFilterActive && !_isAppTimeFocusActive && _appFilterRoot != null && _appFilterRoot.Children.Count > 0)
-            {
-                query = query.Where(l => EvaluateFilterNode(l, _appFilterRoot));
-            }
-            if (_isAppFilterActive)
-            {
-                if (_treeShowOnlyLogger != null)
-                {
-                    query = query.Where(l => l.Logger == _treeShowOnlyLogger);
-                }
-                else if (_treeShowOnlyPrefix != null)
-                {
-                    query = query.Where(l => l.Logger != null && (l.Logger == _treeShowOnlyPrefix || l.Logger.StartsWith(_treeShowOnlyPrefix + ".")));
-                }
-                else
-                {
-                    if (_treeHiddenLoggers.Count > 0 || _treeHiddenPrefixes.Count > 0)
-                    {
-                        query = query.Where(l =>
-                        {
-                            if (l.Logger == null) return true;
-                            if (_treeHiddenLoggers.Contains(l.Logger)) return false;
-                            foreach (var prefix in _treeHiddenPrefixes)
-                            {
-                                if (l.Logger == prefix || l.Logger.StartsWith(prefix + ".")) return false;
-                            }
-                            return true;
-                        });
-                    }
-                }
-            }
-            if (!string.IsNullOrWhiteSpace(SearchText))
-            {
-                string search = SearchText;
-
-                // Smart Boolean Search for App Logs
-                if (QueryParserService.HasBooleanOperators(SearchText))
-                {
-                    var parser = new QueryParserService();
-                    var filterTree = parser.Parse(SearchText, out string errorMessage);
-
-                    if (filterTree != null)
-                    {
-                        // Use smart filtering with parsed tree
-                        query = query.Where(l => EvaluateFilterNode(l, filterTree));
-                    }
-                    else
-                    {
-                        // Parsing failed - fall back to simple search
-                        query = query.Where(l =>
-                        {
-                            if (l.Message == null) return false;
-
-                            if (l.Message.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
-                                return true;
-
-                            int dataIndex = l.Message.IndexOf("DATA:", StringComparison.OrdinalIgnoreCase);
-                            if (dataIndex >= 0)
-                            {
-                                string dataSection = l.Message.Substring(dataIndex + 5);
-                                if (dataSection.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
-                                    return true;
-                            }
-
-                            return false;
-                        });
-                    }
-                }
-                else
-                {
-                    // Simple search for maximum performance
-                    query = query.Where(l =>
-                    {
-                        if (l.Message == null) return false;
-
-                        if (l.Message.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
-                            return true;
-
-                        int dataIndex = l.Message.IndexOf("DATA:", StringComparison.OrdinalIgnoreCase);
-                        if (dataIndex >= 0)
-                        {
-                            string dataSection = l.Message.Substring(dataIndex + 5);
-                            if (dataSection.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
-                                return true;
-                        }
-
-                        return false;
-                    });
-                }
-            }
-            if (_isAppFilterOutActive && _negativeFilters.Any())
-            {
-                var negFilters = _negativeFilters.ToList();
-                query = query.Where(l =>
-                {
-                    foreach (var f in negFilters)
-                    {
-                        if (f.StartsWith("THREAD:"))
-                        {
-                            if (l.ThreadName != null && l.ThreadName.IndexOf(f.Substring(7), StringComparison.OrdinalIgnoreCase) >= 0) return false;
-                        }
-                        else
-                        {
-                            if (l.Message != null && l.Message.IndexOf(f, StringComparison.OrdinalIgnoreCase) >= 0) return false;
-                        }
-                    }
-                    return true;
-                });
-            }
-            var resultList = query.ToList();
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                AppDevLogsFiltered.ReplaceAll(resultList);
-            });
-        }
+        // Delegate to FilterVM
+        private void ToggleFilterView(bool show) => FilterVM?.ToggleFilterView(show);
+        // Delegate to FilterVM
+        private void UpdateMainLogsFilter(bool show) => FilterVM?.ApplyMainLogsFilter();
+        // Delegate to FilterVM
+        private void ApplyAppLogsFilter() => FilterVM?.ApplyAppLogsFilter();
         // Indilogs 3.0/ViewModels/MainViewModel.cs
 
-        private void StartLiveMonitoring(string path)
-        {
-            // ניקוי
-            StopLiveMonitoring();
-            ClearLogs(null);
+        // Delegate live monitoring to LiveVM
+        private void StartLiveMonitoring(string path) => LiveVM?.StartLiveMonitoring(path);
+        private void StopLiveMonitoring() => LiveVM?.StopLiveMonitoring();
 
-            // הגדרות UI
-            LoadedFiles.Add(Path.GetFileName(path));
-            _liveFilePath = path;
-            _liveLogsCollection = new ObservableRangeCollection<LogEntry>();
-            _allLogsCache = _liveLogsCollection;
-            Logs = _liveLogsCollection;
+        // OLD IMPLEMENTATION REMOVED - Now delegated to LiveVM
 
-            IsLiveMode = true;
-            IsRunning = true;
-            WindowTitle = "IndiLogs 3.0 - LIVE MONITORING (Custom)";
 
-            // אתחול המנגנון החדש
-            _liveCts = new CancellationTokenSource();
-            _customReader = new CustomLiveLogReader();
-
-            // רישום לאירועים
-            _customReader.OnStatusChanged += (msg) =>
-            {
-                Application.Current.Dispatcher.Invoke(() => StatusMessage = msg);
-            };
-
-            // בתוך StartLiveMonitoring, החלף את הרישום ל-OnLogsReceived:
-
-            _customReader.OnLogsReceived += (newLogs) =>
-            {
-                Task.Run(async () =>
-                {
-                    // 1. החלת צבעים (דיפולטיים + מותאמים אישית אם יש)
-                    await _coloringService.ApplyDefaultColorsAsync(newLogs, false);
-
-                    // אם יש חוקי צביעה מותאמים אישית פעילים
-                    if (_mainColoringRules != null && _mainColoringRules.Any())
-                    {
-                        await _coloringService.ApplyCustomColoringAsync(newLogs, _mainColoringRules);
-                    }
-
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        lock (_collectionLock)
-                        {
-                            foreach (var log in newLogs) // שומרים על סדר כרונולוגי
-                            {
-                                // א. הוספה תמיד לטאב הראשי (PLC) ולזיכרון
-                                _liveLogsCollection.Insert(0, log);
-
-                                // ב. הוספה לטאב המסונן (PLC FILTERED) רק אם עומד בתנאים!
-                                if (ShouldShowInFilteredView(log))
-                                {
-                                    FilteredLogs.Insert(0, log);
-                                }
-                            }
-
-                            StatusMessage = $"Live: {FilteredLogs.Count:N0} filtered / {_liveLogsCollection.Count:N0} total";
-                        }
-                    });
-                });
-            };
-
-            // הפעלה ברקע
-            Task.Run(() => _customReader.StartMonitoring(path, _liveCts.Token));
-        }
-        private bool ShouldShowInFilteredView(LogEntry log)
-        {
-            // 1. בדיקת Negative Filters (Filter Out) - תמיד פעיל אם מוגדר
-            if (_isMainFilterOutActive && _negativeFilters.Any())
-            {
-                foreach (var f in _negativeFilters)
-                {
-                    if (f.StartsWith("THREAD:"))
-                    {
-                        if (log.ThreadName != null && log.ThreadName.IndexOf(f.Substring(7), StringComparison.OrdinalIgnoreCase) >= 0)
-                            return false;
-                    }
-                    else
-                    {
-                        if (log.Message != null && log.Message.IndexOf(f, StringComparison.OrdinalIgnoreCase) >= 0)
-                            return false;
-                    }
-                }
-            }
-
-            // 2. האם יש פילטרים פעילים? (חיפוש, עצים, Threads)
-            bool hasSearch = !string.IsNullOrWhiteSpace(SearchText);
-            bool hasActiveFilter = _isMainFilterActive || hasSearch || _activeThreadFilters.Any();
-
-            // 3. אם אין שום פילטר פעיל -> השתמש בלוגיקה הדיפולטית (Default Colors/Filter)
-            // זה מה שגורם לטאב "PLC Filtered" להיראות כמו בטעינה רגילה
-            if (!hasActiveFilter)
-            {
-                return IsDefaultLog(log);
-            }
-
-            // 4. בדיקת פילטרים פעילים
-
-            // Thread Filter
-            if (_activeThreadFilters.Any())
-            {
-                if (!_activeThreadFilters.Contains(log.ThreadName)) return false;
-            }
-
-            // Search Text
-            if (hasSearch)
-            {
-                if (log.Message == null || log.Message.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) < 0)
-                    return false;
-            }
-
-            // Advanced Tree / Condition Filter
-            if (_mainFilterRoot != null && _mainFilterRoot.Children != null && _mainFilterRoot.Children.Count > 0)
-            {
-                if (!EvaluateFilterNode(log, _mainFilterRoot)) return false;
-            }
-
-            return true;
-        }
-        private void StartFileWatcher(string filePath)
-        {
-            try
-            {
-                if (_fileWatcher != null)
-                {
-                    _fileWatcher.EnableRaisingEvents = false;
-                    _fileWatcher.Dispose();
-                    _fileWatcher = null;
-                }
-
-                string directory = Path.GetDirectoryName(filePath);
-                string fileName = Path.GetFileName(filePath);
-
-                Debug.WriteLine($">>> Starting FileSystemWatcher for: {fileName}");
-
-                _fileWatcher = new FileSystemWatcher(directory, fileName);
-                _fileWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size;
-                _fileWatcher.Changed += OnFileChanged;
-                _fileWatcher.EnableRaisingEvents = true;
-
-                Debug.WriteLine($">>> ✅ FileSystemWatcher started");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"❌ FileSystemWatcher error: {ex.Message}");
-                Debug.WriteLine($"   No live monitoring - FileSystemWatcher failed");
-            }
-        }
-        private void OnFileChanged(object sender, FileSystemEventArgs e)
-        {
-            var now = DateTime.Now;
-
-            // חזק יותר: 5 שניות מינימום בין refreshים
-            if ((now - _lastFileCheckTime).TotalMilliseconds < MIN_REFRESH_INTERVAL_MS)
-            {
-                Debug.WriteLine($"[{now:HH:mm:ss.fff}] 🔇 File change IGNORED (throttled)");
-                return;
-            }
-
-            _lastFileCheckTime = now;
-            Debug.WriteLine($"[{now:HH:mm:ss.fff}] 📢 File changed - triggering refresh");
-
-            Task.Run(async () =>
-            {
-                try
-                {
-                    await RefreshLogs();
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"❌ OnFileChanged error: {ex.Message}");
-                }
-            });
-        }
-
-        private async Task RefreshLogsOptimized()
-        {
-            if (_isRefreshActive) return;
-
-            _isRefreshActive = true;
-            Debug.WriteLine($">>> RefreshLogsOptimized STARTED");
-
-            try
-            {
-                await Task.Delay(100); // Wait for write to complete
-
-                long currentFileSize;
-                try
-                {
-                    var fileInfo = new FileInfo(_liveFilePath);
-                    currentFileSize = fileInfo.Length;
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"  ❌ Cannot access file: {ex.Message}");
-                    return;
-                }
-
-                const long MIN_GROWTH = 5120; // 5KB
-                long growth = currentFileSize - _lastFileSize;
-
-                if (growth < MIN_GROWTH)
-                {
-                    Debug.WriteLine($"  ℹ️ File grew by only {growth:N0} bytes - skipping");
-                    return;
-                }
-
-                _lastFileSize = currentFileSize;
-                Debug.WriteLine($"  File grew by {growth:N0} bytes");
-
-                // ================================================================
-                // STRATEGY 1: Try to seek to last position (FAST!)
-                // ================================================================
-                Debug.WriteLine($"  🎯 Attempting OPTIMIZED read from position {_lastStreamPosition:N0}...");
-
-                bool optimizedSuccess = false;
-                List<LogEntry> newLogs = null;
-
-                try
-                {
-                    newLogs = await Task.Run(() =>
-                    {
-                        using (var fs = new FileStream(_liveFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                        {
-                            // Try seeking to last known position
-                            if (_lastStreamPosition > 0 && _lastStreamPosition < fs.Length)
-                            {
-                                Debug.WriteLine($"    Seeking to position {_lastStreamPosition:N0}...");
-                                fs.Seek(_lastStreamPosition, SeekOrigin.Begin);
-
-                                Debug.WriteLine($"    Creating reader from seeked position...");
-                                var result = _logService.ParseLogStream(fs);
-
-                                if (result.AllLogs != null && result.AllLogs.Count > 0)
-                                {
-                                    Debug.WriteLine($"    ✅ SUCCESS! Parsed {result.AllLogs.Count:N0} new logs from seeked position!");
-
-                                    // Update position
-                                    _lastStreamPosition = fs.Position;
-
-                                    optimizedSuccess = true;
-                                    return result.AllLogs;
-                                }
-                                else
-                                {
-                                    Debug.WriteLine($"    ⚠️ No logs from seeked position, falling back...");
-                                }
-                            }
-
-                            return null;
-                        }
-                    });
-                }
-                catch (Exception seekEx)
-                {
-                    Debug.WriteLine($"    ❌ Seek strategy failed: {seekEx.Message}");
-                }
-
-                // ================================================================
-                // STRATEGY 2: Fallback - parse entire file (SLOW)
-                // ================================================================
-                if (!optimizedSuccess || newLogs == null)
-                {
-                    Debug.WriteLine($"  ⚙️ Falling back to full file parse...");
-
-                    var sw = System.Diagnostics.Stopwatch.StartNew();
-
-                    newLogs = await Task.Run(() =>
-                    {
-                        using (var fs = new FileStream(_liveFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                        using (var ms = new MemoryStream())
-                        {
-                            fs.CopyTo(ms);
-                            ms.Position = 0;
-
-                            var result = _logService.ParseLogStream(ms);
-                            var allLogs = result.AllLogs;
-
-                            if (allLogs != null && allLogs.Count > _lastParsedLogCount)
-                            {
-                                var deltaLogs = allLogs.Skip(_lastParsedLogCount).ToList();
-                                _lastParsedLogCount = allLogs.Count;
-                                _lastStreamPosition = fs.Position; // Update position
-
-                                return deltaLogs;
-                            }
-
-                            return null;
-                        }
-                    });
-
-                    sw.Stop();
-                    Debug.WriteLine($"  Full parse took {sw.ElapsedMilliseconds:N0}ms");
-                }
-
-                // ================================================================
-                // Add new logs to UI
-                // ================================================================
-                if (newLogs != null && newLogs.Count > 0)
-                {
-                    await _coloringService.ApplyDefaultColorsAsync(newLogs, false);
-                    if (_savedColoringRules != null && _savedColoringRules.Count > 0)
-                        await _coloringService.ApplyCustomColoringAsync(newLogs, _savedColoringRules);
-
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        lock (_collectionLock)
-                        {
-                            foreach (var log in newLogs.OrderByDescending(l => l.Date))
-                            {
-                                _liveLogsCollection.Insert(0, log);
-                                FilteredLogs.Insert(0, log);
-                            }
-
-                            if (SelectedLog == null && FilteredLogs.Count > 0)
-                                SelectedLog = FilteredLogs[0];
-
-                            StatusMessage = $"Live: {FilteredLogs.Count:N0} shown (+{newLogs.Count} new) | {_liveLogsCollection.Count:N0} total";
-                        }
-                    });
-
-                    string method = optimizedSuccess ? "OPTIMIZED SEEK" : "full parse";
-                    Debug.WriteLine($"  ✅ Added {newLogs.Count:N0} new logs via {method}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"❌ RefreshLogsOptimized error: {ex.Message}");
-            }
-            finally
-            {
-                _isRefreshActive = false;
-                Debug.WriteLine($">>> RefreshLogsOptimized FINISHED");
-            }
-        }
-
-
-
-
-        private void StopLiveMonitoring()
-        {
-            _liveCts?.Cancel();
-            _liveCts = null;
-            _customReader = null;
-
-            IsLiveMode = false;
-            IsRunning = false;
-            StatusMessage = "Live monitoring stopped.";
-        }
-
-
-
-
-
-        private async Task PollingLoop(CancellationToken token)
-        {
-            Debug.WriteLine($">>> PollingLoop STARTED");
-
-            while (!token.IsCancellationRequested)
-            {
-                try
-                {
-                    if (IsRunning && !string.IsNullOrEmpty(_liveFilePath) && File.Exists(_liveFilePath))
-                    {
-                        Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Polling trigger...");
-                        await RefreshLogs();
-                    }
-                    else
-                    {
-                        if (!IsRunning)
-                            Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Polling skipped (paused)");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"❌ PollingLoop error: {ex.Message}");
-                }
-
-                try
-                {
-                    Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Waiting {POLLING_INTERVAL_MS}ms...");
-                    await Task.Delay(POLLING_INTERVAL_MS, token);
-                }
-                catch (TaskCanceledException)
-                {
-                    Debug.WriteLine($">>> PollingLoop CANCELLED");
-                    break;
-                }
-            }
-
-            Debug.WriteLine($">>> PollingLoop EXITED");
-        }
-
-
-
-
-
-        // Indilogs 3.0/ViewModels/MainViewModel.cs
-
-        private async Task RefreshLogs()
-        {
-            if (_isRefreshActive) return;
-            _isRefreshActive = true;
-
-            try
-            {
-                // בדיקה מהירה אם הקובץ באמת גדל
-                long currentLength = new FileInfo(_liveFilePath).Length;
-                if (currentLength <= _lastStreamPosition)
-                {
-                    _isRefreshActive = false;
-                    return;
-                }
-
-                await Task.Run(() =>
-                {
-                    using (var fs = new FileStream(_liveFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                    {
-                        // 1. קפיצה למיקום האחרון הידוע
-                        fs.Seek(_lastStreamPosition, SeekOrigin.Begin);
-
-                        // 2. קריאת הדלתא (הלוגים החדשים בלבד)
-                        var newLogs = _logService.ParseLogStreamPartial(fs);
-
-                        // 3. עדכון המיקום לפעם הבאה
-                        _lastStreamPosition = fs.Position;
-                        _lastFileSize = fs.Length;
-
-                        if (newLogs.Count > 0)
-                        {
-                            // צביעה
-                            _coloringService.ApplyDefaultColorsAsync(newLogs, false).Wait();
-
-                            // עדכון UI
-                            Application.Current.Dispatcher.Invoke(() =>
-                            {
-                                lock (_collectionLock)
-                                {
-                                    foreach (var log in newLogs.OrderByDescending(l => l.Date))
-                                    {
-                                        FilteredLogs.Insert(0, log);       // הוספה לראש התצוגה
-                                        _liveLogsCollection.Insert(0, log); // הוספה לראש ה-Cache
-                                    }
-                                    StatusMessage = $"Live: {FilteredLogs.Count:N0} logs (+{newLogs.Count} new)";
-                                }
-                            });
-                        }
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"RefreshLogs Error: {ex.Message}");
-            }
-            finally
-            {
-                _isRefreshActive = false;
-            }
-        }
-
-        // ============================================================================
-        // STEP 4: REPLACE StopLiveMonitoring() METHOD (around line 1601)
-        // ============================================================================
-
-
-        private void LivePlay(object obj)
-        {
-            Debug.WriteLine($"LivePlay called - IsLiveMode: {IsLiveMode}, _liveFilePath: {_liveFilePath}");
-            IsRunning = true;
-            StatusMessage = "Live monitoring active.";
-        }
-        private void LivePause(object obj)
-        {
-            Debug.WriteLine($"LivePause called");
-            IsRunning = false;
-            StatusMessage = "Live monitoring paused.";
-        }
+        private void LivePlay(object obj) => LiveVM?.LivePlayCommand.Execute(obj);
+        private void LivePause(object obj) => LiveVM?.LivePauseCommand.Execute(obj);
         private void LoadFile(object obj)
         {
             var dialog = new OpenFileDialog { Multiselect = true, Filter = "All Supported|*.zip;*.log|Log Files (*.log)|*.log|Log Archives (*.zip)|*.zip|All files (*.*)|*.*" };
             if (dialog.ShowDialog() == true) ProcessFiles(dialog.FileNames);
         }
-        private void FilterOut(object p)
-        {
-            if (SelectedLog == null) return;
-            var w = new FilterOutWindow(SelectedLog.Message);
-            if (w.ShowDialog() == true && !string.IsNullOrWhiteSpace(w.TextToRemove))
-            {
-                _negativeFilters.Add(w.TextToRemove);
-                IsFilterOutActive = true;
-                ToggleFilterView(IsFilterActive);
-            }
-        }
-        private void FilterOutThread(object obj)
-        {
-            if (SelectedLog == null || string.IsNullOrEmpty(SelectedLog.ThreadName)) return;
-            var win = new FilterOutWindow(SelectedLog.ThreadName);
-            if (win.ShowDialog() == true && !string.IsNullOrWhiteSpace(win.TextToRemove))
-            {
-                string filterKey = "THREAD:" + win.TextToRemove;
-                if (!_negativeFilters.Contains(filterKey))
-                {
-                    _negativeFilters.Add(filterKey);
-                    IsFilterOutActive = true;
-                    ToggleFilterView(IsFilterActive);
-                }
-            }
-        }
-        private void OpenThreadFilter(object obj)
-        {
-            if (_allLogsCache == null || !_allLogsCache.Any()) return;
-            var threads = _allLogsCache.Select(l => l.ThreadName).Where(t => !string.IsNullOrEmpty(t)).Distinct().OrderBy(t => t).ToList();
-            var win = new ThreadFilterWindow(threads);
-            if (win.ShowDialog() == true)
-            {
-                if (win.ShouldClear) { _activeThreadFilters.Clear(); if (_savedFilterRoot == null) IsFilterActive = false; }
-                else if (win.SelectedThreads != null && win.SelectedThreads.Any()) { _activeThreadFilters = win.SelectedThreads; IsFilterActive = true; }
-                ToggleFilterView(IsFilterActive);
-            }
-        }
         private async void OpenFilterWindow(object obj)
         {
             var win = new FilterWindow();
             bool isAppTab = SelectedTabIndex == 2;
-            var currentRoot = isAppTab ? _appFilterRoot : _mainFilterRoot;
+            var currentRoot = isAppTab ? FilterVM.AppFilterRoot : FilterVM.MainFilterRoot;
 
             if (currentRoot != null) { win.ViewModel.RootNodes.Clear(); win.ViewModel.RootNodes.Add(currentRoot.DeepClone()); }
 
@@ -2643,10 +1419,10 @@ namespace IndiLogs_3._0.ViewModels
                 IsBusy = true;
                 await Task.Run(() =>
                 {
-                    if (isAppTab) _appFilterRoot = newRoot;
+                    if (isAppTab) FilterVM.AppFilterRoot = newRoot;
                     else
                     {
-                        _mainFilterRoot = newRoot;
+                        FilterVM.MainFilterRoot = newRoot;
                         if (hasAdvanced)
                         {
                             // Thread-safe enumeration: create a copy of the collection before filtering
@@ -2655,98 +1431,24 @@ namespace IndiLogs_3._0.ViewModels
                             {
                                 cacheCopy = _allLogsCache.ToList();
                             }
-                            var res = cacheCopy.Where(l => EvaluateFilterNode(l, _mainFilterRoot)).ToList();
-                            _lastFilteredCache = res;
+                            var res = cacheCopy.Where(l => EvaluateFilterNode(l, FilterVM.MainFilterRoot)).ToList();
+                            FilterVM.LastFilteredCache = res;
                         }
-                        else _lastFilteredCache.Clear();
+                        else FilterVM.LastFilteredCache.Clear();
                     }
                 });
 
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    if (isAppTab) { _isAppFilterActive = hasAdvanced; ApplyAppLogsFilter(); }
-                    else { _isMainFilterActive = hasAdvanced || _activeThreadFilters.Any(); UpdateMainLogsFilter(_isMainFilterActive); }
+                    if (isAppTab) { FilterVM.IsAppFilterActive = hasAdvanced; ApplyAppLogsFilter(); }
+                    else { FilterVM.IsMainFilterActive = hasAdvanced || FilterVM.ActiveThreadFilters.Any(); UpdateMainLogsFilter(FilterVM.IsMainFilterActive); }
                     OnPropertyChanged(nameof(IsFilterActive));
                     IsBusy = false;
                 });
             }
         }
-        private bool EvaluateFilterNode(LogEntry log, FilterNode node)
-        {
-            if (node == null) return true;
-            if (node.Type == NodeType.Condition)
-            {
-                string val = "";
-                switch (node.Field)
-                {
-                    case "Level": val = log.Level; break;
-                    case "ThreadName": val = log.ThreadName; break;
-                    case "Logger": val = log.Logger; break;
-                    case "ProcessName": val = log.ProcessName; break;
-                    case "Method": val = log.Method; break;
-                    default: val = log.Message; break;
-                }
-                if (string.IsNullOrEmpty(val)) return false;
-                string op = node.Operator;
-                string criteria = node.Value;
-                if (op == "Equals") return val.Equals(criteria, StringComparison.OrdinalIgnoreCase);
-                if (op == "Begins With") return val.StartsWith(criteria, StringComparison.OrdinalIgnoreCase);
-                if (op == "Ends With") return val.EndsWith(criteria, StringComparison.OrdinalIgnoreCase);
-                if (op == "Regex") { try { return System.Text.RegularExpressions.Regex.IsMatch(val, criteria, System.Text.RegularExpressions.RegexOptions.IgnoreCase); } catch { return false; } }
-                return val.IndexOf(criteria, StringComparison.OrdinalIgnoreCase) >= 0;
-            }
-            else
-            {
-                if (node.Children == null || node.Children.Count == 0) return true;
-                string op = node.LogicalOperator;
-                bool isBaseOr = op.Contains("OR");
-                bool baseResult;
-                if (isBaseOr)
-                {
-                    baseResult = false;
-                    foreach (var child in node.Children) { if (EvaluateFilterNode(log, child)) { baseResult = true; break; } }
-                }
-                else
-                {
-                    baseResult = true;
-                    foreach (var child in node.Children) { if (!EvaluateFilterNode(log, child)) { baseResult = false; break; } }
-                }
-                if (op.StartsWith("NOT")) return !baseResult;
-                return baseResult;
-            }
-        }
-        private void FilterContext(object obj)
-        {
-            if (SelectedLog == null) return;
-            IsBusy = true;
-            double multiplier = SelectedTimeUnit == "Minutes" ? 60 : 1;
-            double rangeInSeconds = ContextSeconds * multiplier;
-            DateTime targetTime = SelectedLog.Date;
-            DateTime startTime = targetTime.AddSeconds(-rangeInSeconds);
-            DateTime endTime = targetTime.AddSeconds(rangeInSeconds);
-            bool isAppTab = SelectedTabIndex == 2;
-
-            Task.Run(() =>
-            {
-                if (isAppTab)
-                {
-                    if (_allAppLogsCache != null)
-                    {
-                        var contextLogs = _allAppLogsCache.Where(l => l.Date >= startTime && l.Date <= endTime).OrderByDescending(l => l.Date).ToList();
-                        Application.Current.Dispatcher.Invoke(() => { _lastFilteredAppCache = contextLogs; _isAppTimeFocusActive = true; _appFilterRoot = null; IsFilterActive = true; ToggleFilterView(true); StatusMessage = $"APP Focus Time: {contextLogs.Count} logs shown"; IsBusy = false; });
-                    }
-                }
-                else
-                {
-                    if (_allLogsCache != null)
-                    {
-                        var contextLogs = _allLogsCache.Where(l => l.Date >= startTime && l.Date <= endTime).OrderByDescending(l => l.Date).ToList();
-                        Application.Current.Dispatcher.Invoke(() => { _lastFilteredCache = contextLogs; _savedFilterRoot = null; _isTimeFocusActive = true; IsFilterActive = true; ToggleFilterView(true); StatusMessage = $"Focus Time: +/- {rangeInSeconds}s | {contextLogs.Count} logs shown"; IsBusy = false; });
-                    }
-                }
-            });
-        }
-        private void UndoFilterOut(object parameter) { }
+        // Delegate to FilterVM
+        private bool EvaluateFilterNode(LogEntry log, FilterNode node) => FilterVM?.EvaluateFilterNode(log, node) ?? true;
         private async void ExportParsedData(object obj)
         {
             if (SelectedSession == null || SelectedSession.Logs == null || !SelectedSession.Logs.Any())
@@ -2783,114 +1485,11 @@ namespace IndiLogs_3._0.ViewModels
             snakeWindow.Owner = Application.Current.MainWindow;
             snakeWindow.ShowDialog();
         }
-        private void LoadSavedConfigurations()
-        {
-            string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IndiLogs", "Configs");
-            if (Directory.Exists(path))
-                foreach (var f in Directory.GetFiles(path, "*.json")) { try { var c = JsonConvert.DeserializeObject<SavedConfiguration>(File.ReadAllText(f)); c.FilePath = f; SavedConfigs.Add(c); } catch { } }
-        }
-        private async void ApplyConfiguration(object parameter)
-        {
-            if (parameter is SavedConfiguration c)
-            {
-                IsBusy = true;
-                StatusMessage = $"Loading config: {c.Name} (Overriding current state)...";
-
-                await Application.Current.Dispatcher.InvokeAsync(() =>
-                {
-                    SearchText = "";
-                    IsSearchPanelVisible = false;
-                    _negativeFilters.Clear();
-                    _activeThreadFilters.Clear();
-                    _isTimeFocusActive = false;
-                    _isAppTimeFocusActive = false;
-                    ResetTreeFilters();
-                    _lastFilteredCache.Clear();
-                    _lastFilteredAppCache = null;
-                    _isMainFilterActive = false;
-                    _isAppFilterActive = false;
-                    _isMainFilterOutActive = false;
-                    _isAppFilterOutActive = false;
-                    OnPropertyChanged(nameof(IsFilterActive));
-                    OnPropertyChanged(nameof(IsFilterOutActive));
-                });
-
-                await Task.Run(async () =>
-                {
-                    _mainColoringRules = c.MainColoringRules ?? new List<ColoringCondition>();
-                    if (_allLogsCache != null)
-                    {
-                        await _coloringService.ApplyDefaultColorsAsync(_allLogsCache, false);
-                        if (_mainColoringRules.Any())
-                            await _coloringService.ApplyCustomColoringAsync(_allLogsCache, _mainColoringRules);
-                    }
-
-                    _appColoringRules = c.AppColoringRules ?? new List<ColoringCondition>();
-                    if (_allAppLogsCache != null)
-                    {
-                        await _coloringService.ApplyDefaultColorsAsync(_allAppLogsCache, true);
-                        if (_appColoringRules.Any())
-                            await _coloringService.ApplyCustomColoringAsync(_allAppLogsCache, _appColoringRules);
-                    }
-                });
-
-                _mainFilterRoot = c.MainFilterRoot;
-                if (_mainFilterRoot != null && _allLogsCache != null)
-                {
-                    var res = await Task.Run(() => _allLogsCache.Where(l => EvaluateFilterNode(l, _mainFilterRoot)).ToList());
-                    _lastFilteredCache = res;
-                }
-
-                _appFilterRoot = c.AppFilterRoot;
-
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    if (_appFilterRoot != null && _appFilterRoot.Children.Count > 0)
-                        _isAppFilterActive = true;
-
-                    if (_mainFilterRoot != null && _mainFilterRoot.Children.Count > 0)
-                        _isMainFilterActive = true;
-
-                    if (Logs != null) foreach (var log in Logs) log.OnPropertyChanged("RowBackground");
-                    if (AppDevLogsFiltered != null) foreach (var log in AppDevLogsFiltered) log.OnPropertyChanged("RowBackground");
-
-                    UpdateMainLogsFilter(_isMainFilterActive);
-                    ApplyAppLogsFilter();
-
-                    OnPropertyChanged(nameof(IsFilterActive));
-                    OnPropertyChanged(nameof(IsFilterOutActive));
-                });
-
-                IsBusy = false;
-                StatusMessage = "Configuration loaded successfully.";
-            }
-        }
-        private void RemoveConfiguration(object parameter)
-        {
-            var configToDelete = SelectedConfig;
-            if (configToDelete != null && MessageBox.Show($"Delete '{configToDelete.Name}'?", "Confirm", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
-            {
-                if (File.Exists(configToDelete.FilePath)) File.Delete(configToDelete.FilePath);
-                SavedConfigs.Remove(configToDelete);
-            }
-        }
-        private void SaveConfiguration(object obj)
-        {
-            var existingNames = SavedConfigs.Select(c => c.Name).ToList();
-            var dlg = new SaveConfigWindow(existingNames);
-            if (dlg.ShowDialog() == true)
-            {
-                string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IndiLogs", "Configs");
-                Directory.CreateDirectory(dir);
-                var cfg = new SavedConfiguration { Name = dlg.ConfigName, CreatedDate = DateTime.Now, FilePath = Path.Combine(dir, dlg.ConfigName + ".json"), MainColoringRules = _mainColoringRules ?? new List<ColoringCondition>(), MainFilterRoot = _mainFilterRoot, AppColoringRules = _appColoringRules ?? new List<ColoringCondition>(), AppFilterRoot = _appFilterRoot };
-                File.WriteAllText(cfg.FilePath, JsonConvert.SerializeObject(cfg)); SavedConfigs.Add(cfg);
-            }
-        }
-        private void LoadConfigurationFromFile(object obj)
-        {
-            var dlg = new OpenFileDialog { Filter = "JSON|*.json" };
-            if (dlg.ShowDialog() == true) { try { var c = JsonConvert.DeserializeObject<SavedConfiguration>(File.ReadAllText(dlg.FileName)); c.FilePath = dlg.FileName; SavedConfigs.Add(c); } catch { } }
-        }
+        private void LoadSavedConfigurations() => CaseVM?.LoadSavedConfigs();
+        private void ApplyConfiguration(object parameter) { if (parameter is SavedConfiguration c) CaseVM?.ApplyConfiguration(c); }
+        private void RemoveConfiguration(object parameter) => CaseVM?.DeleteConfigCommand.Execute(parameter);
+        private void SaveConfiguration(object obj) => CaseVM?.SaveConfigCommand.Execute(obj);
+        private void LoadConfigurationFromFile(object obj) => CaseVM?.LoadConfigCommand.Execute(obj);
         private void ApplyTheme(bool isDark)
         {
             var dict = Application.Current.Resources;
@@ -2937,59 +1536,10 @@ namespace IndiLogs_3._0.ViewModels
                 dict.Remove(key);
             dict.Add(key, value);
         }
-        private async void OpenColoringWindow(object obj)
-        {
-            try
-            {
-                var win = new ColoringWindow();
-                bool isAppTab = SelectedTabIndex == 2;
-                var currentRulesSource = isAppTab ? _appColoringRules : _mainColoringRules;
-                var rulesCopy = currentRulesSource.Select(r => r.Clone()).ToList();
-                win.LoadSavedRules(rulesCopy);
-
-                if (win.ShowDialog() == true)
-                {
-                    var newRules = win.ResultConditions;
-                    IsBusy = true;
-                    StatusMessage = isAppTab ? "Applying APP Colors..." : "Applying Main Colors...";
-                    await Task.Run(async () =>
-                    {
-                        if (isAppTab) { _appColoringRules = newRules; if (_allAppLogsCache != null) { await _coloringService.ApplyDefaultColorsAsync(_allAppLogsCache, true); await _coloringService.ApplyCustomColoringAsync(_allAppLogsCache, _appColoringRules); } }
-                        else { _mainColoringRules = newRules; if (_allLogsCache != null) { await _coloringService.ApplyDefaultColorsAsync(_allLogsCache, false); await _coloringService.ApplyCustomColoringAsync(_allLogsCache, _mainColoringRules); } }
-                    });
-                    Application.Current.Dispatcher.Invoke(() => { if (isAppTab) { if (AppDevLogsFiltered != null) foreach (var log in AppDevLogsFiltered) log.OnPropertyChanged("RowBackground"); } else { if (Logs != null) foreach (var log in Logs) log.OnPropertyChanged("RowBackground"); } });
-                    IsBusy = false; StatusMessage = "Colors Updated.";
-                }
-            }
-            catch (Exception ex) { MessageBox.Show($"Error: {ex.Message}"); IsBusy = false; }
-        }
-        private void MarkRow(object obj)
-        {
-            if (SelectedLog != null)
-            {
-                SelectedLog.IsMarked = !SelectedLog.IsMarked;
-                bool isAppTab = SelectedTabIndex == 2;
-                var targetList = isAppTab ? MarkedAppLogs : MarkedLogs;
-                if (SelectedLog.IsMarked) { targetList.Add(SelectedLog); var sorted = targetList.OrderByDescending(x => x.Date).ToList(); targetList.Clear(); foreach (var l in sorted) targetList.Add(l); }
-                else { targetList.Remove(SelectedLog); }
-            }
-        }
-        private void GoToNextMarked(object obj)
-        {
-            if (!Logs.Any()) return;
-            var list = Logs.ToList();
-            int current = SelectedLog != null ? list.IndexOf(SelectedLog) : -1;
-            var next = list.Skip(current + 1).FirstOrDefault(l => l.IsMarked) ?? list.FirstOrDefault(l => l.IsMarked);
-            if (next != null) { SelectedLog = next; RequestScrollToLog?.Invoke(next); }
-        }
-        private void GoToPrevMarked(object obj)
-        {
-            if (!Logs.Any()) return;
-            var list = Logs.ToList();
-            int current = SelectedLog != null ? list.IndexOf(SelectedLog) : list.Count;
-            var prev = list.Take(current).LastOrDefault(l => l.IsMarked) ?? list.LastOrDefault(l => l.IsMarked);
-            if (prev != null) { SelectedLog = prev; RequestScrollToLog?.Invoke(prev); }
-        }
+        // Delegate to CaseVM
+        private void MarkRow(object obj) => CaseVM?.MarkLogCommand.Execute(obj);
+        private void GoToNextMarked(object obj) => CaseVM?.GoToNextMarkedCommand.Execute(obj);
+        private void GoToPrevMarked(object obj) => CaseVM?.GoToPrevMarkedCommand.Execute(obj);
         private void JumpToLog(object obj) { if (obj is LogEntry log) { SelectedLog = log; RequestScrollToLog?.Invoke(log); } }
         private void OpenSettingsWindow(object obj)
         {
@@ -3018,79 +1568,10 @@ namespace IndiLogs_3._0.ViewModels
                     isBold ? System.Windows.FontWeights.Bold : System.Windows.FontWeights.Normal);
             }
         }
-        private void OpenMarkedLogsWindow(object obj)
-        {
-            if (IsMarkedLogsCombined)
-            {
-                if (_combinedMarkedWindow != null && _combinedMarkedWindow.IsVisible)
-                {
-                    _combinedMarkedWindow.Activate();
-                    return;
-                }
-
-                var combinedList = new List<LogEntry>();
-                if (MarkedLogs != null) combinedList.AddRange(MarkedLogs);
-                if (MarkedAppLogs != null) combinedList.AddRange(MarkedAppLogs);
-
-                var sortedList = combinedList.OrderByDescending(x => x.Date).ToList();
-                var collectionToShow = new ObservableCollection<LogEntry>(sortedList);
-
-                _combinedMarkedWindow = new MarkedLogsWindow(collectionToShow, "Marked Lines (Combined - Main & App)");
-                _combinedMarkedWindow.DataContext = this;
-                _combinedMarkedWindow.Owner = Application.Current.MainWindow;
-                _combinedMarkedWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-                _combinedMarkedWindow.Closed += (s, e) => _combinedMarkedWindow = null;
-                _combinedMarkedWindow.Show();
-            }
-            else
-            {
-                bool isAppTab = SelectedTabIndex == 2;
-
-                if (isAppTab)
-                {
-                    if (_markedAppLogsWindow != null && _markedAppLogsWindow.IsVisible)
-                    {
-                        _markedAppLogsWindow.Activate();
-                        return;
-                    }
-                    _markedAppLogsWindow = new MarkedLogsWindow(MarkedAppLogs, "Marked Lines (APP)");
-                    _markedAppLogsWindow.DataContext = this;
-                    _markedAppLogsWindow.Owner = Application.Current.MainWindow;
-                    _markedAppLogsWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-                    _markedAppLogsWindow.Closed += (s, e) => _markedAppLogsWindow = null;
-                    _markedAppLogsWindow.Show();
-                }
-                else
-                {
-                    if (_markedMainLogsWindow != null && _markedMainLogsWindow.IsVisible)
-                    {
-                        _markedMainLogsWindow.Activate();
-                        return;
-                    }
-                    _markedMainLogsWindow = new MarkedLogsWindow(MarkedLogs, "Marked Lines (LOGS)");
-                    _markedMainLogsWindow.DataContext = this;
-                    _markedMainLogsWindow.Owner = Application.Current.MainWindow;
-                    _markedMainLogsWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-                    _markedMainLogsWindow.Closed += (s, e) => _markedMainLogsWindow = null;
-                    _markedMainLogsWindow.Show();
-                }
-            }
-        }
-        private void CloseAllMarkedWindows()
-        {
-            if (_combinedMarkedWindow != null) { _combinedMarkedWindow.Close(); _combinedMarkedWindow = null; }
-            if (_markedMainLogsWindow != null) { _markedMainLogsWindow.Close(); _markedMainLogsWindow = null; }
-            if (_markedAppLogsWindow != null) { _markedAppLogsWindow.Close(); _markedAppLogsWindow = null; }
-        }
-        private bool IsDefaultLog(LogEntry l)
-        {
-            if (string.Equals(l.Level, "Error", StringComparison.OrdinalIgnoreCase)) return true;
-            if (l.Message != null && l.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase)) return true;
-            if (l.ThreadName != null && l.ThreadName.Equals("Events", StringComparison.OrdinalIgnoreCase)) return true;
-            if (l.Logger != null && l.Logger.IndexOf("Manager", StringComparison.OrdinalIgnoreCase) >= 0) return true;
-            if (l.ThreadName != null && l.ThreadName.Equals("Manager", StringComparison.OrdinalIgnoreCase)) return true;
-            return false;
-        }
+        // Delegate to CaseVM
+        private void OpenMarkedLogsWindow(object obj) => CaseVM?.OpenMarkedWindowCommand.Execute(obj);
+        // Delegate to FilterVM
+        private bool IsDefaultLog(LogEntry l) => FilterVM?.IsDefaultLog(l) ?? false;
         private void OpenUrl(string url) { try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); } catch { } }
         private void OpenOutlook(object obj) { try { Process.Start("outlook.exe", "/c ipm.note"); } catch { OpenUrl("mailto:"); } }
         private void OpenKibana(object obj) { }
@@ -3107,414 +1588,18 @@ namespace IndiLogs_3._0.ViewModels
         /// <summary>
         /// Gets annotation for a specific log entry, or null if none exists
         /// </summary>
-        public LogAnnotation GetAnnotation(LogEntry log)
-        {
-            if (log == null) return null;
-            return _logAnnotations.TryGetValue(log, out var annotation) ? annotation : null;
-        }
-
-        /// <summary>
-        /// Adds or updates annotation for a log entry
-        /// </summary>
-        private void AddAnnotation(object parameter)
-        {
-            if (parameter is LogEntry log)
-            {
-                // Prompt user for comment
-                var window = new Views.AnnotationWindow(GetAnnotation(log)?.Content ?? "");
-                if (window.ShowDialog() == true)
-                {
-                    // Save custom color if exists, otherwise use default yellow
-                    string color = "#FFFF00";
-                    if (log.CustomColor.HasValue)
-                    {
-                        color = log.CustomColor.Value.ToString();
-                    }
-
-                    var annotation = new LogAnnotation
-                    {
-                        TargetLog = CreateLogTarget(log),
-                        Content = window.AnnotationText,
-                        Color = color,
-                        Author = Environment.UserName,
-                        CreatedAt = DateTime.Now
-                    };
-
-                    _logAnnotations[log] = annotation;
-
-                    // Mark log as having annotation for visual indicator
-                    log.HasAnnotation = true;
-                    log.AnnotationContent = window.AnnotationText; // ✅ Store content for display
-                    log.IsAnnotationExpanded = true; // ✅ Auto-expand when adding
-
-                    StatusMessage = "Annotation added";
-                }
-            }
-        }
-
-        /// <summary>
-        /// Creates a soft link target for a log entry
-        /// </summary>
-        private LogTarget CreateLogTarget(LogEntry log)
-        {
-            return new LogTarget
-            {
-                Timestamp = log.Date,
-                Logger = log.Logger,
-                Thread = log.ThreadName,
-                Level = log.Level,
-                Snippet = log.Message?.Length > 100 ? log.Message.Substring(0, 100) : log.Message
-            };
-        }
-
-        /// <summary>
-        /// Finds a log entry matching the soft link target
-        /// </summary>
-        private LogEntry FindLogByTarget(LogTarget target, IEnumerable<LogEntry> logs)
-        {
-            if (target == null || logs == null) return null;
-
-            // Try exact match first
-            var exactMatch = logs.FirstOrDefault(l =>
-                l.Date == target.Timestamp &&
-                l.Logger == target.Logger &&
-                l.ThreadName == target.Thread);
-
-            if (exactMatch != null) return exactMatch;
-
-            // Fallback: find closest by timestamp with same logger/thread
-            var timeTolerance = TimeSpan.FromMilliseconds(100);
-            return logs.FirstOrDefault(l =>
-                Math.Abs((l.Date - target.Timestamp).TotalMilliseconds) < timeTolerance.TotalMilliseconds &&
-                l.Logger == target.Logger &&
-                l.ThreadName == target.Thread &&
-                (!string.IsNullOrEmpty(target.Snippet) && !string.IsNullOrEmpty(l.Message) &&
-                 l.Message.StartsWith(target.Snippet.Substring(0, Math.Min(50, target.Snippet.Length)))));
-        }
+        // Delegate to CaseVM
+        public LogAnnotation GetAnnotation(LogEntry log) => CaseVM?.GetAnnotation(log);
+        private void AddAnnotation(object parameter) => CaseVM?.AddAnnotationCommand.Execute(parameter);
 
         /// <summary>
         /// Saves current investigation state to a .indi-case file
         /// </summary>
-        private void SaveCase(object parameter)
-        {
-            try
-            {
-                var dialog = new SaveFileDialog
-                {
-                    Filter = "IndiLogs Case File (*.indi-case)|*.indi-case",
-                    DefaultExt = ".indi-case",
-                    FileName = $"Investigation_{DateTime.Now:yyyyMMdd_HHmmss}.indi-case"
-                };
-
-                if (dialog.ShowDialog() == true)
-                {
-                    var caseFile = new CaseFile
-                    {
-                        Meta = new CaseMetadata
-                        {
-                            Author = Environment.UserName,
-                            CreatedAt = DateTime.Now,
-                            Description = "Investigation case file"
-                        },
-                        ViewState = new CaseViewState
-                        {
-                            ActiveFilters = _mainFilterRoot?.DeepClone(),
-                            QuickSearchText = SearchText,
-                            SelectedTab = SelectedTabIndex == 0 ? "MAIN" : SelectedTabIndex == 1 ? "FILTERED" : "APP",
-                            ActiveThreadFilters = _activeThreadFilters.ToList(),
-                            NegativeFilters = _negativeFilters.ToList()
-                        },
-                        // ✅ שמירת חוקי צביעה
-                        MainColoringRules = _mainColoringRules ?? new List<ColoringCondition>(),
-                        AppColoringRules = _appColoringRules ?? new List<ColoringCondition>(),
-                        Annotations = _logAnnotations.Values.ToList()
-                    };
-
-                    // Add resources (log files)
-                    if (SelectedSession != null && !string.IsNullOrEmpty(SelectedSession.FilePath))
-                    {
-                        var fileInfo = new FileInfo(SelectedSession.FilePath);
-                        if (fileInfo.Exists)
-                        {
-                            caseFile.Resources.Add(new CaseResource
-                            {
-                                FileName = fileInfo.Name,
-                                Size = fileInfo.Length,
-                                LastModified = fileInfo.LastWriteTime
-                            });
-                        }
-                    }
-
-                    var json = JsonConvert.SerializeObject(caseFile, Formatting.Indented);
-                    File.WriteAllText(dialog.FileName, json);
-
-                    _currentCaseFilePath = dialog.FileName;
-                    _currentCase = caseFile;
-
-                    StatusMessage = $"Case saved: {Path.GetFileName(dialog.FileName)}";
-                    MessageBox.Show($"Case file saved successfully!\n\n" +
-                                  $"Filters: {(_mainFilterRoot != null ? "✓" : "✗")}\n" +
-                                  $"Coloring Rules: {_mainColoringRules?.Count ?? 0} (Main) + {_appColoringRules?.Count ?? 0} (App)\n" +
-                                  $"Annotations: {caseFile.Annotations.Count}\n" +
-                                  $"Search: {(string.IsNullOrEmpty(SearchText) ? "✗" : "✓")}",
-                                  "Case Saved", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error saving case: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
+        private void SaveCase(object parameter) => CaseVM?.SaveCaseCommand.Execute(parameter);
 
 
-        /// <summary>
-        /// Loads an investigation case from a .indi-case file
-        /// </summary>
-        private void LoadCase(object parameter)
-        {
-            try
-            {
-                var dialog = new OpenFileDialog
-                {
-                    Filter = "IndiLogs Case File (*.indi-case)|*.indi-case",
-                    DefaultExt = ".indi-case"
-                };
+        private void LoadCase(object parameter) => CaseVM?.LoadCaseCommand.Execute(parameter);
 
-                if (dialog.ShowDialog() == true)
-                {
-                    var json = File.ReadAllText(dialog.FileName);
-                    var caseFile = JsonConvert.DeserializeObject<CaseFile>(json);
-
-                    if (caseFile == null)
-                    {
-                        MessageBox.Show("Invalid case file format.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                        return;
-                    }
-
-                    // Check if log files exist and collect paths
-                    var logFilesToLoad = new List<string>();
-                    bool filesFound = true;
-                    var caseDir = Path.GetDirectoryName(dialog.FileName);
-
-                    foreach (var resource in caseFile.Resources)
-                    {
-                        var logPath = Path.Combine(caseDir, resource.FileName);
-
-                        if (!File.Exists(logPath))
-                        {
-                            var result = MessageBox.Show(
-                                $"Log file not found: {resource.FileName}\n\n" +
-                                $"Expected location: {caseDir}\n\n" +
-                                $"Would you like to locate it manually?",
-                                "File Not Found",
-                                MessageBoxButton.YesNo,
-                                MessageBoxImage.Question);
-
-                            if (result == MessageBoxResult.Yes)
-                            {
-                                var fileDialog = new OpenFileDialog
-                                {
-                                    Filter = "Log Files (*.file;*.log;*.zip)|*.file;*.log;*.zip|All Files (*.*)|*.*",
-                                    FileName = resource.FileName,
-                                    Title = $"Locate: {resource.FileName}"
-                                };
-
-                                if (fileDialog.ShowDialog() == true)
-                                {
-                                    logPath = fileDialog.FileName;
-                                }
-                                else
-                                {
-                                    filesFound = false;
-                                    break;
-                                }
-                            }
-                            else
-                            {
-                                filesFound = false;
-                                break;
-                            }
-                        }
-
-                        logFilesToLoad.Add(logPath);
-                    }
-
-                    if (filesFound && logFilesToLoad.Count > 0)
-                    {
-                        StatusMessage = "Loading case files...";
-                        _isLoadingCase = true;
-
-                        // Clear all existing sessions to start fresh
-                        LoadedSessions.Clear();
-                        SelectedSession = null;
-
-                        // ✅ טעינת הלוגים עם callback
-                        ProcessFiles(logFilesToLoad.ToArray(), session =>
-                        {
-                            // Callback נקרא אחרי שהלוגים נטענו בהצלחה
-                            Application.Current.Dispatcher.Invoke(() =>
-                            {
-                                StatusMessage = "Applying case settings...";
-                                ApplyCaseSettings(caseFile);
-                                _isLoadingCase = false;
-                                StatusMessage = "Case loaded successfully!";
-                            });
-                        });
-                    }
-                    else
-                    {
-                        MessageBox.Show(
-                            "Case cannot be loaded without the log files.\n\n" +
-                            "Please ensure the log files are in the same folder as the .indi-case file,\n" +
-                            "or select them manually when prompted.",
-                            "Missing Log Files",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Warning);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error loading case: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                _isLoadingCase = false;
-            }
-        }
-
-        /// <summary>
-        /// Applies case settings after logs are loaded
-        /// </summary>
-        private async void ApplyCaseSettings(CaseFile caseFile)
-        {
-            if (caseFile == null) return;
-
-            _currentCaseFilePath = null;
-            _currentCase = caseFile;
-
-            IsBusy = true;
-            StatusMessage = "Applying case settings...";
-
-            // ✅ 1. החזרת חוקי צביעה תחילה
-            _mainColoringRules = caseFile.MainColoringRules ?? new List<ColoringCondition>();
-            _appColoringRules = caseFile.AppColoringRules ?? new List<ColoringCondition>();
-
-            // החלת צבעים על כל הלוגים
-            await Task.Run(async () =>
-            {
-                if (_allLogsCache != null)
-                {
-                    await _coloringService.ApplyDefaultColorsAsync(_allLogsCache, false);
-                    if (_mainColoringRules.Any())
-                        await _coloringService.ApplyCustomColoringAsync(_allLogsCache, _mainColoringRules);
-                }
-
-                if (_allAppLogsCache != null)
-                {
-                    await _coloringService.ApplyDefaultColorsAsync(_allAppLogsCache, true);
-                    if (_appColoringRules.Any())
-                        await _coloringService.ApplyCustomColoringAsync(_allAppLogsCache, _appColoringRules);
-                }
-            });
-
-            // ✅ 2. Restore annotations (re-bind to actual log entries)
-            _logAnnotations.Clear();
-            int annotationsRestored = 0;
-
-            if (caseFile.Annotations != null && _allLogsCache != null)
-            {
-                var allLogs = _allLogsCache.ToList();
-                foreach (var annotation in caseFile.Annotations)
-                {
-                    var matchingLog = FindLogByTarget(annotation.TargetLog, allLogs);
-                    if (matchingLog != null)
-                    {
-                        _logAnnotations[matchingLog] = annotation;
-                        matchingLog.HasAnnotation = true;
-                        matchingLog.AnnotationContent = annotation.Content; // ✅ Store content
-                        matchingLog.IsAnnotationExpanded = false; // Start collapsed
-
-                        // Restore custom color if it exists
-                        if (!string.IsNullOrEmpty(annotation.Color) && annotation.Color != "#FFFF00")
-                        {
-                            try
-                            {
-                                var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(annotation.Color);
-                                matchingLog.CustomColor = color;
-                            }
-                            catch { }
-                        }
-
-                        annotationsRestored++;
-                    }
-                }
-            }
-
-            // ✅ 3. Restore view state (filters, search, etc.)
-            if (caseFile.ViewState != null)
-            {
-                _mainFilterRoot = caseFile.ViewState.ActiveFilters;
-                SearchText = caseFile.ViewState.QuickSearchText ?? "";
-                _activeThreadFilters = caseFile.ViewState.ActiveThreadFilters ?? new List<string>();
-                _negativeFilters = caseFile.ViewState.NegativeFilters ?? new List<string>();
-
-                // Set filter active flags
-                if (_mainFilterRoot != null && _mainFilterRoot.Children.Count > 0)
-                    _isMainFilterActive = true;
-
-                if (_negativeFilters.Any())
-                    _isMainFilterOutActive = true;
-
-                // ✅ החלת הפילטרים
-                if (_isMainFilterActive && _mainFilterRoot != null)
-                {
-                    await Task.Run(() =>
-                    {
-                        var res = _allLogsCache.Where(l => EvaluateFilterNode(l, _mainFilterRoot)).ToList();
-                        _lastFilteredCache = res;
-                    });
-                }
-
-                // Switch to the correct tab
-                if (caseFile.ViewState.SelectedTab == "APP")
-                    SelectedTabIndex = 2;
-                else if (caseFile.ViewState.SelectedTab == "FILTERED")
-                    SelectedTabIndex = 1;
-                else
-                    SelectedTabIndex = 0;
-            }
-
-            // ✅ 4. רענון תצוגה
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                // Refresh all log backgrounds to show colors
-                if (Logs != null)
-                    foreach (var log in Logs)
-                        log.OnPropertyChanged("RowBackground");
-
-                if (AppDevLogsFiltered != null)
-                    foreach (var log in AppDevLogsFiltered)
-                        log.OnPropertyChanged("RowBackground");
-
-                // Update the UI with filters
-                UpdateMainLogsFilter(_isMainFilterActive);
-                ApplyAppLogsFilter();
-
-                OnPropertyChanged(nameof(IsFilterActive));
-                OnPropertyChanged(nameof(IsFilterOutActive));
-
-                IsBusy = false;
-                StatusMessage = $"Case loaded: {annotationsRestored} annotations restored";
-
-                MessageBox.Show(
-                    $"Case loaded successfully!\n\n" +
-                    $"📝 Annotations: {annotationsRestored}/{caseFile.Annotations?.Count ?? 0}\n" +
-                    $"🎨 Coloring Rules: {_mainColoringRules.Count} (Main) + {_appColoringRules.Count} (App)\n" +
-                    $"🔍 Filters: {(_mainFilterRoot != null && _mainFilterRoot.Children.Count > 0 ? "Active" : "None")}\n" +
-                    $"🔎 Search: {(string.IsNullOrEmpty(SearchText) ? "None" : $"\"{SearchText}\"")}\n" +
-                    $"🧵 Thread Filters: {_activeThreadFilters.Count}\n" +
-                    $"🚫 Filter Out: {_negativeFilters.Count}",
-                    "Case Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
-            });
-        }
 
         // ==================== TIME-SYNC SCROLLING METHODS ====================
 
@@ -3735,5 +1820,8 @@ namespace IndiLogs_3._0.ViewModels
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+        // Public method for child ViewModels to notify property changes on MainViewModel
+        public void NotifyPropertyChanged(string propertyName) => OnPropertyChanged(propertyName);
     }
 } 

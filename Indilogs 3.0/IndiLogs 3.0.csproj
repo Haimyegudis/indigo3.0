@@ -29,7 +29,7 @@
     <UpdateRequired>false</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
     <InstallUrl>\\iihome.inr.rd.hpicorp.net\softwareqa%24\QA-Utils\Indilogs\</InstallUrl>
-    <ApplicationRevision>10</ApplicationRevision>
+    <ApplicationRevision>11</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
@@ -200,6 +200,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Controls\TimelineCanvas.cs" />
+    <Compile Include="Converters\AnnotationTextBrushConverter.cs" />
     <Compile Include="Converters\ArrayConverter.cs" />
     <Compile Include="Converters\BoolToVisibilityConverter.cs" />
     <Compile Include="Converters\InverseBooleanConverter.cs" />
@@ -212,6 +213,11 @@
     <Compile Include="Services\Analysis\StateFailureAnalyzer.cs" />
     <Compile Include="Services\Analysis\UniversalStateFailureAnalyzer.cs" />
     <Compile Include="Services\CustomLiveLogReader.cs" />
+    <Compile Include="ViewModels\Components\CaseManagementViewModel.cs" />
+    <Compile Include="ViewModels\Components\ConfigExplorerViewModel.cs" />
+    <Compile Include="ViewModels\Components\FilterSearchViewModel.cs" />
+    <Compile Include="ViewModels\Components\LiveMonitoringViewModel.cs" />
+    <Compile Include="ViewModels\Components\LogSessionViewModel.cs" />
     <Compile Include="ViewModels\VisualTimelineViewModel.cs" />
     <Compile Include="Views\BrowseTableWindow.xaml.cs">
       <DependentUpon>BrowseTableWindow.xaml</DependentUpon>
