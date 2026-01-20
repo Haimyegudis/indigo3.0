@@ -275,14 +275,10 @@ namespace IndiLogs_3._0
         {
             if (sender is DataGrid grid)
             {
-                // Find the ScrollViewer inside the DataGrid
                 var scrollViewer = FindVisualChild<ScrollViewer>(grid);
                 if (scrollViewer != null)
                 {
-                    // Get grid name from element or parent tab
                     string gridName = grid.Name ?? "";
-
-                    // If no name, try to identify from parent tab
                     if (string.IsNullOrEmpty(gridName))
                     {
                         var parent = FindVisualParent<TabItem>(grid);
@@ -295,14 +291,12 @@ namespace IndiLogs_3._0
                         }
                     }
 
-                    // Cache the ScrollViewer with the grid name
                     if (!string.IsNullOrEmpty(gridName))
                     {
                         _scrollViewerCache[gridName] = scrollViewer;
                         System.Diagnostics.Debug.WriteLine($"[CACHE] Cached ScrollViewer for grid: {gridName}");
                     }
 
-                    // Subscribe to scroll changes
                     scrollViewer.ScrollChanged += (s, args) =>
                     {
                         // Horizontal scroll prevention
@@ -315,18 +309,16 @@ namespace IndiLogs_3._0
                             _lastUserHorizontalOffset = scrollViewer.HorizontalOffset;
                         }
 
-                        // Time-Sync on vertical scroll
-                        if (args.VerticalChange != 0 && _isUserScrolling && !_isProgrammaticScroll)
+                        // ✅ FIX: Time-Sync on ANY vertical scroll (not just wheel/drag)
+                        if (args.VerticalChange != 0 && !_isProgrammaticScroll)
                         {
                             TriggerTimeSyncScroll(grid, gridName);
                         }
                     };
 
-                    // Detect user scrolling
                     scrollViewer.PreviewMouseWheel += (s, args) => { _isUserScrolling = true; };
                     scrollViewer.PreviewMouseDown += (s, args) => { _isUserScrolling = true; };
                     scrollViewer.PreviewMouseUp += (s, args) => {
-                        // Delay setting _isUserScrolling to false to allow ScrollChanged to fire
                         System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
                             System.Windows.Threading.DispatcherPriority.Background,
                             new Action(() => {
@@ -334,14 +326,6 @@ namespace IndiLogs_3._0
                                 _lastUserHorizontalOffset = scrollViewer.HorizontalOffset;
                             })
                         );
-                    };
-
-                    // Also detect scrollbar dragging
-                    scrollViewer.ScrollChanged += (s, args) => {
-                        if (args.VerticalChange != 0 && !_isProgrammaticScroll)
-                        {
-                            _isUserScrolling = true;
-                        }
                     };
                 }
             }

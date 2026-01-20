@@ -286,6 +286,7 @@
                         </Style.Triggers>
                     </Style>
                 </DataGridTextColumn.ElementStyle>
+
             </DataGridTextColumn>
 
             <DataGridTemplateColumn Header="Message" Width="*" MinWidth="400">
@@ -341,14 +342,8 @@
         <!-- Row Style with Details Visibility -->
         <DataGrid.RowStyle>
             <Style TargetType="DataGridRow" BasedOn="{StaticResource LogRowStyle}">
-                <Style.Triggers>
-                    <DataTrigger Binding="{Binding IsAnnotationExpanded}" Value="True">
-                        <Setter Property="DetailsVisibility" Value="Visible"/>
-                    </DataTrigger>
-                    <DataTrigger Binding="{Binding IsAnnotationExpanded}" Value="False">
-                        <Setter Property="DetailsVisibility" Value="Collapsed"/>
-                    </DataTrigger>
-                </Style.Triggers>
+               
+               
             </Style>
         </DataGrid.RowStyle>
     </DataGrid>

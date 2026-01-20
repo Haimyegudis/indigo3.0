@@ -790,28 +790,23 @@ namespace IndiLogs_3._0.ViewModels
 
         private void ToggleAnnotation(object parameter)
         {
-            System.Diagnostics.Debug.WriteLine($"[ToggleAnnotation] Called with parameter: {parameter?.GetType().Name}");
+            System.Diagnostics.Debug.WriteLine($"[TOGGLE] Called with: {parameter?.GetType().Name}");
 
             if (parameter is LogEntry log)
             {
-                System.Diagnostics.Debug.WriteLine($"[ToggleAnnotation] LogEntry found. HasAnnotation={log.HasAnnotation}, IsAnnotationExpanded={log.IsAnnotationExpanded}");
+                System.Diagnostics.Debug.WriteLine($"[TOGGLE] Before: HasAnnotation={log.HasAnnotation}, IsExpanded={log.IsAnnotationExpanded}");
 
                 if (log.HasAnnotation)
                 {
                     log.IsAnnotationExpanded = !log.IsAnnotationExpanded;
-                    System.Diagnostics.Debug.WriteLine($"[ToggleAnnotation] Toggled to: {log.IsAnnotationExpanded}");
+                    System.Diagnostics.Debug.WriteLine($"[TOGGLE] After: IsExpanded={log.IsAnnotationExpanded}");
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine($"[ToggleAnnotation] Log does not have annotation");
+                    System.Diagnostics.Debug.WriteLine($"[TOGGLE] Log has no annotation!");
                 }
             }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"[ToggleAnnotation] Parameter is not LogEntry");
-            }
         }
-
         private void ToggleAllAnnotations(object obj)
         {
             IEnumerable<LogEntry> targetList = null;

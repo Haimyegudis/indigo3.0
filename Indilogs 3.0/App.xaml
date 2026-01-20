@@ -238,21 +238,27 @@
                     </ToolTip>
                 </Setter.Value>
             </Setter>
+
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Level}" Value="Error">
                     <Setter Property="Foreground" Value="White"/>
                 </DataTrigger>
+
                 <DataTrigger Binding="{Binding Level}" Value="ERROR">
                     <Setter Property="Foreground" Value="White"/>
                 </DataTrigger>
+
                 <DataTrigger Binding="{Binding Level}" Value="Fatal">
                     <Setter Property="Foreground" Value="White"/>
                 </DataTrigger>
+
+                <!-- ✅ רק תיקון הצבע של Selection -->
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#FFEB3B"/>
-                    <Setter Property="Foreground" Value="Black"/>
+                    <Setter Property="Background" Value="#3078D4"/>
+                    <Setter Property="Foreground" Value="White"/>
                     <Setter Property="BorderBrush" Value="Transparent"/>
                 </Trigger>
+
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="#1AFFFFFF"/>
                 </Trigger>

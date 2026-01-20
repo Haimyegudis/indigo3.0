@@ -16,7 +16,6 @@ namespace IndiLogs_3._0.Controls
     {
         public DataGrid InnerDataGrid => LogsDataGrid;
 
-        // DependencyProperty for ItemsSource
         public static readonly DependencyProperty LogsSourceProperty =
             DependencyProperty.Register(
                 nameof(LogsSource),
@@ -30,7 +29,6 @@ namespace IndiLogs_3._0.Controls
             set => SetValue(LogsSourceProperty, value);
         }
 
-        // DependencyProperty to identify grid type (PLC or APP)
         public static readonly DependencyProperty GridTypeProperty =
             DependencyProperty.Register(
                 nameof(GridType),
@@ -54,12 +52,54 @@ namespace IndiLogs_3._0.Controls
         {
             InitializeComponent();
 
-            // Add column header right-click handler
             LogsDataGrid.Loaded += (s, e) =>
             {
                 AttachColumnHeaderContextMenu();
                 LoadColumnSettings();
             };
+
+            // ✅ FIX: Manual annotation expansion management
+            LogsDataGrid.LoadingRow += OnRowLoading;
+        }
+
+        // ✅ NEW: Handle annotation expansion manually
+        private void OnRowLoading(object sender, DataGridRowEventArgs e)
+        {
+            if (e.Row.Item is LogEntry log)
+            {
+                // Set initial visibility
+                UpdateRowDetailsVisibility(e.Row, log);
+
+                // Subscribe to property changes
+                log.PropertyChanged += (s, args) =>
+                {
+                    if (args.PropertyName == nameof(LogEntry.IsAnnotationExpanded))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[ROW DETAILS] IsAnnotationExpanded={log.IsAnnotationExpanded}");
+
+                        Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            UpdateRowDetailsVisibility(e.Row, log);
+                        }), System.Windows.Threading.DispatcherPriority.Background);
+                    }
+                };
+            }
+        }
+
+        // ✅ NEW: Update row details visibility
+        private void UpdateRowDetailsVisibility(DataGridRow row, LogEntry log)
+        {
+            if (row == null || log == null) return;
+
+            var newVisibility = (log.HasAnnotation && log.IsAnnotationExpanded)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+            if (row.DetailsVisibility != newVisibility)
+            {
+                row.DetailsVisibility = newVisibility;
+                System.Diagnostics.Debug.WriteLine($"[ROW DETAILS] Set DetailsVisibility to: {newVisibility}");
+            }
         }
 
         private void AttachColumnHeaderContextMenu()
@@ -71,28 +111,22 @@ namespace IndiLogs_3._0.Controls
         {
             var depObj = e.OriginalSource as DependencyObject;
 
-            // Check if clicked on column header
             while (depObj != null && !(depObj is DataGridColumnHeader))
             {
-                // Skip non-visual elements (like Run, which is inside TextBlock)
                 if (!(depObj is System.Windows.Media.Visual || depObj is System.Windows.Media.Media3D.Visual3D))
                 {
-                    // Try to get the parent from LogicalTree instead
                     depObj = LogicalTreeHelper.GetParent(depObj);
                     continue;
                 }
-
                 depObj = VisualTreeHelper.GetParent(depObj);
             }
 
             if (depObj is DataGridColumnHeader header && header.Column != null)
             {
-                // Show column visibility context menu
                 var contextMenu = new ContextMenu();
                 contextMenu.PlacementTarget = header;
                 contextMenu.Placement = PlacementMode.Bottom;
 
-                // Add menu item for managing columns
                 var manageItem = new MenuItem
                 {
                     Header = "☰ Manage Columns...",
@@ -100,10 +134,8 @@ namespace IndiLogs_3._0.Controls
                 };
                 manageItem.Click += (s, args) => ShowColumnManager();
                 contextMenu.Items.Add(manageItem);
-
                 contextMenu.Items.Add(new Separator());
 
-                // Add menu items for each column
                 foreach (var column in LogsDataGrid.Columns)
                 {
                     if (column.Header != null && !string.IsNullOrEmpty(column.Header.ToString()))
@@ -145,7 +177,6 @@ namespace IndiLogs_3._0.Controls
 
         private void LogsDataGrid_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            // Delegate to parent handler if needed
             var parent = Window.GetWindow(this) as MainWindow;
             parent?.MainLogsGrid_PreviewKeyDown(sender, e);
         }
@@ -157,26 +188,22 @@ namespace IndiLogs_3._0.Controls
 
         private void LogsDataGrid_Loaded(object sender, RoutedEventArgs e)
         {
-            // Delegate to parent handler if needed
             var parent = Window.GetWindow(this) as MainWindow;
             parent?.DataGrid_Loaded(sender, e);
         }
 
         private void LogsDataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
         {
-            // Delegate to parent handler if needed
             var parent = Window.GetWindow(this) as MainWindow;
             parent?.DataGrid_LoadingRow(sender, e);
         }
 
         private void LogsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-
         }
 
         private void LogsDataGrid_ColumnReordered(object sender, DataGridColumnEventArgs e)
         {
-            // Save column order
             SaveColumnSettings();
         }
 
@@ -184,13 +211,9 @@ namespace IndiLogs_3._0.Controls
         {
             try
             {
-                // Load existing settings or create new
                 GridSettings gridSettings = LoadGridSettings();
-
-                // Determine which settings to update (PLC or APP)
                 var columnSettings = new ColumnSettings();
 
-                // Save column widths
                 foreach (var column in LogsDataGrid.Columns)
                 {
                     if (column.Header != null && !string.IsNullOrEmpty(column.Header.ToString()))
@@ -202,7 +225,6 @@ namespace IndiLogs_3._0.Controls
                     }
                 }
 
-                // Update the appropriate settings based on GridType
                 if (GridType == "APP")
                 {
                     gridSettings.AppColumns = columnSettings;
@@ -212,7 +234,6 @@ namespace IndiLogs_3._0.Controls
                     gridSettings.PlcColumns = columnSettings;
                 }
 
-                // Save to file
                 Directory.CreateDirectory(Path.GetDirectoryName(SettingsFilePath));
                 string json = JsonConvert.SerializeObject(gridSettings, Formatting.Indented);
                 File.WriteAllText(SettingsFilePath, json);
@@ -234,7 +255,6 @@ namespace IndiLogs_3._0.Controls
 
                 if (columnSettings == null) return;
 
-                // Apply column widths
                 foreach (var column in LogsDataGrid.Columns)
                 {
                     if (column.Header != null && !string.IsNullOrEmpty(column.Header.ToString()))
