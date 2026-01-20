@@ -26,9 +26,6 @@
                     <Button Command="{Binding OpenSettingsCommand}" CommandParameter="{Binding RelativeSource={RelativeSource Self}}" Style="{DynamicResource ModernBtn}" Width="28" Height="28" ToolTip="Settings" Padding="0" Background="Transparent" BorderThickness="0">
                         <TextBlock Text="⚙" FontFamily="Segoe UI Symbol" FontSize="14" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource TextSecondary}"/>
                     </Button>
-                    <Button Command="{Binding ManageColumnsCommand}" Style="{DynamicResource ModernBtn}" Width="28" Height="28" ToolTip="Manage Columns" Padding="0" Background="Transparent" BorderThickness="0" Margin="3,0,0,0">
-                        <TextBlock Text="☰" FontSize="14" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource TextSecondary}"/>
-                    </Button>
                     <StackPanel VerticalAlignment="Center" Margin="6,0,0,0">
                         <TextBlock Text="INDILOGS" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimary}"/>
                         <TextBlock Text="VERSION 3.0" FontWeight="Normal" FontSize="8" Foreground="{DynamicResource PrimaryColor}" HorizontalAlignment="Right" Margin="0,-2,0,0"/>

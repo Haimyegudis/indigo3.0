@@ -1,3 +1,4 @@
+using DocumentFormat.OpenXml.Spreadsheet;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Views;
@@ -95,6 +96,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand ToggleAnnotationCommand { get; }
         public ICommand CloseAnnotationCommand { get; }
         public ICommand AddAnnotationCommand { get; }
+        public ICommand DeleteAnnotationCommand { get; }  // ✅ DELETE ANNOTATION COMMAND
         public ICommand MarkLogCommand { get; }
         public ICommand UnmarkLogCommand { get; }
         public ICommand OpenMarkedWindowCommand { get; }
@@ -123,6 +125,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             ToggleAnnotationCommand = new RelayCommand(ToggleAnnotation);
             CloseAnnotationCommand = new RelayCommand(CloseAnnotation);
             AddAnnotationCommand = new RelayCommand(obj => { if (obj is LogEntry log) AddAnnotation(log); });
+            DeleteAnnotationCommand = new RelayCommand(DeleteAnnotation);  // ✅ No CanExecute - just check in the method itself
             MarkLogCommand = new RelayCommand(MarkRow);
             UnmarkLogCommand = new RelayCommand(UnmarkLog);
             OpenMarkedWindowCommand = new RelayCommand(OpenMarkedLogsWindow);
@@ -199,6 +202,54 @@ namespace IndiLogs_3._0.ViewModels.Components
                 log.IsAnnotationExpanded = true;
 
                 _sessionVM.StatusMessage = "Annotation added";
+            }
+        }
+
+        // ✅ DELETE ANNOTATION METHODS
+        private bool SelectedLogHasAnnotation()
+        {
+            var selectedLog = _parent?.SelectedLog;
+            return selectedLog != null && LogAnnotations.ContainsKey(selectedLog);
+        }
+
+        private void DeleteAnnotation(object parameter)
+        {
+            LogEntry log = parameter as LogEntry ?? _parent?.SelectedLog;
+
+            System.Diagnostics.Debug.WriteLine($"[DELETE] Parameter type: {parameter?.GetType().Name}, Log: {log?.Date:HH:mm:ss.fff}");
+            System.Diagnostics.Debug.WriteLine($"[DELETE] HasAnnotation: {log?.HasAnnotation}, ContainsKey: {(log != null ? LogAnnotations.ContainsKey(log) : false)}");
+
+            if (log == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[DELETE] Log is null!");
+                return;
+            }
+
+            if (!log.HasAnnotation)
+            {
+                System.Diagnostics.Debug.WriteLine("[DELETE] Log has no annotation!");
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"Delete annotation for this log entry?\n\n{log.Message}",
+                "Delete Annotation",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                if (LogAnnotations.ContainsKey(log))
+                {
+                    LogAnnotations.Remove(log);
+                }
+
+                log.HasAnnotation = false;
+                log.IsAnnotationExpanded = false;
+                log.AnnotationContent = null;
+
+                _sessionVM.StatusMessage = "Annotation deleted";
+                System.Diagnostics.Debug.WriteLine($"[ANNOTATION] Deleted annotation for log at {log.Date:HH:mm:ss.fff}");
             }
         }
 

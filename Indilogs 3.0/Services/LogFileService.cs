@@ -359,8 +359,30 @@ namespace IndiLogs_3._0.Services
                     if (header == null) return list;
 
                     var headers = header.Split(',').Select(h => h.Trim().Trim('"')).ToArray();
-                    int timeIdx = Array.FindIndex(headers, h => h.IndexOf("Time", StringComparison.OrdinalIgnoreCase) >= 0);
-                    int nameIdx = Array.FindIndex(headers, h => h.IndexOf("Name", StringComparison.OrdinalIgnoreCase) >= 0);
+                    Debug.WriteLine($"[EVENTS CSV] Headers found: {string.Join(", ", headers)}");
+
+                    int timeIdx = Array.FindIndex(headers, h => h.IndexOf("Time", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                                                  h.IndexOf("Date", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                                                  h.IndexOf("Timestamp", StringComparison.OrdinalIgnoreCase) >= 0);
+                    int nameIdx = Array.FindIndex(headers, h => h.Equals("Name", StringComparison.OrdinalIgnoreCase) ||
+                                                                  h.Equals("EventName", StringComparison.OrdinalIgnoreCase) ||
+                                                                  h.Equals("Event", StringComparison.OrdinalIgnoreCase) ||
+                                                                  h.IndexOf("Name", StringComparison.OrdinalIgnoreCase) >= 0);
+                    int stateIdx = Array.FindIndex(headers, h => h.Equals("State", StringComparison.OrdinalIgnoreCase) ||
+                                                                  h.Equals("EventState", StringComparison.OrdinalIgnoreCase) ||
+                                                                  h.Equals("Status", StringComparison.OrdinalIgnoreCase));
+                    int severityIdx = Array.FindIndex(headers, h => h.Equals("Severity", StringComparison.OrdinalIgnoreCase) ||
+                                                                     h.Equals("Level", StringComparison.OrdinalIgnoreCase) ||
+                                                                     h.Equals("Priority", StringComparison.OrdinalIgnoreCase));
+                    int parametersIdx = Array.FindIndex(headers, h => h.IndexOf("Parameters", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                                                       h.IndexOf("Params", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                                                       h.IndexOf("Args", StringComparison.OrdinalIgnoreCase) >= 0);
+                    int descriptionIdx = Array.FindIndex(headers, h => h.IndexOf("Info", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                                                         h.IndexOf("Description", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                                                         h.IndexOf("Subsystem", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                                                         h.IndexOf("Message", StringComparison.OrdinalIgnoreCase) >= 0);
+
+                    Debug.WriteLine($"[EVENTS CSV] Column indices - Time:{timeIdx}, Name:{nameIdx}, State:{stateIdx}, Severity:{severityIdx}, Params:{parametersIdx}, Desc:{descriptionIdx}");
 
                     while (!reader.EndOfStream)
                     {
@@ -373,7 +395,11 @@ namespace IndiLogs_3._0.Services
                             list.Add(new EventEntry
                             {
                                 Time = time,
-                                Name = (nameIdx >= 0 && parts.Count > nameIdx) ? parts[nameIdx] : "Unknown"
+                                Name = (nameIdx >= 0 && parts.Count > nameIdx) ? parts[nameIdx].Trim('"') : "Unknown",
+                                State = (stateIdx >= 0 && parts.Count > stateIdx) ? parts[stateIdx].Trim('"') : string.Empty,
+                                Severity = (severityIdx >= 0 && parts.Count > severityIdx) ? parts[severityIdx].Trim('"') : string.Empty,
+                                Parameters = (parametersIdx >= 0 && parts.Count > parametersIdx) ? parts[parametersIdx].Trim('"') : string.Empty,
+                                Description = (descriptionIdx >= 0 && parts.Count > descriptionIdx) ? parts[descriptionIdx].Trim('"') : string.Empty
                             });
                         }
                     }

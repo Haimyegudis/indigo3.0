@@ -16,9 +16,17 @@ namespace IndiLogs_3._0.Views
 
         public MarkedLogsWindow(IEnumerable<LogEntry> logsToShow, string title)
         {
-            InitializeComponent();
+            InitializeComponent();  
             this.Title = title;
             MarkedList.ItemsSource = new ObservableCollection<LogEntry>(logsToShow);
+
+            // Show Logger and Method columns for App logs
+            bool isAppLogs = title.IndexOf("APP", StringComparison.OrdinalIgnoreCase) >= 0;
+            if (isAppLogs)
+            {
+                LoggerColumn.Visibility = Visibility.Visible;
+                MethodColumn.Visibility = Visibility.Visible;
+            }
         }
 
         private void MarkedList_PreviewKeyDown(object sender, KeyEventArgs e)

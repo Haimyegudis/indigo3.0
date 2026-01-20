@@ -45,11 +45,13 @@
                 <MenuItem Command="{Binding PlacementTarget.DataContext.FilterContextCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Header="Time Focus Filter"/>
                 <Separator/>
                 <MenuItem Header="📝 Add/Edit Annotation" Command="{Binding AddAnnotationCommand}" CommandParameter="{Binding SelectedLog}"/>
+                <MenuItem Header="🗑 Delete Annotation" Command="{Binding DeleteAnnotationCommand}" CommandParameter="{Binding SelectedLog}"/>
                 <Separator/>
                 <MenuItem Header="Filter Out (Message)..." Command="{Binding FilterOutCommand}"/>
                 <MenuItem Header="Filter Out (Thread)..." Command="{Binding FilterOutThreadCommand}"/>
             </ContextMenu>
         </DataGrid.ContextMenu>
+
 
         <DataGrid.InputBindings>
             <KeyBinding Key="Space" Command="{Binding MarkRowCommand}" />
@@ -97,6 +99,9 @@
                         <Setter Property="HorizontalAlignment" Value="Left"/>
                         <Setter Property="Padding" Value="0,0"/>
                         <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                <Setter Property="Foreground" Value="Black"/>
+                            </DataTrigger>
                             <DataTrigger Binding="{Binding Level}" Value="Error">
                                 <Setter Property="Foreground" Value="White"/>
                             </DataTrigger>
@@ -121,6 +126,9 @@
                         <Setter Property="HorizontalAlignment" Value="Left"/>
                         <Setter Property="Padding" Value="8,0"/>
                         <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                <Setter Property="Foreground" Value="Black"/>
+                            </DataTrigger>
                             <DataTrigger Binding="{Binding Level}" Value="Error">
                                 <Setter Property="Foreground" Value="White"/>
                             </DataTrigger>
@@ -150,6 +158,9 @@
                         <Setter Property="Padding" Value="25,0"/>
                         <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
                         <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                <Setter Property="Foreground" Value="Black"/>
+                            </DataTrigger>
                             <DataTrigger Binding="{Binding Level}" Value="Error">
                                 <Setter Property="Foreground" Value="White"/>
                             </DataTrigger>
@@ -326,15 +337,13 @@
         <!-- Row Details Template for Annotations -->
         <DataGrid.RowDetailsTemplate>
             <DataTemplate>
-                <Border Background="#FFFACD" BorderBrush="#FFD700" BorderThickness="1,0,1,1" Padding="10" Margin="5,0,5,5">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding AnnotationContent}" TextWrapping="Wrap" Foreground="Black" FontStyle="Italic"/>
-                        <Button Grid.Column="1" Content="✕" Command="{Binding DataContext.CloseAnnotationCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0" FontSize="14" Foreground="#666" Cursor="Hand" ToolTip="Close annotation" VerticalAlignment="Top" Margin="10,0,0,0"/>
-                    </Grid>
+                <Border Background="{DynamicResource BgDark}" BorderBrush="#FFD700" BorderThickness="2" Padding="12" Margin="5,0,5,5" CornerRadius="4">
+                    <!-- Annotation Text -->
+                    <TextBlock Text="{Binding AnnotationContent}"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextPrimary}"
+                               FontStyle="Italic"
+                               VerticalAlignment="Center"/>
                 </Border>
             </DataTemplate>
         </DataGrid.RowDetailsTemplate>

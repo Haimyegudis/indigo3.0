@@ -62,7 +62,7 @@ namespace IndiLogs_3._0.Controls
             LogsDataGrid.LoadingRow += OnRowLoading;
         }
 
-        // ✅ NEW: Handle annotation expansion manually
+        // ✅ NEW: Handle annotation expansion manually (FIXED - no duplicate handlers)
         private void OnRowLoading(object sender, DataGridRowEventArgs e)
         {
             if (e.Row.Item is LogEntry log)
@@ -70,20 +70,46 @@ namespace IndiLogs_3._0.Controls
                 // Set initial visibility
                 UpdateRowDetailsVisibility(e.Row, log);
 
-                // Subscribe to property changes
-                log.PropertyChanged += (s, args) =>
-                {
-                    if (args.PropertyName == nameof(LogEntry.IsAnnotationExpanded))
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[ROW DETAILS] IsAnnotationExpanded={log.IsAnnotationExpanded}");
+                // IMPORTANT: Remove handler first to prevent duplicates
+                log.PropertyChanged -= Log_PropertyChanged;
+                log.PropertyChanged += Log_PropertyChanged;
 
-                        Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                        {
-                            UpdateRowDetailsVisibility(e.Row, log);
-                        }), System.Windows.Threading.DispatcherPriority.Background);
-                    }
-                };
+                // Store row reference in Tag for later updates
+                e.Row.Tag = log;
             }
+        }
+
+        // Separate method to avoid closure issues and duplicates
+        private void Log_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(LogEntry.IsAnnotationExpanded) && sender is LogEntry log)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ROW DETAILS] IsAnnotationExpanded={log.IsAnnotationExpanded}");
+
+                // Find the row for this log
+                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    var row = FindRowForLog(log);
+                    if (row != null)
+                    {
+                        UpdateRowDetailsVisibility(row, log);
+                    }
+                }), System.Windows.Threading.DispatcherPriority.Background);
+            }
+        }
+
+        // Helper to find the DataGridRow for a specific LogEntry
+        private DataGridRow FindRowForLog(LogEntry log)
+        {
+            if (log == null) return null;
+
+            var itemsSource = LogsDataGrid.ItemsSource as System.Collections.IList;
+            if (itemsSource == null) return null;
+
+            int index = itemsSource.IndexOf(log);
+            if (index < 0) return null;
+
+            return LogsDataGrid.ItemContainerGenerator.ContainerFromIndex(index) as DataGridRow;
         }
 
         // ✅ NEW: Update row details visibility
@@ -138,11 +164,12 @@ namespace IndiLogs_3._0.Controls
 
                 foreach (var column in LogsDataGrid.Columns)
                 {
-                    if (column.Header != null && !string.IsNullOrEmpty(column.Header.ToString()))
+                    string headerText = GetColumnHeaderText(column);
+                    if (!string.IsNullOrEmpty(headerText))
                     {
                         var menuItem = new MenuItem
                         {
-                            Header = column.Header.ToString(),
+                            Header = headerText,
                             IsCheckable = true,
                             IsChecked = column.Visibility == Visibility.Visible,
                             Tag = column
@@ -216,9 +243,9 @@ namespace IndiLogs_3._0.Controls
 
                 foreach (var column in LogsDataGrid.Columns)
                 {
-                    if (column.Header != null && !string.IsNullOrEmpty(column.Header.ToString()))
+                    string header = GetColumnHeaderText(column);
+                    if (!string.IsNullOrEmpty(header))
                     {
-                        string header = column.Header.ToString();
                         columnSettings.ColumnWidths[header] = column.ActualWidth;
                         columnSettings.ColumnOrders[header] = column.DisplayIndex;
                         columnSettings.ColumnVisibility[header] = column.Visibility == Visibility.Visible;

@@ -146,6 +146,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _isMainFilterActive = value;
                 OnPropertyChanged();
                 _parent?.NotifyPropertyChanged(nameof(_parent.IsMainFilterActive));
+                _parent?.NotifyPropertyChanged(nameof(_parent.IsFilterActive));
             }
         }
 
@@ -158,6 +159,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _isAppFilterActive = value;
                 OnPropertyChanged();
                 _parent?.NotifyPropertyChanged(nameof(_parent.IsAppFilterActive));
+                _parent?.NotifyPropertyChanged(nameof(_parent.IsFilterActive));
             }
         }
 
@@ -170,6 +172,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _isMainFilterOutActive = value;
                 OnPropertyChanged();
                 _parent?.NotifyPropertyChanged(nameof(_parent.IsMainFilterOutActive));
+                _parent?.NotifyPropertyChanged(nameof(_parent.IsFilterOutActive));
             }
         }
 
@@ -182,6 +185,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _isAppFilterOutActive = value;
                 OnPropertyChanged();
                 _parent?.NotifyPropertyChanged(nameof(_parent.IsAppFilterOutActive));
+                _parent?.NotifyPropertyChanged(nameof(_parent.IsFilterOutActive));
             }
         }
 
@@ -278,6 +282,8 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand FilterOutCommand { get; }
         public ICommand FilterOutThreadCommand { get; }
         public ICommand OpenThreadFilterCommand { get; }
+        public ICommand OpenLoggerFilterCommand { get; }
+        public ICommand OpenMethodFilterCommand { get; }
         public ICommand FilterContextCommand { get; }
         public ICommand UndoFilterOutCommand { get; }
         public ICommand TreeShowThisCommand { get; }
@@ -309,6 +315,8 @@ namespace IndiLogs_3._0.ViewModels.Components
             FilterOutCommand = new RelayCommand(FilterOut);
             FilterOutThreadCommand = new RelayCommand(FilterOutThread);
             OpenThreadFilterCommand = new RelayCommand(OpenThreadFilter);
+            OpenLoggerFilterCommand = new RelayCommand(OpenLoggerFilter);
+            OpenMethodFilterCommand = new RelayCommand(OpenMethodFilter);
             FilterContextCommand = new RelayCommand(FilterContext);
             UndoFilterOutCommand = new RelayCommand(UndoFilterOut);
             TreeShowThisCommand = new RelayCommand(ExecuteTreeShowThis);
@@ -463,7 +471,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         {
             if (_sessionVM?.AllAppLogsCache == null) return;
 
-            if (!_isAppFilterActive && string.IsNullOrWhiteSpace(SearchText))
+            if (!_isAppFilterActive && string.IsNullOrWhiteSpace(SearchText) && !_activeThreadFilters.Any())
             {
                 AppDevLogsFiltered.ReplaceAll(_sessionVM.AllAppLogsCache);
                 return;
@@ -476,6 +484,15 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
 
             var query = source.AsParallel().AsOrdered();
+
+            // Apply thread/logger/method filters (from column header clicks)
+            if (_isAppFilterActive && _activeThreadFilters.Any())
+            {
+                query = query.Where(l =>
+                    _activeThreadFilters.Contains(l.ThreadName) ||
+                    _activeThreadFilters.Contains(l.Logger) ||
+                    _activeThreadFilters.Contains(l.Method));
+            }
 
             if (_isAppFilterActive && !_isAppTimeFocusActive && _appFilterRoot != null && _appFilterRoot.Children.Count > 0)
             {
@@ -757,9 +774,77 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         private void OpenThreadFilter(object obj)
         {
-            if (_sessionVM.AllLogsCache == null || !_sessionVM.AllLogsCache.Any()) return;
-            var threads = _sessionVM.AllLogsCache.Select(l => l.ThreadName).Where(t => !string.IsNullOrEmpty(t)).Distinct().OrderBy(t => t).ToList();
+            // Check which tab is active and use appropriate cache
+            bool isAppTab = _parent.SelectedTabIndex == 2;
+            var cache = isAppTab ? _sessionVM.AllAppLogsCache : _sessionVM.AllLogsCache;
+
+            if (cache == null || !cache.Any()) return;
+            var threads = cache.Select(l => l.ThreadName).Where(t => !string.IsNullOrEmpty(t)).Distinct().OrderBy(t => t).ToList();
             var win = new Views.ThreadFilterWindow(threads);
+            if (win.ShowDialog() == true)
+            {
+                if (win.ShouldClear)
+                {
+                    _activeThreadFilters.Clear();
+                    if (_savedFilterRoot == null)
+                    {
+                        if (isAppTab) IsAppFilterActive = false;
+                        else IsMainFilterActive = false;
+                    }
+                }
+                else if (win.SelectedThreads != null && win.SelectedThreads.Any())
+                {
+                    _activeThreadFilters.Clear();
+                    foreach (var thread in win.SelectedThreads)
+                        _activeThreadFilters.Add(thread);
+                    if (isAppTab) IsAppFilterActive = true;
+                    else IsMainFilterActive = true;
+                }
+                ToggleFilterView(isAppTab ? IsAppFilterActive : IsMainFilterActive);
+            }
+        }
+
+        private void OpenLoggerFilter(object obj)
+        {
+            // Check which tab is active and use appropriate cache
+            bool isAppTab = _parent.SelectedTabIndex == 2;
+            var cache = isAppTab ? _sessionVM.AllAppLogsCache : _sessionVM.AllLogsCache;
+
+            if (cache == null || !cache.Any()) return;
+            var loggers = cache.Select(l => l.Logger).Where(l => !string.IsNullOrEmpty(l)).Distinct().OrderBy(l => l).ToList();
+            var win = new Views.ThreadFilterWindow(loggers) { Title = "Filter by Logger" };
+            if (win.ShowDialog() == true)
+            {
+                if (win.ShouldClear)
+                {
+                    _activeThreadFilters.Clear();
+                    if (_savedFilterRoot == null)
+                    {
+                        if (isAppTab) IsAppFilterActive = false;
+                        else IsMainFilterActive = false;
+                    }
+                }
+                else if (win.SelectedThreads != null && win.SelectedThreads.Any())
+                {
+                    _activeThreadFilters.Clear();
+                    foreach (var logger in win.SelectedThreads)
+                        _activeThreadFilters.Add(logger);
+                    if (isAppTab) IsAppFilterActive = true;
+                    else IsMainFilterActive = true;
+                }
+                ToggleFilterView(isAppTab ? IsAppFilterActive : IsMainFilterActive);
+            }
+        }
+
+        private void OpenMethodFilter(object obj)
+        {
+            // Check which tab is active and use appropriate cache
+            bool isAppTab = _parent.SelectedTabIndex == 2;
+            var cache = isAppTab ? _sessionVM.AllAppLogsCache : _sessionVM.AllLogsCache;
+
+            if (cache == null || !cache.Any()) return;
+            var methods = cache.Select(l => l.Method).Where(m => !string.IsNullOrEmpty(m)).Distinct().OrderBy(m => m).ToList();
+            var win = new Views.ThreadFilterWindow(methods) { Title = "Filter by Method" };
             if (win.ShowDialog() == true)
             {
                 if (win.ShouldClear)
@@ -770,8 +855,8 @@ namespace IndiLogs_3._0.ViewModels.Components
                 else if (win.SelectedThreads != null && win.SelectedThreads.Any())
                 {
                     _activeThreadFilters.Clear();
-                    foreach (var thread in win.SelectedThreads)
-                        _activeThreadFilters.Add(thread);
+                    foreach (var method in win.SelectedThreads)
+                        _activeThreadFilters.Add(method);
                     IsMainFilterActive = true;
                 }
                 ToggleFilterView(IsMainFilterActive);

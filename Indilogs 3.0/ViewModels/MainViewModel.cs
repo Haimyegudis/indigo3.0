@@ -310,11 +310,13 @@ namespace IndiLogs_3._0.ViewModels
                     OnPropertyChanged(nameof(IsFilterActive));
                     OnPropertyChanged(nameof(IsFilterOutActive));
                     OnPropertyChanged(nameof(IsPLCTabSelected));
+                    OnPropertyChanged(nameof(IsAppTabSelected));
                 }
             }
         }
 
         public bool IsPLCTabSelected => _selectedTabIndex == 0 || _selectedTabIndex == 1;
+        public bool IsAppTabSelected => _selectedTabIndex == 2;
 
 
         private int _leftTabIndex;
@@ -576,6 +578,8 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand FilterOutCommand { get; }
         public ICommand FilterOutThreadCommand { get; }
         public ICommand OpenThreadFilterCommand { get; }
+        public ICommand OpenLoggerFilterCommand { get; }
+        public ICommand OpenMethodFilterCommand { get; }
         public ICommand FilterContextCommand { get; }
         public ICommand UndoFilterOutCommand { get; }
         public ICommand ToggleThemeCommand { get; }
@@ -609,6 +613,7 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand ToggleTimeSyncCommand { get; }
 
         public ICommand AddAnnotationCommand { get; }
+        public ICommand DeleteAnnotationCommand { get; }
         public ICommand SaveCaseCommand { get; }
         public ICommand LoadCaseCommand { get; }
 
@@ -730,6 +735,8 @@ namespace IndiLogs_3._0.ViewModels
             FilterOutCommand = FilterVM.FilterOutCommand;
             FilterOutThreadCommand = FilterVM.FilterOutThreadCommand;
             OpenThreadFilterCommand = FilterVM.OpenThreadFilterCommand;
+            OpenLoggerFilterCommand = FilterVM.OpenLoggerFilterCommand;
+            OpenMethodFilterCommand = FilterVM.OpenMethodFilterCommand;
             FilterContextCommand = FilterVM.FilterContextCommand;
             UndoFilterOutCommand = FilterVM.UndoFilterOutCommand;
 
@@ -760,6 +767,7 @@ namespace IndiLogs_3._0.ViewModels
             LiveClearCommand = LiveVM.LiveClearCommand;
 
             AddAnnotationCommand = new RelayCommand(AddAnnotation);
+            DeleteAnnotationCommand = new RelayCommand(DeleteAnnotation);
             SaveCaseCommand = new RelayCommand(SaveCase);
             LoadCaseCommand = new RelayCommand(LoadCase);
 
@@ -813,28 +821,31 @@ namespace IndiLogs_3._0.ViewModels
 
             if (SelectedTabIndex == 2) // APP Tab
             {
-                targetList = IsAppFilterActive ? AppDevLogsFiltered : (IEnumerable<LogEntry>)SessionVM?.AllAppLogsCache;
+                targetList = SessionVM?.AllAppLogsCache;
             }
             else // PLC Tab
             {
-                targetList = IsFilterActive ? FilteredLogs : (IEnumerable<LogEntry>)Logs;
+                targetList = SessionVM?.AllLogsCache;
             }
 
-            if (targetList == null) return;
+            if (targetList == null || !targetList.Any()) return;
+
+            // Get only logs with annotations
+            var logsWithAnnotations = targetList.Where(l => l.HasAnnotation).ToList();
+            if (!logsWithAnnotations.Any()) return;
 
             // Check if any is expanded to determine direction
-            bool anyExpanded = targetList.Any(l => l.HasAnnotation && l.IsAnnotationExpanded);
+            bool anyExpanded = logsWithAnnotations.Any(l => l.IsAnnotationExpanded);
             bool newState = !anyExpanded;
 
-            foreach (var log in targetList)
+            // Update all annotations
+            foreach (var log in logsWithAnnotations)
             {
-                if (log.HasAnnotation)
-                {
-                    log.IsAnnotationExpanded = newState;
-                }
+                log.IsAnnotationExpanded = newState;
             }
 
             ShowAllAnnotations = newState;
+            StatusMessage = newState ? "All annotations expanded" : "All annotations collapsed";
         }
 
         private void CloseAnnotation(object parameter) => CaseVM?.CloseAnnotationCommand.Execute(parameter);
@@ -1549,6 +1560,7 @@ namespace IndiLogs_3._0.ViewModels
 
         public LogAnnotation GetAnnotation(LogEntry log) => CaseVM?.GetAnnotation(log);
         private void AddAnnotation(object parameter) => CaseVM?.AddAnnotationCommand.Execute(parameter);
+        private void DeleteAnnotation(object parameter) => CaseVM?.DeleteAnnotationCommand.Execute(parameter);
         private void SaveCase(object parameter) => CaseVM?.SaveCaseCommand.Execute(parameter);
         private void LoadCase(object parameter) => CaseVM?.LoadCaseCommand.Execute(parameter);
 

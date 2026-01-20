@@ -12,11 +12,10 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="150"/>
+            <RowDefinition Height="80"/>
         </Grid.RowDefinitions>
 
         <DataGrid x:Name="MarkedList" Grid.Row="0"
-                  ItemsSource="{Binding MarkedLogs}" 
                   SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
                   Background="Transparent" 
                   BorderThickness="0" 
@@ -38,7 +37,7 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Timestamp" Binding="{Binding Date, StringFormat='yyyy-MM-dd HH:mm:ss.fff'}" Width="170" FontWeight="Bold"/>
 
-                <DataGridTextColumn Header="Thread" Binding="{Binding ThreadName}" Width="120">
+                <DataGridTextColumn Header="Thread" Binding="{Binding ThreadName}" Width="100">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
@@ -48,11 +47,31 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
 
+                <DataGridTextColumn x:Name="LoggerColumn" Header="Logger" Binding="{Binding Logger}" Width="150" Visibility="Collapsed">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource SecondaryColor}"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn x:Name="MethodColumn" Header="Method" Binding="{Binding Method}" Width="150" Visibility="Collapsed">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
                 <DataGridTemplateColumn Header="Message" Width="*">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <controls:HighlightTextBlock 
-                                Text="{Binding Message}" 
+                            <controls:HighlightTextBlock
+                                Text="{Binding Message}"
                                 VerticalAlignment="Center">
                                 <controls:HighlightTextBlock.Style>
                                     <Style TargetType="controls:HighlightTextBlock">

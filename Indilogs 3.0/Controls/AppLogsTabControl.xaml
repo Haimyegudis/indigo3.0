@@ -28,7 +28,7 @@
 
         <DataGrid Grid.Row="1" x:Name="AppLogsGrid" ItemsSource="{Binding AppDevLogsFiltered}" SelectedItem="{Binding SelectedLog}" Sorting="AppLogsGrid_Sorting" FontSize="{Binding GridFontSize}" FontFamily="{DynamicResource ContentFontFamily}" FontWeight="{DynamicResource ContentFontWeight}" AutoGenerateColumns="False" IsReadOnly="True"
                   SelectionMode="Extended" SelectionUnit="FullRow" HorizontalScrollBarVisibility="Auto" RequestBringIntoView="AppLogsGrid_RequestBringIntoView" Loaded="AppLogsGrid_Loaded" LoadingRow="AppLogsGrid_LoadingRow"
-                  GridLinesVisibility="Vertical" VerticalGridLinesBrush="{DynamicResource BorderColor}">
+                  GridLinesVisibility="Vertical" VerticalGridLinesBrush="{DynamicResource BorderColor}" SelectionChanged="AppLogsGrid_SelectionChanged" ColumnReordered="AppLogsGrid_ColumnReordered">
 
             <DataGrid.InputBindings>
                 <KeyBinding Key="Space" Command="{Binding MarkRowCommand}" />
@@ -39,6 +39,7 @@
                     <MenuItem Command="{Binding PlacementTarget.DataContext.FilterContextCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Header="Time Focus Filter"/>
                     <Separator/>
                     <MenuItem Header="📝 Add/Edit Annotation" Command="{Binding AddAnnotationCommand}" CommandParameter="{Binding SelectedLog}"/>
+                    <MenuItem Header="🗑 Delete Annotation" Command="{Binding DeleteAnnotationCommand}" CommandParameter="{Binding SelectedLog}"/>
                     <Separator/>
                     <MenuItem Header="Filter Out (Message)..." Command="{Binding FilterOutCommand}"/>
                 </ContextMenu>
@@ -64,11 +65,17 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTextColumn Header="Lvl" Binding="{Binding Level}" Width="60" FontWeight="Bold" CanUserSort="True" SortMemberPath="Level">
+
+                <DataGridTextColumn Header="Lvl" Binding="{Binding Level}" Width="50" FontWeight="Bold" CanUserSort="True" SortMemberPath="Level">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="HorizontalAlignment" Value="Left"/>
+                            <Setter Property="Padding" Value="8,0"/>
                             <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding Level}" Value="Error">
                                     <Setter Property="Foreground" Value="White"/>
                                 </DataTrigger>
@@ -83,11 +90,16 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
 
-                <DataGridTextColumn Header="Timestamp" Binding="{Binding Date, StringFormat='yyyy-MM-dd HH:mm:ss.fff'}" Width="170" CanUserSort="True" SortMemberPath="Time">
+                <DataGridTextColumn Header="Timestamp" Binding="{Binding Date, StringFormat='yyyy-MM-dd HH:mm:ss.fff'}" Width="180" CanUserSort="True" SortMemberPath="Time">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="HorizontalAlignment" Value="Left"/>
+                            <Setter Property="Padding" Value="8,0"/>
                             <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding Level}" Value="Error">
                                     <Setter Property="Foreground" Value="White"/>
                                 </DataTrigger>
@@ -102,14 +114,21 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
 
-                <DataGridTextColumn Binding="{Binding Logger}" Header="Logger" Width="250" CanUserSort="True" SortMemberPath="Logger">
+                <DataGridTextColumn Binding="{Binding Logger}" Width="200" CanUserSort="True" SortMemberPath="Logger">
+                    <DataGridTextColumn.Header>
+                        <Button Content="🔍 Logger" Command="{Binding DataContext.OpenLoggerFilterCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" Cursor="Hand" ToolTip="Click to filter by logger" FontSize="12" Padding="6,2"/>
+                    </DataGridTextColumn.Header>
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
                             <Setter Property="VerticalAlignment" Value="Center"/>
-                            <Setter Property="Padding" Value="4,0"/>
+                            <Setter Property="HorizontalAlignment" Value="Left"/>
+                            <Setter Property="Padding" Value="8,0"/>
                             <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
                             <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding Level}" Value="Error">
                                     <Setter Property="Foreground" Value="White"/>
                                 </DataTrigger>
@@ -124,13 +143,21 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
 
-                <DataGridTextColumn Header="Thread" Binding="{Binding ThreadName}" Width="100" CanUserSort="True" SortMemberPath="Thread">
+                <DataGridTextColumn Binding="{Binding ThreadName}" Width="90" CanUserSort="True" SortMemberPath="Thread">
+                    <DataGridTextColumn.Header>
+                        <Button Content="🔍 Thread" Command="{Binding DataContext.OpenThreadFilterCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" Cursor="Hand" ToolTip="Click to filter by thread" FontSize="12" Padding="6,2"/>
+                    </DataGridTextColumn.Header>
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
                             <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="HorizontalAlignment" Value="Left"/>
+                            <Setter Property="Padding" Value="8,0"/>
                             <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
                             <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding Level}" Value="Error">
                                     <Setter Property="Foreground" Value="White"/>
                                 </DataTrigger>
@@ -148,13 +175,21 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
 
-                <DataGridTextColumn Header="Method" Binding="{Binding Method}" Width="200" CanUserSort="True" SortMemberPath="Method">
+                <DataGridTextColumn Binding="{Binding Method}" Width="230" CanUserSort="True" SortMemberPath="Method">
+                    <DataGridTextColumn.Header>
+                        <Button Content="🔍 Method" Command="{Binding DataContext.OpenMethodFilterCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" Cursor="Hand" ToolTip="Click to filter by method" FontSize="12" Padding="6,2"/>
+                    </DataGridTextColumn.Header>
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
                             <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="HorizontalAlignment" Value="Left"/>
+                            <Setter Property="Padding" Value="8,0"/>
                             <Setter Property="Foreground" Value="{DynamicResource SecondaryColor}"/>
                             <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding Level}" Value="Error">
                                     <Setter Property="Foreground" Value="White"/>
                                 </DataTrigger>
@@ -169,16 +204,19 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
 
-                <DataGridTemplateColumn Header="Message" Width="*" MinWidth="400">
+                <DataGridTemplateColumn Header="Message" MinWidth="100">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <controls:HighlightTextBlock Text="{Binding Message}" HighlightText="{Binding DataContext.SearchText, RelativeSource={RelativeSource AncestorType=Window}}" VerticalAlignment="Center">
+                            <controls:HighlightTextBlock Text="{Binding Message}" HighlightText="{Binding DataContext.SearchText, RelativeSource={RelativeSource AncestorType=DataGrid}}" VerticalAlignment="Center" Padding="8,0">
                                 <controls:HighlightTextBlock.Style>
                                     <Style TargetType="controls:HighlightTextBlock">
                                         <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                                         <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
                                         <Setter Property="TextWrapping" Value="NoWrap"/>
                                         <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                                <Setter Property="Foreground" Value="Black"/>
+                                            </DataTrigger>
                                             <DataTrigger Binding="{Binding Level}" Value="Error">
                                                 <Setter Property="Foreground" Value="White"/>
                                             </DataTrigger>
@@ -200,15 +238,13 @@
             <!-- Row Details Template for Annotations -->
             <DataGrid.RowDetailsTemplate>
                 <DataTemplate>
-                    <Border Background="#FFFACD" BorderBrush="#FFD700" BorderThickness="1,0,1,1" Padding="10" Margin="5,0,5,5">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{Binding AnnotationContent}" TextWrapping="Wrap" Foreground="Black" FontStyle="Italic"/>
-                            <Button Grid.Column="1" Content="✕" Command="{Binding DataContext.CloseAnnotationCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0" FontSize="14" Foreground="#666" Cursor="Hand" ToolTip="Close annotation" VerticalAlignment="Top" Margin="10,0,0,0"/>
-                        </Grid>
+                    <Border Background="{DynamicResource BgDark}" BorderBrush="#FFD700" BorderThickness="2" Padding="12" Margin="5,0,5,5" CornerRadius="4">
+                        <!-- Annotation Text -->
+                        <TextBlock Text="{Binding AnnotationContent}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextPrimary}"
+                                   FontStyle="Italic"
+                                   VerticalAlignment="Center"/>
                     </Border>
                 </DataTemplate>
             </DataGrid.RowDetailsTemplate>
