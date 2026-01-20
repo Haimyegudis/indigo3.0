@@ -272,7 +272,43 @@ namespace IndiLogs_3._0.Controls
                 System.Diagnostics.Debug.WriteLine("[COLUMN SETTINGS] Error saving settings: " + ex.Message);
             }
         }
+        private string GetColumnHeaderText(DataGridColumn column)
+        {
+            if (column.Header == null)
+                return null;
 
+            // If header is a Button, extract just the text content
+            if (column.Header is Button button)
+            {
+                string content = button.Content?.ToString() ?? "";
+                // Remove filter icon prefix if present (e.g., "🔍 Logger" -> "Logger")
+                if (content.StartsWith("🔍 "))
+                    return content.Substring(3);
+                return content;
+            }
+
+            // If header is a string, return it directly
+            if (column.Header is string headerString)
+            {
+                return headerString;
+            }
+
+            // For other types, try ToString and extract the last part if it's a path
+            string headerText = column.Header.ToString();
+
+            // Skip empty or type name strings
+            if (string.IsNullOrEmpty(headerText) || headerText.StartsWith("System."))
+                return null;
+
+            // If it looks like a dotted path (e.g., "System.Window.Control.Button"), take the last part
+            if (headerText.Contains("."))
+            {
+                var parts = headerText.Split('.');
+                return parts[parts.Length - 1];
+            }
+
+            return headerText;
+        }
         private void LoadColumnSettings()
         {
             try

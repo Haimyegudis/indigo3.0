@@ -21,6 +21,7 @@
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
     </Window.Resources>
 
     <Window.DataContext>
@@ -47,7 +48,6 @@
             <RowDefinition Height="24"/>
         </Grid.RowDefinitions>
 
-        <!-- Header Control -->
         <controls:HeaderControl Grid.Row="0" DataContext="{Binding}"/>
 
         <Grid Grid.Row="1">
@@ -226,143 +226,6 @@
                             </Grid>
                         </Grid>
                     </TabItem>
-
-                    <TabItem Header="LOGGERS">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <TreeView Grid.Row="0" ItemsSource="{Binding LoggerTreeRoot}" Background="Transparent" BorderThickness="0" Padding="10" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Visible" Foreground="{DynamicResource TextPrimary}">
-                                <TreeView.ItemContainerStyle>
-                                    <Style TargetType="TreeViewItem">
-                                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
-                                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
-                                        <EventSetter Event="PreviewMouseRightButtonDown" Handler="TreeViewItem_PreviewMouseRightButtonDown"/>
-                                        <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=TreeView}}"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-                                        <Setter Property="ContextMenu">
-                                            <Setter.Value>
-                                                <ContextMenu>
-                                                    <MenuItem Header="🎯 Show Only This" Command="{Binding PlacementTarget.Tag.TreeShowOnlyThisCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
-                                                    <MenuItem Header="📂 Show With Children" Command="{Binding PlacementTarget.Tag.TreeShowWithChildrenCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
-                                                    <Separator/>
-                                                    <MenuItem Header="🚫 Hide This Logger" Command="{Binding PlacementTarget.Tag.TreeHideThisCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
-                                                    <MenuItem Header="🚫 Hide With Children" Command="{Binding PlacementTarget.Tag.TreeHideWithChildrenCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
-                                                    <Separator/>
-                                                    <MenuItem Header="✅ Show All" Command="{Binding PlacementTarget.Tag.TreeShowAllCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                                </ContextMenu>
-                                            </Setter.Value>
-                                        </Setter>
-                                    </Style>
-                                </TreeView.ItemContainerStyle>
-                                <TreeView.ItemTemplate>
-                                    <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                                        <StackPanel Orientation="Horizontal" Margin="2">
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding Count, StringFormat=' ({0})'}" Foreground="{DynamicResource TextSecondary}" Margin="5,0,0,0" FontSize="11" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                        <HierarchicalDataTemplate.Triggers>
-                                            <DataTrigger Binding="{Binding IsHidden}" Value="True">
-                                                <Setter Property="TextBlock.TextDecorations" Value="Strikethrough"/>
-                                                <Setter Property="TextBlock.Foreground" Value="{DynamicResource DangerColor}"/>
-                                            </DataTrigger>
-                                        </HierarchicalDataTemplate.Triggers>
-                                    </HierarchicalDataTemplate>
-                                </TreeView.ItemTemplate>
-                            </TreeView>
-
-                            <!-- Action Button for LOGGERS tab (App Logs) -->
-                            <Grid Grid.Row="1" VerticalAlignment="Bottom" Margin="10,0,10,10">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <Border Grid.Row="0" Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10" Visibility="{Binding IsExplorerMenuOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <Border.Effect>
-                                        <DropShadowEffect Color="Black" Opacity="0.2" BlurRadius="10" ShadowDepth="2"/>
-                                    </Border.Effect>
-                                    <StackPanel>
-                                        <DockPanel LastChildFill="False" Margin="0,0,0,8">
-                                            <TextBlock Text="Actions" FontWeight="Bold" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" FontSize="11"/>
-                                        </DockPanel>
-                                        <Button Command="{Binding ClearCommand}" Background="{DynamicResource DangerColor}" Style="{DynamicResource PrimaryBtn}" Margin="0,0,0,8">
-                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-                                                <TextBlock Text="🗑 Clear All"/>
-                                            </Viewbox>
-                                        </Button>
-                                        <Button Command="{Binding OpenMarkedLogsWindowCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5">
-                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-                                                <TextBlock Text="📌 Marked Lines"/>
-                                            </Viewbox>
-                                        </Button>
-                                        <Separator Margin="0,10,0,10" Background="{DynamicResource BorderColor}"/>
-                                        <DockPanel LastChildFill="False" Margin="0,0,0,8">
-                                            <TextBlock Text="Case File" FontWeight="Bold" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" FontSize="11"/>
-                                        </DockPanel>
-                                        <Button Command="{Binding SaveCaseCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5">
-                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-                                                <TextBlock Text="💾 Save Case"/>
-                                            </Viewbox>
-                                        </Button>
-                                        <Button Command="{Binding LoadCaseCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}">
-                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-                                                <TextBlock Text="📂 Load Case"/>
-                                            </Viewbox>
-                                        </Button>
-                                    </StackPanel>
-                                </Border>
-                                <Button Grid.Row="1" Command="{Binding ToggleExplorerMenuCommand}" Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" HorizontalAlignment="Left" Width="40" Height="40" ToolTip="Show Actions">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="20">
-                                                <Border.Effect>
-                                                    <DropShadowEffect Color="Black" Opacity="0.15" BlurRadius="5" ShadowDepth="2"/>
-                                                </Border.Effect>
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource BgCardHover}"/>
-                                                    <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
-                                                </Trigger>
-                                                <Trigger Property="IsPressed" Value="True">
-                                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryColor}"/>
-                                                    <Setter Property="Foreground" Value="White"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                    <Grid>
-                                        <TextBlock Text="••" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-8,0,0">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsExplorerMenuOpen}" Value="True">
-                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                        <TextBlock Text="✕" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsExplorerMenuOpen}" Value="True">
-                                                            <Setter Property="Visibility" Value="Visible"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </Grid>
-                                </Button>
-                            </Grid>
-                        </Grid>
-                    </TabItem>
                 </TabControl>
             </Grid>
 
@@ -376,7 +239,6 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Search Panel Control -->
                 <controls:SearchPanelControl Grid.Row="0" DataContext="{Binding}"/>
 
                 <TabControl x:Name="MainTabs" Grid.Row="0" SelectedIndex="{Binding SelectedTabIndex}" BorderThickness="0" Background="Transparent" Padding="0" SelectionChanged="TabControl_SelectionChanged">
@@ -682,6 +544,24 @@
                             <CheckBox Content="APPLY FILTER OUT" IsChecked="{Binding IsFilterOutActive}" ToolTip="Uncheck to reveal hidden logs" VerticalAlignment="Center" Margin="10,0,15,0" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/>
                             <CheckBox Content="APPLY FILTER" IsChecked="{Binding IsFilterActive}" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/>
                             <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="10,4"/>
+
+                            <Button Command="{Binding FilterAppErrorsCommand}" Background="{DynamicResource DangerColor}" Foreground="White" Margin="10,0,0,0" ToolTip="Show Errors Only (Newest First)">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ModernBtn}">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="2">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="🐞" Margin="0,0,6,0"/>
+                                    <TextBlock Text="SHOW ERRORS ONLY" FontWeight="Bold"/>
+                                </StackPanel>
+                            </Button>
+
                             <Border Background="{DynamicResource BgCard}" CornerRadius="8" Padding="4" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Visibility="{Binding IsPLCTabSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <StackPanel Orientation="Horizontal">
                                     <RadioButton GroupName="ViewMode" Content="TEXT" IsChecked="{Binding IsVisualMode, Converter={StaticResource InverseBooleanConverter}}" Style="{StaticResource ViewModeRadioButton}"/>
@@ -755,7 +635,9 @@
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Visible"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsConfigMenuOpen}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                                <DataTrigger Binding="{Binding IsConfigMenuOpen}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </TextBlock.Style>
@@ -765,7 +647,9 @@
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsConfigMenuOpen}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                                <DataTrigger Binding="{Binding IsConfigMenuOpen}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </TextBlock.Style>
@@ -812,7 +696,6 @@
             </Border>
         </Grid>
 
-        <!-- Status Bar Control -->
         <controls:StatusBarControl Grid.Row="2" DataContext="{Binding}"/>
 
         <Grid Grid.RowSpan="3" Background="#CC000000" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}" Panel.ZIndex="999">

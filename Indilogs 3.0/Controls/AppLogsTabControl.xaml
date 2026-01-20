@@ -11,39 +11,27 @@
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </UserControl.Resources>
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-        <Border Grid.Row="0" Background="{DynamicResource BgPanel}" Padding="8" CornerRadius="4" Margin="0,0,0,5">
-            <StackPanel Orientation="Horizontal">
-                <Button Command="{Binding FilterAppErrorsCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource DangerColor}" Foreground="White" Padding="10,6" Margin="5" ToolTip="Show Errors Only (Newest First)">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="⚠" Margin="0,0,8,0"/>
-                        <TextBlock Text="SHOW ERRORS ONLY" FontWeight="Bold"/>
-                    </StackPanel>
-                </Button>
-            </StackPanel>
-        </Border>
-
-        <DataGrid Grid.Row="1" x:Name="AppLogsGrid" ItemsSource="{Binding AppDevLogsFiltered}" SelectedItem="{Binding SelectedLog}" Sorting="AppLogsGrid_Sorting" FontSize="{Binding GridFontSize}" FontFamily="{DynamicResource ContentFontFamily}" FontWeight="{DynamicResource ContentFontWeight}" AutoGenerateColumns="False" IsReadOnly="True"
-                  SelectionMode="Extended" SelectionUnit="FullRow" HorizontalScrollBarVisibility="Auto" RequestBringIntoView="AppLogsGrid_RequestBringIntoView" Loaded="AppLogsGrid_Loaded" LoadingRow="AppLogsGrid_LoadingRow"
+        <DataGrid x:Name="AppLogsGrid" ItemsSource="{Binding AppDevLogsFiltered}" SelectedItem="{Binding SelectedLog}" Sorting="AppLogsGrid_Sorting" FontSize="{Binding GridFontSize}" FontFamily="{DynamicResource ContentFontFamily}" FontWeight="{DynamicResource ContentFontWeight}" AutoGenerateColumns="False" IsReadOnly="True"
+                  SelectionMode="Extended" SelectionUnit="FullRow" 
+                  HorizontalScrollBarVisibility="Auto" RequestBringIntoView="AppLogsGrid_RequestBringIntoView" Loaded="AppLogsGrid_Loaded" LoadingRow="AppLogsGrid_LoadingRow"
                   GridLinesVisibility="Vertical" VerticalGridLinesBrush="{DynamicResource BorderColor}" SelectionChanged="AppLogsGrid_SelectionChanged" ColumnReordered="AppLogsGrid_ColumnReordered">
 
             <DataGrid.InputBindings>
                 <KeyBinding Key="Space" Command="{Binding MarkRowCommand}" />
                 <MouseBinding Gesture="LeftDoubleClick" Command="{Binding ViewLogDetailsCommand}" CommandParameter="{Binding SelectedLog}" />
             </DataGrid.InputBindings>
+
             <DataGrid.ContextMenu>
                 <ContextMenu>
                     <MenuItem Command="{Binding PlacementTarget.DataContext.FilterContextCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Header="Time Focus Filter"/>
                     <Separator/>
-                    <MenuItem Header="📝 Add/Edit Annotation" Command="{Binding AddAnnotationCommand}" CommandParameter="{Binding SelectedLog}"/>
+                    <MenuItem Header="✏️ Add/Edit Annotation" Command="{Binding AddAnnotationCommand}" CommandParameter="{Binding SelectedLog}"/>
                     <MenuItem Header="🗑 Delete Annotation" Command="{Binding DeleteAnnotationCommand}" CommandParameter="{Binding SelectedLog}"/>
                     <Separator/>
                     <MenuItem Header="Filter Out (Message)..." Command="{Binding FilterOutCommand}"/>
                 </ContextMenu>
             </DataGrid.ContextMenu>
+
             <DataGrid.Columns>
                 <DataGridTemplateColumn Header="" Width="30" CanUserSort="False">
                     <DataGridTemplateColumn.CellTemplate>
@@ -235,11 +223,9 @@
                 </DataGridTemplateColumn>
             </DataGrid.Columns>
 
-            <!-- Row Details Template for Annotations -->
             <DataGrid.RowDetailsTemplate>
                 <DataTemplate>
                     <Border Background="{DynamicResource BgDark}" BorderBrush="#FFD700" BorderThickness="2" Padding="12" Margin="5,0,5,5" CornerRadius="4">
-                        <!-- Annotation Text -->
                         <TextBlock Text="{Binding AnnotationContent}"
                                    TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextPrimary}"
@@ -249,7 +235,6 @@
                 </DataTemplate>
             </DataGrid.RowDetailsTemplate>
 
-            <!-- Row Style with Details Visibility -->
             <DataGrid.RowStyle>
                 <Style TargetType="DataGridRow" BasedOn="{StaticResource LogRowStyle}">
                     <Style.Triggers>
