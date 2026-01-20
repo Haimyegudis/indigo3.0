@@ -8,6 +8,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -20,8 +21,46 @@
             </StackPanel>
         </Border>
 
+        <!-- Search and Filter Bar -->
+        <Border Grid.Row="1" Background="{DynamicResource BgPanel}" Padding="15,10" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="🔍 Search:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" Margin="0,0,10,0"/>
+
+                <TextBox Grid.Column="1" x:Name="SearchTextBox"
+                         Height="28"
+                         VerticalContentAlignment="Center"
+                         Background="{DynamicResource BgDark}"
+                         Foreground="{DynamicResource TextPrimary}"
+                         BorderBrush="{DynamicResource BorderColor}"
+                         Padding="8,4"
+                         FontFamily="Consolas, Courier New"
+                         TextChanged="SearchTextBox_TextChanged"/>
+
+                <Button Grid.Column="2" Content="✕ Clear"
+                        Width="80" Height="28"
+                        Margin="10,0,0,0"
+                        Background="{DynamicResource BgCard}"
+                        Foreground="{DynamicResource TextSecondary}"
+                        BorderBrush="{DynamicResource BorderColor}"
+                        Click="ClearSearchButton_Click"/>
+
+                <TextBlock Grid.Column="3" x:Name="FilteredCountText"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextSecondary}"
+                           Margin="15,0,0,0"
+                           FontSize="11"/>
+            </Grid>
+        </Border>
+
         <!-- Data Grid -->
-        <DataGrid Grid.Row="1" 
+        <DataGrid Grid.Row="2" 
                   x:Name="DataBrowserGrid"
                   AutoGenerateColumns="True"
                   IsReadOnly="True"
@@ -76,7 +115,7 @@
         </DataGrid>
 
         <!-- Footer -->
-        <Border Grid.Row="2" Background="{DynamicResource BgPanel}" Padding="15" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0">
+        <Border Grid.Row="3" Background="{DynamicResource BgPanel}" Padding="15" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Export to CSV" Width="120" Height="30" 
                         Background="{DynamicResource BgCard}" 

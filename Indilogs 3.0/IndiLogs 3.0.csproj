@@ -199,12 +199,34 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Controls\AppLogsTabControl.xaml.cs">
+      <DependentUpon>AppLogsTabControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\HeaderControl.xaml.cs">
+      <DependentUpon>HeaderControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\PlcFilteredTabControl.xaml.cs">
+      <DependentUpon>PlcFilteredTabControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\PlcLogsGridControl.xaml.cs">
+      <DependentUpon>PlcLogsGridControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\PlcLogsTabControl.xaml.cs">
+      <DependentUpon>PlcLogsTabControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\SearchPanelControl.xaml.cs">
+      <DependentUpon>SearchPanelControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\StatusBarControl.xaml.cs">
+      <DependentUpon>StatusBarControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\TimelineCanvas.cs" />
     <Compile Include="Converters\AnnotationTextBrushConverter.cs" />
     <Compile Include="Converters\ArrayConverter.cs" />
     <Compile Include="Converters\BoolToVisibilityConverter.cs" />
     <Compile Include="Converters\InverseBooleanConverter.cs" />
     <Compile Include="IndigoLogsReaderExplorer.cs" />
+    <Compile Include="Models\ColumnSettings.cs" />
     <Compile Include="Models\DbTreeNode.cs" />
     <Compile Include="Models\LoggerNode.cs" />
     <Compile Include="Models\StateEntry.cs" />
@@ -271,6 +293,9 @@
     <Compile Include="Views\ColoringWindow.xaml.cs">
       <DependentUpon>ColoringWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\ColumnManagerWindow.xaml.cs">
+      <DependentUpon>ColumnManagerWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\FilterWindow.xaml.cs">
       <DependentUpon>FilterWindow.xaml</DependentUpon>
     </Compile>
@@ -311,6 +336,34 @@
     <Compile Include="Views\VisualTimelineView.xaml.cs">
       <DependentUpon>VisualTimelineView.xaml</DependentUpon>
     </Compile>
+    <Page Include="Controls\AppLogsTabControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\HeaderControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\PlcFilteredTabControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\PlcLogsGridControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\PlcLogsTabControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\SearchPanelControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\StatusBarControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Views\BrowseTableWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -352,6 +405,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\ColorPaletteWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ColumnManagerWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

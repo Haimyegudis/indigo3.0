@@ -1,0 +1,355 @@
+<UserControl x:Class="IndiLogs_3._0.Controls.PlcLogsGridControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:IndiLogs_3._0.Controls"
+             xmlns:converters="clr-namespace:IndiLogs_3._0.Converters"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </UserControl.Resources>
+    <DataGrid x:Name="LogsDataGrid"
+              ItemsSource="{Binding LogsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
+              SelectedItem="{Binding SelectedLog, Mode=TwoWay}"
+              FontSize="{Binding GridFontSize}"
+              FontFamily="{DynamicResource ContentFontFamily}"
+              FontWeight="{DynamicResource ContentFontWeight}"
+              AutoGenerateColumns="False"
+              IsReadOnly="True"
+              SelectionMode="Extended"
+              SelectionUnit="FullRow"
+              HorizontalScrollBarVisibility="Auto"
+              CanUserReorderColumns="True"
+              CanUserResizeColumns="True"
+              PreviewKeyDown="LogsDataGrid_PreviewKeyDown"
+              RequestBringIntoView="LogsDataGrid_RequestBringIntoView"
+              Loaded="LogsDataGrid_Loaded"
+              LoadingRow="LogsDataGrid_LoadingRow"
+              ColumnReordered="LogsDataGrid_ColumnReordered">
+
+        <DataGrid.Style>
+            <Style TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
+                <Setter Property="Visibility" Value="Visible"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsVisualMode}" Value="True">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </DataGrid.Style>
+
+        <DataGrid.ContextMenu>
+            <ContextMenu>
+                <MenuItem Command="{Binding PlacementTarget.DataContext.FilterContextCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Header="Time Focus Filter"/>
+                <Separator/>
+                <MenuItem Header="📝 Add/Edit Annotation" Command="{Binding AddAnnotationCommand}" CommandParameter="{Binding SelectedLog}"/>
+                <Separator/>
+                <MenuItem Header="Filter Out (Message)..." Command="{Binding FilterOutCommand}"/>
+                <MenuItem Header="Filter Out (Thread)..." Command="{Binding FilterOutThreadCommand}"/>
+            </ContextMenu>
+        </DataGrid.ContextMenu>
+
+        <DataGrid.InputBindings>
+            <KeyBinding Key="Space" Command="{Binding MarkRowCommand}" />
+            <MouseBinding Gesture="LeftDoubleClick" Command="{Binding ViewLogDetailsCommand}" CommandParameter="{Binding SelectedLog}" />
+        </DataGrid.InputBindings>
+
+        <DataGrid.Columns>
+            <!-- Annotation Icon Column -->
+            <DataGridTemplateColumn Header="" Width="30" CanUserSort="False">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <Button Content="{Binding AnnotationIcon}"
+                                Command="{Binding DataContext.ToggleAnnotationCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                CommandParameter="{Binding}"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Cursor="Hand"
+                                FontSize="14"
+                                Padding="0"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                ToolTip="Click to show/hide annotation"
+                                Visibility="{Binding HasAnnotation, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <ContentPresenter/>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTextColumn Header="Lvl" Binding="{Binding Level}" Width="70" FontWeight="Bold">
+                <DataGridTextColumn.ElementStyle>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="VerticalAlignment" Value="Center"/>
+                        <Setter Property="HorizontalAlignment" Value="Left"/>
+                        <Setter Property="Padding" Value="0,0"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Level}" Value="Error">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Level}" Value="ERROR">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Level}" Value="Fatal">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                <Setter Property="Foreground" Value="Black"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGridTextColumn.ElementStyle>
+            </DataGridTextColumn>
+
+            <DataGridTextColumn Header="Timestamp" Binding="{Binding Date, StringFormat='yyyy-MM-dd HH:mm:ss.fff'}" Width="180" FontFamily="{StaticResource ContentFontFamily}">
+                <DataGridTextColumn.ElementStyle>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="VerticalAlignment" Value="Center"/>
+                        <Setter Property="HorizontalAlignment" Value="Left"/>
+                        <Setter Property="Padding" Value="8,0"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Level}" Value="Error">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Level}" Value="ERROR">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Level}" Value="Fatal">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                <Setter Property="Foreground" Value="Black"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGridTextColumn.ElementStyle>
+            </DataGridTextColumn>
+
+            <DataGridTextColumn Binding="{Binding ThreadName}" Width="130">
+                <DataGridTextColumn.Header>
+                    <Button Content="🔍 Thread" Command="{Binding DataContext.OpenThreadFilterCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" Cursor="Hand" ToolTip="Click to filter by thread" FontSize="12" Padding="6,2"/>
+                </DataGridTextColumn.Header>
+                <DataGridTextColumn.ElementStyle>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                        <Setter Property="VerticalAlignment" Value="Center"/>
+                        <Setter Property="HorizontalAlignment" Value="Left"/>
+                        <Setter Property="Padding" Value="25,0"/>
+                        <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Level}" Value="Error">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Level}" Value="ERROR">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Level}" Value="Fatal">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                <Setter Property="Foreground" Value="Black"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGridTextColumn.ElementStyle>
+            </DataGridTextColumn>
+
+            <DataGridTextColumn Binding="{Binding Logger}" Header="Logger" Width="250" Visibility="Collapsed">
+                <DataGridTextColumn.ElementStyle>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                        <Setter Property="VerticalAlignment" Value="Center"/>
+                        <Setter Property="HorizontalAlignment" Value="Left"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Level}" Value="Error">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Level}" Value="ERROR">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Level}" Value="Fatal">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                <Setter Property="Foreground" Value="Black"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGridTextColumn.ElementStyle>
+            </DataGridTextColumn>
+
+            <DataGridTextColumn Header="Method" Binding="{Binding Method}" Width="200" Visibility="Collapsed">
+                <DataGridTextColumn.ElementStyle>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                        <Setter Property="VerticalAlignment" Value="Center"/>
+                        <Setter Property="HorizontalAlignment" Value="Left"/>
+                        <Setter Property="Foreground" Value="{DynamicResource SecondaryColor}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Level}" Value="Error">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Level}" Value="ERROR">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Level}" Value="Fatal">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                <Setter Property="Foreground" Value="Black"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGridTextColumn.ElementStyle>
+            </DataGridTextColumn>
+
+            <DataGridTextColumn Header="Data" Binding="{Binding Data}" Width="300" Visibility="Collapsed">
+                <DataGridTextColumn.ElementStyle>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                        <Setter Property="VerticalAlignment" Value="Center"/>
+                        <Setter Property="HorizontalAlignment" Value="Left"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Level}" Value="Error">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Level}" Value="ERROR">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Level}" Value="Fatal">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                <Setter Property="Foreground" Value="Black"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGridTextColumn.ElementStyle>
+            </DataGridTextColumn>
+
+            <DataGridTextColumn Header="Pattern" Binding="{Binding Pattern}" Width="150" Visibility="Collapsed">
+                <DataGridTextColumn.ElementStyle>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                        <Setter Property="VerticalAlignment" Value="Center"/>
+                        <Setter Property="HorizontalAlignment" Value="Left"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Level}" Value="Error">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Level}" Value="ERROR">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Level}" Value="Fatal">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                <Setter Property="Foreground" Value="Black"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGridTextColumn.ElementStyle>
+            </DataGridTextColumn>
+
+            <DataGridTextColumn Header="Process" Binding="{Binding Process}" Width="120" Visibility="Collapsed">
+                <DataGridTextColumn.ElementStyle>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                        <Setter Property="VerticalAlignment" Value="Center"/>
+                        <Setter Property="HorizontalAlignment" Value="Left"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Level}" Value="Error">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Level}" Value="ERROR">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Level}" Value="Fatal">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                <Setter Property="Foreground" Value="Black"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGridTextColumn.ElementStyle>
+            </DataGridTextColumn>
+
+            <DataGridTemplateColumn Header="Message" Width="*" MinWidth="400">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <controls:HighlightTextBlock Text="{Binding Message}" HighlightText="{Binding DataContext.SearchText, RelativeSource={RelativeSource AncestorType=Window}}" VerticalAlignment="Center">
+                            <controls:HighlightTextBlock.Style>
+                                <Style TargetType="controls:HighlightTextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                    <Setter Property="TextWrapping" Value="NoWrap"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Level}" Value="Error">
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Level}" Value="ERROR">
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Level}" Value="Fatal">
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </controls:HighlightTextBlock.Style>
+                        </controls:HighlightTextBlock>
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+        </DataGrid.Columns>
+
+        <!-- Row Details Template for Annotations -->
+        <DataGrid.RowDetailsTemplate>
+            <DataTemplate>
+                <Border Background="#FFFACD" BorderBrush="#FFD700" BorderThickness="1,0,1,1" Padding="10" Margin="5,0,5,5">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding AnnotationContent}" TextWrapping="Wrap" Foreground="Black" FontStyle="Italic"/>
+                        <Button Grid.Column="1" Content="✕" Command="{Binding DataContext.CloseAnnotationCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0" FontSize="14" Foreground="#666" Cursor="Hand" ToolTip="Close annotation" VerticalAlignment="Top" Margin="10,0,0,0"/>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </DataGrid.RowDetailsTemplate>
+
+        <!-- Row Style with Details Visibility -->
+        <DataGrid.RowStyle>
+            <Style TargetType="DataGridRow" BasedOn="{StaticResource LogRowStyle}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsAnnotationExpanded}" Value="True">
+                        <Setter Property="DetailsVisibility" Value="Visible"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding IsAnnotationExpanded}" Value="False">
+                        <Setter Property="DetailsVisibility" Value="Collapsed"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </DataGrid.RowStyle>
+    </DataGrid>
+</UserControl>

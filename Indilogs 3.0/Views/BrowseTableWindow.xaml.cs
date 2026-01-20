@@ -16,6 +16,7 @@ namespace IndiLogs_3._0.Views
         private readonly string _tableName;
         private readonly byte[] _dbBytes;
         private DataTable _dataTable;
+        private DataView _filteredView;
 
         public BrowseTableWindow(string tableName, byte[] dbBytes)
         {
@@ -51,12 +52,14 @@ namespace IndiLogs_3._0.Views
                 // Clean up temp file
                 try { File.Delete(tempDbPath); } catch { }
 
-                // Set data to grid
-                DataBrowserGrid.ItemsSource = _dataTable.DefaultView;
+                // Set data to grid using DataView for filtering
+                _filteredView = _dataTable.DefaultView;
+                DataBrowserGrid.ItemsSource = _filteredView;
 
                 // Update header info
                 TableNameText.Text = $"Table: {_tableName}";
                 RowCountText.Text = $"{_dataTable.Rows.Count} rows × {_dataTable.Columns.Count} columns";
+                UpdateFilteredCount();
             }
             catch (Exception ex)
             {
@@ -65,10 +68,92 @@ namespace IndiLogs_3._0.Views
             }
         }
 
+        private void SearchTextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            ApplyFilter();
+        }
+
+        private void ClearSearchButton_Click(object sender, RoutedEventArgs e)
+        {
+            SearchTextBox.Clear();
+        }
+
+        private void ApplyFilter()
+        {
+            if (_dataTable == null || _filteredView == null)
+                return;
+
+            string searchText = SearchTextBox.Text?.Trim();
+
+            if (string.IsNullOrEmpty(searchText))
+            {
+                _filteredView.RowFilter = string.Empty;
+            }
+            else
+            {
+                // Build filter for all columns
+                var filters = new List<string>();
+                foreach (DataColumn col in _dataTable.Columns)
+                {
+                    // Use LIKE for string matching across all column types
+                    filters.Add($"CONVERT([{col.ColumnName}], 'System.String') LIKE '%{EscapeFilterValue(searchText)}%'");
+                }
+                _filteredView.RowFilter = string.Join(" OR ", filters);
+            }
+
+            UpdateFilteredCount();
+        }
+
+        private string EscapeFilterValue(string value)
+        {
+            // Escape special characters for DataView filter
+            return value.Replace("'", "''")
+                        .Replace("[", "[[]")
+                        .Replace("]", "[]]")
+                        .Replace("*", "[*]")
+                        .Replace("%", "[%]");
+        }
+
+        private void UpdateFilteredCount()
+        {
+            if (_filteredView == null || _dataTable == null)
+                return;
+
+            int filteredCount = _filteredView.Count;
+            int totalCount = _dataTable.Rows.Count;
+
+            if (filteredCount == totalCount)
+            {
+                FilteredCountText.Text = "";
+            }
+            else
+            {
+                FilteredCountText.Text = $"Showing {filteredCount} of {totalCount} rows";
+            }
+        }
+
         private void ExportButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
+                bool isFiltered = _filteredView != null && _filteredView.Count < _dataTable.Rows.Count;
+                string prompt = isFiltered
+                    ? $"Export {_filteredView.Count} filtered rows or all {_dataTable.Rows.Count} rows?"
+                    : $"Export all {_dataTable.Rows.Count} rows?";
+
+                MessageBoxResult result = MessageBoxResult.Yes;
+                if (isFiltered)
+                {
+                    result = MessageBox.Show(
+                        $"{prompt}\n\nClick Yes to export filtered data only, No to export all data.",
+                        "Export Options",
+                        MessageBoxButton.YesNoCancel,
+                        MessageBoxImage.Question);
+
+                    if (result == MessageBoxResult.Cancel)
+                        return;
+                }
+
                 var dialog = new SaveFileDialog
                 {
                     Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
@@ -78,8 +163,11 @@ namespace IndiLogs_3._0.Views
 
                 if (dialog.ShowDialog() == true)
                 {
-                    ExportToCsv(dialog.FileName);
-                    MessageBox.Show($"Data exported successfully to:\n{dialog.FileName}",
+                    bool exportFiltered = result == MessageBoxResult.Yes && isFiltered;
+                    ExportToCsv(dialog.FileName, exportFiltered);
+
+                    int exportedRows = exportFiltered ? _filteredView.Count : _dataTable.Rows.Count;
+                    MessageBox.Show($"{exportedRows} rows exported successfully to:\n{dialog.FileName}",
                         "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
@@ -90,7 +178,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void ExportToCsv(string filePath)
+        private void ExportToCsv(string filePath, bool exportFilteredOnly = false)
         {
             var sb = new StringBuilder();
 
@@ -98,11 +186,22 @@ namespace IndiLogs_3._0.Views
             var headers = _dataTable.Columns.Cast<DataColumn>().Select(col => col.ColumnName);
             sb.AppendLine(string.Join(",", headers.Select(h => EscapeCsvValue(h))));
 
-            // Write rows
-            foreach (DataRow row in _dataTable.Rows)
+            // Write rows (either filtered or all)
+            if (exportFilteredOnly && _filteredView != null)
             {
-                var values = row.ItemArray.Select(val => EscapeCsvValue(val?.ToString() ?? ""));
-                sb.AppendLine(string.Join(",", values));
+                foreach (DataRowView rowView in _filteredView)
+                {
+                    var values = rowView.Row.ItemArray.Select(val => EscapeCsvValue(val?.ToString() ?? ""));
+                    sb.AppendLine(string.Join(",", values));
+                }
+            }
+            else
+            {
+                foreach (DataRow row in _dataTable.Rows)
+                {
+                    var values = row.ItemArray.Select(val => EscapeCsvValue(val?.ToString() ?? ""));
+                    sb.AppendLine(string.Join(",", values));
+                }
             }
 
             File.WriteAllText(filePath, sb.ToString(), Encoding.UTF8);

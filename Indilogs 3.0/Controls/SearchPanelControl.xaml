@@ -1,0 +1,39 @@
+<UserControl x:Class="IndiLogs_3._0.Controls.SearchPanelControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:converters="clr-namespace:IndiLogs_3._0.Converters"
+             mc:Ignorable="d"
+             d:DesignHeight="50" d:DesignWidth="400">
+    <UserControl.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
+    <Border VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,15,40,0" Panel.ZIndex="100"
+            Background="{DynamicResource BgCard}" CornerRadius="20" Padding="8,4"
+            Visibility="{Binding IsSearchPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="15" ShadowDepth="4" Opacity="0.4" Color="Black"/>
+        </Border.Effect>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="🔍" VerticalAlignment="Center" Margin="5,0,5,0" Foreground="{DynamicResource TextSecondary}"/>
+            <TextBox x:Name="SearchTextBox" Width="250" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                     Background="Transparent" BorderBrush="Transparent" BorderThickness="0" Padding="2"
+                     VerticalContentAlignment="Center" CaretBrush="{DynamicResource PrimaryColor}"
+                     IsVisibleChanged="SearchTextBox_IsVisibleChanged"
+                     ToolTip="{Binding SearchSyntaxError}">
+                <TextBox.Style>
+                    <Style TargetType="TextBox">
+                        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSearchSyntaxValid}" Value="False">
+                                <Setter Property="Foreground" Value="#FF6B6B"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBox.Style>
+            </TextBox>
+            <Button Content="✕" Command="{Binding CloseSearchCommand}" Style="{DynamicResource ModernBtn}" Width="24" Height="24" Padding="0" Margin="5,0,0,0" Background="Transparent" ToolTip="Close (Esc)"/>
+        </StackPanel>
+    </Border>
+</UserControl>

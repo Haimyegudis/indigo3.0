@@ -5,7 +5,7 @@ namespace IndiLogs_3._0.Views
 {
     public partial class LogDetailsWindow : Window
     {
-        public LogDetailsWindow(LogEntry log, LogAnnotation annotation = null)
+        public LogDetailsWindow(LogEntry log)
         {
             InitializeComponent();
 
@@ -16,14 +16,6 @@ namespace IndiLogs_3._0.Views
                 ThreadText.Text = log.ThreadName;
                 LoggerText.Text = log.Logger;
                 MessageText.Text = log.Message;
-            }
-
-            // Show annotation if exists
-            if (annotation != null)
-            {
-                AnnotationBorder.Visibility = Visibility.Visible;
-                AnnotationText.Text = annotation.Content;
-                AnnotationAuthor.Text = $"By {annotation.Author} on {annotation.CreatedAt:yyyy-MM-dd HH:mm}";
             }
 
             // לחיצה על ESC תסגור את החלון

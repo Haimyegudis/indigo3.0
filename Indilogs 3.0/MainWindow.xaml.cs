@@ -57,34 +57,12 @@ namespace IndiLogs_3._0
                 vm.RequestScrollToLog += MapsToLogRow;
                 vm.PropertyChanged += ViewModel_PropertyChanged;
 
-                // ✅ Initialize Time-Sync button visual state (OFF by default)
-                UpdateTimeSyncButtonVisual(vm.IsTimeSyncEnabled);
             }
         }
 
         private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(MainViewModel.IsTimeSyncEnabled) && DataContext is MainViewModel vm)
-            {
-                UpdateTimeSyncButtonVisual(vm.IsTimeSyncEnabled);
-            }
-        }
-
-        private void UpdateTimeSyncButtonVisual(bool isEnabled)
-        {
-            if (TimeSyncButton != null)
-            {
-                TimeSyncButton.Background = isEnabled ?
-                    new SolidColorBrush((Color)ColorConverter.ConvertFromString("#3B82F6")) :
-                    new SolidColorBrush(Colors.Transparent);
-
-                if (TimeSyncButton.Content is TextBlock textBlock)
-                {
-                    textBlock.Foreground = isEnabled ?
-                        new SolidColorBrush(Colors.White) :
-                        (Brush)FindResource("TextPrimary");
-                }
-            }
+            // No longer needed - TimeSync button styling is now handled via XAML binding in HeaderControl
         }
 
         public void HandleExternalArguments(string[] args)
@@ -117,19 +95,19 @@ namespace IndiLogs_3._0
             DataGrid targetGrid = null;
 
             // Determine which grid to scroll based on which contains the log
-            if (MainLogsGrid != null && MainLogsGrid.Items.Contains(log))
+            if (PlcLogsTab?.LogsGrid?.InnerDataGrid != null && PlcLogsTab.LogsGrid.InnerDataGrid.Items.Contains(log))
             {
-                targetGrid = MainLogsGrid;
+                targetGrid = PlcLogsTab.LogsGrid.InnerDataGrid;
                 System.Diagnostics.Debug.WriteLine("[SCROLL TO LOG] Target: MainLogsGrid");
             }
-            else if (FilteredLogsGrid != null && FilteredLogsGrid.Items.Contains(log))
+            else if (PlcFilteredTab?.LogsGrid?.InnerDataGrid != null && PlcFilteredTab.LogsGrid.InnerDataGrid.Items.Contains(log))
             {
-                targetGrid = FilteredLogsGrid;
+                targetGrid = PlcFilteredTab.LogsGrid.InnerDataGrid;
                 System.Diagnostics.Debug.WriteLine("[SCROLL TO LOG] Target: FilteredLogsGrid");
             }
-            else if (AppLogsGrid != null && AppLogsGrid.Items.Contains(log))
+            else if (AppLogsTab?.InnerDataGrid != null && AppLogsTab.InnerDataGrid.Items.Contains(log))
             {
-                targetGrid = AppLogsGrid;
+                targetGrid = AppLogsTab.InnerDataGrid;
                 System.Diagnostics.Debug.WriteLine("[SCROLL TO LOG] Target: AppLogsGrid");
             }
 
@@ -148,9 +126,12 @@ namespace IndiLogs_3._0
                     return;
                 }
 
-                // ✅ Try to get ScrollViewer from cache first
+                // Try to get ScrollViewer from cache first
                 ScrollViewer scrollViewer = null;
                 string gridName = targetGrid.Name;
+
+                System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] Looking for ScrollViewer. Grid name: '{gridName}', Cache count: {_scrollViewerCache.Count}");
+                System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] Cached grids: {string.Join(", ", _scrollViewerCache.Keys)}");
 
                 if (!string.IsNullOrEmpty(gridName) && _scrollViewerCache.ContainsKey(gridName))
                 {
@@ -159,18 +140,47 @@ namespace IndiLogs_3._0
                 }
                 else
                 {
-                    // Fallback: search for it
-                    scrollViewer = FindVisualChild<ScrollViewer>(targetGrid);
+                    // Fallback: search for it and wait for it to load
+                    System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] Cache miss for '{gridName}', searching visual tree...");
+
+                    // Force layout update and apply template
+                    targetGrid.UpdateLayout();
+                    targetGrid.ApplyTemplate();
+
+                    // Try multiple times with slight delays for lazy-loaded grids
+                    for (int attempt = 0; attempt < 3 && scrollViewer == null; attempt++)
+                    {
+                        if (attempt > 0)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] Retry attempt {attempt}...");
+                            System.Threading.Thread.Sleep(10); // Small delay
+                            targetGrid.UpdateLayout();
+                        }
+
+                        scrollViewer = FindVisualChild<ScrollViewer>(targetGrid);
+                    }
+
                     if (scrollViewer != null && !string.IsNullOrEmpty(gridName))
                     {
                         _scrollViewerCache[gridName] = scrollViewer;
-                        System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] Found and cached ScrollViewer for {gridName}");
+                        System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] ✅ Found and cached ScrollViewer for {gridName}");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] ⚠️ Still couldn't find ScrollViewer after multiple attempts");
                     }
                 }
 
                 if (scrollViewer == null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] ScrollViewer not found for {gridName}");
+                    System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] ❌ ScrollViewer not found for '{gridName}'. Deferring scroll...");
+
+                    // Schedule a retry after a short delay
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(() =>
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] 🔄 Retrying scroll for {gridName}...");
+                        MapsToLogRow(log);
+                    }));
                     return;
                 }
 
@@ -194,13 +204,12 @@ namespace IndiLogs_3._0
             }
         }
 
-
-
-        private void DataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+        public void DataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
         {
             if (e.Row.Item is LogEntry log)
             {
                 // Show row details if annotation exists and should be expanded
+                // This is a backup for the XAML binding
                 e.Row.DetailsVisibility = (log.HasAnnotation && log.IsAnnotationExpanded)
                     ? Visibility.Visible
                     : Visibility.Collapsed;
@@ -262,7 +271,7 @@ namespace IndiLogs_3._0
         private double _lastUserHorizontalOffset = 0;
         private bool _isUserScrolling = false;
 
-        private void DataGrid_Loaded(object sender, RoutedEventArgs e)
+        public void DataGrid_Loaded(object sender, RoutedEventArgs e)
         {
             if (sender is DataGrid grid)
             {
@@ -270,14 +279,10 @@ namespace IndiLogs_3._0
                 var scrollViewer = FindVisualChild<ScrollViewer>(grid);
                 if (scrollViewer != null)
                 {
-                    // ✅ Cache it!
+                    // Get grid name from element or parent tab
                     string gridName = grid.Name ?? "";
-                    if (!string.IsNullOrEmpty(gridName))
-                    {
-                        _scrollViewerCache[gridName] = scrollViewer;
-                    }
 
-                    // Identify grid name for time-sync
+                    // If no name, try to identify from parent tab
                     if (string.IsNullOrEmpty(gridName))
                     {
                         var parent = FindVisualParent<TabItem>(grid);
@@ -288,6 +293,13 @@ namespace IndiLogs_3._0
                             else if (header == "PLC (FILTERED)") gridName = "FilteredLogsGrid";
                             else if (header == "APP") gridName = "AppLogsGrid";
                         }
+                    }
+
+                    // Cache the ScrollViewer with the grid name
+                    if (!string.IsNullOrEmpty(gridName))
+                    {
+                        _scrollViewerCache[gridName] = scrollViewer;
+                        System.Diagnostics.Debug.WriteLine($"[CACHE] Cached ScrollViewer for grid: {gridName}");
                     }
 
                     // Subscribe to scroll changes
@@ -303,7 +315,7 @@ namespace IndiLogs_3._0
                             _lastUserHorizontalOffset = scrollViewer.HorizontalOffset;
                         }
 
-                        // ✅ Time-Sync on vertical scroll
+                        // Time-Sync on vertical scroll
                         if (args.VerticalChange != 0 && _isUserScrolling && !_isProgrammaticScroll)
                         {
                             TriggerTimeSyncScroll(grid, gridName);
@@ -314,8 +326,22 @@ namespace IndiLogs_3._0
                     scrollViewer.PreviewMouseWheel += (s, args) => { _isUserScrolling = true; };
                     scrollViewer.PreviewMouseDown += (s, args) => { _isUserScrolling = true; };
                     scrollViewer.PreviewMouseUp += (s, args) => {
-                        _isUserScrolling = false;
-                        _lastUserHorizontalOffset = scrollViewer.HorizontalOffset;
+                        // Delay setting _isUserScrolling to false to allow ScrollChanged to fire
+                        System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
+                            System.Windows.Threading.DispatcherPriority.Background,
+                            new Action(() => {
+                                _isUserScrolling = false;
+                                _lastUserHorizontalOffset = scrollViewer.HorizontalOffset;
+                            })
+                        );
+                    };
+
+                    // Also detect scrollbar dragging
+                    scrollViewer.ScrollChanged += (s, args) => {
+                        if (args.VerticalChange != 0 && !_isProgrammaticScroll)
+                        {
+                            _isUserScrolling = true;
+                        }
                     };
                 }
             }
@@ -346,9 +372,6 @@ namespace IndiLogs_3._0
             else if (gridName.Contains("Filtered"))
                 sourceType = "PLCFiltered";
 
-            // DEBUG: Log the scroll trigger
-            System.Diagnostics.Debug.WriteLine($"[TIME-SYNC TRIGGER] Grid: {sourceType}, Time: {logEntry.Date:HH:mm:ss.fff}, Index: {firstVisibleIndex}");
-
             // Trigger the sync
             vm.RequestSyncScroll(logEntry.Date, sourceType);
         }
@@ -371,7 +394,7 @@ namespace IndiLogs_3._0
 
 
         // --- Copy Logic ---
-        private void MainLogsGrid_PreviewKeyDown(object sender, KeyEventArgs e)
+        public void MainLogsGrid_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.C && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
@@ -382,9 +405,9 @@ namespace IndiLogs_3._0
 
         private void CopySelectedLogsToClipboard()
         {
-            if (MainLogsGrid.SelectedItems.Count == 0) return;
+            if (PlcLogsTab?.LogsGrid?.InnerDataGrid?.SelectedItems.Count == 0) return;
             var sb = new StringBuilder();
-            var selectedLogs = MainLogsGrid.SelectedItems.Cast<LogEntry>().OrderBy(l => l.Date).ToList();
+            var selectedLogs = PlcLogsTab.LogsGrid.InnerDataGrid.SelectedItems.Cast<LogEntry>().OrderBy(l => l.Date).ToList();
             int maxTime = 24;
             int maxLevel = Math.Max(5, selectedLogs.Max(l => (l.Level ?? "").Length));
             int maxThread = Math.Max(10, selectedLogs.Max(l => (l.ThreadName ?? "").Length));
@@ -417,7 +440,7 @@ namespace IndiLogs_3._0
             return source as TreeViewItem;
         }
 
-        private void AppLogsGrid_Sorting(object sender, DataGridSortingEventArgs e)
+        public void AppLogsGrid_Sorting(object sender, DataGridSortingEventArgs e)
         {
             e.Handled = true;
             if (DataContext is MainViewModel vm)
@@ -511,13 +534,9 @@ namespace IndiLogs_3._0
                             _tabPanelWidths[_previousTabIndex] = leftPanelColumn.Width.Value;
                         }
 
-                    
-                        else
-                        {
-                            // Restore width for other tabs (or use default)
-                            double newWidth = _tabPanelWidths.ContainsKey(newTabIndex) ? _tabPanelWidths[newTabIndex] : DEFAULT_PANEL_WIDTH;
-                            leftPanelColumn.Width = new GridLength(newWidth);
-                        }
+                        // Restore width for other tabs (or use default)
+                        double newWidth = _tabPanelWidths.ContainsKey(newTabIndex) ? _tabPanelWidths[newTabIndex] : DEFAULT_PANEL_WIDTH;
+                        leftPanelColumn.Width = new GridLength(newWidth);
 
                         _previousTabIndex = newTabIndex;
                     }

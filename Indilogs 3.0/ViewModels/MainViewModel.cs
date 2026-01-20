@@ -23,12 +23,11 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using System.Data.SQLite;
+
 namespace IndiLogs_3._0.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {
-
-
         // --- Child ViewModels (Composition Pattern) ---
         public LogSessionViewModel SessionVM { get; private set; }
         public FilterSearchViewModel FilterVM { get; private set; }
@@ -50,11 +49,12 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         public ICommand BrowseTableCommand { get; }
+        public ICommand CopyTableNameCommand { get; }
         public ICommand ToggleAnnotationCommand { get; }
         public ICommand CloseAnnotationCommand { get; }
         public ICommand ToggleAllAnnotationsCommand { get; }
         public ICommand ToggleVisualModeCommand { get; }
-        // Live monitoring fields moved to LiveVM
+
         public ObservableCollection<LogEntry> MarkedAppLogs => CaseVM?.MarkedAppLogs;
         private readonly LogFileService _logService;
         private readonly LogColoringService _coloringService;
@@ -70,14 +70,14 @@ namespace IndiLogs_3._0.ViewModels
             get => _isAnalysisRunning;
             set { _isAnalysisRunning = value; OnPropertyChanged(); }
         }
-        // State Flags
-        // Caches (moved to SessionVM, kept for backwards compatibility)
+
+        // Caches
         private IList<LogEntry> _allLogsCache;
         private IList<LogEntry> _allAppLogsCache;
 
         // Coloring
         private List<ColoringCondition> _savedColoringRules = new List<ColoringCondition>();
-        // Coloring rules moved to CaseVM
+
         public List<ColoringCondition> MainColoringRules
         {
             get => CaseVM?.MainColoringRules;
@@ -89,23 +89,23 @@ namespace IndiLogs_3._0.ViewModels
             set { if (CaseVM != null) CaseVM.AppColoringRules = value; }
         }
 
-        // Case File & Annotations (delegated to CaseVM)
+        // Case File & Annotations
         public Dictionary<LogEntry, LogAnnotation> LogAnnotations => CaseVM?.LogAnnotations;
-        // Live Monitoring fields moved to LiveVM
-        private const int UI_UPDATE_BATCH_SIZE = 500; // Show 500 logs at a time
+
+        private const int UI_UPDATE_BATCH_SIZE = 500;
         private readonly object _collectionLock = new object();
-        // Collections - delegate to SessionVM
+
+        // Collections
         public IEnumerable<LogEntry> Logs
         {
             get => SessionVM?.Logs;
             set { if (SessionVM != null) SessionVM.Logs = value; OnPropertyChanged(); }
         }
-        // Delegate these to FilterVM
+
         public ObservableRangeCollection<LogEntry> FilteredLogs => FilterVM?.FilteredLogs;
         public ObservableRangeCollection<LogEntry> AppDevLogsFiltered => FilterVM?.AppDevLogsFiltered;
         public ObservableCollection<LoggerNode> LoggerTreeRoot => FilterVM?.LoggerTreeRoot;
 
-        // Delegate these to SessionVM
         public IList<LogEntry> AllLogsCache => SessionVM?.AllLogsCache;
         public IList<LogEntry> AllAppLogsCache => SessionVM?.AllAppLogsCache;
         public ObservableCollection<EventEntry> Events => SessionVM?.Events;
@@ -137,7 +137,7 @@ namespace IndiLogs_3._0.ViewModels
             set { if (SessionVM != null) SessionVM.IsBusy = value; }
         }
 
-        // Delegate these to FilterVM (additional)
+        // Search & Filter Properties
         public string SearchText
         {
             get => FilterVM?.SearchText;
@@ -158,7 +158,6 @@ namespace IndiLogs_3._0.ViewModels
         public bool IsTimeFocusActive => FilterVM?.IsTimeFocusActive ?? false;
         public bool IsAppTimeFocusActive => FilterVM?.IsAppTimeFocusActive ?? false;
 
-        // Filter state delegates
         public FilterNode MainFilterRoot
         {
             get => FilterVM?.MainFilterRoot;
@@ -199,7 +198,7 @@ namespace IndiLogs_3._0.ViewModels
             set { if (FilterVM != null) FilterVM.TreeShowOnlyPrefix = value; }
         }
 
-        // Delegate these to LiveVM
+        // Live Mode
         public bool IsLiveMode
         {
             get => LiveVM?.IsLiveMode ?? false;
@@ -212,16 +211,16 @@ namespace IndiLogs_3._0.ViewModels
         }
         public bool IsPaused => LiveVM?.IsPaused ?? false;
 
-        // Delegate these to CaseVM
+        // Case Management
         public ObservableCollection<SavedConfiguration> SavedConfigs
         {
             get => CaseVM?.SavedConfigs;
-            set { /* Read-only collection, no setter needed */ }
+            set { /* Read-only collection */ }
         }
         public ObservableCollection<LogEntry> MarkedLogs
         {
             get => CaseVM?.MarkedLogs;
-            set { /* Read-only collection, no setter needed */ }
+            set { /* Read-only collection */ }
         }
         public SavedConfiguration SelectedConfig
         {
@@ -239,7 +238,7 @@ namespace IndiLogs_3._0.ViewModels
             set { if (CaseVM != null) CaseVM.ShowAllAnnotations = value; }
         }
 
-        // Delegate these to ConfigVM
+        // Config Explorer
         public ObservableCollection<string> ConfigurationFiles => ConfigVM?.ConfigurationFiles;
         public string SelectedConfigFile
         {
@@ -315,7 +314,6 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
-        // PLC tab is index 0 (PLC LOGS) or 1 (PLC FILTERED)
         public bool IsPLCTabSelected => _selectedTabIndex == 0 || _selectedTabIndex == 1;
 
 
@@ -361,10 +359,6 @@ namespace IndiLogs_3._0.ViewModels
             set { _selectedLog = value; OnPropertyChanged(); }
         }
 
-
-        // Delegate to FilterVM
-
-
         private bool _isSearchSyntaxValid = true;
         public bool IsSearchSyntaxValid
         {
@@ -402,7 +396,6 @@ namespace IndiLogs_3._0.ViewModels
                 return;
             }
 
-            // Only validate if it has boolean operators
             if (QueryParserService.HasBooleanOperators(SearchText))
             {
                 var parser = new QueryParserService();
@@ -549,7 +542,6 @@ namespace IndiLogs_3._0.ViewModels
                 System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] Feature is now: {(value ? "ENABLED ✓" : "DISABLED ✗")}");
                 System.Diagnostics.Debug.WriteLine($"========================================");
 
-                // Also show in status bar
                 StatusMessage = value ? "🔗 Time-Sync ENABLED" : "⛓ Time-Sync DISABLED";
             }
         }
@@ -616,6 +608,10 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand ResetTimeFocusCommand { get; }
         public ICommand ToggleTimeSyncCommand { get; }
 
+        public ICommand AddAnnotationCommand { get; }
+        public ICommand SaveCaseCommand { get; }
+        public ICommand LoadCaseCommand { get; }
+
         public MainViewModel()
         {
             _csvService = new CsvExportService();
@@ -630,47 +626,25 @@ namespace IndiLogs_3._0.ViewModels
             LiveVM = new LiveMonitoringViewModel(this, SessionVM, FilterVM, CaseVM, _logService, _coloringService);
             ConfigVM = new ConfigExplorerViewModel(this, SessionVM);
 
-            // Set dependencies after all ViewModels are created (circular dependency resolution)
+            // Set dependencies
             SessionVM.SetDependencies(FilterVM, CaseVM, ConfigVM, LiveVM);
 
-            // Subscribe to child ViewModel property changes to relay notifications to UI
+            // Subscriptions
             SessionVM.PropertyChanged += (s, e) =>
             {
                 switch (e.PropertyName)
                 {
-                    case nameof(SessionVM.Logs):
-                        OnPropertyChanged(nameof(Logs));
-                        break;
-                    case nameof(SessionVM.AllLogsCache):
-                        OnPropertyChanged(nameof(AllLogsCache));
-                        break;
-                    case nameof(SessionVM.AllAppLogsCache):
-                        OnPropertyChanged(nameof(AllAppLogsCache));
-                        break;
-                    case nameof(SessionVM.Events):
-                        OnPropertyChanged(nameof(Events));
-                        break;
-                    case nameof(SessionVM.Screenshots):
-                        OnPropertyChanged(nameof(Screenshots));
-                        break;
-                    case nameof(SessionVM.LoadedFiles):
-                        OnPropertyChanged(nameof(LoadedFiles));
-                        break;
-                    case nameof(SessionVM.LoadedSessions):
-                        OnPropertyChanged(nameof(LoadedSessions));
-                        break;
-                    case nameof(SessionVM.SelectedSession):
-                        OnPropertyChanged(nameof(SelectedSession));
-                        break;
-                    case nameof(SessionVM.CurrentProgress):
-                        OnPropertyChanged(nameof(CurrentProgress));
-                        break;
-                    case nameof(SessionVM.StatusMessage):
-                        OnPropertyChanged(nameof(StatusMessage));
-                        break;
-                    case nameof(SessionVM.IsBusy):
-                        OnPropertyChanged(nameof(IsBusy));
-                        break;
+                    case nameof(SessionVM.Logs): OnPropertyChanged(nameof(Logs)); break;
+                    case nameof(SessionVM.AllLogsCache): OnPropertyChanged(nameof(AllLogsCache)); break;
+                    case nameof(SessionVM.AllAppLogsCache): OnPropertyChanged(nameof(AllAppLogsCache)); break;
+                    case nameof(SessionVM.Events): OnPropertyChanged(nameof(Events)); break;
+                    case nameof(SessionVM.Screenshots): OnPropertyChanged(nameof(Screenshots)); break;
+                    case nameof(SessionVM.LoadedFiles): OnPropertyChanged(nameof(LoadedFiles)); break;
+                    case nameof(SessionVM.LoadedSessions): OnPropertyChanged(nameof(LoadedSessions)); break;
+                    case nameof(SessionVM.SelectedSession): OnPropertyChanged(nameof(SelectedSession)); break;
+                    case nameof(SessionVM.CurrentProgress): OnPropertyChanged(nameof(CurrentProgress)); break;
+                    case nameof(SessionVM.StatusMessage): OnPropertyChanged(nameof(StatusMessage)); break;
+                    case nameof(SessionVM.IsBusy): OnPropertyChanged(nameof(IsBusy)); break;
                 }
             };
 
@@ -678,30 +652,14 @@ namespace IndiLogs_3._0.ViewModels
             {
                 switch (e.PropertyName)
                 {
-                    case nameof(FilterVM.FilteredLogs):
-                        OnPropertyChanged(nameof(FilteredLogs));
-                        break;
-                    case nameof(FilterVM.AppDevLogsFiltered):
-                        OnPropertyChanged(nameof(AppDevLogsFiltered));
-                        break;
-                    case nameof(FilterVM.SearchText):
-                        OnPropertyChanged(nameof(SearchText));
-                        break;
-                    case nameof(FilterVM.IsSearchPanelVisible):
-                        OnPropertyChanged(nameof(IsSearchPanelVisible));
-                        break;
-                    case nameof(FilterVM.LoggerTreeRoot):
-                        OnPropertyChanged(nameof(LoggerTreeRoot));
-                        break;
-                    case nameof(FilterVM.SelectedTreeItem):
-                        OnPropertyChanged(nameof(SelectedTreeItem));
-                        break;
-                    case nameof(FilterVM.IsMainFilterActive):
-                        OnPropertyChanged(nameof(IsMainFilterActive));
-                        break;
-                    case nameof(FilterVM.IsAppFilterActive):
-                        OnPropertyChanged(nameof(IsAppFilterActive));
-                        break;
+                    case nameof(FilterVM.FilteredLogs): OnPropertyChanged(nameof(FilteredLogs)); break;
+                    case nameof(FilterVM.AppDevLogsFiltered): OnPropertyChanged(nameof(AppDevLogsFiltered)); break;
+                    case nameof(FilterVM.SearchText): OnPropertyChanged(nameof(SearchText)); break;
+                    case nameof(FilterVM.IsSearchPanelVisible): OnPropertyChanged(nameof(IsSearchPanelVisible)); break;
+                    case nameof(FilterVM.LoggerTreeRoot): OnPropertyChanged(nameof(LoggerTreeRoot)); break;
+                    case nameof(FilterVM.SelectedTreeItem): OnPropertyChanged(nameof(SelectedTreeItem)); break;
+                    case nameof(FilterVM.IsMainFilterActive): OnPropertyChanged(nameof(IsMainFilterActive)); break;
+                    case nameof(FilterVM.IsAppFilterActive): OnPropertyChanged(nameof(IsAppFilterActive)); break;
                 }
             };
 
@@ -709,22 +667,14 @@ namespace IndiLogs_3._0.ViewModels
             {
                 switch (e.PropertyName)
                 {
-                    case nameof(LiveVM.IsLiveMode):
-                        OnPropertyChanged(nameof(IsLiveMode));
-                        break;
-                    case nameof(LiveVM.IsRunning):
-                        OnPropertyChanged(nameof(IsRunning));
-                        OnPropertyChanged(nameof(IsPaused));
-                        break;
-                    case nameof(LiveVM.IsPaused):
-                        OnPropertyChanged(nameof(IsPaused));
-                        break;
+                    case nameof(LiveVM.IsLiveMode): OnPropertyChanged(nameof(IsLiveMode)); break;
+                    case nameof(LiveVM.IsRunning): OnPropertyChanged(nameof(IsRunning)); OnPropertyChanged(nameof(IsPaused)); break;
+                    case nameof(LiveVM.IsPaused): OnPropertyChanged(nameof(IsPaused)); break;
                 }
             };
 
             ToggleVisualModeCommand = new RelayCommand(o => IsVisualMode = !IsVisualMode);
 
-            // Delegate to FilterVM
             TreeShowThisCommand = FilterVM.TreeShowThisCommand;
             TreeHideThisCommand = FilterVM.TreeHideThisCommand;
             TreeShowOnlyThisCommand = FilterVM.TreeShowOnlyThisCommand;
@@ -733,7 +683,6 @@ namespace IndiLogs_3._0.ViewModels
             TreeShowAllCommand = FilterVM.TreeShowAllCommand;
             OpenIndigoInvadersCommand = new RelayCommand(OpenIndigoInvaders);
 
-            // These are now managed by SessionVM and FilterVM
             _allLogsCache = SessionVM.AllLogsCache;
             SavedConfigs = new ObservableCollection<SavedConfiguration>();
             MarkedLogs = new ObservableCollection<LogEntry>();
@@ -745,11 +694,13 @@ namespace IndiLogs_3._0.ViewModels
             ToggleConfigMenuCommand = new RelayCommand(o => IsConfigMenuOpen = !IsConfigMenuOpen);
             ToggleTimeSyncCommand = new RelayCommand(o => IsTimeSyncEnabled = !IsTimeSyncEnabled);
             BrowseTableCommand = ConfigVM.BrowseTableCommand;
+            CopyTableNameCommand = new RelayCommand(CopyTableName);
+
+            // --- UPDATED ANNOTATION COMMANDS ---
             ToggleAnnotationCommand = new RelayCommand(ToggleAnnotation);
             CloseAnnotationCommand = new RelayCommand(CloseAnnotation);
-            ToggleAllAnnotationsCommand = new RelayCommand(o => ShowAllAnnotations = !ShowAllAnnotations);
+            ToggleAllAnnotationsCommand = new RelayCommand(ToggleAllAnnotations);
 
-            // Delegate to SessionVM
             LoadCommand = SessionVM.LoadCommand;
             ClearCommand = new RelayCommand(o => { SessionVM.ClearCommand.Execute(o); IsExplorerMenuOpen = false; });
             MarkRowCommand = new RelayCommand(MarkRow);
@@ -766,7 +717,6 @@ namespace IndiLogs_3._0.ViewModels
             ExportParsedDataCommand = new RelayCommand(o => { ExportParsedData(o); IsExplorerMenuOpen = false; });
             RunAnalysisCommand = new RelayCommand(o => { RunAnalysis(o); IsExplorerMenuOpen = false; });
 
-            // Delegate to FilterVM
             ToggleSearchCommand = FilterVM.ToggleSearchCommand;
             CloseSearchCommand = FilterVM.CloseSearchCommand;
             OpenFilterWindowCommand = FilterVM.OpenFilterWindowCommand;
@@ -777,7 +727,6 @@ namespace IndiLogs_3._0.ViewModels
             RemoveConfigCommand = new RelayCommand(o => { RemoveConfiguration(o); IsConfigMenuOpen = false; }, o => SelectedConfig != null);
             ApplyConfigCommand = new RelayCommand(ApplyConfiguration);
 
-            // Delegate to FilterVM
             FilterOutCommand = FilterVM.FilterOutCommand;
             FilterOutThreadCommand = FilterVM.FilterOutThreadCommand;
             OpenThreadFilterCommand = FilterVM.OpenThreadFilterCommand;
@@ -806,12 +755,10 @@ namespace IndiLogs_3._0.ViewModels
                 else GridFontSize = Math.Max(8, GridFontSize - 1);
             });
 
-            // Delegate to LiveVM
             LivePlayCommand = LiveVM.LivePlayCommand;
             LivePauseCommand = LiveVM.LivePauseCommand;
             LiveClearCommand = LiveVM.LiveClearCommand;
 
-            // Case File Commands
             AddAnnotationCommand = new RelayCommand(AddAnnotation);
             SaveCaseCommand = new RelayCommand(SaveCase);
             LoadCaseCommand = new RelayCommand(LoadCase);
@@ -823,7 +770,6 @@ namespace IndiLogs_3._0.ViewModels
 
         private void OnSearchTimerTick(object sender, EventArgs e)
         {
-            // Search debounce timer is now in FilterVM
             ToggleFilterView(IsFilterActive);
         }
 
@@ -835,15 +781,67 @@ namespace IndiLogs_3._0.ViewModels
                 VisualTimelineVM.LoadData(logsToUse.ToList(), Events);
             }
         }
-        // Delegate to SessionVM
+
         public void ProcessFiles(string[] filePaths, Action<LogSessionData> onLoadComplete = null)
             => SessionVM?.ProcessFiles(filePaths, onLoadComplete);
 
 
-        // Delegate to CaseVM
-        private void ToggleAnnotation(object parameter) => CaseVM?.ToggleAnnotationCommand.Execute(parameter);
+        // --- NEW ANNOTATION LOGIC ---
 
-        // Delegate to CaseVM
+        private void ToggleAnnotation(object parameter)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ToggleAnnotation] Called with parameter: {parameter?.GetType().Name}");
+
+            if (parameter is LogEntry log)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ToggleAnnotation] LogEntry found. HasAnnotation={log.HasAnnotation}, IsAnnotationExpanded={log.IsAnnotationExpanded}");
+
+                if (log.HasAnnotation)
+                {
+                    log.IsAnnotationExpanded = !log.IsAnnotationExpanded;
+                    System.Diagnostics.Debug.WriteLine($"[ToggleAnnotation] Toggled to: {log.IsAnnotationExpanded}");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ToggleAnnotation] Log does not have annotation");
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[ToggleAnnotation] Parameter is not LogEntry");
+            }
+        }
+
+        private void ToggleAllAnnotations(object obj)
+        {
+            IEnumerable<LogEntry> targetList = null;
+
+            if (SelectedTabIndex == 2) // APP Tab
+            {
+                targetList = IsAppFilterActive ? AppDevLogsFiltered : (IEnumerable<LogEntry>)SessionVM?.AllAppLogsCache;
+            }
+            else // PLC Tab
+            {
+                targetList = IsFilterActive ? FilteredLogs : (IEnumerable<LogEntry>)Logs;
+            }
+
+            if (targetList == null) return;
+
+            // Check if any is expanded to determine direction
+            bool anyExpanded = targetList.Any(l => l.HasAnnotation && l.IsAnnotationExpanded);
+            bool newState = !anyExpanded;
+
+            foreach (var log in targetList)
+            {
+                if (log.HasAnnotation)
+                {
+                    log.IsAnnotationExpanded = newState;
+                }
+            }
+
+            ShowAllAnnotations = newState;
+        }
+
         private void CloseAnnotation(object parameter) => CaseVM?.CloseAnnotationCommand.Execute(parameter);
 
         private string LoadSqliteContent(byte[] dbBytes)
@@ -853,23 +851,17 @@ namespace IndiLogs_3._0.ViewModels
 
             try
             {
-                // Write DB bytes to a temporary file (SQLite needs a file path)
                 tempDbPath = Path.Combine(Path.GetTempPath(), $"indilogs_temp_{Guid.NewGuid()}.db");
                 File.WriteAllBytes(tempDbPath, dbBytes);
 
                 using (var connection = new SQLiteConnection($"Data Source={tempDbPath};Read Only=True;"))
                 {
                     connection.Open();
-
-                    // Get all table names
                     var tables = new List<string>();
                     using (var cmd = new SQLiteCommand("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;", connection))
                     using (var reader = cmd.ExecuteReader())
                     {
-                        while (reader.Read())
-                        {
-                            tables.Add(reader.GetString(0));
-                        }
+                        while (reader.Read()) { tables.Add(reader.GetString(0)); }
                     }
 
                     sb.AppendLine($"=== SQLite Database: {tables.Count} tables ===");
@@ -878,28 +870,19 @@ namespace IndiLogs_3._0.ViewModels
                     foreach (var tableName in tables)
                     {
                         sb.AppendLine($"━━━ TABLE: {tableName} ━━━");
-
-                        // Get row count
                         using (var countCmd = new SQLiteCommand($"SELECT COUNT(*) FROM [{tableName}]", connection))
                         {
                             var count = countCmd.ExecuteScalar();
                             sb.AppendLine($"Rows: {count}");
                         }
-
-                        // Get column info and data
                         using (var cmd = new SQLiteCommand($"SELECT * FROM [{tableName}] LIMIT 100", connection))
                         using (var reader = cmd.ExecuteReader())
                         {
-                            // Get column names
                             var columns = new List<string>();
-                            for (int i = 0; i < reader.FieldCount; i++)
-                            {
-                                columns.Add(reader.GetName(i));
-                            }
+                            for (int i = 0; i < reader.FieldCount; i++) { columns.Add(reader.GetName(i)); }
                             sb.AppendLine($"Columns: {string.Join(", ", columns)}");
                             sb.AppendLine();
 
-                            // Display data
                             int rowNum = 0;
                             while (reader.Read() && rowNum < 100)
                             {
@@ -907,7 +890,6 @@ namespace IndiLogs_3._0.ViewModels
                                 for (int i = 0; i < reader.FieldCount; i++)
                                 {
                                     var value = reader.IsDBNull(i) ? "NULL" : reader.GetValue(i)?.ToString() ?? "NULL";
-                                    // Truncate very long values
                                     if (value.Length > 500) value = value.Substring(0, 500) + "...";
                                     sb.AppendLine($"  {columns[i]}: {value}");
                                 }
@@ -923,16 +905,13 @@ namespace IndiLogs_3._0.ViewModels
             }
             finally
             {
-                // Clean up temp file
                 if (tempDbPath != null && File.Exists(tempDbPath))
                 {
                     try { File.Delete(tempDbPath); } catch { }
                 }
             }
-
             return sb.ToString();
         }
-
 
         private List<StateEntry> CalculateStatesInternal(IEnumerable<LogEntry> logs)
         {
@@ -1063,7 +1042,6 @@ namespace IndiLogs_3._0.ViewModels
 
             if (IsLiveMode)
             {
-                // Live monitoring continues - state managed by LiveVM
                 IsRunning = true;
                 StatusMessage = "Cleared. Monitoring continues...";
                 Debug.WriteLine("LiveClear: Cleared UI, monitoring continues");
@@ -1091,11 +1069,7 @@ namespace IndiLogs_3._0.ViewModels
             IsFilterOutActive = false; LoadedSessions.Clear(); SelectedSession = null;
             SessionVM.AllAppLogsCache = null;
             ResetTreeFilters();
-
-            // --- CLEAR CONFIG EXPLORER ---
             ConfigVM.ClearConfigurationFiles();
-            // -----------------------------
-
             VisualTimelineVM?.Clear();
             IsVisualMode = false;
         }
@@ -1265,8 +1239,7 @@ namespace IndiLogs_3._0.ViewModels
             invadersWindow.Owner = Application.Current.MainWindow;
             invadersWindow.ShowDialog();
         }
-        // SwitchToSession is now implemented in LogSessionViewModel and called automatically when SelectedSession changes
-        // Delegate to FilterVM
+
         private void BuildLoggerTree(IEnumerable<LogEntry> logs) => FilterVM?.BuildLoggerTree(logs);
         private void ExecuteTreeShowThis(object obj)
         {
@@ -1353,8 +1326,7 @@ namespace IndiLogs_3._0.ViewModels
         {
             if (parameter is LogEntry log)
             {
-                var annotation = GetAnnotation(log);
-                new LogDetailsWindow(log, annotation).Show();
+                new LogDetailsWindow(log).Show();
             }
         }
         public async void SortAppLogs(string sortBy, bool ascending)
@@ -1382,20 +1354,13 @@ namespace IndiLogs_3._0.ViewModels
                 });
             });
         }
-        // Delegate to FilterVM
-        private void ToggleFilterView(bool show) => FilterVM?.ToggleFilterView(show);
-        // Delegate to FilterVM
-        private void UpdateMainLogsFilter(bool show) => FilterVM?.ApplyMainLogsFilter();
-        // Delegate to FilterVM
-        private void ApplyAppLogsFilter() => FilterVM?.ApplyAppLogsFilter();
-        // Indilogs 3.0/ViewModels/MainViewModel.cs
 
-        // Delegate live monitoring to LiveVM
+        private void ToggleFilterView(bool show) => FilterVM?.ToggleFilterView(show);
+        private void UpdateMainLogsFilter(bool show) => FilterVM?.ApplyMainLogsFilter();
+        private void ApplyAppLogsFilter() => FilterVM?.ApplyAppLogsFilter();
+
         private void StartLiveMonitoring(string path) => LiveVM?.StartLiveMonitoring(path);
         private void StopLiveMonitoring() => LiveVM?.StopLiveMonitoring();
-
-        // OLD IMPLEMENTATION REMOVED - Now delegated to LiveVM
-
 
         private void LivePlay(object obj) => LiveVM?.LivePlayCommand.Execute(obj);
         private void LivePause(object obj) => LiveVM?.LivePauseCommand.Execute(obj);
@@ -1425,7 +1390,6 @@ namespace IndiLogs_3._0.ViewModels
                         FilterVM.MainFilterRoot = newRoot;
                         if (hasAdvanced)
                         {
-                            // Thread-safe enumeration: create a copy of the collection before filtering
                             List<LogEntry> cacheCopy;
                             lock (_collectionLock)
                             {
@@ -1447,7 +1411,7 @@ namespace IndiLogs_3._0.ViewModels
                 });
             }
         }
-        // Delegate to FilterVM
+
         private bool EvaluateFilterNode(LogEntry log, FilterNode node) => FilterVM?.EvaluateFilterNode(log, node) ?? true;
         private async void ExportParsedData(object obj)
         {
@@ -1536,7 +1500,7 @@ namespace IndiLogs_3._0.ViewModels
                 dict.Remove(key);
             dict.Add(key, value);
         }
-        // Delegate to CaseVM
+
         private void MarkRow(object obj) => CaseVM?.MarkLogCommand.Execute(obj);
         private void GoToNextMarked(object obj) => CaseVM?.GoToNextMarkedCommand.Execute(obj);
         private void GoToPrevMarked(object obj) => CaseVM?.GoToPrevMarkedCommand.Execute(obj);
@@ -1568,45 +1532,33 @@ namespace IndiLogs_3._0.ViewModels
                     isBold ? System.Windows.FontWeights.Bold : System.Windows.FontWeights.Normal);
             }
         }
-        // Delegate to CaseVM
+
         private void OpenMarkedLogsWindow(object obj) => CaseVM?.OpenMarkedWindowCommand.Execute(obj);
-        // Delegate to FilterVM
         private bool IsDefaultLog(LogEntry l) => FilterVM?.IsDefaultLog(l) ?? false;
         private void OpenUrl(string url) { try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); } catch { } }
         private void OpenOutlook(object obj) { try { Process.Start("outlook.exe", "/c ipm.note"); } catch { OpenUrl("mailto:"); } }
         private void OpenKibana(object obj) { }
+
+        private void CopyTableName(object parameter)
+        {
+            if (parameter is DbTreeNode node && !string.IsNullOrEmpty(node.Name))
+            {
+                try
+                {
+                    Clipboard.SetText(node.Name);
+                }
+                catch { }
+            }
+        }
         public void OnFilesDropped(string[] files) { if (files != null && files.Length > 0) ProcessFiles(files); }
 
-        // ============================================================================
-        // CASE FILE & ANNOTATIONS
-        // ============================================================================
-
-        public ICommand AddAnnotationCommand { get; }
-        public ICommand SaveCaseCommand { get; }
-        public ICommand LoadCaseCommand { get; }
-
-        /// <summary>
-        /// Gets annotation for a specific log entry, or null if none exists
-        /// </summary>
-        // Delegate to CaseVM
         public LogAnnotation GetAnnotation(LogEntry log) => CaseVM?.GetAnnotation(log);
         private void AddAnnotation(object parameter) => CaseVM?.AddAnnotationCommand.Execute(parameter);
-
-        /// <summary>
-        /// Saves current investigation state to a .indi-case file
-        /// </summary>
         private void SaveCase(object parameter) => CaseVM?.SaveCaseCommand.Execute(parameter);
-
-
         private void LoadCase(object parameter) => CaseVM?.LoadCaseCommand.Execute(parameter);
-
 
         // ==================== TIME-SYNC SCROLLING METHODS ====================
 
-        /// <summary>
-        /// Linear search for the nearest log entry by timestamp
-        /// Works on both sorted and unsorted collections (O(N))
-        /// </summary>
         private int LinearSearchNearest(IList<LogEntry> collection, DateTime targetTime)
         {
             if (collection == null || collection.Count == 0)
@@ -1628,8 +1580,6 @@ namespace IndiLogs_3._0.ViewModels
                     minDiff = currentDiff;
                     nearestIndex = i;
                 }
-
-                // Early exit if we found an exact match
                 if (minDiff.TotalMilliseconds < 1)
                     break;
             }
@@ -1639,58 +1589,22 @@ namespace IndiLogs_3._0.ViewModels
             return nearestIndex;
         }
 
-        /// <summary>
-        /// Binary search for the nearest log entry by timestamp
-        /// WARNING: This assumes the collection is sorted by Date!
-        /// </summary>
         private int BinarySearchNearest(IList<LogEntry> collection, DateTime targetTime)
         {
-            if (collection == null || collection.Count == 0)
-            {
-                System.Diagnostics.Debug.WriteLine("[BINARY SEARCH] Collection is null or empty");
-                return -1;
-            }
-
-            // DEBUG: Check if collection is sorted
-            bool isSorted = true;
-            for (int i = 1; i < Math.Min(10, collection.Count); i++)
-            {
-                if (collection[i].Date < collection[i - 1].Date)
-                {
-                    isSorted = false;
-                    break;
-                }
-            }
-            System.Diagnostics.Debug.WriteLine($"[BINARY SEARCH] Collection count: {collection.Count}, First 10 sorted: {isSorted}");
-            System.Diagnostics.Debug.WriteLine($"[BINARY SEARCH] Range: {collection[0].Date:HH:mm:ss.fff} to {collection[collection.Count - 1].Date:HH:mm:ss.fff}");
-            System.Diagnostics.Debug.WriteLine($"[BINARY SEARCH] Target: {targetTime:HH:mm:ss.fff}");
+            if (collection == null || collection.Count == 0) return -1;
 
             int left = 0;
             int right = collection.Count - 1;
 
-            // Check bounds
-            if (targetTime <= collection[0].Date)
-            {
-                System.Diagnostics.Debug.WriteLine($"[BINARY SEARCH] Target before first entry, returning 0");
-                return 0;
-            }
-            if (targetTime >= collection[right].Date)
-            {
-                System.Diagnostics.Debug.WriteLine($"[BINARY SEARCH] Target after last entry, returning {right}");
-                return right;
-            }
+            if (targetTime <= collection[0].Date) return 0;
+            if (targetTime >= collection[right].Date) return right;
 
-            // Binary search
             while (left <= right)
             {
                 int mid = left + (right - left) / 2;
                 DateTime midTime = collection[mid].Date;
 
-                if (midTime == targetTime)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[BINARY SEARCH] Exact match at index {mid}");
-                    return mid;
-                }
+                if (midTime == targetTime) return mid;
 
                 if (midTime < targetTime)
                     left = mid + 1;
@@ -1698,14 +1612,7 @@ namespace IndiLogs_3._0.ViewModels
                     right = mid - 1;
             }
 
-            // At this point, left is the index of the first element greater than targetTime
-            // and right is the index of the last element less than targetTime
-            // Return the closer one
-            if (left >= collection.Count)
-            {
-                System.Diagnostics.Debug.WriteLine($"[BINARY SEARCH] Left out of bounds, returning {right}");
-                return right;
-            }
+            if (left >= collection.Count) return right;
 
             DateTime leftTime = collection[left].Date;
             DateTime rightTime = collection[right].Date;
@@ -1713,39 +1620,23 @@ namespace IndiLogs_3._0.ViewModels
             TimeSpan leftDiff = (leftTime - targetTime).Duration();
             TimeSpan rightDiff = (targetTime - rightTime).Duration();
 
-            int result = leftDiff < rightDiff ? left : right;
-            System.Diagnostics.Debug.WriteLine($"[BINARY SEARCH] Nearest match at index {result} ({collection[result].Date:HH:mm:ss.fff})");
-
-            return result;
+            return leftDiff < rightDiff ? left : right;
         }
 
-        /// <summary>
-        /// Request synchronization scroll from one grid to another based on timestamp
-        /// </summary>
         public void RequestSyncScroll(DateTime targetTime, string sourceGrid)
         {
-            if (!IsTimeSyncEnabled || _isSyncScrolling)
-            {
-                System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] Skipped - Enabled: {IsTimeSyncEnabled}, Syncing: {_isSyncScrolling}");
-                return;
-            }
+            if (!IsTimeSyncEnabled || _isSyncScrolling) return;
 
             _isSyncScrolling = true;
 
             try
             {
-                // Apply time offset if configured
                 DateTime adjustedTime = targetTime.AddSeconds(TimeSyncOffsetSeconds);
-
-                // Determine target collection based on source
                 IList<LogEntry> targetCollection = null;
                 string targetGrid = null;
 
-                System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] Source: {sourceGrid}, Target time: {adjustedTime:HH:mm:ss.fff}");
-
                 if (sourceGrid == "PLC" || sourceGrid == "PLCFiltered")
                 {
-                    // Source is PLC, sync to APP
                     if (AppDevLogsFiltered != null && AppDevLogsFiltered.Count > 0)
                     {
                         targetCollection = AppDevLogsFiltered;
@@ -1754,8 +1645,6 @@ namespace IndiLogs_3._0.ViewModels
                 }
                 else if (sourceGrid == "APP")
                 {
-                    // Source is APP, sync to PLC
-                    // Use FilteredLogs if available and active, otherwise use main Logs
                     if (FilteredLogs != null && FilteredLogs.Count > 0 && SelectedTabIndex == 1)
                     {
                         targetCollection = FilteredLogs;
@@ -1768,15 +1657,8 @@ namespace IndiLogs_3._0.ViewModels
                     }
                 }
 
-                if (targetCollection == null || targetCollection.Count == 0)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] No target collection available");
-                    return;
-                }
+                if (targetCollection == null || targetCollection.Count == 0) return;
 
-                System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] Target grid: {targetGrid}, Collection size: {targetCollection.Count}");
-
-                // Find nearest log entry (using linear search for now - works on filtered/unfiltered)
                 int nearestIndex = LinearSearchNearest(targetCollection, adjustedTime);
 
                 if (nearestIndex >= 0)
@@ -1784,15 +1666,9 @@ namespace IndiLogs_3._0.ViewModels
                     LogEntry nearestLog = targetCollection[nearestIndex];
                     TimeSpan timeDiff = (nearestLog.Date - adjustedTime).Duration();
 
-                    System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] Found match at index {nearestIndex}: {nearestLog.Date:HH:mm:ss.fff} (diff: {timeDiff.TotalSeconds:F1}s)");
-
-                    // Only sync if the match is within acceptable range (60 seconds)
                     if (timeDiff.TotalSeconds <= 60)
                     {
-                        // Trigger scroll to the found log entry
                         RequestScrollToLog?.Invoke(nearestLog);
-
-                        // Update status with sync info
                         Application.Current?.Dispatcher?.Invoke(() =>
                         {
                             StatusMessage = $"🔗 Synced {sourceGrid} ↔ {targetGrid} (±{timeDiff.TotalSeconds:F1}s)";
@@ -1800,16 +1676,11 @@ namespace IndiLogs_3._0.ViewModels
                     }
                     else
                     {
-                        // Show notification that no correlated logs found nearby
                         Application.Current?.Dispatcher?.Invoke(() =>
                         {
                             StatusMessage = $"⚠ No correlated logs within 60s (closest: {timeDiff.TotalSeconds:F0}s)";
                         });
                     }
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"[TIME-SYNC] No match found");
                 }
             }
             finally
@@ -1820,8 +1691,6 @@ namespace IndiLogs_3._0.ViewModels
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-
-        // Public method for child ViewModels to notify property changes on MainViewModel
         public void NotifyPropertyChanged(string propertyName) => OnPropertyChanged(propertyName);
     }
-} 
+}
