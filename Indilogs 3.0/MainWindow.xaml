@@ -154,7 +154,7 @@
                                                 <TextBlock Text="📊 Export CSV"/>
                                             </Viewbox>
                                         </Button>
-                                        <Button Command="{Binding RunAnalysisCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsPLCTabSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Button Command="{Binding RunAnalysisCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5">
                                             <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
                                                 <TextBlock Text="⚙ Reports"/>
                                             </Viewbox>
@@ -224,6 +224,51 @@
                                     </Grid>
                                 </Button>
                             </Grid>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem Header="LOGGERS">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="APP LOGGERS" Foreground="{DynamicResource TextSecondary}" FontWeight="Bold" FontSize="11" Margin="15,15,0,10"/>
+                            <TreeView Grid.Row="1" ItemsSource="{Binding LoggerTreeRoot}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" Margin="5,0">
+                                <TreeView.ItemContainerStyle>
+                                    <Style TargetType="TreeViewItem">
+                                        <Setter Property="IsExpanded" Value="False"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsHidden}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                                <Setter Property="FontStyle" Value="Italic"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TreeView.ItemContainerStyle>
+                                <TreeView.ItemTemplate>
+                                    <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                        <Grid Margin="0,2">
+                                            <Grid.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Show This" Command="{Binding DataContext.TreeShowThisCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                                    <MenuItem Header="Hide This" Command="{Binding DataContext.TreeHideThisCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                                    <MenuItem Header="Show Only This" Command="{Binding DataContext.TreeShowOnlyThisCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                                    <MenuItem Header="Show With Children" Command="{Binding DataContext.TreeShowWithChildrenCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                                    <MenuItem Header="Hide With Children" Command="{Binding DataContext.TreeHideWithChildrenCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                                    <Separator/>
+                                                    <MenuItem Header="Show All" Command="{Binding DataContext.TreeShowAllCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                </ContextMenu>
+                                            </Grid.ContextMenu>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Name}" ToolTip="{Binding FullPath}" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Count, StringFormat=' ({0})'}" Foreground="{DynamicResource TextSecondary}" Margin="5,0,0,0" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </HierarchicalDataTemplate>
+                                </TreeView.ItemTemplate>
+                            </TreeView>
                         </Grid>
                     </TabItem>
                 </TabControl>

@@ -1060,6 +1060,7 @@ namespace IndiLogs_3._0.ViewModels
 
         private void ClearLogs(object obj)
         {
+            System.Diagnostics.Debug.WriteLine("[CLEAR] Clear All command executed");
             CaseVM?.ClearMarkedLogs();
             FilterVM.IsMainFilterActive = false; FilterVM.IsAppFilterActive = false;
             FilterVM.IsMainFilterOutActive = false; FilterVM.IsAppFilterOutActive = false;
@@ -1071,13 +1072,24 @@ namespace IndiLogs_3._0.ViewModels
             FilterVM.ActiveThreadFilters.Clear();
             Logs = new List<LogEntry>(); FilteredLogs?.Clear(); AppDevLogsFiltered?.Clear();
             LoggerTreeRoot?.Clear(); Events.Clear(); Screenshots.Clear();
-            LoadedFiles.Clear(); CurrentProgress = 0; SetupInfo = ""; PressConfig = ""; ScreenshotZoom = 400;
+            LoadedFiles.Clear(); CurrentProgress = 0;
+
+            // Clear all text info
+            SetupInfo = "";
+            PressConfig = "";
+            VersionsInfo = "";
+            WindowTitle = "IndiLogs 3.0";
+
+            ScreenshotZoom = 400;
             IsFilterOutActive = false; LoadedSessions.Clear(); SelectedSession = null;
             SessionVM.AllAppLogsCache = null;
             ResetTreeFilters();
             ConfigVM.ClearConfigurationFiles();
             VisualTimelineVM?.Clear();
             IsVisualMode = false;
+
+            System.Diagnostics.Debug.WriteLine("[CLEAR] All data cleared successfully");
+            StatusMessage = "All data cleared";
         }
 
         private void OpenStatesWindow(object obj)

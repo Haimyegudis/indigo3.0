@@ -41,9 +41,11 @@ namespace IndiLogs_3._0.ViewModels.Components
             get => _isSearchPanelVisible;
             set
             {
+                System.Diagnostics.Debug.WriteLine($"[SEARCH] IsSearchPanelVisible setter called. Old value: {_isSearchPanelVisible}, New value: {value}");
                 _isSearchPanelVisible = value;
                 OnPropertyChanged();
                 _parent?.NotifyPropertyChanged(nameof(_parent.IsSearchPanelVisible));
+                System.Diagnostics.Debug.WriteLine($"[SEARCH] PropertyChanged notified for IsSearchPanelVisible");
             }
         }
 
@@ -268,8 +270,17 @@ namespace IndiLogs_3._0.ViewModels.Components
             _searchDebounceTimer.Interval = TimeSpan.FromMilliseconds(500);
             _searchDebounceTimer.Tick += OnSearchTimerTick;
 
-            ToggleSearchCommand = new RelayCommand(o => IsSearchPanelVisible = !IsSearchPanelVisible);
-            CloseSearchCommand = new RelayCommand(o => IsSearchPanelVisible = false);
+            ToggleSearchCommand = new RelayCommand(o =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[SEARCH] ToggleSearchCommand executed. Current visibility: {IsSearchPanelVisible}");
+                IsSearchPanelVisible = !IsSearchPanelVisible;
+                System.Diagnostics.Debug.WriteLine($"[SEARCH] New visibility: {IsSearchPanelVisible}");
+            });
+            CloseSearchCommand = new RelayCommand(o =>
+            {
+                System.Diagnostics.Debug.WriteLine("[SEARCH] CloseSearchCommand executed");
+                IsSearchPanelVisible = false;
+            });
             OpenFilterWindowCommand = new RelayCommand(OpenFilterWindow);
             FilterOutCommand = new RelayCommand(FilterOut);
             FilterOutThreadCommand = new RelayCommand(FilterOutThread);
@@ -879,27 +890,41 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         private void ExecuteTreeShowThis(object obj)
         {
+            System.Diagnostics.Debug.WriteLine($"[TREE FILTER] ExecuteTreeShowThis called with: {obj?.GetType().Name}");
             if (obj is LoggerNode node)
             {
+                System.Diagnostics.Debug.WriteLine($"[TREE FILTER] Showing logger: {node.FullPath}");
                 _treeShowOnlyLogger = null;
                 _treeShowOnlyPrefix = null;
                 _treeHiddenLoggers.Remove(node.FullPath);
                 node.IsHidden = false;
                 IsAppFilterActive = true;
                 ToggleFilterView(true);
+                System.Diagnostics.Debug.WriteLine($"[TREE FILTER] IsAppFilterActive set to true, filter applied");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[TREE FILTER] Parameter is not LoggerNode!");
             }
         }
 
         private void ExecuteTreeHideThis(object obj)
         {
+            System.Diagnostics.Debug.WriteLine($"[TREE FILTER] ExecuteTreeHideThis called with: {obj?.GetType().Name}");
             if (obj is LoggerNode node)
             {
+                System.Diagnostics.Debug.WriteLine($"[TREE FILTER] Hiding logger: {node.FullPath}");
                 _treeShowOnlyLogger = null;
                 _treeShowOnlyPrefix = null;
                 _treeHiddenLoggers.Add(node.FullPath);
                 node.IsHidden = true;
                 IsAppFilterActive = true;
                 ToggleFilterView(true);
+                System.Diagnostics.Debug.WriteLine($"[TREE FILTER] IsAppFilterActive set to true, filter applied");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[TREE FILTER] Parameter is not LoggerNode!");
             }
         }
 

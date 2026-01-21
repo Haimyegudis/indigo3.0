@@ -189,7 +189,8 @@ namespace IndiLogs_3._0.Views
 
             return grouped.Select(g => new ErrorStat
             {
-                Message = g.Key, // Used for Name/Message display
+                Name = g.Key,    // For Logger/Thread names
+                Message = g.Key, // For error messages
                 Count = g.Count,
                 DisplayText = $"{g.Count:N0}",
                 BarWidth = maxCount > 0 ? (double)g.Count / maxCount * (keySelector == null ? 300 : 200) : 0
