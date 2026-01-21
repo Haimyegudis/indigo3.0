@@ -376,6 +376,53 @@ namespace IndiLogs_3._0.ViewModels.Components
             System.Diagnostics.Debug.WriteLine("[SESSION VM] Resetting properties...");
             SelectedSession = null;
             CurrentProgress = 0;
+
+            // Clear text info properties in parent
+            _parent.SetupInfo = "";
+            _parent.PressConfig = "";
+            _parent.VersionsInfo = "";
+            _parent.WindowTitle = "IndiLogs 3.0";
+
+            // Clear FilterVM collections directly
+            System.Diagnostics.Debug.WriteLine("[SESSION VM] Clearing FilterVM collections...");
+            if (_filterVM != null)
+            {
+                // Reset tree filters first
+                _filterVM.ResetTreeFilters();
+
+                if (_filterVM.FilteredLogs != null)
+                {
+                    _filterVM.FilteredLogs.Clear();
+                    _parent.OnPropertyChanged(nameof(_parent.FilteredLogs));
+                }
+
+                if (_filterVM.AppDevLogsFiltered != null)
+                {
+                    _filterVM.AppDevLogsFiltered.Clear();
+                    _parent.OnPropertyChanged(nameof(_parent.AppDevLogsFiltered));
+                }
+
+                if (_filterVM.LoggerTreeRoot != null)
+                {
+                    _filterVM.LoggerTreeRoot.Clear();
+                    _parent.OnPropertyChanged(nameof(_parent.LoggerTreeRoot));
+                }
+            }
+
+            // Clear ConfigVM collections directly
+            System.Diagnostics.Debug.WriteLine("[SESSION VM] Clearing ConfigVM collections...");
+            if (_configVM != null)
+            {
+                _configVM.ClearConfigurationFiles();
+                _parent.OnPropertyChanged(nameof(_parent.ConfigurationFiles));
+                _parent.OnPropertyChanged(nameof(_parent.DbTreeNodes));
+                _parent.OnPropertyChanged(nameof(_parent.SelectedConfigFile));
+                _parent.OnPropertyChanged(nameof(_parent.ConfigFileContent));
+                _parent.OnPropertyChanged(nameof(_parent.FilteredConfigContent));
+                _parent.OnPropertyChanged(nameof(_parent.ConfigSearchText));
+                _parent.OnPropertyChanged(nameof(_parent.IsDbFileSelected));
+            }
+
             StatusMessage = "Logs cleared";
 
             System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════════════════════");

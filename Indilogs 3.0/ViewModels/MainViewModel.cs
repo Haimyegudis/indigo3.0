@@ -1108,17 +1108,17 @@ namespace IndiLogs_3._0.ViewModels
                     if (FilterVM.ActiveMethodFilters != null)
                         FilterVM.ActiveMethodFilters.Clear();
 
-                    System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing FilteredLogs: {FilteredLogs?.Count ?? 0} items");
-                    if (FilteredLogs != null)
-                        FilteredLogs.Clear();
-
-                    System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing AppDevLogsFiltered: {AppDevLogsFiltered?.Count ?? 0} items");
-                    if (AppDevLogsFiltered != null)
-                        AppDevLogsFiltered.Clear();
+                    // Note: FilteredLogs and AppDevLogsFiltered are already cleared by SessionVM
+                    // This is just a backup to ensure they are cleared
+                    System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Backup: Checking FilteredLogs: {FilteredLogs?.Count ?? 0} items");
+                    System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Backup: Checking AppDevLogsFiltered: {AppDevLogsFiltered?.Count ?? 0} items");
 
                     System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing LoggerTreeRoot: {LoggerTreeRoot?.Count ?? 0} items");
                     if (LoggerTreeRoot != null)
+                    {
                         LoggerTreeRoot.Clear();
+                        OnPropertyChanged(nameof(LoggerTreeRoot));
+                    }
 
                     FilterVM.SearchText = "";
                     FilterVM.IsSearchPanelVisible = false;
@@ -1129,36 +1129,14 @@ namespace IndiLogs_3._0.ViewModels
                 Logs = new List<LogEntry>();
                 OnPropertyChanged(nameof(Logs));
 
-                // Step 5: Clear configuration
-                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 5: Clearing configuration...");
-                ConfigVM?.ClearConfigurationFiles();
-
-                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing ConfigFileContent (was: {ConfigFileContent?.Length ?? 0} chars)");
-                ConfigFileContent = "";
-                OnPropertyChanged(nameof(ConfigFileContent));
-
-                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing ConfigSearchText");
-                ConfigSearchText = "";
-                OnPropertyChanged(nameof(ConfigSearchText));
-
-                // ⚠️ THIS IS THE CRITICAL PART - Clear text info ⚠️
-                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 6: Clearing text info (CRITICAL)...");
-
-                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing SetupInfo (was: {SetupInfo?.Length ?? 0} chars)");
-                SetupInfo = "";
-                OnPropertyChanged(nameof(SetupInfo));
-
-                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing PressConfig (was: {PressConfig?.Length ?? 0} chars)");
-                PressConfig = "";
-                OnPropertyChanged(nameof(PressConfig));
-
-                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing VersionsInfo (was: {VersionsInfo?.Length ?? 0} chars)");
-                VersionsInfo = "";
-                OnPropertyChanged(nameof(VersionsInfo));
-
-                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Resetting WindowTitle");
-                WindowTitle = "IndiLogs 3.0";
-                OnPropertyChanged(nameof(WindowTitle));
+                // Note: Configuration and text info are already cleared by SessionVM
+                // This is just logging to verify they were cleared
+                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 5: Verifying configuration cleared...");
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] ConfigurationFiles count: {ConfigurationFiles?.Count ?? 0}");
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] DbTreeNodes count: {DbTreeNodes?.Count ?? 0}");
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] SetupInfo length: {SetupInfo?.Length ?? 0}");
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] PressConfig length: {PressConfig?.Length ?? 0}");
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] VersionsInfo length: {VersionsInfo?.Length ?? 0}");
 
                 // Step 7: Reset UI state
                 System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 7: Resetting UI state...");

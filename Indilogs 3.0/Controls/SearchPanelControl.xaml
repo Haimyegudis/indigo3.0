@@ -12,7 +12,7 @@
 
     <Border VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,15,40,0" Panel.ZIndex="100"
             Background="{DynamicResource BgCard}" CornerRadius="20" Padding="8,4"
-            Visibility="{Binding IsSearchPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+            Visibility="{Binding IsSearchPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
         <Border.Effect>
             <DropShadowEffect BlurRadius="15" ShadowDepth="4" Opacity="0.4" Color="Black"/>
         </Border.Effect>
@@ -22,7 +22,7 @@
                      Background="Transparent" BorderBrush="Transparent" BorderThickness="0" Padding="2"
                      VerticalContentAlignment="Center" CaretBrush="{DynamicResource PrimaryColor}"
                      IsVisibleChanged="SearchTextBox_IsVisibleChanged"
-                     ToolTip="{Binding SearchSyntaxError}">
+                     ToolTip="{Binding SearchSyntaxError}" TextChanged="SearchTextBox_TextChanged">
                 <TextBox.Style>
                     <Style TargetType="TextBox">
                         <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>

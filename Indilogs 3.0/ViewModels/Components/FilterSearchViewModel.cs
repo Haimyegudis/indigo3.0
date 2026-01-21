@@ -299,11 +299,16 @@ namespace IndiLogs_3._0.ViewModels.Components
                 System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
                 System.Diagnostics.Debug.WriteLine($"[SEARCH CMD] ToggleSearchCommand CALLED");
                 System.Diagnostics.Debug.WriteLine($"[SEARCH CMD] Current: {IsSearchPanelVisible}");
-                System.Diagnostics.Debug.WriteLine($"[SEARCH CMD] Toggling to: {!IsSearchPanelVisible}");
 
-                IsSearchPanelVisible = !IsSearchPanelVisible;
+                // Force refresh by toggling if already true
+                if (IsSearchPanelVisible)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SEARCH CMD] Already visible, forcing refresh");
+                    IsSearchPanelVisible = false;
+                }
+                IsSearchPanelVisible = true;
 
-                System.Diagnostics.Debug.WriteLine($"[SEARCH CMD] After toggle: {IsSearchPanelVisible}");
+                System.Diagnostics.Debug.WriteLine($"[SEARCH CMD] After: {IsSearchPanelVisible}");
                 System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
             });
             CloseSearchCommand = new RelayCommand(o =>

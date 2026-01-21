@@ -14,9 +14,18 @@ namespace IndiLogs_3._0.Controls
         {
             if (SearchTextBox.IsVisible)
             {
-                SearchTextBox.Focus();
-                SearchTextBox.SelectAll();
+                // Use Dispatcher to ensure focus happens after UI is rendered
+                Dispatcher.BeginInvoke(new System.Action(() =>
+                {
+                    SearchTextBox.Focus();
+                    SearchTextBox.SelectAll();
+                }), System.Windows.Threading.DispatcherPriority.Input);
             }
+        }
+
+        private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+
         }
     }
 }
