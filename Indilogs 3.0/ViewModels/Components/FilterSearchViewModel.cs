@@ -58,7 +58,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     if (_parent != null)
                     {
                         System.Diagnostics.Debug.WriteLine($"[SEARCH PROP SET] Notifying parent");
-                        _parent?.OnPropertyChanged(nameof(_parent.IsSearchPanelVisible));
+                        _parent.NotifyPropertyChanged(nameof(_parent.IsSearchPanelVisible));
                     }
                     else
                     {
@@ -298,11 +298,12 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
                 System.Diagnostics.Debug.WriteLine($"[SEARCH CMD] ToggleSearchCommand CALLED");
-                System.Diagnostics.Debug.WriteLine($"[SEARCH CMD] Current IsSearchPanelVisible: {IsSearchPanelVisible}");
+                System.Diagnostics.Debug.WriteLine($"[SEARCH CMD] Current: {IsSearchPanelVisible}");
                 System.Diagnostics.Debug.WriteLine($"[SEARCH CMD] Toggling to: {!IsSearchPanelVisible}");
 
                 IsSearchPanelVisible = !IsSearchPanelVisible;
 
+                System.Diagnostics.Debug.WriteLine($"[SEARCH CMD] After toggle: {IsSearchPanelVisible}");
                 System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
             });
             CloseSearchCommand = new RelayCommand(o =>
@@ -989,7 +990,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
         }
 
-
         private void ExecuteTreeShowOnlyThis(object obj)
         {
             System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
@@ -1057,7 +1057,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             System.Diagnostics.Debug.WriteLine($"[TREE] Result: AppDevLogsFiltered count={_appDevLogsFiltered?.Count ?? 0}");
             System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
         }
-
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

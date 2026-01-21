@@ -203,23 +203,6 @@ namespace IndiLogs_3._0.ViewModels
                 OnPropertyChanged();
             }
         }
-        public string SearchText
-        {
-            get => FilterVM?.SearchText;
-            set { if (FilterVM != null) FilterVM.SearchText = value; }
-        }
-
-        // הוסף כאן:
-        public bool IsSearchPanelVisible
-        {
-            get => FilterVM?.IsSearchPanelVisible ?? false;
-            set
-            {
-                if (FilterVM != null)
-                    FilterVM.IsSearchPanelVisible = value;
-                OnPropertyChanged();
-            }
-        }
         // Live Mode
         public bool IsLiveMode
         {
@@ -1088,8 +1071,8 @@ namespace IndiLogs_3._0.ViewModels
 
             try
             {
-                // Step 1: Clear SessionVM
-                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 1: Calling SessionVM.Clear()...");
+                // Step 1: Clear SessionVM (this clears logs, events, screenshots)
+                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 1: Calling SessionVM.ClearCommand...");
                 SessionVM?.ClearCommand.Execute(null);
 
                 // Step 2: Clear case management
@@ -1112,27 +1095,36 @@ namespace IndiLogs_3._0.ViewModels
                     FilterVM.IsAppTimeFocusActive = false;
                     FilterVM.IsTimeFocusActive = false;
 
-                    FilterVM.LastFilteredAppCache?.Clear();
-                    FilterVM.LastFilteredCache?.Clear();
-                    FilterVM.NegativeFilters?.Clear();
-                    FilterVM.ActiveThreadFilters?.Clear();
-                    FilterVM.ActiveLoggerFilters?.Clear();
-                    FilterVM.ActiveMethodFilters?.Clear();
+                    if (FilterVM.LastFilteredAppCache != null)
+                        FilterVM.LastFilteredAppCache.Clear();
+                    if (FilterVM.LastFilteredCache != null)
+                        FilterVM.LastFilteredCache.Clear();
+                    if (FilterVM.NegativeFilters != null)
+                        FilterVM.NegativeFilters.Clear();
+                    if (FilterVM.ActiveThreadFilters != null)
+                        FilterVM.ActiveThreadFilters.Clear();
+                    if (FilterVM.ActiveLoggerFilters != null)
+                        FilterVM.ActiveLoggerFilters.Clear();
+                    if (FilterVM.ActiveMethodFilters != null)
+                        FilterVM.ActiveMethodFilters.Clear();
 
                     System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing FilteredLogs: {FilteredLogs?.Count ?? 0} items");
-                    FilteredLogs?.Clear();
+                    if (FilteredLogs != null)
+                        FilteredLogs.Clear();
 
                     System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing AppDevLogsFiltered: {AppDevLogsFiltered?.Count ?? 0} items");
-                    AppDevLogsFiltered?.Clear();
+                    if (AppDevLogsFiltered != null)
+                        AppDevLogsFiltered.Clear();
 
                     System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing LoggerTreeRoot: {LoggerTreeRoot?.Count ?? 0} items");
-                    LoggerTreeRoot?.Clear();
+                    if (LoggerTreeRoot != null)
+                        LoggerTreeRoot.Clear();
 
                     FilterVM.SearchText = "";
                     FilterVM.IsSearchPanelVisible = false;
                 }
 
-                // Step 4: Clear main collections
+                // Step 4: Clear main collections (backup - SessionVM should have done this)
                 System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 4: Clearing main collections...");
                 Logs = new List<LogEntry>();
                 OnPropertyChanged(nameof(Logs));
@@ -1149,8 +1141,8 @@ namespace IndiLogs_3._0.ViewModels
                 ConfigSearchText = "";
                 OnPropertyChanged(nameof(ConfigSearchText));
 
-                // Step 6: Clear text info
-                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 6: Clearing text info...");
+                // ⚠️ THIS IS THE CRITICAL PART - Clear text info ⚠️
+                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 6: Clearing text info (CRITICAL)...");
 
                 System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing SetupInfo (was: {SetupInfo?.Length ?? 0} chars)");
                 SetupInfo = "";
@@ -1184,7 +1176,8 @@ namespace IndiLogs_3._0.ViewModels
 
                 // Step 9: Reset visual mode
                 System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 9: Resetting visual mode...");
-                VisualTimelineVM?.Clear();
+                if (VisualTimelineVM != null)
+                    VisualTimelineVM.Clear();
                 IsVisualMode = false;
 
                 // Step 10: Reset tabs
@@ -1804,7 +1797,7 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        public void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         public void NotifyPropertyChanged(string propertyName) => OnPropertyChanged(propertyName);
     }
 }

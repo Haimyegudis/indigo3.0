@@ -7,7 +7,7 @@
              mc:Ignorable="d"
              d:DesignHeight="50" d:DesignWidth="400">
     <UserControl.Resources>
-        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:BoolToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
     </UserControl.Resources>
 
     <Border VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,15,40,0" Panel.ZIndex="100"
