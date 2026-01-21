@@ -13,15 +13,12 @@ using System.Windows.Threading;
 
 namespace IndiLogs_3._0.ViewModels.Components
 {
-    /// <summary>
-    /// Manages filtering, searching, and logger tree operations
-    /// </summary>
     public class FilterSearchViewModel : INotifyPropertyChanged
     {
         private readonly MainViewModel _parent;
         private readonly LogSessionViewModel _sessionVM;
 
-        // Search functionality
+        // --- Search ---
         private string _searchText;
         public string SearchText
         {
@@ -50,7 +47,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        // Filtered collections (results after filtering)
+        // --- Collections ---
         private ObservableRangeCollection<LogEntry> _filteredLogs;
         public ObservableRangeCollection<LogEntry> FilteredLogs
         {
@@ -75,7 +72,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        // Logger Tree
         private ObservableCollection<LoggerNode> _loggerTreeRoot;
         public ObservableCollection<LoggerNode> LoggerTreeRoot
         {
@@ -100,43 +96,29 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        // Filter state
+        // --- Filter Roots ---
         private FilterNode _mainFilterRoot;
         public FilterNode MainFilterRoot
         {
             get => _mainFilterRoot;
-            set
-            {
-                _mainFilterRoot = value;
-                OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.MainFilterRoot));
-            }
+            set { _mainFilterRoot = value; OnPropertyChanged(); _parent?.NotifyPropertyChanged(nameof(_parent.MainFilterRoot)); }
         }
 
         private FilterNode _appFilterRoot;
         public FilterNode AppFilterRoot
         {
             get => _appFilterRoot;
-            set
-            {
-                _appFilterRoot = value;
-                OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.AppFilterRoot));
-            }
+            set { _appFilterRoot = value; OnPropertyChanged(); _parent?.NotifyPropertyChanged(nameof(_parent.AppFilterRoot)); }
         }
 
         private FilterNode _savedFilterRoot;
         public FilterNode SavedFilterRoot
         {
             get => _savedFilterRoot;
-            set
-            {
-                _savedFilterRoot = value;
-                OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.SavedFilterRoot));
-            }
+            set { _savedFilterRoot = value; OnPropertyChanged(); _parent?.NotifyPropertyChanged(nameof(_parent.SavedFilterRoot)); }
         }
 
+        // --- Active Flags ---
         private bool _isMainFilterActive;
         public bool IsMainFilterActive
         {
@@ -193,57 +175,46 @@ namespace IndiLogs_3._0.ViewModels.Components
         public bool IsTimeFocusActive
         {
             get => _isTimeFocusActive;
-            set
-            {
-                _isTimeFocusActive = value;
-                OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsTimeFocusActive));
-            }
+            set { _isTimeFocusActive = value; OnPropertyChanged(); _parent?.NotifyPropertyChanged(nameof(_parent.IsTimeFocusActive)); }
         }
 
         private bool _isAppTimeFocusActive = false;
         public bool IsAppTimeFocusActive
         {
             get => _isAppTimeFocusActive;
-            set
-            {
-                _isAppTimeFocusActive = value;
-                OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsAppTimeFocusActive));
-            }
+            set { _isAppTimeFocusActive = value; OnPropertyChanged(); _parent?.NotifyPropertyChanged(nameof(_parent.IsAppTimeFocusActive)); }
         }
 
-        // Negative filters (filter out)
+        // --- Specific Filters Lists ---
         private List<string> _negativeFilters = new List<string>();
         public List<string> NegativeFilters => _negativeFilters;
 
         private List<string> _activeThreadFilters = new List<string>();
         public List<string> ActiveThreadFilters => _activeThreadFilters;
 
-        // Cached filtered results
+        // New Lists for independent column filtering
+        private List<string> _activeLoggerFilters = new List<string>();
+        public List<string> ActiveLoggerFilters => _activeLoggerFilters;
+
+        private List<string> _activeMethodFilters = new List<string>();
+        public List<string> ActiveMethodFilters => _activeMethodFilters;
+
+        // --- Caches ---
         private List<LogEntry> _lastFilteredCache = null;
         public List<LogEntry> LastFilteredCache
         {
             get => _lastFilteredCache;
-            set
-            {
-                _lastFilteredCache = value;
-                OnPropertyChanged();
-            }
+            set { _lastFilteredCache = value; OnPropertyChanged(); }
         }
 
         private List<LogEntry> _lastFilteredAppCache = null;
         public List<LogEntry> LastFilteredAppCache
         {
             get => _lastFilteredAppCache;
-            set
-            {
-                _lastFilteredAppCache = value;
-                OnPropertyChanged();
-            }
+            set { _lastFilteredAppCache = value; OnPropertyChanged(); }
         }
 
-        // Tree filter state
+        // --- Tree Filter State ---
         private HashSet<string> _treeHiddenLoggers = new HashSet<string>();
         public HashSet<string> TreeHiddenLoggers => _treeHiddenLoggers;
 
@@ -254,28 +225,19 @@ namespace IndiLogs_3._0.ViewModels.Components
         public string TreeShowOnlyLogger
         {
             get => _treeShowOnlyLogger;
-            set
-            {
-                _treeShowOnlyLogger = value;
-                OnPropertyChanged();
-            }
+            set { _treeShowOnlyLogger = value; OnPropertyChanged(); }
         }
 
         private string _treeShowOnlyPrefix = null;
         public string TreeShowOnlyPrefix
         {
             get => _treeShowOnlyPrefix;
-            set
-            {
-                _treeShowOnlyPrefix = value;
-                OnPropertyChanged();
-            }
+            set { _treeShowOnlyPrefix = value; OnPropertyChanged(); }
         }
 
-        // Search debounce timer
         private DispatcherTimer _searchDebounceTimer;
 
-        // Commands
+        // --- Commands ---
         public ICommand ToggleSearchCommand { get; }
         public ICommand CloseSearchCommand { get; }
         public ICommand OpenFilterWindowCommand { get; }
@@ -298,25 +260,25 @@ namespace IndiLogs_3._0.ViewModels.Components
             _parent = parent;
             _sessionVM = sessionVM;
 
-            // Initialize collections
             _filteredLogs = new ObservableRangeCollection<LogEntry>();
             _appDevLogsFiltered = new ObservableRangeCollection<LogEntry>();
             _loggerTreeRoot = new ObservableCollection<LoggerNode>();
 
-            // Initialize search debounce timer
             _searchDebounceTimer = new DispatcherTimer();
             _searchDebounceTimer.Interval = TimeSpan.FromMilliseconds(500);
             _searchDebounceTimer.Tick += OnSearchTimerTick;
 
-            // Initialize commands (placeholders for now)
             ToggleSearchCommand = new RelayCommand(o => IsSearchPanelVisible = !IsSearchPanelVisible);
             CloseSearchCommand = new RelayCommand(o => IsSearchPanelVisible = false);
             OpenFilterWindowCommand = new RelayCommand(OpenFilterWindow);
             FilterOutCommand = new RelayCommand(FilterOut);
             FilterOutThreadCommand = new RelayCommand(FilterOutThread);
+
+            // Fixed commands calling specific logic
             OpenThreadFilterCommand = new RelayCommand(OpenThreadFilter);
             OpenLoggerFilterCommand = new RelayCommand(OpenLoggerFilter);
             OpenMethodFilterCommand = new RelayCommand(OpenMethodFilter);
+
             FilterContextCommand = new RelayCommand(FilterContext);
             UndoFilterOutCommand = new RelayCommand(UndoFilterOut);
             TreeShowThisCommand = new RelayCommand(ExecuteTreeShowThis);
@@ -336,8 +298,8 @@ namespace IndiLogs_3._0.ViewModels.Components
         private void OnSearchTimerTick(object sender, EventArgs e)
         {
             _searchDebounceTimer.Stop();
-            // Apply search filter - to be implemented
             ApplyMainLogsFilter();
+            ApplyAppLogsFilter();
         }
 
         public void BuildLoggerTree(IEnumerable<LogEntry> logs)
@@ -368,7 +330,6 @@ namespace IndiLogs_3._0.ViewModels.Components
         private void AddNodeRecursive(LoggerNode parent, string[] parts, int index, string currentPath, int count)
         {
             if (index >= parts.Length) return;
-
             string part = parts[index];
             string newPath = string.IsNullOrEmpty(currentPath) ? part : $"{currentPath}.{part}";
 
@@ -381,20 +342,13 @@ namespace IndiLogs_3._0.ViewModels.Components
                     insertIdx++;
                 parent.Children.Insert(insertIdx, child);
             }
-
             child.Count += count;
             AddNodeRecursive(child, parts, index + 1, newPath, count);
         }
 
         public void ApplyMainLogsFilter()
         {
-            // Check if in Live Mode - don't replace the live collection
-            if (_parent.IsLiveMode)
-            {
-                // In Live mode, filtering happens only in FilteredLogs tab
-                // Main logs stay connected to live collection
-                return;
-            }
+            if (_parent.IsLiveMode) return;
 
             bool isActive = _isMainFilterActive;
             IEnumerable<LogEntry> currentLogs;
@@ -407,31 +361,23 @@ namespace IndiLogs_3._0.ViewModels.Components
                 else
                     currentLogs = _sessionVM?.AllLogsCache ?? new List<LogEntry>();
 
+                // PLC Tab only uses Thread Filter
                 if (_activeThreadFilters.Any())
                     currentLogs = currentLogs.Where(l => _activeThreadFilters.Contains(l.ThreadName));
 
                 if (hasSearchText)
                 {
-                    // Smart Boolean Search: Check if query has special operators
                     if (QueryParserService.HasBooleanOperators(SearchText))
                     {
                         var parser = new QueryParserService();
                         var filterTree = parser.Parse(SearchText, out string errorMessage);
-
                         if (filterTree != null)
-                        {
-                            // Use smart filtering with parsed tree
                             currentLogs = currentLogs.Where(l => EvaluateFilterNode(l, filterTree));
-                        }
                         else
-                        {
-                            // Parsing failed - fall back to simple search
                             currentLogs = currentLogs.Where(l => l.Message != null && l.Message.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0);
-                        }
                     }
                     else
                     {
-                        // Simple search for maximum performance
                         currentLogs = currentLogs.Where(l => l.Message != null && l.Message.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0);
                     }
                 }
@@ -460,18 +406,21 @@ namespace IndiLogs_3._0.ViewModels.Components
                 });
             }
 
-            // Update the Logs in SessionVM
             if (_sessionVM != null)
-            {
                 _sessionVM.Logs = currentLogs.ToList();
-            }
         }
 
         public void ApplyAppLogsFilter()
         {
             if (_sessionVM?.AllAppLogsCache == null) return;
 
-            if (!_isAppFilterActive && string.IsNullOrWhiteSpace(SearchText) && !_activeThreadFilters.Any())
+            // Check if any specific filter is active
+            bool hasThreadFilter = _activeThreadFilters.Any();
+            bool hasLoggerFilter = _activeLoggerFilters.Any();
+            bool hasMethodFilter = _activeMethodFilters.Any();
+            bool hasSearch = !string.IsNullOrWhiteSpace(SearchText);
+
+            if (!_isAppFilterActive && !hasSearch && !hasThreadFilter && !hasLoggerFilter && !hasMethodFilter)
             {
                 AppDevLogsFiltered.ReplaceAll(_sessionVM.AllAppLogsCache);
                 return;
@@ -485,20 +434,31 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             var query = source.AsParallel().AsOrdered();
 
-            // Apply thread/logger/method filters (from column header clicks)
-            if (_isAppFilterActive && _activeThreadFilters.Any())
+            // 1. Thread Filter
+            if (hasThreadFilter)
             {
-                query = query.Where(l =>
-                    _activeThreadFilters.Contains(l.ThreadName) ||
-                    _activeThreadFilters.Contains(l.Logger) ||
-                    _activeThreadFilters.Contains(l.Method));
+                query = query.Where(l => _activeThreadFilters.Contains(l.ThreadName));
             }
 
+            // 2. Logger Filter
+            if (hasLoggerFilter)
+            {
+                query = query.Where(l => _activeLoggerFilters.Contains(l.Logger));
+            }
+
+            // 3. Method Filter
+            if (hasMethodFilter)
+            {
+                query = query.Where(l => _activeMethodFilters.Contains(l.Method));
+            }
+
+            // --- Apply Advanced Filter ---
             if (_isAppFilterActive && !_isAppTimeFocusActive && _appFilterRoot != null && _appFilterRoot.Children.Count > 0)
             {
                 query = query.Where(l => EvaluateFilterNode(l, _appFilterRoot));
             }
 
+            // --- Apply Tree Filter ---
             if (_isAppFilterActive)
             {
                 if (_treeShowOnlyLogger != null)
@@ -527,30 +487,21 @@ namespace IndiLogs_3._0.ViewModels.Components
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(SearchText))
+            // --- Apply Search ---
+            if (hasSearch)
             {
                 string search = SearchText;
-
-                // Smart Boolean Search for App Logs
                 if (QueryParserService.HasBooleanOperators(SearchText))
                 {
                     var parser = new QueryParserService();
                     var filterTree = parser.Parse(SearchText, out string errorMessage);
-
                     if (filterTree != null)
-                    {
-                        // Use smart filtering with parsed tree
                         query = query.Where(l => EvaluateFilterNode(l, filterTree));
-                    }
                     else
-                    {
-                        // Fall back to simple search
                         query = query.Where(l => l.Message != null && l.Message.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0);
-                    }
                 }
                 else
                 {
-                    // Simple search
                     query = query.Where(l => l.Message != null && l.Message.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0);
                 }
             }
@@ -586,14 +537,8 @@ namespace IndiLogs_3._0.ViewModels.Components
                 if (op == "Ends With") return val.EndsWith(criteria, StringComparison.OrdinalIgnoreCase);
                 if (op == "Regex")
                 {
-                    try
-                    {
-                        return System.Text.RegularExpressions.Regex.IsMatch(val, criteria, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                    }
-                    catch
-                    {
-                        return false;
-                    }
+                    try { return System.Text.RegularExpressions.Regex.IsMatch(val, criteria, System.Text.RegularExpressions.RegexOptions.IgnoreCase); }
+                    catch { return false; }
                 }
                 return val.IndexOf(criteria, StringComparison.OrdinalIgnoreCase) >= 0;
             }
@@ -610,11 +555,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     baseResult = false;
                     foreach (var child in node.Children)
                     {
-                        if (EvaluateFilterNode(log, child))
-                        {
-                            baseResult = true;
-                            break;
-                        }
+                        if (EvaluateFilterNode(log, child)) { baseResult = true; break; }
                     }
                 }
                 else
@@ -622,11 +563,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     baseResult = true;
                     foreach (var child in node.Children)
                     {
-                        if (!EvaluateFilterNode(log, child))
-                        {
-                            baseResult = false;
-                            break;
-                        }
+                        if (!EvaluateFilterNode(log, child)) { baseResult = false; break; }
                     }
                 }
 
@@ -635,9 +572,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        /// <summary>
-        /// Default PLC filter - determines which logs show by default in PLC FILTERED tab
-        /// </summary>
         public bool IsDefaultLog(LogEntry l)
         {
             if (string.Equals(l.Level, "Error", StringComparison.OrdinalIgnoreCase)) return true;
@@ -661,7 +595,12 @@ namespace IndiLogs_3._0.ViewModels.Components
             SearchText = "";
 
             _negativeFilters.Clear();
+
+            // Clear all column filters
             _activeThreadFilters.Clear();
+            _activeLoggerFilters.Clear();
+            _activeMethodFilters.Clear();
+
             _lastFilteredCache = null;
             _lastFilteredAppCache = null;
 
@@ -685,7 +624,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             _treeShowOnlyPrefix = null;
         }
 
-        // Command implementations
         private async void OpenFilterWindow(object obj)
         {
             var win = new Views.FilterWindow();
@@ -719,10 +657,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                             var res = cacheCopy.Where(l => EvaluateFilterNode(l, MainFilterRoot)).ToList();
                             LastFilteredCache = res;
                         }
-                        else
-                        {
-                            LastFilteredCache = null;
-                        }
+                        else LastFilteredCache = null;
                     }
                 });
 
@@ -780,89 +715,105 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             if (cache == null || !cache.Any()) return;
             var threads = cache.Select(l => l.ThreadName).Where(t => !string.IsNullOrEmpty(t)).Distinct().OrderBy(t => t).ToList();
-            var win = new Views.ThreadFilterWindow(threads);
+
+            var win = new Views.ThreadFilterWindow(threads) { Title = "Filter by Thread" };
+
             if (win.ShowDialog() == true)
             {
                 if (win.ShouldClear)
                 {
                     _activeThreadFilters.Clear();
-                    if (_savedFilterRoot == null)
-                    {
-                        if (isAppTab) IsAppFilterActive = false;
-                        else IsMainFilterActive = false;
-                    }
+                    CheckIfFiltersEmpty(isAppTab);
                 }
                 else if (win.SelectedThreads != null && win.SelectedThreads.Any())
                 {
                     _activeThreadFilters.Clear();
-                    foreach (var thread in win.SelectedThreads)
-                        _activeThreadFilters.Add(thread);
-                    if (isAppTab) IsAppFilterActive = true;
-                    else IsMainFilterActive = true;
+                    _activeThreadFilters.AddRange(win.SelectedThreads);
+                    SetFilterActive(isAppTab);
                 }
-                ToggleFilterView(isAppTab ? IsAppFilterActive : IsMainFilterActive);
+                ToggleFilterView(true); // Must re-trigger filter
             }
         }
 
         private void OpenLoggerFilter(object obj)
         {
-            // Check which tab is active and use appropriate cache
             bool isAppTab = _parent.SelectedTabIndex == 2;
-            var cache = isAppTab ? _sessionVM.AllAppLogsCache : _sessionVM.AllLogsCache;
+            if (!isAppTab) return;
 
+            var cache = _sessionVM.AllAppLogsCache;
             if (cache == null || !cache.Any()) return;
+
             var loggers = cache.Select(l => l.Logger).Where(l => !string.IsNullOrEmpty(l)).Distinct().OrderBy(l => l).ToList();
+
             var win = new Views.ThreadFilterWindow(loggers) { Title = "Filter by Logger" };
+
             if (win.ShowDialog() == true)
             {
                 if (win.ShouldClear)
                 {
-                    _activeThreadFilters.Clear();
-                    if (_savedFilterRoot == null)
-                    {
-                        if (isAppTab) IsAppFilterActive = false;
-                        else IsMainFilterActive = false;
-                    }
+                    _activeLoggerFilters.Clear();
+                    CheckIfFiltersEmpty(true);
                 }
                 else if (win.SelectedThreads != null && win.SelectedThreads.Any())
                 {
-                    _activeThreadFilters.Clear();
-                    foreach (var logger in win.SelectedThreads)
-                        _activeThreadFilters.Add(logger);
-                    if (isAppTab) IsAppFilterActive = true;
-                    else IsMainFilterActive = true;
+                    _activeLoggerFilters.Clear();
+                    _activeLoggerFilters.AddRange(win.SelectedThreads);
+                    SetFilterActive(true);
                 }
-                ToggleFilterView(isAppTab ? IsAppFilterActive : IsMainFilterActive);
+                ToggleFilterView(true);
             }
         }
 
         private void OpenMethodFilter(object obj)
         {
-            // Check which tab is active and use appropriate cache
             bool isAppTab = _parent.SelectedTabIndex == 2;
-            var cache = isAppTab ? _sessionVM.AllAppLogsCache : _sessionVM.AllLogsCache;
+            if (!isAppTab) return;
 
+            var cache = _sessionVM.AllAppLogsCache;
             if (cache == null || !cache.Any()) return;
+
             var methods = cache.Select(l => l.Method).Where(m => !string.IsNullOrEmpty(m)).Distinct().OrderBy(m => m).ToList();
+
             var win = new Views.ThreadFilterWindow(methods) { Title = "Filter by Method" };
+
             if (win.ShowDialog() == true)
             {
                 if (win.ShouldClear)
                 {
-                    _activeThreadFilters.Clear();
-                    if (_savedFilterRoot == null) IsMainFilterActive = false;
+                    _activeMethodFilters.Clear();
+                    CheckIfFiltersEmpty(true);
                 }
                 else if (win.SelectedThreads != null && win.SelectedThreads.Any())
                 {
-                    _activeThreadFilters.Clear();
-                    foreach (var method in win.SelectedThreads)
-                        _activeThreadFilters.Add(method);
-                    IsMainFilterActive = true;
+                    _activeMethodFilters.Clear();
+                    _activeMethodFilters.AddRange(win.SelectedThreads);
+                    SetFilterActive(true);
                 }
-                ToggleFilterView(IsMainFilterActive);
+                ToggleFilterView(true);
             }
         }
 
+        private void SetFilterActive(bool isAppTab)
+        {
+            if (isAppTab) IsAppFilterActive = true;
+            else IsMainFilterActive = true;
+        }
+
+        private void CheckIfFiltersEmpty(bool isAppTab)
+        {
+            if (isAppTab)
+            {
+                if (!_activeThreadFilters.Any() && !_activeLoggerFilters.Any() && !_activeMethodFilters.Any() && _appFilterRoot == null)
+                    IsAppFilterActive = false;
+            }
+            else
+            {
+                if (!_activeThreadFilters.Any() && _mainFilterRoot == null)
+                    IsMainFilterActive = false;
+            }
+        }
+
+        // --- ?????? ?? ???????? ????? ---
         private void FilterContext(object obj)
         {
             if (_parent.SelectedLog == null) return;
@@ -994,7 +945,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             ToggleFilterView(false);
         }
 
-        // INotifyPropertyChanged implementation
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
