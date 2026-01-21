@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Log Statistics Dashboard" Height="800" Width="1200"
+        Title="Log Statistics Dashboard" Height="850" Width="1250"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgDark}"
         Foreground="{DynamicResource TextPrimary}">
@@ -21,262 +21,489 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+        <StackPanel Grid.Row="0" Margin="0,0,0,15">
             <TextBlock Text="LOG STATISTICS DASHBOARD" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
             <TextBlock x:Name="SummaryText" Text="Analyzing logs..." Foreground="{DynamicResource TextSecondary}" FontSize="14" Margin="0,5,0,0"/>
         </StackPanel>
 
-        <!-- Main Content -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+        <!-- Tab Control for PLC/APP -->
+        <TabControl x:Name="MainTabControl" Grid.Row="1" Background="Transparent" BorderThickness="0">
+            <TabControl.Resources>
+                <Style TargetType="TabItem">
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="TabItem">
+                                <Border x:Name="Border" Background="{DynamicResource BgCard}"
+                                        CornerRadius="8,8,0,0" Margin="0,0,5,0" Padding="20,10">
+                                    <ContentPresenter x:Name="ContentSite" ContentSource="Header"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter TargetName="Border" Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                    <Setter Property="FontSize" Value="14"/>
+                </Style>
+            </TabControl.Resources>
 
-                <!-- Row 1: Top 10 Errors + Thread Distribution -->
-                <Grid Grid.Row="0" Margin="0,0,0,20">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="20"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- Top 10 Errors -->
-                    <Border Grid.Column="0" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="15">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-
-                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
-                                <TextBlock Text="TOP 10 MOST COMMON ERRORS" FontWeight="Bold" Foreground="{DynamicResource DangerColor}" FontSize="14"/>
-                                <TextBlock x:Name="ErrorCountText" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="10,2,0,0"/>
-                            </StackPanel>
-
-                            <ItemsControl x:Name="ErrorHistogram" Grid.Row="1">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid Margin="0,0,0,8">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
-
-                                            <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="{Binding Message}"
-                                                       Foreground="{DynamicResource TextPrimary}"
-                                                       FontSize="12" TextTrimming="CharacterEllipsis"
-                                                       ToolTip="{Binding Message}"/>
-
-                                            <Border Grid.Row="1" Grid.Column="0" Height="20" Margin="0,4,10,0" CornerRadius="3" Background="{DynamicResource BgPanel}">
-                                                <Border Background="{DynamicResource DangerColor}"
-                                                        Width="{Binding BarWidth}"
-                                                        HorizontalAlignment="Left"
-                                                        CornerRadius="3"/>
-                                            </Border>
-
-                                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Count}"
-                                                       Foreground="{DynamicResource DangerColor}"
-                                                       FontWeight="Bold" FontSize="12"
-                                                       VerticalAlignment="Center" MinWidth="40" TextAlignment="Right"/>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </Grid>
-                    </Border>
-
-                    <!-- Thread Distribution -->
-                    <Border Grid.Column="2" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="15">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-
-                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
-                                <TextBlock Text="THREAD LOAD DISTRIBUTION" FontWeight="Bold" Foreground="{DynamicResource PrimaryColor}" FontSize="14"/>
-                                <TextBlock x:Name="ThreadCountText" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="10,2,0,0"/>
-                            </StackPanel>
-
-                            <ItemsControl x:Name="ThreadHistogram" Grid.Row="1">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid Margin="0,0,0,6">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="120"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                                       Foreground="{DynamicResource TextPrimary}"
-                                                       FontSize="12" TextTrimming="CharacterEllipsis"
-                                                       ToolTip="{Binding Name}"/>
-
-                                            <Border Grid.Column="1" Height="16" Margin="10,0" CornerRadius="3" Background="{DynamicResource BgPanel}">
-                                                <Border Background="{DynamicResource PrimaryColor}"
-                                                        Width="{Binding BarWidth}"
-                                                        HorizontalAlignment="Left"
-                                                        CornerRadius="3"/>
-                                            </Border>
-
-                                            <TextBlock Grid.Column="2" Text="{Binding DisplayText}"
-                                                       Foreground="{DynamicResource TextSecondary}"
-                                                       FontSize="11" VerticalAlignment="Center" MinWidth="80" TextAlignment="Right"/>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </Grid>
-                    </Border>
-                </Grid>
-
-                <!-- Row 2: Logger Distribution -->
-                <Border Grid.Row="1" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="15" Margin="0,0,0,20">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
-                            <TextBlock Text="LOGGER LOAD DISTRIBUTION (Top 15)" FontWeight="Bold" Foreground="{DynamicResource SecondaryColor}" FontSize="14"/>
-                            <TextBlock x:Name="LoggerCountText" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="10,2,0,0"/>
-                        </StackPanel>
-
-                        <ItemsControl x:Name="LoggerHistogram" Grid.Row="1">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="{DynamicResource BgPanel}" CornerRadius="4" Padding="10,6" Margin="0,0,8,8" MinWidth="200">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <TextBlock Grid.Column="0" Text="{Binding Name}"
-                                                       Foreground="{DynamicResource TextPrimary}"
-                                                       FontSize="11" TextTrimming="CharacterEllipsis"
-                                                       ToolTip="{Binding Name}"/>
-
-                                            <TextBlock Grid.Column="1" Text="{Binding DisplayText}"
-                                                       Foreground="{DynamicResource SecondaryColor}"
-                                                       FontWeight="Bold" FontSize="11" Margin="10,0,0,0"/>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </Grid>
-                </Border>
-
-                <!-- Row 3: Gap Analysis -->
-                <Border Grid.Row="2" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="15">
+            <!-- PLC Tab -->
+            <TabItem Header="PLC LOGS">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                            <TextBlock Text="GAP ANALYSIS" FontWeight="Bold" Foreground="{DynamicResource WarningColor}" FontSize="14"/>
-                            <TextBlock Text=" (Time gaps >= 2 seconds with no log activity)" Foreground="{DynamicResource TextSecondary}" FontSize="12" VerticalAlignment="Bottom"/>
-                        </StackPanel>
+                        <!-- PLC Summary -->
+                        <TextBlock x:Name="PlcSummaryText" Grid.Row="0" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="13" Margin="0,0,0,15"/>
 
-                        <TextBlock x:Name="GapSummaryText" Grid.Row="1" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="0,0,0,15"/>
+                        <!-- Row 1: Top 10 Errors + Thread Distribution -->
+                        <Grid Grid.Row="1" Margin="0,0,0,20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
 
-                        <DataGrid x:Name="GapDataGrid" Grid.Row="2"
-                                  AutoGenerateColumns="False"
-                                  IsReadOnly="True"
-                                  Background="Transparent"
-                                  BorderThickness="0"
-                                  Foreground="{DynamicResource TextPrimary}"
-                                  RowBackground="{DynamicResource BgPanel}"
-                                  AlternatingRowBackground="{DynamicResource BgDark}"
-                                  GridLinesVisibility="Horizontal"
-                                  HorizontalGridLinesBrush="{DynamicResource BorderColor}"
-                                  MaxHeight="250"
-                                  HeadersVisibility="Column">
+                            <!-- PLC Top 10 Errors -->
+                            <Border Grid.Column="0" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="15">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
 
-                            <DataGrid.ColumnHeaderStyle>
-                                <Style TargetType="DataGridColumnHeader">
-                                    <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
-                                    <Setter Property="FontWeight" Value="Bold"/>
-                                    <Setter Property="FontSize" Value="11"/>
-                                    <Setter Property="Padding" Value="10,8"/>
-                                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                                    <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
-                                </Style>
-                            </DataGrid.ColumnHeaderStyle>
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                                        <TextBlock Text="TOP 10 MOST COMMON ERRORS" FontWeight="Bold" Foreground="{DynamicResource DangerColor}" FontSize="14"/>
+                                        <TextBlock x:Name="PlcErrorCountText" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="10,2,0,0"/>
+                                    </StackPanel>
 
-                            <DataGrid.CellStyle>
-                                <Style TargetType="DataGridCell">
-                                    <Setter Property="Padding" Value="10,6"/>
-                                    <Setter Property="BorderThickness" Value="0"/>
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="DataGridCell">
-                                                <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}">
-                                                    <ContentPresenter VerticalAlignment="Center"/>
-                                                </Border>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </DataGrid.CellStyle>
+                                    <ItemsControl x:Name="PlcErrorHistogram" Grid.Row="1">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,8">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
 
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="50"/>
-                                <DataGridTextColumn Header="Gap Start" Binding="{Binding StartTime, StringFormat='yyyy-MM-dd HH:mm:ss.fff'}" Width="180"/>
-                                <DataGridTextColumn Header="Gap End" Binding="{Binding EndTime, StringFormat='yyyy-MM-dd HH:mm:ss.fff'}" Width="180"/>
-                                <DataGridTextColumn Header="Duration" Binding="{Binding DurationText}" Width="100">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="{DynamicResource WarningColor}"/>
+                                                    <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="{Binding Message}"
+                                                               Foreground="{DynamicResource TextPrimary}"
+                                                               FontSize="12" TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding Message}"/>
+
+                                                    <Border Grid.Row="1" Grid.Column="0" Height="20" Margin="0,4,10,0" CornerRadius="3" Background="{DynamicResource BgPanel}">
+                                                        <Border Background="{DynamicResource DangerColor}"
+                                                                Width="{Binding BarWidth}"
+                                                                HorizontalAlignment="Left"
+                                                                CornerRadius="3"/>
+                                                    </Border>
+
+                                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Count}"
+                                                               Foreground="{DynamicResource DangerColor}"
+                                                               FontWeight="Bold" FontSize="12"
+                                                               VerticalAlignment="Center" MinWidth="40" TextAlignment="Right"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </Border>
+
+                            <!-- PLC Thread Distribution -->
+                            <Border Grid.Column="2" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="15">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                                        <TextBlock Text="THREAD LOAD DISTRIBUTION" FontWeight="Bold" Foreground="{DynamicResource PrimaryColor}" FontSize="14"/>
+                                        <TextBlock x:Name="PlcThreadCountText" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="10,2,0,0"/>
+                                    </StackPanel>
+
+                                    <ItemsControl x:Name="PlcThreadHistogram" Grid.Row="1">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="120"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                               Foreground="{DynamicResource TextPrimary}"
+                                                               FontSize="12" TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding Name}"/>
+
+                                                    <Border Grid.Column="1" Height="16" Margin="10,0" CornerRadius="3" Background="{DynamicResource BgPanel}">
+                                                        <Border Background="{DynamicResource PrimaryColor}"
+                                                                Width="{Binding BarWidth}"
+                                                                HorizontalAlignment="Left"
+                                                                CornerRadius="3"/>
+                                                    </Border>
+
+                                                    <TextBlock Grid.Column="2" Text="{Binding DisplayText}"
+                                                               Foreground="{DynamicResource TextSecondary}"
+                                                               FontSize="11" VerticalAlignment="Center" MinWidth="80" TextAlignment="Right"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <!-- Row 2: PLC Gap Analysis -->
+                        <Border Grid.Row="2" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="15">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                                    <TextBlock Text="GAP ANALYSIS" FontWeight="Bold" Foreground="{DynamicResource WarningColor}" FontSize="14"/>
+                                    <TextBlock Text=" (Time gaps >= 2 seconds with no log activity)" Foreground="{DynamicResource TextSecondary}" FontSize="12" VerticalAlignment="Bottom"/>
+                                </StackPanel>
+
+                                <TextBlock x:Name="PlcGapSummaryText" Grid.Row="1" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="0,0,0,15"/>
+
+                                <DataGrid x:Name="PlcGapDataGrid" Grid.Row="2"
+                                          AutoGenerateColumns="False" IsReadOnly="True"
+                                          Background="Transparent" BorderThickness="0"
+                                          Foreground="{DynamicResource TextPrimary}"
+                                          RowBackground="{DynamicResource BgPanel}"
+                                          AlternatingRowBackground="{DynamicResource BgDark}"
+                                          GridLinesVisibility="Horizontal"
+                                          HorizontalGridLinesBrush="{DynamicResource BorderColor}"
+                                          MaxHeight="200" HeadersVisibility="Column">
+                                    <DataGrid.ColumnHeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader">
+                                            <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
                                             <Setter Property="FontWeight" Value="Bold"/>
+                                            <Setter Property="FontSize" Value="11"/>
+                                            <Setter Property="Padding" Value="10,8"/>
                                         </Style>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-                                <DataGridTextColumn Header="Last Log Before Gap" Binding="{Binding LastMessageBeforeGap}" Width="*">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                            <Setter Property="ToolTip" Value="{Binding LastMessageBeforeGap}"/>
-                                        </Style>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                                    </DataGrid.ColumnHeaderStyle>
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="50"/>
+                                        <DataGridTextColumn Header="Gap Start" Binding="{Binding StartTime, StringFormat='yyyy-MM-dd HH:mm:ss.fff'}" Width="180"/>
+                                        <DataGridTextColumn Header="Gap End" Binding="{Binding EndTime, StringFormat='yyyy-MM-dd HH:mm:ss.fff'}" Width="180"/>
+                                        <DataGridTextColumn Header="Duration" Binding="{Binding DurationText}" Width="100">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource WarningColor}"/>
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn Header="Last Log Before Gap" Binding="{Binding LastMessageBeforeGap}" Width="*"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
 
-                        <!-- No gaps message -->
-                        <TextBlock x:Name="NoGapsMessage" Grid.Row="2"
-                                   Text="No significant time gaps found in the logs."
-                                   Foreground="{DynamicResource SuccessColor}"
-                                   FontSize="14"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   Visibility="Collapsed"/>
+                                <TextBlock x:Name="PlcNoGapsMessage" Grid.Row="2"
+                                           Text="No significant time gaps found in the PLC logs."
+                                           Foreground="{DynamicResource SuccessColor}"
+                                           FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Visibility="Collapsed"/>
+                            </Grid>
+                        </Border>
                     </Grid>
-                </Border>
-            </Grid>
-        </ScrollViewer>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- APP Tab -->
+            <TabItem Header="APP LOGS">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- APP Summary -->
+                        <TextBlock x:Name="AppSummaryText" Grid.Row="0" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="13" Margin="0,0,0,15"/>
+
+                        <!-- Row 1: Errors by Logger + Errors by Thread -->
+                        <Grid Grid.Row="1" Margin="0,0,0,20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Errors by Logger -->
+                            <Border Grid.Column="0" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="15">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                                        <TextBlock Text="ERRORS BY LOGGER" FontWeight="Bold" Foreground="{DynamicResource DangerColor}" FontSize="14"/>
+                                        <TextBlock x:Name="AppLoggerErrorCountText" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="10,2,0,0"/>
+                                    </StackPanel>
+
+                                    <ItemsControl x:Name="AppLoggerErrorHistogram" Grid.Row="1">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="150"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                               Foreground="{DynamicResource TextPrimary}"
+                                                               FontSize="11" TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding FullName}"/>
+
+                                                    <Border Grid.Column="1" Height="16" Margin="10,0" CornerRadius="3" Background="{DynamicResource BgPanel}">
+                                                        <Border Background="{DynamicResource DangerColor}"
+                                                                Width="{Binding BarWidth}"
+                                                                HorizontalAlignment="Left"
+                                                                CornerRadius="3"/>
+                                                    </Border>
+
+                                                    <TextBlock Grid.Column="2" Text="{Binding DisplayText}"
+                                                               Foreground="{DynamicResource DangerColor}"
+                                                               FontWeight="Bold" FontSize="11" MinWidth="60" TextAlignment="Right"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </Border>
+
+                            <!-- Errors by Thread -->
+                            <Border Grid.Column="2" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="15">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                                        <TextBlock Text="ERRORS BY THREAD" FontWeight="Bold" Foreground="{DynamicResource DangerColor}" FontSize="14"/>
+                                        <TextBlock x:Name="AppThreadErrorCountText" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="10,2,0,0"/>
+                                    </StackPanel>
+
+                                    <ItemsControl x:Name="AppThreadErrorHistogram" Grid.Row="1">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="120"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                               Foreground="{DynamicResource TextPrimary}"
+                                                               FontSize="11" TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding Name}"/>
+
+                                                    <Border Grid.Column="1" Height="16" Margin="10,0" CornerRadius="3" Background="{DynamicResource BgPanel}">
+                                                        <Border Background="{DynamicResource DangerColor}"
+                                                                Width="{Binding BarWidth}"
+                                                                HorizontalAlignment="Left"
+                                                                CornerRadius="3"/>
+                                                    </Border>
+
+                                                    <TextBlock Grid.Column="2" Text="{Binding DisplayText}"
+                                                               Foreground="{DynamicResource DangerColor}"
+                                                               FontWeight="Bold" FontSize="11" MinWidth="60" TextAlignment="Right"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <!-- Row 2: Thread Load + Logger Load Distribution -->
+                        <Grid Grid.Row="2" Margin="0,0,0,20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Thread Load Distribution -->
+                            <Border Grid.Column="0" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="15">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                                        <TextBlock Text="THREAD LOAD DISTRIBUTION" FontWeight="Bold" Foreground="{DynamicResource PrimaryColor}" FontSize="14"/>
+                                        <TextBlock x:Name="AppThreadCountText" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="10,2,0,0"/>
+                                    </StackPanel>
+
+                                    <ItemsControl x:Name="AppThreadHistogram" Grid.Row="1">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="120"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                               Foreground="{DynamicResource TextPrimary}"
+                                                               FontSize="12" TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding Name}"/>
+
+                                                    <Border Grid.Column="1" Height="16" Margin="10,0" CornerRadius="3" Background="{DynamicResource BgPanel}">
+                                                        <Border Background="{DynamicResource PrimaryColor}"
+                                                                Width="{Binding BarWidth}"
+                                                                HorizontalAlignment="Left"
+                                                                CornerRadius="3"/>
+                                                    </Border>
+
+                                                    <TextBlock Grid.Column="2" Text="{Binding DisplayText}"
+                                                               Foreground="{DynamicResource TextSecondary}"
+                                                               FontSize="11" VerticalAlignment="Center" MinWidth="80" TextAlignment="Right"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </Border>
+
+                            <!-- Logger Load Distribution -->
+                            <Border Grid.Column="2" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="15">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                                        <TextBlock Text="LOGGER LOAD DISTRIBUTION" FontWeight="Bold" Foreground="{DynamicResource SecondaryColor}" FontSize="14"/>
+                                        <TextBlock x:Name="AppLoggerCountText" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="10,2,0,0"/>
+                                    </StackPanel>
+
+                                    <ItemsControl x:Name="AppLoggerHistogram" Grid.Row="1">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="150"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                               Foreground="{DynamicResource TextPrimary}"
+                                                               FontSize="11" TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding FullName}"/>
+
+                                                    <Border Grid.Column="1" Height="16" Margin="10,0" CornerRadius="3" Background="{DynamicResource BgPanel}">
+                                                        <Border Background="{DynamicResource SecondaryColor}"
+                                                                Width="{Binding BarWidth}"
+                                                                HorizontalAlignment="Left"
+                                                                CornerRadius="3"/>
+                                                    </Border>
+
+                                                    <TextBlock Grid.Column="2" Text="{Binding DisplayText}"
+                                                               Foreground="{DynamicResource TextSecondary}"
+                                                               FontSize="11" VerticalAlignment="Center" MinWidth="80" TextAlignment="Right"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <!-- Row 3: APP Gap Analysis -->
+                        <Border Grid.Row="3" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="15">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                                    <TextBlock Text="GAP ANALYSIS" FontWeight="Bold" Foreground="{DynamicResource WarningColor}" FontSize="14"/>
+                                    <TextBlock Text=" (Time gaps >= 2 seconds with no log activity)" Foreground="{DynamicResource TextSecondary}" FontSize="12" VerticalAlignment="Bottom"/>
+                                </StackPanel>
+
+                                <TextBlock x:Name="AppGapSummaryText" Grid.Row="1" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="0,0,0,15"/>
+
+                                <DataGrid x:Name="AppGapDataGrid" Grid.Row="2"
+                                          AutoGenerateColumns="False" IsReadOnly="True"
+                                          Background="Transparent" BorderThickness="0"
+                                          Foreground="{DynamicResource TextPrimary}"
+                                          RowBackground="{DynamicResource BgPanel}"
+                                          AlternatingRowBackground="{DynamicResource BgDark}"
+                                          GridLinesVisibility="Horizontal"
+                                          HorizontalGridLinesBrush="{DynamicResource BorderColor}"
+                                          MaxHeight="200" HeadersVisibility="Column">
+                                    <DataGrid.ColumnHeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader">
+                                            <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                            <Setter Property="FontSize" Value="11"/>
+                                            <Setter Property="Padding" Value="10,8"/>
+                                        </Style>
+                                    </DataGrid.ColumnHeaderStyle>
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="50"/>
+                                        <DataGridTextColumn Header="Gap Start" Binding="{Binding StartTime, StringFormat='yyyy-MM-dd HH:mm:ss.fff'}" Width="180"/>
+                                        <DataGridTextColumn Header="Gap End" Binding="{Binding EndTime, StringFormat='yyyy-MM-dd HH:mm:ss.fff'}" Width="180"/>
+                                        <DataGridTextColumn Header="Duration" Binding="{Binding DurationText}" Width="100">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource WarningColor}"/>
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn Header="Last Log Before Gap" Binding="{Binding LastMessageBeforeGap}" Width="*"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <TextBlock x:Name="AppNoGapsMessage" Grid.Row="2"
+                                           Text="No significant time gaps found in the APP logs."
+                                           Foreground="{DynamicResource SuccessColor}"
+                                           FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Visibility="Collapsed"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
 
         <!-- Footer -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
             <Button Content="Export Report" Click="Export_Click"
                     Style="{DynamicResource ModernBtn}"
                     Background="{DynamicResource PrimaryColor}"
