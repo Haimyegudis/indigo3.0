@@ -1199,32 +1199,24 @@ namespace IndiLogs_3._0.ViewModels
         {
             System.Diagnostics.Debug.WriteLine("[ANALYSIS] ShowStatisticsAnalysis called");
 
-            // Determine which logs to analyze based on current tab
-            IEnumerable<LogEntry> logsToAnalyze;
-            string logSource;
+            // שליפת שתי הרשימות
+            var plcLogs = SessionVM?.AllLogsCache;
+            var appLogs = SessionVM?.AllAppLogsCache;
 
-            if (SelectedTabIndex == 2) // App tab
-            {
-                logsToAnalyze = SessionVM?.AllAppLogsCache;
-                logSource = "App Logs";
-                System.Diagnostics.Debug.WriteLine($"[ANALYSIS] Using App logs, count={logsToAnalyze?.Count() ?? 0}");
-            }
-            else // PLC tab
-            {
-                logsToAnalyze = SessionVM?.AllLogsCache;
-                logSource = "PLC Logs";
-                System.Diagnostics.Debug.WriteLine($"[ANALYSIS] Using PLC logs, count={logsToAnalyze?.Count() ?? 0}");
-            }
+            // בדיקה אם יש בכלל נתונים להציג
+            bool hasPlc = plcLogs != null && plcLogs.Any();
+            bool hasApp = appLogs != null && appLogs.Any();
 
-            if (logsToAnalyze == null || !logsToAnalyze.Any())
+            if (!hasPlc && !hasApp)
             {
-                MessageBox.Show($"No {logSource} available for analysis.", "No Data", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("No logs available for analysis.", "No Data", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            var statsWindow = new Views.StatsWindow(logsToAnalyze);
+            // יצירת החלון עם שני הפרמטרים
+            var statsWindow = new Views.StatsWindow(plcLogs, appLogs);
             statsWindow.Owner = Application.Current.MainWindow;
-            statsWindow.Title = $"Log Statistics - {logSource}";
+            statsWindow.Title = "Log Statistics Dashboard";
             statsWindow.Show();
         }
         private void FilterToState(object obj)

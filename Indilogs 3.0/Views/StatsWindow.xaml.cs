@@ -1,215 +1,254 @@
+using DocumentFormat.OpenXml.Spreadsheet;
+using IndiLogs_3._0.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows;
-using IndiLogs_3._0.Models;
 
 namespace IndiLogs_3._0.Views
 {
     public partial class StatsWindow : Window
     {
-        private readonly List<LogEntry> _logs;
-        private List<ErrorStat> _errorStats;
-        private List<LoadStat> _threadStats;
-        private List<LoadStat> _loggerStats;
-        private List<GapInfo> _gaps;
+        private readonly List<LogEntry> _plcLogs;
+        private readonly List<LogEntry> _appLogs;
 
-        public StatsWindow(IEnumerable<LogEntry> logs)
+        // PLC Stats Data
+        private List<ErrorStat> _plcErrorStats;
+        private List<LoadStat> _plcThreadStats;
+        private List<GapInfo> _plcGaps;
+
+        // APP Stats Data
+        private List<ErrorStat> _appLoggerErrorStats;
+        private List<ErrorStat> _appThreadErrorStats;
+        private List<LoadStat> _appThreadStats;
+        private List<LoadStat> _appLoggerStats;
+        private List<GapInfo> _appGaps;
+
+        // ??? ??: ????? ???? ??? ??? ?????? ??????. ?? ????? ?? ?????? ?-StatsWindow ???? ????? ????.
+        public StatsWindow(IEnumerable<LogEntry> plcLogs, IEnumerable<LogEntry> appLogs)
         {
             InitializeComponent();
-            _logs = logs?.ToList() ?? new List<LogEntry>();
+            _plcLogs = plcLogs?.ToList() ?? new List<LogEntry>();
+            _appLogs = appLogs?.ToList() ?? new List<LogEntry>();
 
-            System.Diagnostics.Debug.WriteLine($"[STATS] StatsWindow initialized with {_logs.Count} logs");
+            System.Diagnostics.Debug.WriteLine($"[STATS] Initialized with {_plcLogs.Count} PLC logs and {_appLogs.Count} APP logs");
 
             Loaded += (s, e) => CalculateStatistics();
         }
 
         private void CalculateStatistics()
         {
-            System.Diagnostics.Debug.WriteLine("[STATS] Starting statistics calculation...");
+            System.Diagnostics.Debug.WriteLine("[STATS] Starting calculation...");
 
-            if (_logs == null || !_logs.Any())
+            // ????? ????? ?????
+            int totalLogs = _plcLogs.Count + _appLogs.Count;
+            if (totalLogs == 0)
             {
                 SummaryText.Text = "No logs available for analysis.";
-                System.Diagnostics.Debug.WriteLine("[STATS] No logs available");
                 return;
             }
 
-            var orderedLogs = _logs.OrderBy(l => l.Date).ToList();
-            var timeSpan = orderedLogs.Last().Date - orderedLogs.First().Date;
+            // ????? ???? ????? ????
+            var allDates = _plcLogs.Concat(_appLogs).Select(l => l.Date).OrderBy(d => d).ToList();
+            if (allDates.Any())
+            {
+                var timeSpan = allDates.Last() - allDates.First();
+                SummaryText.Text = $"Analyzed {totalLogs:N0} logs spanning {timeSpan.TotalMinutes:F1} minutes";
+            }
 
-            SummaryText.Text = $"Analyzed {_logs.Count:N0} log entries spanning {timeSpan.TotalMinutes:F1} minutes ({orderedLogs.First().Date:HH:mm:ss} - {orderedLogs.Last().Date:HH:mm:ss})";
-
-            // Calculate all statistics
-            CalculateErrorHistogram();
-            CalculateThreadDistribution();
-            CalculateLoggerDistribution();
-            CalculateGapAnalysis(orderedLogs);
-
-            System.Diagnostics.Debug.WriteLine("[STATS] Statistics calculation completed");
+            // ??????? ??? ??? ?????
+            CalculatePlcStatistics();
+            CalculateAppStatistics();
         }
 
-        private void CalculateErrorHistogram()
+        // ==========================================
+        //  PLC LOGS ANALYSIS
+        // ==========================================
+        private void CalculatePlcStatistics()
         {
-            System.Diagnostics.Debug.WriteLine("[STATS] Calculating error histogram...");
+            if (!_plcLogs.Any())
+            {
+                PlcSummaryText.Text = "No PLC logs available.";
+                return;
+            }
 
-            var errors = _logs.Where(l =>
+            PlcSummaryText.Text = $"PLC Logs: {_plcLogs.Count:N0} entries";
+
+            // 1. PLC Errors
+            var errors = GetErrorLogs(_plcLogs);
+            _plcErrorStats = CalculateErrorHistogram(errors, 10);
+            PlcErrorHistogram.ItemsSource = _plcErrorStats;
+            PlcErrorCountText.Text = errors.Any() ? $"(Total: {errors.Count:N0})" : "(No errors)";
+
+            // 2. PLC Thread Load
+            _plcThreadStats = CalculateLoadDistribution(_plcLogs, l => l.ThreadName, 10);
+            PlcThreadHistogram.ItemsSource = _plcThreadStats;
+            PlcThreadCountText.Text = _plcThreadStats.Any() ? "(Top 10)" : "";
+
+            // 3. PLC Gaps
+            _plcGaps = FindGaps(_plcLogs);
+            if (_plcGaps.Any())
+            {
+                PlcGapSummaryText.Text = $"Found {_plcGaps.Count} gap(s) >= 2s. Total: {FormatDuration(TimeSpan.FromSeconds(_plcGaps.Sum(g => g.Duration.TotalSeconds)))}";
+                PlcGapDataGrid.ItemsSource = _plcGaps;
+                PlcGapDataGrid.Visibility = Visibility.Visible;
+                PlcNoGapsMessage.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                PlcGapSummaryText.Text = "No significant time gaps.";
+                PlcGapDataGrid.Visibility = Visibility.Collapsed;
+                PlcNoGapsMessage.Visibility = Visibility.Visible;
+            }
+        }
+
+        // ==========================================
+        //  APP LOGS ANALYSIS
+        // ==========================================
+        private void CalculateAppStatistics()
+        {
+            if (!_appLogs.Any())
+            {
+                AppSummaryText.Text = "No APP logs available.";
+                return;
+            }
+
+            AppSummaryText.Text = $"APP Logs: {_appLogs.Count:N0} entries";
+
+            var errors = GetErrorLogs(_appLogs);
+
+            // 1. APP Errors by Logger (???? ??????)
+            _appLoggerErrorStats = CalculateErrorHistogram(errors, 10, l => GetShortLoggerName(l.Logger));
+            AppLoggerErrorHistogram.ItemsSource = _appLoggerErrorStats;
+            AppLoggerErrorCountText.Text = errors.Any() ? $"(Total: {errors.Count:N0})" : "(No errors)";
+
+            // 2. APP Errors by Thread (???? ??????)
+            _appThreadErrorStats = CalculateErrorHistogram(errors, 10, l => l.ThreadName);
+            AppThreadErrorHistogram.ItemsSource = _appThreadErrorStats;
+            AppThreadErrorCountText.Text = errors.Any() ? $"(Top 10 threads)" : "";
+
+            // 3. APP Thread Load (General)
+            _appThreadStats = CalculateLoadDistribution(_appLogs, l => l.ThreadName, 10);
+            AppThreadHistogram.ItemsSource = _appThreadStats;
+            AppThreadCountText.Text = "(Top 10)";
+
+            // 4. APP Logger Load (General)
+            _appLoggerStats = CalculateLoadDistribution(_appLogs, l => GetShortLoggerName(l.Logger), 15, l => l.Logger);
+            AppLoggerHistogram.ItemsSource = _appLoggerStats;
+            AppLoggerCountText.Text = "(Top 15)";
+
+            // 5. APP Gaps
+            _appGaps = FindGaps(_appLogs);
+            if (_appGaps.Any())
+            {
+                AppGapSummaryText.Text = $"Found {_appGaps.Count} gap(s) >= 2s. Total: {FormatDuration(TimeSpan.FromSeconds(_appGaps.Sum(g => g.Duration.TotalSeconds)))}";
+                AppGapDataGrid.ItemsSource = _appGaps;
+                AppGapDataGrid.Visibility = Visibility.Visible;
+                AppNoGapsMessage.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                AppGapSummaryText.Text = "No significant time gaps.";
+                AppGapDataGrid.Visibility = Visibility.Collapsed;
+                AppNoGapsMessage.Visibility = Visibility.Visible;
+            }
+        }
+
+        // ==========================================
+        //  HELPERS
+        // ==========================================
+
+        private List<LogEntry> GetErrorLogs(List<LogEntry> source)
+        {
+            return source.Where(l =>
                 string.Equals(l.Level, "Error", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(l.Level, "ERROR", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(l.Level, "Fatal", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(l.Level, "FATAL", StringComparison.OrdinalIgnoreCase))
                 .ToList();
-
-            System.Diagnostics.Debug.WriteLine($"[STATS] Found {errors.Count} error logs");
-
-            if (!errors.Any())
-            {
-                ErrorCountText.Text = "(No errors found)";
-                _errorStats = new List<ErrorStat>();
-                ErrorHistogram.ItemsSource = _errorStats;
-                return;
-            }
-
-            // Group by message (truncate for grouping)
-            var grouped = errors
-                .GroupBy(e => TruncateMessage(e.Message, 100))
-                .Select(g => new { Message = g.Key, Count = g.Count() })
-                .OrderByDescending(g => g.Count)
-                .Take(10)
-                .ToList();
-
-            int maxCount = grouped.Max(g => g.Count);
-
-            _errorStats = grouped.Select(g => new ErrorStat
-            {
-                Message = g.Message,
-                Count = g.Count,
-                BarWidth = maxCount > 0 ? (double)g.Count / maxCount * 300 : 0
-            }).ToList();
-
-            ErrorCountText.Text = $"(Total: {errors.Count:N0} errors)";
-            ErrorHistogram.ItemsSource = _errorStats;
-
-            System.Diagnostics.Debug.WriteLine($"[STATS] Error histogram: {_errorStats.Count} unique error types");
         }
 
-        private void CalculateThreadDistribution()
+        // Generic Error Histogram Calculator (By Message or Custom Key)
+        private List<ErrorStat> CalculateErrorHistogram(List<LogEntry> errors, int take, Func<LogEntry, string> keySelector = null)
         {
-            System.Diagnostics.Debug.WriteLine("[STATS] Calculating thread distribution...");
+            if (!errors.Any()) return new List<ErrorStat>();
 
-            var grouped = _logs
-                .Where(l => !string.IsNullOrEmpty(l.ThreadName))
-                .GroupBy(l => l.ThreadName)
-                .Select(g => new { Name = g.Key, Count = g.Count() })
+            // Default key is the Message
+            keySelector = keySelector ?? (l => TruncateMessage(l.Message, 100));
+
+            var grouped = errors
+                .GroupBy(keySelector)
+                .Select(g => new { Key = g.Key, Count = g.Count() })
                 .OrderByDescending(g => g.Count)
-                .Take(10)
+                .Take(take)
                 .ToList();
 
-            if (!grouped.Any())
+            int maxCount = grouped.Max(g => g.Count);
+
+            return grouped.Select(g => new ErrorStat
             {
-                ThreadCountText.Text = "(No thread data)";
-                _threadStats = new List<LoadStat>();
-                ThreadHistogram.ItemsSource = _threadStats;
-                return;
-            }
+                Message = g.Key, // Used for Name/Message display
+                Count = g.Count,
+                DisplayText = $"{g.Count:N0}",
+                BarWidth = maxCount > 0 ? (double)g.Count / maxCount * (keySelector == null ? 300 : 200) : 0
+            }).ToList();
+        }
+
+        // Generic Load Distribution Calculator
+        private List<LoadStat> CalculateLoadDistribution(List<LogEntry> logs, Func<LogEntry, string> keySelector, int take, Func<LogEntry, string> fullNameSelector = null)
+        {
+            var grouped = logs
+                .Where(l => !string.IsNullOrEmpty(keySelector(l)))
+                .GroupBy(keySelector)
+                .Select(g => new { Name = g.Key, Count = g.Count(), FullName = fullNameSelector != null ? fullNameSelector(g.First()) : g.Key })
+                .OrderByDescending(g => g.Count)
+                .Take(take)
+                .ToList();
+
+            if (!grouped.Any()) return new List<LoadStat>();
 
             int maxCount = grouped.Max(g => g.Count);
-            int totalLogs = _logs.Count;
+            int total = logs.Count;
 
-            _threadStats = grouped.Select(g => new LoadStat
+            return grouped.Select(g => new LoadStat
             {
                 Name = g.Name,
+                FullName = g.FullName,
                 Count = g.Count,
-                Percentage = (double)g.Count / totalLogs * 100,
-                DisplayText = $"{g.Count:N0} ({(double)g.Count / totalLogs * 100:F1}%)",
+                Percentage = (double)g.Count / total * 100,
+                DisplayText = $"{g.Count:N0} ({(double)g.Count / total * 100:F1}%)",
                 BarWidth = maxCount > 0 ? (double)g.Count / maxCount * 200 : 0
             }).ToList();
-
-            ThreadCountText.Text = $"(Top 10 of {_logs.Select(l => l.ThreadName).Distinct().Count()} threads)";
-            ThreadHistogram.ItemsSource = _threadStats;
-
-            System.Diagnostics.Debug.WriteLine($"[STATS] Thread distribution: {_threadStats.Count} threads shown");
         }
 
-        private void CalculateLoggerDistribution()
+        private List<GapInfo> FindGaps(List<LogEntry> logs)
         {
-            System.Diagnostics.Debug.WriteLine("[STATS] Calculating logger distribution...");
+            var gaps = new List<GapInfo>();
+            if (logs == null || logs.Count < 2) return gaps;
 
-            var grouped = _logs
-                .Where(l => !string.IsNullOrEmpty(l.Logger))
-                .GroupBy(l => l.Logger)
-                .Select(g => new { Name = g.Key, Count = g.Count() })
-                .OrderByDescending(g => g.Count)
-                .Take(15)
-                .ToList();
+            var ordered = logs.OrderBy(l => l.Date).ToList();
+            const double threshold = 2.0;
 
-            if (!grouped.Any())
+            for (int i = 1; i < ordered.Count; i++)
             {
-                LoggerCountText.Text = "(No logger data)";
-                _loggerStats = new List<LoadStat>();
-                LoggerHistogram.ItemsSource = _loggerStats;
-                return;
-            }
-
-            int totalLogs = _logs.Count;
-
-            _loggerStats = grouped.Select(g => new LoadStat
-            {
-                Name = GetShortLoggerName(g.Name),
-                FullName = g.Name,
-                Count = g.Count,
-                Percentage = (double)g.Count / totalLogs * 100,
-                DisplayText = $"{g.Count:N0} ({(double)g.Count / totalLogs * 100:F1}%)"
-            }).ToList();
-
-            LoggerCountText.Text = $"(Top 15 of {_logs.Select(l => l.Logger).Where(l => !string.IsNullOrEmpty(l)).Distinct().Count()} loggers)";
-            LoggerHistogram.ItemsSource = _loggerStats;
-
-            System.Diagnostics.Debug.WriteLine($"[STATS] Logger distribution: {_loggerStats.Count} loggers shown");
-        }
-
-        private void CalculateGapAnalysis(List<LogEntry> orderedLogs)
-        {
-            System.Diagnostics.Debug.WriteLine("[STATS] Calculating gap analysis...");
-
-            _gaps = new List<GapInfo>();
-            const double gapThresholdSeconds = 2.0;
-
-            for (int i = 1; i < orderedLogs.Count; i++)
-            {
-                var gap = orderedLogs[i].Date - orderedLogs[i - 1].Date;
-                if (gap.TotalSeconds >= gapThresholdSeconds)
+                var diff = ordered[i].Date - ordered[i - 1].Date;
+                if (diff.TotalSeconds >= threshold)
                 {
-                    _gaps.Add(new GapInfo
+                    gaps.Add(new GapInfo
                     {
-                        Index = _gaps.Count + 1,
-                        StartTime = orderedLogs[i - 1].Date,
-                        EndTime = orderedLogs[i].Date,
-                        Duration = gap,
-                        DurationText = FormatDuration(gap),
-                        LastMessageBeforeGap = TruncateMessage(orderedLogs[i - 1].Message, 100),
-                        LastLogBeforeGap = orderedLogs[i - 1]
+                        Index = gaps.Count + 1,
+                        StartTime = ordered[i - 1].Date,
+                        EndTime = ordered[i].Date,
+                        Duration = diff,
+                        DurationText = FormatDuration(diff),
+                        LastMessageBeforeGap = TruncateMessage(ordered[i - 1].Message, 100),
+                        LastLogBeforeGap = ordered[i - 1]
                     });
                 }
             }
-
-            System.Diagnostics.Debug.WriteLine($"[STATS] Found {_gaps.Count} gaps >= {gapThresholdSeconds}s");
-
-            if (_gaps.Any())
-            {
-                GapSummaryText.Text = $"Found {_gaps.Count} time gap(s) of 2+ seconds. Total gap time: {FormatDuration(TimeSpan.FromSeconds(_gaps.Sum(g => g.Duration.TotalSeconds)))}";
-                GapDataGrid.ItemsSource = _gaps;
-                GapDataGrid.Visibility = Visibility.Visible;
-                NoGapsMessage.Visibility = Visibility.Collapsed;
-            }
-            else
-            {
-                GapSummaryText.Text = "No significant time gaps detected.";
-                GapDataGrid.Visibility = Visibility.Collapsed;
-                NoGapsMessage.Visibility = Visibility.Visible;
-            }
+            return gaps;
         }
 
         private string TruncateMessage(string message, int maxLength)
@@ -221,7 +260,7 @@ namespace IndiLogs_3._0.Views
 
         private string GetShortLoggerName(string logger)
         {
-            if (string.IsNullOrEmpty(logger)) return logger;
+            if (string.IsNullOrEmpty(logger)) return "Unknown";
             var parts = logger.Split('.');
             if (parts.Length <= 2) return logger;
             return string.Join(".", parts.Skip(parts.Length - 2));
@@ -229,8 +268,7 @@ namespace IndiLogs_3._0.Views
 
         private string FormatDuration(TimeSpan ts)
         {
-            if (ts.TotalMinutes >= 1)
-                return $"{ts.TotalMinutes:F1} min";
+            if (ts.TotalMinutes >= 1) return $"{ts.TotalMinutes:F1} min";
             return $"{ts.TotalSeconds:F1} sec";
         }
 
@@ -241,100 +279,75 @@ namespace IndiLogs_3._0.Views
                 var sb = new StringBuilder();
                 sb.AppendLine("=== LOG STATISTICS REPORT ===");
                 sb.AppendLine($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-                sb.AppendLine($"Total Logs: {_logs.Count:N0}");
+                sb.AppendLine($"PLC Logs: {_plcLogs.Count:N0}");
+                sb.AppendLine($"APP Logs: {_appLogs.Count:N0}");
+                sb.AppendLine(new string('=', 50));
                 sb.AppendLine();
 
-                // Error Histogram
-                sb.AppendLine("--- TOP 10 ERRORS ---");
-                if (_errorStats != null && _errorStats.Any())
-                {
-                    foreach (var e2 in _errorStats)
-                    {
-                        sb.AppendLine($"  [{e2.Count}] {e2.Message}");
-                    }
-                }
-                else
-                {
-                    sb.AppendLine("  No errors found.");
-                }
+                // --- PLC SECTION ---
+                sb.AppendLine(">>> PLC LOGS STATISTICS <<<");
+                AppendSection(sb, "TOP 10 COMMON ERRORS", _plcErrorStats, s => $"[{s.Count}] {s.Message}");
+                AppendSection(sb, "THREAD LOAD", _plcThreadStats, s => $"{s.Name}: {s.DisplayText}");
+                AppendGapSection(sb, _plcGaps);
                 sb.AppendLine();
 
-                // Thread Distribution
-                sb.AppendLine("--- THREAD DISTRIBUTION ---");
-                if (_threadStats != null && _threadStats.Any())
-                {
-                    foreach (var t in _threadStats)
-                    {
-                        sb.AppendLine($"  {t.Name}: {t.DisplayText}");
-                    }
-                }
-                sb.AppendLine();
+                // --- APP SECTION ---
+                sb.AppendLine(">>> APP LOGS STATISTICS <<<");
+                AppendSection(sb, "ERRORS BY LOGGER", _appLoggerErrorStats, s => $"{s.Name} ({s.Count} errors)");
+                AppendSection(sb, "ERRORS BY THREAD", _appThreadErrorStats, s => $"{s.Name} ({s.Count} errors)");
+                AppendSection(sb, "THREAD LOAD", _appThreadStats, s => $"{s.Name}: {s.DisplayText}");
+                AppendSection(sb, "LOGGER LOAD", _appLoggerStats, s => $"{s.FullName}: {s.DisplayText}");
+                AppendGapSection(sb, _appGaps);
 
-                // Logger Distribution
-                sb.AppendLine("--- LOGGER DISTRIBUTION ---");
-                if (_loggerStats != null && _loggerStats.Any())
-                {
-                    foreach (var l in _loggerStats)
-                    {
-                        sb.AppendLine($"  {l.FullName ?? l.Name}: {l.DisplayText}");
-                    }
-                }
-                sb.AppendLine();
-
-                // Gap Analysis
-                sb.AppendLine("--- GAP ANALYSIS (>= 2 seconds) ---");
-                if (_gaps != null && _gaps.Any())
-                {
-                    sb.AppendLine($"  Total gaps: {_gaps.Count}");
-                    sb.AppendLine();
-                    foreach (var g in _gaps)
-                    {
-                        sb.AppendLine($"  Gap #{g.Index}:");
-                        sb.AppendLine($"    Start: {g.StartTime:yyyy-MM-dd HH:mm:ss.fff}");
-                        sb.AppendLine($"    End: {g.EndTime:yyyy-MM-dd HH:mm:ss.fff}");
-                        sb.AppendLine($"    Duration: {g.DurationText}");
-                        sb.AppendLine($"    Last message: {g.LastMessageBeforeGap}");
-                        sb.AppendLine();
-                    }
-                }
-                else
-                {
-                    sb.AppendLine("  No significant gaps found.");
-                }
-
-                // Save to file
+                // Save
                 var dialog = new Microsoft.Win32.SaveFileDialog
                 {
                     Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
-                    FileName = $"LogStats_{DateTime.Now:yyyyMMdd_HHmmss}.txt"
+                    FileName = $"LogStats_Full_{DateTime.Now:yyyyMMdd_HHmmss}.txt"
                 };
 
                 if (dialog.ShowDialog() == true)
                 {
                     File.WriteAllText(dialog.FileName, sb.ToString());
-                    MessageBox.Show($"Report exported to:\n{dialog.FileName}", "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show($"Report exported successfully.", "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error exporting report: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Error exporting: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private void Close_Click(object sender, RoutedEventArgs e)
+        private void AppendSection<T>(StringBuilder sb, string title, List<T> items, Func<T, string> formatter)
         {
-            Close();
+            sb.AppendLine($"--- {title} ---");
+            if (items != null && items.Any())
+                foreach (var item in items) sb.AppendLine("  " + formatter(item));
+            else
+                sb.AppendLine("  (No data)");
+            sb.AppendLine();
         }
-    }
 
-    // Helper classes for data binding
-    public class ErrorStat
-    {
-        public string Message { get; set; }
-        public int Count { get; set; }
-        public double BarWidth { get; set; }
-    }
+        private void AppendGapSection(StringBuilder sb, List<GapInfo> gaps)
+        {
+            sb.AppendLine("--- GAP ANALYSIS (>= 2s) ---");
+            if (gaps != null && gaps.Any())
+            {
+                foreach (var g in gaps)
+                {
+                    sb.AppendLine($"  #{g.Index} | {g.DurationText} | Start: {g.StartTime:HH:mm:ss.fff} | End: {g.EndTime:HH:mm:ss.fff}");
+                    sb.AppendLine($"      Last Log: {g.LastMessageBeforeGap}");
+                }
+            }
+            else
+            {
+                sb.AppendLine("  No significant gaps.");
+            }
+            sb.AppendLine();
+        }
 
+        private void Close_Click(object sender, RoutedEventArgs e) => Close();
+    }
     public class LoadStat
     {
         public string Name { get; set; }
@@ -355,4 +368,16 @@ namespace IndiLogs_3._0.Views
         public string LastMessageBeforeGap { get; set; }
         public LogEntry LastLogBeforeGap { get; set; }
     }
+
+    // (ErrorStat ??? ???? ?????, ?? ???? ?????? ??? ????? ????? ???)
+    public class ErrorStat
+    {
+        public string Name { get; set; }      // ?? ?-Logger ?? ?-Thread
+        public string Message { get; set; }   // ????? ?????? (???? ????????? ??????)
+        public int Count { get; set; }
+        public string DisplayText { get; set; }
+        public double BarWidth { get; set; }
+    }
+    // Helper models (same as before but ensured they have necessary props)
+   
 }
