@@ -1,4 +1,4 @@
-using IndiLogs_3._0.Models;
+﻿using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using System;
 using System.Collections.Generic;
@@ -38,14 +38,38 @@ namespace IndiLogs_3._0.ViewModels.Components
         private bool _isSearchPanelVisible;
         public bool IsSearchPanelVisible
         {
-            get => _isSearchPanelVisible;
+            get
+            {
+                System.Diagnostics.Debug.WriteLine($"[SEARCH PROP GET] IsSearchPanelVisible = {_isSearchPanelVisible}");
+                return _isSearchPanelVisible;
+            }
             set
             {
-                System.Diagnostics.Debug.WriteLine($"[SEARCH] IsSearchPanelVisible setter called. Old value: {_isSearchPanelVisible}, New value: {value}");
-                _isSearchPanelVisible = value;
-                OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsSearchPanelVisible));
-                System.Diagnostics.Debug.WriteLine($"[SEARCH] PropertyChanged notified for IsSearchPanelVisible");
+                System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
+                System.Diagnostics.Debug.WriteLine($"[SEARCH PROP SET] Called with value: {value}");
+                System.Diagnostics.Debug.WriteLine($"[SEARCH PROP SET] Current value: {_isSearchPanelVisible}");
+
+                if (_isSearchPanelVisible != value)
+                {
+                    _isSearchPanelVisible = value;
+                    System.Diagnostics.Debug.WriteLine($"[SEARCH PROP SET] Value changed! Calling OnPropertyChanged()");
+                    OnPropertyChanged();
+
+                    if (_parent != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[SEARCH PROP SET] Notifying parent");
+                        _parent?.OnPropertyChanged(nameof(_parent.IsSearchPanelVisible));
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[SEARCH PROP SET] ⚠️ WARNING: _parent is NULL!");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SEARCH PROP SET] Value unchanged, skipping");
+                }
+                System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
             }
         }
 
@@ -272,9 +296,14 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             ToggleSearchCommand = new RelayCommand(o =>
             {
-                System.Diagnostics.Debug.WriteLine($"[SEARCH] ToggleSearchCommand executed. Current visibility: {IsSearchPanelVisible}");
+                System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
+                System.Diagnostics.Debug.WriteLine($"[SEARCH CMD] ToggleSearchCommand CALLED");
+                System.Diagnostics.Debug.WriteLine($"[SEARCH CMD] Current IsSearchPanelVisible: {IsSearchPanelVisible}");
+                System.Diagnostics.Debug.WriteLine($"[SEARCH CMD] Toggling to: {!IsSearchPanelVisible}");
+
                 IsSearchPanelVisible = !IsSearchPanelVisible;
-                System.Diagnostics.Debug.WriteLine($"[SEARCH] New visibility: {IsSearchPanelVisible}");
+
+                System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
             });
             CloseSearchCommand = new RelayCommand(o =>
             {
@@ -890,84 +919,143 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         private void ExecuteTreeShowThis(object obj)
         {
-            System.Diagnostics.Debug.WriteLine($"[TREE FILTER] ExecuteTreeShowThis called with: {obj?.GetType().Name}");
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
+            System.Diagnostics.Debug.WriteLine($"[TREE] ExecuteTreeShowThis CALLED");
+            System.Diagnostics.Debug.WriteLine($"[TREE] Parameter: {obj?.GetType().Name ?? "NULL"}");
+
             if (obj is LoggerNode node)
             {
-                System.Diagnostics.Debug.WriteLine($"[TREE FILTER] Showing logger: {node.FullPath}");
+                System.Diagnostics.Debug.WriteLine($"[TREE] Logger: {node.FullPath}");
+                System.Diagnostics.Debug.WriteLine($"[TREE] Before: IsHidden={node.IsHidden}");
+                System.Diagnostics.Debug.WriteLine($"[TREE] Before: HiddenLoggers count={_treeHiddenLoggers.Count}");
+
                 _treeShowOnlyLogger = null;
                 _treeShowOnlyPrefix = null;
-                _treeHiddenLoggers.Remove(node.FullPath);
+                bool wasRemoved = _treeHiddenLoggers.Remove(node.FullPath);
                 node.IsHidden = false;
+
+                System.Diagnostics.Debug.WriteLine($"[TREE] Removed from hidden: {wasRemoved}");
+                System.Diagnostics.Debug.WriteLine($"[TREE] After: IsHidden={node.IsHidden}");
+                System.Diagnostics.Debug.WriteLine($"[TREE] After: HiddenLoggers count={_treeHiddenLoggers.Count}");
+                System.Diagnostics.Debug.WriteLine($"[TREE] Setting IsAppFilterActive=true");
+
                 IsAppFilterActive = true;
+
+                System.Diagnostics.Debug.WriteLine($"[TREE] Calling ToggleFilterView(true)");
                 ToggleFilterView(true);
-                System.Diagnostics.Debug.WriteLine($"[TREE FILTER] IsAppFilterActive set to true, filter applied");
+
+                System.Diagnostics.Debug.WriteLine($"[TREE] Result: AppDevLogsFiltered count={_appDevLogsFiltered?.Count ?? 0}");
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"[TREE FILTER] Parameter is not LoggerNode!");
+                System.Diagnostics.Debug.WriteLine($"[TREE] ❌ NOT LoggerNode!");
             }
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
         }
 
         private void ExecuteTreeHideThis(object obj)
         {
-            System.Diagnostics.Debug.WriteLine($"[TREE FILTER] ExecuteTreeHideThis called with: {obj?.GetType().Name}");
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
+            System.Diagnostics.Debug.WriteLine($"[TREE] ExecuteTreeHideThis CALLED");
+            System.Diagnostics.Debug.WriteLine($"[TREE] Parameter: {obj?.GetType().Name ?? "NULL"}");
+
             if (obj is LoggerNode node)
             {
-                System.Diagnostics.Debug.WriteLine($"[TREE FILTER] Hiding logger: {node.FullPath}");
+                System.Diagnostics.Debug.WriteLine($"[TREE] Logger: {node.FullPath}");
+                System.Diagnostics.Debug.WriteLine($"[TREE] Before: IsHidden={node.IsHidden}");
+                System.Diagnostics.Debug.WriteLine($"[TREE] Before: HiddenLoggers count={_treeHiddenLoggers.Count}");
+
                 _treeShowOnlyLogger = null;
                 _treeShowOnlyPrefix = null;
                 _treeHiddenLoggers.Add(node.FullPath);
                 node.IsHidden = true;
+
+                System.Diagnostics.Debug.WriteLine($"[TREE] After: IsHidden={node.IsHidden}");
+                System.Diagnostics.Debug.WriteLine($"[TREE] After: HiddenLoggers count={_treeHiddenLoggers.Count}");
+                System.Diagnostics.Debug.WriteLine($"[TREE] Hidden loggers: {string.Join(", ", _treeHiddenLoggers)}");
+                System.Diagnostics.Debug.WriteLine($"[TREE] Setting IsAppFilterActive=true");
+
                 IsAppFilterActive = true;
+
+                System.Diagnostics.Debug.WriteLine($"[TREE] Calling ToggleFilterView(true)");
                 ToggleFilterView(true);
-                System.Diagnostics.Debug.WriteLine($"[TREE FILTER] IsAppFilterActive set to true, filter applied");
+
+                System.Diagnostics.Debug.WriteLine($"[TREE] Result: AppDevLogsFiltered count={_appDevLogsFiltered?.Count ?? 0}");
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"[TREE FILTER] Parameter is not LoggerNode!");
+                System.Diagnostics.Debug.WriteLine($"[TREE] ❌ NOT LoggerNode!");
             }
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
         }
+
 
         private void ExecuteTreeShowOnlyThis(object obj)
         {
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
+            System.Diagnostics.Debug.WriteLine($"[TREE] ExecuteTreeShowOnlyThis CALLED");
+
             if (obj is LoggerNode node)
             {
+                System.Diagnostics.Debug.WriteLine($"[TREE] Logger: {node.FullPath}");
                 ResetTreeFilters();
                 _treeShowOnlyLogger = node.FullPath;
+                System.Diagnostics.Debug.WriteLine($"[TREE] ShowOnlyLogger set to: {_treeShowOnlyLogger}");
                 IsAppFilterActive = true;
                 ToggleFilterView(true);
+                System.Diagnostics.Debug.WriteLine($"[TREE] Result: AppDevLogsFiltered count={_appDevLogsFiltered?.Count ?? 0}");
             }
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
         }
 
         private void ExecuteTreeShowWithChildren(object obj)
         {
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
+            System.Diagnostics.Debug.WriteLine($"[TREE] ExecuteTreeShowWithChildren CALLED");
+
             if (obj is LoggerNode node)
             {
+                System.Diagnostics.Debug.WriteLine($"[TREE] Logger: {node.FullPath}");
                 ResetTreeFilters();
                 _treeShowOnlyPrefix = node.FullPath;
+                System.Diagnostics.Debug.WriteLine($"[TREE] ShowOnlyPrefix set to: {_treeShowOnlyPrefix}");
                 IsAppFilterActive = true;
                 ToggleFilterView(true);
+                System.Diagnostics.Debug.WriteLine($"[TREE] Result: AppDevLogsFiltered count={_appDevLogsFiltered?.Count ?? 0}");
             }
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
         }
 
         private void ExecuteTreeHideWithChildren(object obj)
         {
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
+            System.Diagnostics.Debug.WriteLine($"[TREE] ExecuteTreeHideWithChildren CALLED");
+
             if (obj is LoggerNode node)
             {
+                System.Diagnostics.Debug.WriteLine($"[TREE] Logger: {node.FullPath}");
                 _treeShowOnlyLogger = null;
                 _treeShowOnlyPrefix = null;
                 _treeHiddenPrefixes.Add(node.FullPath);
                 node.IsHidden = true;
+                System.Diagnostics.Debug.WriteLine($"[TREE] Added to HiddenPrefixes: {node.FullPath}");
+                System.Diagnostics.Debug.WriteLine($"[TREE] HiddenPrefixes count: {_treeHiddenPrefixes.Count}");
                 IsAppFilterActive = true;
                 ToggleFilterView(true);
+                System.Diagnostics.Debug.WriteLine($"[TREE] Result: AppDevLogsFiltered count={_appDevLogsFiltered?.Count ?? 0}");
             }
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
         }
 
         private void ExecuteTreeShowAll(object obj)
         {
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
+            System.Diagnostics.Debug.WriteLine($"[TREE] ExecuteTreeShowAll CALLED");
             ResetTreeFilters();
             IsAppFilterActive = false;
             ToggleFilterView(false);
+            System.Diagnostics.Debug.WriteLine($"[TREE] Result: AppDevLogsFiltered count={_appDevLogsFiltered?.Count ?? 0}");
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

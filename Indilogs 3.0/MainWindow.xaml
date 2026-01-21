@@ -284,8 +284,8 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <controls:SearchPanelControl Grid.Row="0" DataContext="{Binding}"/>
-
+                <controls:SearchPanelControl Grid.Row="0" DataContext="{Binding}"
+                              Visibility="{Binding IsSearchPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}"/>
                 <TabControl x:Name="MainTabs" Grid.Row="0" SelectedIndex="{Binding SelectedTabIndex}" BorderThickness="0" Background="Transparent" Padding="0" SelectionChanged="TabControl_SelectionChanged">
 
                     <TabItem Header="PLC LOGS">

@@ -1,4 +1,4 @@
-using IndiLogs_3._0.Models;
+﻿using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using System;
 using System.Collections.Generic;
@@ -326,16 +326,61 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         private void ClearLogs(object obj)
         {
-            _allLogsCache?.Clear();
-            _allAppLogsCache?.Clear();
-            Logs = new List<LogEntry>();
-            Events.Clear();
-            Screenshots.Clear();
-            LoadedFiles.Clear();
-            LoadedSessions.Clear();
-            SelectedSession = null;
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════════════════════");
+            System.Diagnostics.Debug.WriteLine("[SESSION VM] ========== CLEAR CALLED ==========");
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════════════════════");
 
+            // Clear logs
+            System.Diagnostics.Debug.WriteLine($"[SESSION VM] Clearing AllLogsCache: {_allLogsCache?.Count ?? 0} items");
+            if (_allLogsCache != null) _allLogsCache.Clear();
+
+            System.Diagnostics.Debug.WriteLine($"[SESSION VM] Clearing AllAppLogsCache: {_allAppLogsCache?.Count ?? 0} items");
+            if (_allAppLogsCache != null) _allAppLogsCache.Clear();
+
+            System.Diagnostics.Debug.WriteLine($"[SESSION VM] Setting Logs to empty list");
+            Logs = new List<LogEntry>();
+            OnPropertyChanged(nameof(Logs));
+
+            // Clear events
+            System.Diagnostics.Debug.WriteLine($"[SESSION VM] Clearing Events: {_events?.Count ?? 0} items");
+            if (_events != null)
+            {
+                _events.Clear();
+                OnPropertyChanged(nameof(Events));
+            }
+
+            // Clear screenshots
+            System.Diagnostics.Debug.WriteLine($"[SESSION VM] Clearing Screenshots: {_screenshots?.Count ?? 0} items");
+            if (_screenshots != null)
+            {
+                _screenshots.Clear();
+                OnPropertyChanged(nameof(Screenshots));
+            }
+
+            // Clear files
+            System.Diagnostics.Debug.WriteLine($"[SESSION VM] Clearing LoadedFiles: {_loadedFiles?.Count ?? 0} items");
+            if (_loadedFiles != null)
+            {
+                _loadedFiles.Clear();
+                OnPropertyChanged(nameof(LoadedFiles));
+            }
+
+            // Clear sessions
+            System.Diagnostics.Debug.WriteLine($"[SESSION VM] Clearing LoadedSessions: {_loadedSessions?.Count ?? 0} items");
+            if (_loadedSessions != null)
+            {
+                _loadedSessions.Clear();
+                OnPropertyChanged(nameof(LoadedSessions));
+            }
+
+            System.Diagnostics.Debug.WriteLine("[SESSION VM] Resetting properties...");
+            SelectedSession = null;
+            CurrentProgress = 0;
             StatusMessage = "Logs cleared";
+
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════════════════════");
+            System.Diagnostics.Debug.WriteLine("[SESSION VM] ========== CLEAR COMPLETED ==========");
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════════════════════");
         }
 
         private void SwitchToSession(LogSessionData session)

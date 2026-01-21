@@ -144,11 +144,7 @@ namespace IndiLogs_3._0.ViewModels
             set { if (FilterVM != null) FilterVM.SearchText = value; }
         }
 
-        public bool IsSearchPanelVisible
-        {
-            get => FilterVM?.IsSearchPanelVisible ?? false;
-            set { if (FilterVM != null) FilterVM.IsSearchPanelVisible = value; }
-        }
+       
 
         public LoggerNode SelectedTreeItem => FilterVM?.SelectedTreeItem;
         public bool IsMainFilterActive => FilterVM?.IsMainFilterActive ?? false;
@@ -197,7 +193,33 @@ namespace IndiLogs_3._0.ViewModels
             get => FilterVM?.TreeShowOnlyPrefix;
             set { if (FilterVM != null) FilterVM.TreeShowOnlyPrefix = value; }
         }
+        public bool IsSearchPanelVisible
+        {
+            get => FilterVM?.IsSearchPanelVisible ?? false;
+            set
+            {
+                if (FilterVM != null)
+                    FilterVM.IsSearchPanelVisible = value;
+                OnPropertyChanged();
+            }
+        }
+        public string SearchText
+        {
+            get => FilterVM?.SearchText;
+            set { if (FilterVM != null) FilterVM.SearchText = value; }
+        }
 
+        // הוסף כאן:
+        public bool IsSearchPanelVisible
+        {
+            get => FilterVM?.IsSearchPanelVisible ?? false;
+            set
+            {
+                if (FilterVM != null)
+                    FilterVM.IsSearchPanelVisible = value;
+                OnPropertyChanged();
+            }
+        }
         // Live Mode
         public bool IsLiveMode
         {
@@ -1060,38 +1082,131 @@ namespace IndiLogs_3._0.ViewModels
 
         private void ClearLogs(object obj)
         {
-            System.Diagnostics.Debug.WriteLine("[CLEAR] Clear All command executed");
-            CaseVM?.ClearMarkedLogs();
-            FilterVM.IsMainFilterActive = false; FilterVM.IsAppFilterActive = false;
-            FilterVM.IsMainFilterOutActive = false; FilterVM.IsAppFilterOutActive = false;
-            FilterVM.IsAppTimeFocusActive = false; FilterVM.LastFilteredAppCache = null;
-            FilterVM.IsTimeFocusActive = false;
-            SessionVM.AllLogsCache?.Clear();
-            if (FilterVM.LastFilteredCache != null) FilterVM.LastFilteredCache.Clear();
-            FilterVM.NegativeFilters.Clear();
-            FilterVM.ActiveThreadFilters.Clear();
-            Logs = new List<LogEntry>(); FilteredLogs?.Clear(); AppDevLogsFiltered?.Clear();
-            LoggerTreeRoot?.Clear(); Events.Clear(); Screenshots.Clear();
-            LoadedFiles.Clear(); CurrentProgress = 0;
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════════════════════");
+            System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] ========== CLEAR ALL STARTED ==========");
+            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════════════════════");
 
-            // Clear all text info
-            SetupInfo = "";
-            PressConfig = "";
-            VersionsInfo = "";
-            WindowTitle = "IndiLogs 3.0";
+            try
+            {
+                // Step 1: Clear SessionVM
+                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 1: Calling SessionVM.Clear()...");
+                SessionVM?.ClearCommand.Execute(null);
 
-            ScreenshotZoom = 400;
-            IsFilterOutActive = false; LoadedSessions.Clear(); SelectedSession = null;
-            SessionVM.AllAppLogsCache = null;
-            ResetTreeFilters();
-            ConfigVM.ClearConfigurationFiles();
-            VisualTimelineVM?.Clear();
-            IsVisualMode = false;
+                // Step 2: Clear case management
+                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 2: Clearing case management...");
+                CaseVM?.ClearMarkedLogs();
+                if (CaseVM?.LogAnnotations != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing {CaseVM.LogAnnotations.Count} annotations");
+                    CaseVM.LogAnnotations.Clear();
+                }
 
-            System.Diagnostics.Debug.WriteLine("[CLEAR] All data cleared successfully");
-            StatusMessage = "All data cleared";
+                // Step 3: Clear filters
+                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 3: Resetting filters...");
+                if (FilterVM != null)
+                {
+                    FilterVM.IsMainFilterActive = false;
+                    FilterVM.IsAppFilterActive = false;
+                    FilterVM.IsMainFilterOutActive = false;
+                    FilterVM.IsAppFilterOutActive = false;
+                    FilterVM.IsAppTimeFocusActive = false;
+                    FilterVM.IsTimeFocusActive = false;
+
+                    FilterVM.LastFilteredAppCache?.Clear();
+                    FilterVM.LastFilteredCache?.Clear();
+                    FilterVM.NegativeFilters?.Clear();
+                    FilterVM.ActiveThreadFilters?.Clear();
+                    FilterVM.ActiveLoggerFilters?.Clear();
+                    FilterVM.ActiveMethodFilters?.Clear();
+
+                    System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing FilteredLogs: {FilteredLogs?.Count ?? 0} items");
+                    FilteredLogs?.Clear();
+
+                    System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing AppDevLogsFiltered: {AppDevLogsFiltered?.Count ?? 0} items");
+                    AppDevLogsFiltered?.Clear();
+
+                    System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing LoggerTreeRoot: {LoggerTreeRoot?.Count ?? 0} items");
+                    LoggerTreeRoot?.Clear();
+
+                    FilterVM.SearchText = "";
+                    FilterVM.IsSearchPanelVisible = false;
+                }
+
+                // Step 4: Clear main collections
+                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 4: Clearing main collections...");
+                Logs = new List<LogEntry>();
+                OnPropertyChanged(nameof(Logs));
+
+                // Step 5: Clear configuration
+                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 5: Clearing configuration...");
+                ConfigVM?.ClearConfigurationFiles();
+
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing ConfigFileContent (was: {ConfigFileContent?.Length ?? 0} chars)");
+                ConfigFileContent = "";
+                OnPropertyChanged(nameof(ConfigFileContent));
+
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing ConfigSearchText");
+                ConfigSearchText = "";
+                OnPropertyChanged(nameof(ConfigSearchText));
+
+                // Step 6: Clear text info
+                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 6: Clearing text info...");
+
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing SetupInfo (was: {SetupInfo?.Length ?? 0} chars)");
+                SetupInfo = "";
+                OnPropertyChanged(nameof(SetupInfo));
+
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing PressConfig (was: {PressConfig?.Length ?? 0} chars)");
+                PressConfig = "";
+                OnPropertyChanged(nameof(PressConfig));
+
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing VersionsInfo (was: {VersionsInfo?.Length ?? 0} chars)");
+                VersionsInfo = "";
+                OnPropertyChanged(nameof(VersionsInfo));
+
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Resetting WindowTitle");
+                WindowTitle = "IndiLogs 3.0";
+                OnPropertyChanged(nameof(WindowTitle));
+
+                // Step 7: Reset UI state
+                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 7: Resetting UI state...");
+                CurrentProgress = 0;
+                ScreenshotZoom = 400;
+                SelectedSession = null;
+                SelectedLog = null;
+                IsFilterOutActive = false;
+                OnPropertyChanged(nameof(IsFilterActive));
+                OnPropertyChanged(nameof(IsFilterOutActive));
+
+                // Step 8: Reset tree filters
+                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 8: Resetting tree filters...");
+                ResetTreeFilters();
+
+                // Step 9: Reset visual mode
+                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 9: Resetting visual mode...");
+                VisualTimelineVM?.Clear();
+                IsVisualMode = false;
+
+                // Step 10: Reset tabs
+                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 10: Resetting tabs...");
+                SelectedTabIndex = 0;
+                OnPropertyChanged(nameof(SelectedTabIndex));
+                LeftTabIndex = 0;
+                OnPropertyChanged(nameof(LeftTabIndex));
+
+                System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════════════════════");
+                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] ========== CLEAR ALL COMPLETED ==========");
+                System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════════════════════");
+
+                StatusMessage = "All data cleared successfully";
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] ❌ ERROR: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Stack trace: {ex.StackTrace}");
+                StatusMessage = $"Clear failed: {ex.Message}";
+            }
         }
-
         private void OpenStatesWindow(object obj)
         {
             if (IsAnalysisRunning)
@@ -1306,74 +1421,7 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         private void BuildLoggerTree(IEnumerable<LogEntry> logs) => FilterVM?.BuildLoggerTree(logs);
-        private void ExecuteTreeShowThis(object obj)
-        {
-            if (obj is LoggerNode node)
-            {
-                FilterVM.TreeShowOnlyLogger = null;
-                FilterVM.TreeShowOnlyPrefix = null;
-                FilterVM.TreeHiddenLoggers.Remove(node.FullPath);
-                node.IsHidden = false;
-                FilterVM.IsAppFilterActive = true;
-                OnPropertyChanged(nameof(IsFilterActive));
-                ToggleFilterView(true);
-            }
-        }
-        private void ExecuteTreeHideThis(object obj)
-        {
-            if (obj is LoggerNode node)
-            {
-                FilterVM.TreeShowOnlyLogger = null;
-                FilterVM.TreeShowOnlyPrefix = null;
-                FilterVM.TreeHiddenLoggers.Add(node.FullPath);
-                node.IsHidden = true;
-                FilterVM.IsAppFilterActive = true;
-                OnPropertyChanged(nameof(IsFilterActive));
-                ToggleFilterView(true);
-            }
-        }
-        private void ExecuteTreeShowOnlyThis(object obj)
-        {
-            if (obj is LoggerNode node)
-            {
-                ResetTreeFilters();
-                FilterVM.TreeShowOnlyLogger = node.FullPath;
-                FilterVM.IsAppFilterActive = true;
-                OnPropertyChanged(nameof(IsFilterActive));
-                ToggleFilterView(true);
-            }
-        }
-        private void ExecuteTreeShowWithChildren(object obj)
-        {
-            if (obj is LoggerNode node)
-            {
-                ResetTreeFilters();
-                FilterVM.TreeShowOnlyPrefix = node.FullPath;
-                FilterVM.IsAppFilterActive = true;
-                OnPropertyChanged(nameof(IsFilterActive));
-                ToggleFilterView(true);
-            }
-        }
-        private void ExecuteTreeHideWithChildren(object obj)
-        {
-            if (obj is LoggerNode node)
-            {
-                FilterVM.TreeShowOnlyLogger = null;
-                FilterVM.TreeShowOnlyPrefix = null;
-                FilterVM.TreeHiddenPrefixes.Add(node.FullPath);
-                node.IsHidden = true;
-                FilterVM.IsAppFilterActive = true;
-                OnPropertyChanged(nameof(IsFilterActive));
-                ToggleFilterView(true);
-            }
-        }
-        private void ExecuteTreeShowAll(object obj)
-        {
-            ResetTreeFilters();
-            FilterVM.IsAppFilterActive = false;
-            OnPropertyChanged(nameof(IsFilterActive));
-            ToggleFilterView(false);
-        }
+                   
         public void ResetTreeFilters()
         {
             FilterVM.TreeHiddenLoggers.Clear();
