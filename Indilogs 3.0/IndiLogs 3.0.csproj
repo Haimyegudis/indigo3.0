@@ -316,6 +316,12 @@
     <Compile Include="Views\ThreadFilterWindow.xaml.cs">
       <DependentUpon>ThreadFilterWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\StatsWindow.xaml.cs">
+      <DependentUpon>StatsWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\AnalysisMenuWindow.xaml.cs">
+      <DependentUpon>AnalysisMenuWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\AnalysisReportWindow.xaml.cs">
       <DependentUpon>AnalysisReportWindow.xaml</DependentUpon>
     </Compile>
@@ -437,6 +443,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\ThreadFilterWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\StatsWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\AnalysisMenuWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

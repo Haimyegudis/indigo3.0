@@ -104,7 +104,7 @@
 
                 <DataGridTextColumn Binding="{Binding Logger}" Width="200" CanUserSort="True" SortMemberPath="Logger">
                     <DataGridTextColumn.Header>
-                        <Button Content="🔍 Logger" Command="{Binding DataContext.OpenLoggerFilterCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" Cursor="Hand" ToolTip="Click to filter by logger" FontSize="12" Padding="6,2"/>
+                        <Button Content="🔍 Logger" Click="LoggerFilterButton_Click" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" Cursor="Hand" ToolTip="Click to filter by logger" FontSize="12" Padding="6,2"/>
                     </DataGridTextColumn.Header>
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
@@ -133,7 +133,7 @@
 
                 <DataGridTextColumn Binding="{Binding ThreadName}" Width="90" CanUserSort="True" SortMemberPath="Thread">
                     <DataGridTextColumn.Header>
-                        <Button Content="🔍 Thread" Command="{Binding DataContext.OpenThreadFilterCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" Cursor="Hand" ToolTip="Click to filter by thread" FontSize="12" Padding="6,2"/>
+                        <Button Content="🔍 Thread" Click="ThreadFilterButton_Click" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" Cursor="Hand" ToolTip="Click to filter by thread" FontSize="12" Padding="6,2"/>
                     </DataGridTextColumn.Header>
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
@@ -165,7 +165,7 @@
 
                 <DataGridTextColumn Binding="{Binding Method}" Width="230" CanUserSort="True" SortMemberPath="Method">
                     <DataGridTextColumn.Header>
-                        <Button Content="🔍 Method" Command="{Binding DataContext.OpenMethodFilterCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" Cursor="Hand" ToolTip="Click to filter by method" FontSize="12" Padding="6,2"/>
+                        <Button Content="🔍 Method" Click="MethodFilterButton_Click" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" Cursor="Hand" ToolTip="Click to filter by method" FontSize="12" Padding="6,2"/>
                     </DataGridTextColumn.Header>
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">

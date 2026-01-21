@@ -1156,6 +1156,28 @@ namespace IndiLogs_3._0.ViewModels
                 return;
             }
 
+            // Show analysis menu
+            var menuWindow = new Views.AnalysisMenuWindow();
+            menuWindow.Owner = Application.Current.MainWindow;
+
+            if (menuWindow.ShowDialog() == true)
+            {
+                switch (menuWindow.SelectedChoice)
+                {
+                    case Views.AnalysisMenuWindow.AnalysisChoice.Failures:
+                        ShowFailuresAnalysis();
+                        break;
+                    case Views.AnalysisMenuWindow.AnalysisChoice.Statistics:
+                        ShowStatisticsAnalysis();
+                        break;
+                }
+            }
+        }
+
+        private void ShowFailuresAnalysis()
+        {
+            System.Diagnostics.Debug.WriteLine("[ANALYSIS] ShowFailuresAnalysis called");
+
             if (_analysisWindow != null && _analysisWindow.IsVisible)
             {
                 _analysisWindow.Activate();
@@ -1171,6 +1193,39 @@ namespace IndiLogs_3._0.ViewModels
                 MessageBox.Show("Great news! No critical state failures were detected in this session.",
                                 "Analysis Result", MessageBoxButton.OK, MessageBoxImage.Information);
             }
+        }
+
+        private void ShowStatisticsAnalysis()
+        {
+            System.Diagnostics.Debug.WriteLine("[ANALYSIS] ShowStatisticsAnalysis called");
+
+            // Determine which logs to analyze based on current tab
+            IEnumerable<LogEntry> logsToAnalyze;
+            string logSource;
+
+            if (SelectedTabIndex == 2) // App tab
+            {
+                logsToAnalyze = SessionVM?.AllAppLogsCache;
+                logSource = "App Logs";
+                System.Diagnostics.Debug.WriteLine($"[ANALYSIS] Using App logs, count={logsToAnalyze?.Count() ?? 0}");
+            }
+            else // PLC tab
+            {
+                logsToAnalyze = SessionVM?.AllLogsCache;
+                logSource = "PLC Logs";
+                System.Diagnostics.Debug.WriteLine($"[ANALYSIS] Using PLC logs, count={logsToAnalyze?.Count() ?? 0}");
+            }
+
+            if (logsToAnalyze == null || !logsToAnalyze.Any())
+            {
+                MessageBox.Show($"No {logSource} available for analysis.", "No Data", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var statsWindow = new Views.StatsWindow(logsToAnalyze);
+            statsWindow.Owner = Application.Current.MainWindow;
+            statsWindow.Title = $"Log Statistics - {logSource}";
+            statsWindow.Show();
         }
         private void FilterToState(object obj)
         {

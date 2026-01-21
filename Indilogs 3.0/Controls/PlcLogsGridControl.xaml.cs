@@ -320,10 +320,9 @@ namespace IndiLogs_3._0.Controls
 
                 foreach (var column in LogsDataGrid.Columns)
                 {
-                    if (column.Header != null && !string.IsNullOrEmpty(column.Header.ToString()))
+                    string header = GetColumnHeaderText(column);
+                    if (!string.IsNullOrEmpty(header))
                     {
-                        string header = column.Header.ToString();
-
                         if (columnSettings.ColumnWidths.ContainsKey(header))
                         {
                             column.Width = new DataGridLength(columnSettings.ColumnWidths[header]);

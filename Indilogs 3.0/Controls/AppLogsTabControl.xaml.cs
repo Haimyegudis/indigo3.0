@@ -128,6 +128,28 @@ namespace IndiLogs_3._0.Controls
 
         }
 
+        // Column filter button click handlers
+        private void LoggerFilterButton_Click(object sender, RoutedEventArgs e)
+        {
+            var vm = DataContext as ViewModels.MainViewModel;
+            vm?.OpenLoggerFilterCommand?.Execute(null);
+            e.Handled = true;
+        }
+
+        private void ThreadFilterButton_Click(object sender, RoutedEventArgs e)
+        {
+            var vm = DataContext as ViewModels.MainViewModel;
+            vm?.OpenThreadFilterCommand?.Execute(null);
+            e.Handled = true;
+        }
+
+        private void MethodFilterButton_Click(object sender, RoutedEventArgs e)
+        {
+            var vm = DataContext as ViewModels.MainViewModel;
+            vm?.OpenMethodFilterCommand?.Execute(null);
+            e.Handled = true;
+        }
+
         private void AttachColumnHeaderContextMenu()
         {
             AppLogsGrid.MouseRightButtonUp += DataGrid_MouseRightButtonUp;

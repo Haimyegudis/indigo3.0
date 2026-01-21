@@ -156,7 +156,7 @@
                                         </Button>
                                         <Button Command="{Binding RunAnalysisCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsPLCTabSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-                                                <TextBlock Text="⚙ Run Analysis"/>
+                                                <TextBlock Text="⚙ Reports"/>
                                             </Viewbox>
                                         </Button>
                                         <Separator Margin="0,10,0,10" Background="{DynamicResource BorderColor}"/>
