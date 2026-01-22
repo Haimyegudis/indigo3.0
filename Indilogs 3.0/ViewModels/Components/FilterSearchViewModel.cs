@@ -410,207 +410,62 @@ namespace IndiLogs_3._0.ViewModels.Components
             AddNodeRecursive(child, parts, index + 1, newPath, count);
         }
 
-        public void ApplyMainLogsFilter()
-        {
-            if (_parent.IsLiveMode) return;
-
-            bool isActive = _isMainFilterActive;
-            IEnumerable<LogEntry> currentLogs;
-            bool hasSearchText = !string.IsNullOrWhiteSpace(SearchText) && SearchText.Length >= 2;
-
-            if (isActive || hasSearchText)
-            {
-                if ((_mainFilterRoot != null && _mainFilterRoot.Children != null && _mainFilterRoot.Children.Count > 0) || _isTimeFocusActive)
-                    currentLogs = _lastFilteredCache ?? new List<LogEntry>();
-                else
-                    currentLogs = _sessionVM?.AllLogsCache ?? new List<LogEntry>();
-
-                // PLC Tab only uses Thread Filter
-                if (_activeThreadFilters.Any())
-                    currentLogs = currentLogs.Where(l => _activeThreadFilters.Contains(l.ThreadName));
-
-                if (hasSearchText)
-                {
-                    if (QueryParserService.HasBooleanOperators(SearchText))
-                    {
-                        var parser = new QueryParserService();
-                        var filterTree = parser.Parse(SearchText, out string errorMessage);
-                        if (filterTree != null)
-                            currentLogs = currentLogs.Where(l => EvaluateFilterNode(l, filterTree));
-                        else
-                            currentLogs = currentLogs.Where(l => l.Message != null && l.Message.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0);
-                    }
-                    else
-                    {
-                        currentLogs = currentLogs.Where(l => l.Message != null && l.Message.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0);
-                    }
-                }
-            }
-            else
-            {
-                // For PLC LOGS tab: show all logs when no filter is active
-                // For PLC FILTERED tab: FilteredLogs should remain empty/unchanged
-                currentLogs = _sessionVM?.AllLogsCache ?? new List<LogEntry>();
-            }
-
-            if (_isMainFilterOutActive && _negativeFilters.Any())
-            {
-                currentLogs = currentLogs.Where(l =>
-                {
-                    foreach (var f in _negativeFilters)
-                    {
-                        if (f.StartsWith("THREAD:"))
-                        {
-                            if (l.ThreadName != null && l.ThreadName.IndexOf(f.Substring(7), StringComparison.OrdinalIgnoreCase) >= 0) return false;
-                        }
-                        else
-                        {
-                            if (l.Message != null && l.Message.IndexOf(f, StringComparison.OrdinalIgnoreCase) >= 0) return false;
-                        }
-                    }
-                    return true;
-                });
-            }
-
-            var logsList = currentLogs.ToList();
-            if (_sessionVM != null)
-                _sessionVM.Logs = logsList;
-
-            // Update FilteredLogs for PLC FILTERED tab
-            // PLC FILTERED rules:
-            // 1. Thread = Manager (no color by default, but can have color if matches sub-rules)
-            // 2. Thread = Events (red color)
-            // 3. Level = Error (red color)
-            // 4. Thread = Manager AND Message begins with "PlcMngr:" AND contains "->" (light blue)
-            // 5. Thread = Manager AND Message begins with "MechInit:" (orange)
-            // 6. Thread = Manager AND Message begins with "GetReady:" (light green)
-            // 7. Thread = Manager AND Message begins with "Print:" (green)
-            var filteredByRules = logsList
-                .Where(l =>
-                    // Thread = Manager (with or without color)
-                    string.Equals(l.ThreadName, "Manager", StringComparison.OrdinalIgnoreCase) ||
-                    // Thread = Events
-                    string.Equals(l.ThreadName, "Events", StringComparison.OrdinalIgnoreCase) ||
-                    // Level = Error
-                    string.Equals(l.Level, "Error", StringComparison.OrdinalIgnoreCase)
-                )
-                .ToList();
-            FilteredLogs.ReplaceAll(filteredByRules);
-        }
 
         public void ApplyAppLogsFilter()
         {
-            System.Diagnostics.Debug.WriteLine("─────────────────────────────────────");
-            System.Diagnostics.Debug.WriteLine($"[APP FILTER] ApplyAppLogsFilter CALLED");
+            // הגנה מפני קריסה אם המטמון ריק
+            if (_sessionVM?.AllAppLogsCache == null) return;
 
-            if (_sessionVM?.AllAppLogsCache == null)
-            {
-                System.Diagnostics.Debug.WriteLine($"[APP FILTER] ❌ AllAppLogsCache is NULL - RETURNING");
-                System.Diagnostics.Debug.WriteLine("─────────────────────────────────────");
-                return;
-            }
-
-            // Check if any specific filter is active
-            bool hasThreadFilter = _activeThreadFilters.Any();
-            bool hasLoggerFilter = _activeLoggerFilters.Any();
-            bool hasMethodFilter = _activeMethodFilters.Any();
-            bool hasSearch = !string.IsNullOrWhiteSpace(SearchText);
-
-            System.Diagnostics.Debug.WriteLine($"[APP FILTER] Cache size: {_sessionVM.AllAppLogsCache.Count}");
-            System.Diagnostics.Debug.WriteLine($"[APP FILTER] IsAppFilterActive: {_isAppFilterActive}");
-            System.Diagnostics.Debug.WriteLine($"[APP FILTER] hasThreadFilter: {hasThreadFilter} (count={_activeThreadFilters.Count})");
-            System.Diagnostics.Debug.WriteLine($"[APP FILTER] hasLoggerFilter: {hasLoggerFilter} (count={_activeLoggerFilters.Count})");
-            System.Diagnostics.Debug.WriteLine($"[APP FILTER] hasMethodFilter: {hasMethodFilter} (count={_activeMethodFilters.Count})");
-            System.Diagnostics.Debug.WriteLine($"[APP FILTER] hasSearch: {hasSearch}");
-
-            if (hasLoggerFilter)
-            {
-                System.Diagnostics.Debug.WriteLine($"[APP FILTER] Active logger filters: {string.Join(", ", _activeLoggerFilters)}");
-            }
-
-            if (!_isAppFilterActive && !hasSearch && !hasThreadFilter && !hasLoggerFilter && !hasMethodFilter)
-            {
-                System.Diagnostics.Debug.WriteLine($"[APP FILTER] No filters active - showing all logs");
-                AppDevLogsFiltered.ReplaceAll(_sessionVM.AllAppLogsCache);
-                System.Diagnostics.Debug.WriteLine($"[APP FILTER] Result count: {AppDevLogsFiltered.Count}");
-                System.Diagnostics.Debug.WriteLine("─────────────────────────────────────");
-                return;
-            }
-
+            // קביעת מקור הנתונים (Cache רגיל או Cache של Focus Context)
             var source = _sessionVM.AllAppLogsCache;
             if (_isAppFilterActive && _isAppTimeFocusActive && _lastFilteredAppCache != null)
             {
                 source = _lastFilteredAppCache;
-                System.Diagnostics.Debug.WriteLine($"[APP FILTER] Using time-filtered cache: {source.Count} items");
             }
 
-            // Apply Global Time Range Filter first
-            if (IsGlobalTimeRangeActive)
+            // --- TIKUN: החלת סינון טווח זמן גלובלי גם על ה-APP ---
+            if (IsGlobalTimeRangeActive && GlobalTimeRangeStart.HasValue && GlobalTimeRangeEnd.HasValue)
             {
-                System.Diagnostics.Debug.WriteLine($"[APP FILTER] Applying global time range: {GlobalTimeRangeStart:yyyy-MM-dd HH:mm:ss} to {GlobalTimeRangeEnd:yyyy-MM-dd HH:mm:ss}");
                 source = source.Where(l => l.Date >= GlobalTimeRangeStart.Value && l.Date <= GlobalTimeRangeEnd.Value).ToList();
-                System.Diagnostics.Debug.WriteLine($"[APP FILTER] After global time range: {source.Count} items");
+            }
+            // -----------------------------------------------------
+
+            // בדיקה האם יש פילטרים פעילים בתוך הטאב (עמודות, חיפוש וכו')
+            bool hasThreadFilter = _activeThreadFilters.Any();
+            bool hasLoggerFilter = _activeLoggerFilters.Any();
+            bool hasMethodFilter = _activeMethodFilters.Any();
+            bool hasSearch = !string.IsNullOrWhiteSpace(SearchText);
+            bool hasTreeFilter = _treeShowOnlyLogger != null || _treeShowOnlyPrefix != null || _treeHiddenLoggers.Count > 0 || _treeHiddenPrefixes.Count > 0;
+            bool hasAdvancedFilter = _appFilterRoot != null && _appFilterRoot.Children.Count > 0;
+
+            // אם אין שום פילטר נוסף, מציגים את המקור (שכבר עבר סינון זמן אם היה צריך)
+            if (!_isAppFilterActive && !hasSearch && !hasThreadFilter && !hasLoggerFilter && !hasMethodFilter && !hasTreeFilter)
+            {
+                AppDevLogsFiltered.ReplaceAll(source);
+                return;
             }
 
             var query = source.AsParallel().AsOrdered();
-            int beforeCount = source.Count;
 
             // 1. Thread Filter
             if (hasThreadFilter)
-            {
                 query = query.Where(l => _activeThreadFilters.Contains(l.ThreadName));
-                System.Diagnostics.Debug.WriteLine($"[APP FILTER] Applied thread filter");
-            }
 
             // 2. Logger Filter
             if (hasLoggerFilter)
             {
-                System.Diagnostics.Debug.WriteLine($"[APP FILTER] Applying logger filter with: {string.Join(", ", _activeLoggerFilters)}");
-
-                // Alternative approach: Convert to list first for debugging
-                var beforeList = query.ToList();
-                System.Diagnostics.Debug.WriteLine($"[APP FILTER] Before logger filter: {beforeList.Count} items");
-
-                // Sample first few loggers in the data
-                var sampleLoggers = beforeList.Take(10).Select(l => l.Logger).Distinct().ToList();
-                System.Diagnostics.Debug.WriteLine($"[APP FILTER] Sample loggers in data: {string.Join(", ", sampleLoggers)}");
-
-                // Method 1: Direct LINQ (original)
-                var filtered1 = beforeList.Where(l => _activeLoggerFilters.Contains(l.Logger)).ToList();
-                System.Diagnostics.Debug.WriteLine($"[APP FILTER] Method 1 (Direct Contains): {filtered1.Count} items");
-
-                // Method 2: Case-insensitive comparison
-                var filtered2 = beforeList.Where(l =>
-                    _activeLoggerFilters.Any(filter =>
-                        string.Equals(l.Logger, filter, StringComparison.OrdinalIgnoreCase)
-                    )
-                ).ToList();
-                System.Diagnostics.Debug.WriteLine($"[APP FILTER] Method 2 (Case-insensitive): {filtered2.Count} items");
-
-                // Method 3: Exact match with null check
-                var filtered3 = beforeList.Where(l =>
-                    l.Logger != null && _activeLoggerFilters.Contains(l.Logger)
-                ).ToList();
-                System.Diagnostics.Debug.WriteLine($"[APP FILTER] Method 3 (With null check): {filtered3.Count} items");
-
-                // Use the case-insensitive version as it's more robust
-                query = filtered2.AsParallel().AsOrdered();
+                query = query.Where(l => _activeLoggerFilters.Any(filter => string.Equals(l.Logger, filter, StringComparison.OrdinalIgnoreCase)));
             }
 
             // 3. Method Filter
             if (hasMethodFilter)
-            {
                 query = query.Where(l => _activeMethodFilters.Contains(l.Method));
-                System.Diagnostics.Debug.WriteLine($"[APP FILTER] Applied method filter");
-            }
 
-            // --- Apply Advanced Filter ---
-            if (_isAppFilterActive && !_isAppTimeFocusActive && _appFilterRoot != null && _appFilterRoot.Children.Count > 0)
-            {
+            // 4. Advanced Filter
+            if (hasAdvancedFilter)
                 query = query.Where(l => EvaluateFilterNode(l, _appFilterRoot));
-            }
 
-            // --- Apply Tree Filter ---
+            // 5. Tree Filter
             if (_isAppFilterActive)
             {
                 if (_treeShowOnlyLogger != null)
@@ -621,29 +476,23 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     query = query.Where(l => l.Logger != null && (l.Logger == _treeShowOnlyPrefix || l.Logger.StartsWith(_treeShowOnlyPrefix + ".")));
                 }
-                else
+                else if (_treeHiddenLoggers.Count > 0 || _treeHiddenPrefixes.Count > 0)
                 {
-                    if (_treeHiddenLoggers.Count > 0 || _treeHiddenPrefixes.Count > 0)
+                    query = query.Where(l =>
                     {
-                        query = query.Where(l =>
-                        {
-                            if (l.Logger == null) return true;
-                            if (_treeHiddenLoggers.Contains(l.Logger)) return false;
-                            foreach (var prefix in _treeHiddenPrefixes)
-                            {
-                                if (l.Logger == prefix || l.Logger.StartsWith(prefix + ".")) return false;
-                            }
-                            return true;
-                        });
-                    }
+                        if (l.Logger == null) return true;
+                        if (_treeHiddenLoggers.Contains(l.Logger)) return false;
+                        foreach (var prefix in _treeHiddenPrefixes)
+                            if (l.Logger == prefix || l.Logger.StartsWith(prefix + ".")) return false;
+                        return true;
+                    });
                 }
             }
 
-            // --- Apply Search ---
+            // 6. Search
             if (hasSearch)
             {
                 string search = SearchText;
-                System.Diagnostics.Debug.WriteLine($"[APP FILTER] Applying search filter: '{search}'");
                 if (QueryParserService.HasBooleanOperators(SearchText))
                 {
                     var parser = new QueryParserService();
@@ -659,14 +508,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 }
             }
 
-            var result = query.ToList();
-            System.Diagnostics.Debug.WriteLine($"[APP FILTER] Filter result: {result.Count} items (from {beforeCount})");
-            System.Diagnostics.Debug.WriteLine($"[APP FILTER] Calling AppDevLogsFiltered.ReplaceAll({result.Count} items)");
-
-            AppDevLogsFiltered.ReplaceAll(result);
-
-            System.Diagnostics.Debug.WriteLine($"[APP FILTER] Final AppDevLogsFiltered count: {AppDevLogsFiltered?.Count ?? 0}");
-            System.Diagnostics.Debug.WriteLine("─────────────────────────────────────");
+            AppDevLogsFiltered.ReplaceAll(query.ToList());
         }
 
         public bool EvaluateFilterNode(LogEntry log, FilterNode node)
@@ -1283,73 +1125,162 @@ namespace IndiLogs_3._0.ViewModels.Components
             System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
         }
 
-        private void ApplyGlobalTimeRangeFilter()
-        {
-            System.Diagnostics.Debug.WriteLine($"[TIME RANGE FILTER] Applying global time range filter");
 
-            if (!IsGlobalTimeRangeActive)
-            {
-                System.Diagnostics.Debug.WriteLine($"[TIME RANGE FILTER] No active filter - resetting to full logs");
-                // Reset to all logs and events
-                if (_sessionVM != null)
-                {
-                    _sessionVM.Logs = _sessionVM.AllLogsCache?.ToList() ?? new List<LogEntry>();
-
-                    // Reset Events to all events (sorted)
-                    if (_sessionVM.AllEvents != null)
-                    {
-                        _sessionVM.Events.ReplaceAll(_sessionVM.AllEvents.OrderBy(e => e.Time).ToList());
-                    }
-                }
-                ApplyAppLogsFilter();
-                ApplyMainLogsFilter();
-                _sessionVM.StatusMessage = "Time range filter cleared";
-                return;
-            }
-
-            System.Diagnostics.Debug.WriteLine($"[TIME RANGE FILTER] Filtering from {GlobalTimeRangeStart:yyyy-MM-dd HH:mm:ss} to {GlobalTimeRangeEnd:yyyy-MM-dd HH:mm:ss}");
-
-            // Filter PLC logs
-            if (_sessionVM?.AllLogsCache != null)
-            {
-                var filteredPlc = _sessionVM.AllLogsCache
-                    .Where(l => l.Date >= GlobalTimeRangeStart.Value && l.Date <= GlobalTimeRangeEnd.Value)
-                    .ToList();
-                _sessionVM.Logs = filteredPlc;
-                System.Diagnostics.Debug.WriteLine($"[TIME RANGE FILTER] PLC Logs: {filteredPlc.Count} (from {_sessionVM.AllLogsCache.Count})");
-            }
-
-            // Filter APP logs
-            ApplyAppLogsFilter();
-
-            // Filter PLC FILTERED logs (apply time range to FilteredLogs)
-            ApplyMainLogsFilter();
-
-            // Filter EVENTS by time range
-            if (_sessionVM?.AllEvents != null)
-            {
-                var filteredEvents = _sessionVM.AllEvents
-                    .Where(e => e.Time >= GlobalTimeRangeStart.Value && e.Time <= GlobalTimeRangeEnd.Value)
-                    .OrderBy(e => e.Time) // Sort by time
-                    .ToList();
-                _sessionVM.Events.ReplaceAll(filteredEvents);
-                System.Diagnostics.Debug.WriteLine($"[TIME RANGE FILTER] Events: {filteredEvents.Count} (from {_sessionVM.AllEvents.Count})");
-            }
-
-            var plcCount = (_sessionVM?.Logs?.Count()) ?? 0;
-            var appCount = (AppDevLogsFiltered?.Count) ?? 0;
-            var filteredCount = (FilteredLogs?.Count) ?? 0;
-            var eventsCount = (_sessionVM?.Events?.Count) ?? 0;
-            _sessionVM.StatusMessage = $"Time Range Filter: PLC={plcCount}, APP={appCount}, FILTERED={filteredCount}, Events={eventsCount}";
-            System.Diagnostics.Debug.WriteLine($"[TIME RANGE FILTER] Complete: PLC={plcCount}, APP={appCount}, FILTERED={filteredCount}, Events={eventsCount}");
-
-            // Notify parent to update Visual Timeline if in visual mode
-            _parent?.OnPropertyChanged(nameof(_parent.Logs));
-            _parent?.OnPropertyChanged(nameof(_parent.Events));
-        }
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    
+    public void ApplyMainLogsFilter()
+        {
+            if (_parent.IsLiveMode) return;
+
+            bool isActive = _isMainFilterActive;
+            IEnumerable<LogEntry> currentLogs;
+            bool hasSearchText = !string.IsNullOrWhiteSpace(SearchText) && SearchText.Length >= 2;
+
+            // 1. קביעת מקור הנתונים
+            if (isActive || hasSearchText)
+            {
+                if ((_mainFilterRoot != null && _mainFilterRoot.Children != null && _mainFilterRoot.Children.Count > 0) || _isTimeFocusActive)
+                    currentLogs = _lastFilteredCache ?? new List<LogEntry>();
+                else
+                    currentLogs = _sessionVM?.AllLogsCache ?? new List<LogEntry>();
+
+                // סינון לפי Threads (קיים בטאב PLC)
+                if (_activeThreadFilters.Any())
+                    currentLogs = currentLogs.Where(l => _activeThreadFilters.Contains(l.ThreadName));
+
+                // סינון לפי טקסט חיפוש
+                if (hasSearchText)
+                {
+                    if (QueryParserService.HasBooleanOperators(SearchText))
+                    {
+                        var parser = new QueryParserService();
+                        var filterTree = parser.Parse(SearchText, out string errorMessage);
+                        if (filterTree != null)
+                            currentLogs = currentLogs.Where(l => EvaluateFilterNode(l, filterTree));
+                        else
+                            currentLogs = currentLogs.Where(l => l.Message != null && l.Message.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0);
+                    }
+                    else
+                    {
+                        currentLogs = currentLogs.Where(l => l.Message != null && l.Message.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0);
+                    }
+                }
+            }
+            else
+            {
+                // כשאין פילטרים פעילים, מציגים את הכל
+                currentLogs = _sessionVM?.AllLogsCache ?? new List<LogEntry>();
+            }
+
+            // 2. החלת סינון טווח זמן גלובלי (התיקון הקריטי)
+            // מתבצע לפני הסינון השלילי ולפני העדכון למסך
+            if (IsGlobalTimeRangeActive && !_isTimeFocusActive && GlobalTimeRangeStart.HasValue && GlobalTimeRangeEnd.HasValue)
+            {
+                currentLogs = currentLogs.Where(l => l.Date >= GlobalTimeRangeStart.Value && l.Date <= GlobalTimeRangeEnd.Value);
+            }
+
+            // 3. סינון שלילי (Filter Out)
+            if (_isMainFilterOutActive && _negativeFilters.Any())
+            {
+                currentLogs = currentLogs.Where(l =>
+                {
+                    foreach (var f in _negativeFilters)
+                    {
+                        if (f.StartsWith("THREAD:"))
+                        {
+                            if (l.ThreadName != null && l.ThreadName.IndexOf(f.Substring(7), StringComparison.OrdinalIgnoreCase) >= 0) return false;
+                        }
+                        else
+                        {
+                            if (l.Message != null && l.Message.IndexOf(f, StringComparison.OrdinalIgnoreCase) >= 0) return false;
+                        }
+                    }
+                    return true;
+                });
+            }
+
+            var logsList = currentLogs.ToList();
+
+            // עדכון ה-PLC Logs Tab
+            if (_sessionVM != null)
+                _sessionVM.Logs = logsList;
+
+            // עדכון ה-PLC Filtered Tab לפי החוקים
+            var filteredByRules = logsList
+                .Where(l =>
+                    string.Equals(l.ThreadName, "Manager", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(l.ThreadName, "Events", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(l.Level, "Error", StringComparison.OrdinalIgnoreCase)
+                )
+                .ToList();
+
+            FilteredLogs.ReplaceAll(filteredByRules);
+        }
+
+        private void ApplyGlobalTimeRangeFilter()
+        {
+            System.Diagnostics.Debug.WriteLine($"[TIME RANGE FILTER] Applying global time range filter. Active={IsGlobalTimeRangeActive}");
+
+            // 1. טיפול באירועים (Events) - סינון או איפוס
+            if (_sessionVM?.AllEvents != null)
+            {
+                List<EventEntry> eventsToShow;
+
+                if (!IsGlobalTimeRangeActive)
+                {
+                    // מצב ניקוי: מציגים את כל האירועים ממוינים
+                    eventsToShow = _sessionVM.AllEvents.OrderBy(e => e.Time).ToList();
+                }
+                else
+                {
+                    // מצב סינון: לוקחים רק את האירועים בטווח
+                    eventsToShow = _sessionVM.AllEvents
+                        .Where(e => e.Time >= GlobalTimeRangeStart.Value && e.Time <= GlobalTimeRangeEnd.Value)
+                        .OrderBy(e => e.Time)
+                        .ToList();
+                }
+
+                // עדכון הרשימה
+                if (_sessionVM.Events is ObservableRangeCollection<EventEntry> rangeCol)
+                {
+                    rangeCol.ReplaceAll(eventsToShow);
+                }
+                else
+                {
+                    _sessionVM.Events.Clear();
+                    foreach (var evt in eventsToShow) _sessionVM.Events.Add(evt);
+                }
+            }
+
+            // 2. עדכון הלוגים (App + PLC)
+            // קריאה לפונקציות הסינון תתחשב כעת ב-IsGlobalTimeRangeActive באופן אוטומטי
+            ApplyAppLogsFilter();
+            ApplyMainLogsFilter();
+
+            // 3. עדכון סטטוס והודעה ל-UI
+            if (!IsGlobalTimeRangeActive)
+            {
+                _sessionVM.StatusMessage = "Time range filter cleared";
+            }
+            else
+            {
+                var plcCount = (_sessionVM?.Logs?.Count()) ?? 0;
+                var appCount = (AppDevLogsFiltered?.Count) ?? 0;
+                var filteredCount = (FilteredLogs?.Count) ?? 0;
+                var eventsCount = (_sessionVM?.Events?.Count) ?? 0;
+                _sessionVM.StatusMessage = $"Time Range Filter: PLC={plcCount}, APP={appCount}, FILTERED={filteredCount}, Events={eventsCount}";
+            }
+
+            // 4. עדכון הוויזואליזציה (Visual Timeline)
+            if (_parent != null)
+            {
+                // שימוש ב-NotifyPropertyChanged כדי לוודא שה-MainViewModel מתעדכן
+                _parent.NotifyPropertyChanged(nameof(_parent.Logs));
+                _parent.NotifyPropertyChanged(nameof(_parent.Events));
+            }
+        }
     }
 }
