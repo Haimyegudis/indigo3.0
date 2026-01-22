@@ -506,17 +506,24 @@ namespace IndiLogs_3._0.ViewModels.Components
                 MainColoringRules = c.MainColoringRules ?? new List<ColoringCondition>();
                 if (_sessionVM.AllLogsCache != null)
                 {
-                    await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllLogsCache, false);
+                    // OPTIMIZATION: Only reapply default colors if there are custom rules
+                    // (otherwise default colors were already applied during initial load)
                     if (MainColoringRules.Any())
+                    {
+                        await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllLogsCache, false);
                         await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllLogsCache, MainColoringRules);
+                    }
                 }
 
                 AppColoringRules = c.AppColoringRules ?? new List<ColoringCondition>();
                 if (_sessionVM.AllAppLogsCache != null)
                 {
-                    await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllAppLogsCache, true);
+                    // OPTIMIZATION: Only reapply default colors if there are custom rules
                     if (AppColoringRules.Any())
+                    {
+                        await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllAppLogsCache, true);
                         await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllAppLogsCache, AppColoringRules);
+                    }
                 }
             });
 
@@ -537,11 +544,11 @@ namespace IndiLogs_3._0.ViewModels.Components
                 if (_filterVM.MainFilterRoot != null && _filterVM.MainFilterRoot.Children.Count > 0)
                     _filterVM.IsMainFilterActive = true;
 
-                if (_parent.Logs != null) foreach (var log in _parent.Logs) log.OnPropertyChanged("RowBackground");
-                if (_parent.AppDevLogsFiltered != null) foreach (var log in _parent.AppDevLogsFiltered) log.OnPropertyChanged("RowBackground");
-
                 _filterVM.ApplyMainLogsFilter();
                 _filterVM.ApplyAppLogsFilter();
+
+                // Colors already applied by ColoringService - no manual refresh needed
+                // WPF DataGrid virtualization will query RowBackground when rendering visible rows
 
                 _parent.NotifyPropertyChanged(nameof(_parent.IsFilterActive));
                 _parent.NotifyPropertyChanged(nameof(_parent.IsFilterOutActive));
@@ -751,21 +758,19 @@ namespace IndiLogs_3._0.ViewModels.Components
             MainColoringRules = caseFile.MainColoringRules ?? new List<ColoringCondition>();
             AppColoringRules = caseFile.AppColoringRules ?? new List<ColoringCondition>();
 
-            // Apply colors to all logs
+            // Apply colors to all logs (OPTIMIZATION: Only if custom rules exist)
             await Task.Run(async () =>
             {
-                if (_sessionVM.AllLogsCache != null)
+                if (_sessionVM.AllLogsCache != null && MainColoringRules.Any())
                 {
                     await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllLogsCache, false);
-                    if (MainColoringRules.Any())
-                        await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllLogsCache, MainColoringRules);
+                    await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllLogsCache, MainColoringRules);
                 }
 
-                if (_sessionVM.AllAppLogsCache != null)
+                if (_sessionVM.AllAppLogsCache != null && AppColoringRules.Any())
                 {
                     await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllAppLogsCache, true);
-                    if (AppColoringRules.Any())
-                        await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllAppLogsCache, AppColoringRules);
+                    await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllAppLogsCache, AppColoringRules);
                 }
             });
 
@@ -853,18 +858,26 @@ namespace IndiLogs_3._0.ViewModels.Components
             // 4. Refresh view
             Application.Current.Dispatcher.Invoke(() =>
             {
-                // Refresh all log backgrounds to show colors
-                if (_parent.Logs != null)
-                    foreach (var log in _parent.Logs)
-                        log.OnPropertyChanged("RowBackground");
+                System.Diagnostics.Debug.WriteLine($"[CASE LOAD] Starting refresh view...");
 
-                if (_parent.AppDevLogsFiltered != null)
-                    foreach (var log in _parent.AppDevLogsFiltered)
-                        log.OnPropertyChanged("RowBackground");
-
-                // Update the UI with filters
+                // Update the UI with filters first
+                System.Diagnostics.Debug.WriteLine($"[CASE LOAD] Calling ApplyMainLogsFilter...");
                 _filterVM.ApplyMainLogsFilter();
+                System.Diagnostics.Debug.WriteLine($"[CASE LOAD] ApplyMainLogsFilter complete");
+
+                System.Diagnostics.Debug.WriteLine($"[CASE LOAD] Calling ApplyAppLogsFilter...");
                 _filterVM.ApplyAppLogsFilter();
+                System.Diagnostics.Debug.WriteLine($"[CASE LOAD] ApplyAppLogsFilter complete");
+
+                // Check collection sizes AFTER filtering
+                var logsCount = _parent.Logs?.Count() ?? 0;
+                var appLogsCount = _parent.AppDevLogsFiltered?.Count ?? 0;
+                System.Diagnostics.Debug.WriteLine($"[CASE LOAD] After filters - PLC Logs: {logsCount}, APP Logs: {appLogsCount}");
+
+                // CRITICAL: Skip RowBackground refresh entirely - let WPF DataGrid virtualization handle it
+                // The DataGrid will query RowBackground property when it renders visible rows
+                // No need to trigger property change on potentially 167K+ logs
+                System.Diagnostics.Debug.WriteLine($"[CASE LOAD] Skipping manual RowBackground refresh - WPF will handle via virtualization");
 
                 _parent.NotifyPropertyChanged(nameof(_parent.IsFilterActive));
                 _parent.NotifyPropertyChanged(nameof(_parent.IsFilterOutActive));
@@ -1003,22 +1016,9 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        if (isAppTab)
-                        {
-                            if (_filterVM.AppDevLogsFiltered != null)
-                            {
-                                foreach (var log in _filterVM.AppDevLogsFiltered)
-                                    log.OnPropertyChanged("RowBackground");
-                            }
-                        }
-                        else
-                        {
-                            if (_parent.Logs != null)
-                            {
-                                foreach (var log in _parent.Logs)
-                                    log.OnPropertyChanged("RowBackground");
-                            }
-                        }
+                        // Colors already applied by ColoringService which sets CustomColor property
+                        // CustomColor setter already triggers OnPropertyChanged(nameof(RowBackground))
+                        // No additional manual refresh needed - WPF handles the rest
                     });
 
                     _sessionVM.IsBusy = false;

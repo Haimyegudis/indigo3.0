@@ -314,8 +314,6 @@ namespace IndiLogs_3._0.Services
                         processedBytesGlobal += currentFileSize;
                     }
 
-                    progress?.Report((98, "Finalizing..."));
-
                     session.VersionsInfo = $"SW: {detectedSwVersion} | PLC: {detectedPlcVersion}";
 
                     // המרה ל-List סופי
@@ -325,16 +323,6 @@ namespace IndiLogs_3._0.Services
                     session.AppDevLogs = appDevLogsBag.OrderByDescending(x => x.Date).ToList();
                     session.Events = eventsBag.OrderByDescending(x => x.Time).ToList();
                     session.Screenshots = screenshotsBag.ToList();
-
-                    // --- אופטימיזציה: ניקוי אגרסיבי ---
-                    logsBag = null;
-                    transitionsBag = null;
-                    failuresBag = null;
-                    appDevLogsBag = null;
-                    // מאלץ GC לנקות את כל המחרוזות הזמניות שלא נכנסו ל-Pool ואת ה-Streams
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-                    // -----------------------------------
 
                     progress?.Report((100, "Done"));
                 }

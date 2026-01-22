@@ -221,7 +221,7 @@
 
         <Style x:Key="LogRowStyle" TargetType="DataGridRow">
             <Setter Property="Background" Value="{Binding RowBackground}" />
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="4"/>
             <Setter Property="Margin" Value="0,1"/>

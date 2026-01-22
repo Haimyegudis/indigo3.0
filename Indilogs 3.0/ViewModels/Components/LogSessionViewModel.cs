@@ -77,6 +77,18 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        // Cache for all events (before time filtering)
+        private List<EventEntry> _allEvents;
+        public List<EventEntry> AllEvents
+        {
+            get => _allEvents;
+            set
+            {
+                _allEvents = value;
+                OnPropertyChanged();
+            }
+        }
+
         private ObservableCollection<BitmapImage> _screenshots;
         public ObservableCollection<BitmapImage> Screenshots
         {
@@ -180,6 +192,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             _allLogsCache = new List<LogEntry>();
             _logs = new List<LogEntry>();
             _events = new ObservableCollection<EventEntry>();
+            _allEvents = new List<EventEntry>();
             _screenshots = new ObservableCollection<BitmapImage>();
             _loadedFiles = new ObservableCollection<string>();
             _loadedSessions = new ObservableCollection<LogSessionData>();
@@ -262,10 +275,21 @@ namespace IndiLogs_3._0.ViewModels.Components
                 if (filePaths.Length > 1) newSession.FileName += $" (+{filePaths.Length - 1})";
                 newSession.FilePath = filePaths[0];
 
+                // Parse APP logs to extract Pattern, Data, Exception fields (ASYNC for performance)
+                if (newSession.AppDevLogs != null && newSession.AppDevLogs.Count > 0)
+                {
+                    StatusMessage = "Parsing APP logs...";
+                    System.Diagnostics.Debug.WriteLine($"[LOG PARSER] Parsing {newSession.AppDevLogs.Count} APP logs...");
+                    await Services.LogParserService.ParseLogEntriesAsync(newSession.AppDevLogs);
+                    System.Diagnostics.Debug.WriteLine($"[LOG PARSER] Parsing complete");
+                }
+
                 StatusMessage = "Applying Colors...";
+                System.Diagnostics.Debug.WriteLine($"[COLORING] Applying default colors to {newSession.Logs.Count} main logs and {newSession.AppDevLogs?.Count ?? 0} app logs...");
                 await _coloringService.ApplyDefaultColorsAsync(newSession.Logs, false);
                 if (newSession.AppDevLogs != null && newSession.AppDevLogs.Any())
                     await _coloringService.ApplyDefaultColorsAsync(newSession.AppDevLogs, true);
+                System.Diagnostics.Debug.WriteLine($"[COLORING] Color application complete");
 
                 LoadedSessions.Add(newSession);
                 SelectedSession = newSession;
@@ -274,12 +298,22 @@ namespace IndiLogs_3._0.ViewModels.Components
                 Logs = newSession.Logs;
                 AllLogsCache = newSession.Logs.ToList();
                 AllAppLogsCache = newSession.AppDevLogs?.ToList() ?? new List<LogEntry>();
+                // Note: Parsing already done in LogFileService when logs were loaded
 
-                // Update Events
+                // Update Events and cache
                 Events.Clear();
                 if (newSession.Events != null)
-                    foreach (var evt in newSession.Events)
+                {
+                    // Sort events by time before storing
+                    var sortedEvents = newSession.Events.OrderBy(e => e.Time).ToList();
+                    AllEvents = sortedEvents; // Cache all events
+                    foreach (var evt in sortedEvents)
                         Events.Add(evt);
+                }
+                else
+                {
+                    AllEvents = new List<EventEntry>();
+                }
 
                 // Update Screenshots
                 Screenshots.Clear();
@@ -303,9 +337,12 @@ namespace IndiLogs_3._0.ViewModels.Components
                     _configVM.LoadConfigurationFiles();
                 }
 
-                // Update FilterVM - copy data to filtered collections
+                // Update FilterVM - apply initial filters (this is the FIRST and MAIN filter application)
+                // Subsequent filter calls happen only when user changes filter settings
+                System.Diagnostics.Debug.WriteLine($"[FILTERING] Initial filter application starting...");
                 _filterVM.ApplyMainLogsFilter();
                 _filterVM.ApplyAppLogsFilter();
+                System.Diagnostics.Debug.WriteLine($"[FILTERING] Initial filter application complete");
 
                 CurrentProgress = 100;
                 StatusMessage = "Logs Loaded. Running Analysis in Background...";
@@ -472,6 +509,8 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _parent.WindowTitle = $"IndiLogs 3.0 - {session.FileName}";
 
             AllAppLogsCache = session.AppDevLogs ?? new List<LogEntry>();
+            // Note: Parsing already done in LogFileService when case logs were loaded or when saving case
+
             _filterVM.BuildLoggerTree(AllAppLogsCache);
 
             // Don't reset search/filters when loading a case - will be restored by ApplyCaseSettings

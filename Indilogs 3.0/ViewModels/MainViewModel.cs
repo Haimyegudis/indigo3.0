@@ -277,6 +277,11 @@ namespace IndiLogs_3._0.ViewModels
             get => ConfigVM?.IsConfigMenuOpen ?? false;
             set { if (ConfigVM != null) ConfigVM.IsConfigMenuOpen = value; }
         }
+        public bool IsLoggersMenuOpen
+        {
+            get => ConfigVM?.IsLoggersMenuOpen ?? false;
+            set { if (ConfigVM != null) ConfigVM.IsLoggersMenuOpen = value; }
+        }
         public ObservableCollection<string> AvailableFonts { get; set; }
         public ObservableCollection<string> TimeUnits { get; } = new ObservableCollection<string> { "Seconds", "Minutes" };
 
@@ -605,6 +610,7 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand LiveClearCommand { get; }
         public ICommand ToggleExplorerMenuCommand { get; }
         public ICommand ToggleConfigMenuCommand { get; }
+        public ICommand ToggleLoggersMenuCommand { get; }
         public ICommand TreeShowThisCommand { get; }
         public ICommand TreeHideThisCommand { get; }
         public ICommand TreeShowOnlyThisCommand { get; }
@@ -616,6 +622,7 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand OpenVisualAnalysisCommand { get; }
         public ICommand ResetTimeFocusCommand { get; }
         public ICommand ToggleTimeSyncCommand { get; }
+        public ICommand OpenTimeRangeFilterCommand { get; }
 
         public ICommand AddAnnotationCommand { get; }
         public ICommand DeleteAnnotationCommand { get; }
@@ -691,6 +698,7 @@ namespace IndiLogs_3._0.ViewModels
             TreeShowWithChildrenCommand = FilterVM.TreeShowWithChildrenCommand;
             TreeHideWithChildrenCommand = FilterVM.TreeHideWithChildrenCommand;
             TreeShowAllCommand = FilterVM.TreeShowAllCommand;
+            OpenTimeRangeFilterCommand = FilterVM.OpenTimeRangeFilterCommand;
             OpenIndigoInvadersCommand = new RelayCommand(OpenIndigoInvaders);
 
             _allLogsCache = SessionVM.AllLogsCache;
@@ -702,6 +710,7 @@ namespace IndiLogs_3._0.ViewModels
 
             ToggleExplorerMenuCommand = new RelayCommand(o => IsExplorerMenuOpen = !IsExplorerMenuOpen);
             ToggleConfigMenuCommand = new RelayCommand(o => IsConfigMenuOpen = !IsConfigMenuOpen);
+            ToggleLoggersMenuCommand = new RelayCommand(o => IsLoggersMenuOpen = !IsLoggersMenuOpen);
             ToggleTimeSyncCommand = new RelayCommand(o => IsTimeSyncEnabled = !IsTimeSyncEnabled);
             BrowseTableCommand = ConfigVM.BrowseTableCommand;
             CopyTableNameCommand = new RelayCommand(CopyTableName);
@@ -788,7 +797,8 @@ namespace IndiLogs_3._0.ViewModels
 
         private void InitializeVisualMode()
         {
-            var logsToUse = SessionVM.AllLogsCache ?? Logs;
+            // Use filtered logs if time range is active, otherwise use all logs
+            var logsToUse = FilterVM.IsGlobalTimeRangeActive ? Logs : (SessionVM.AllLogsCache ?? Logs);
             if (VisualTimelineVM != null)
             {
                 VisualTimelineVM.LoadData(logsToUse.ToList(), Events);
@@ -1129,14 +1139,37 @@ namespace IndiLogs_3._0.ViewModels
                 Logs = new List<LogEntry>();
                 OnPropertyChanged(nameof(Logs));
 
-                // Note: Configuration and text info are already cleared by SessionVM
-                // This is just logging to verify they were cleared
-                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 5: Verifying configuration cleared...");
-                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] ConfigurationFiles count: {ConfigurationFiles?.Count ?? 0}");
-                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] DbTreeNodes count: {DbTreeNodes?.Count ?? 0}");
-                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] SetupInfo length: {SetupInfo?.Length ?? 0}");
-                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] PressConfig length: {PressConfig?.Length ?? 0}");
-                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] VersionsInfo length: {VersionsInfo?.Length ?? 0}");
+                // Step 5: Clear configuration
+                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 5: Clearing configuration...");
+                ConfigVM?.ClearConfigurationFiles();
+
+                // Notify UI about cleared config properties
+                OnPropertyChanged(nameof(ConfigurationFiles));
+                OnPropertyChanged(nameof(DbTreeNodes));
+                OnPropertyChanged(nameof(SelectedConfigFile));
+                OnPropertyChanged(nameof(ConfigFileContent));
+                OnPropertyChanged(nameof(FilteredConfigContent));
+                OnPropertyChanged(nameof(ConfigSearchText));
+                OnPropertyChanged(nameof(IsDbFileSelected));
+
+                // ⚠️ THIS IS THE CRITICAL PART - Clear text info ⚠️
+                System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 6: Clearing text info (CRITICAL)...");
+
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing SetupInfo (was: {SetupInfo?.Length ?? 0} chars)");
+                SetupInfo = "";
+                OnPropertyChanged(nameof(SetupInfo));
+
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing PressConfig (was: {PressConfig?.Length ?? 0} chars)");
+                PressConfig = "";
+                OnPropertyChanged(nameof(PressConfig));
+
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Clearing VersionsInfo (was: {VersionsInfo?.Length ?? 0} chars)");
+                VersionsInfo = "";
+                OnPropertyChanged(nameof(VersionsInfo));
+
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM CLEAR] Resetting WindowTitle");
+                WindowTitle = "IndiLogs 3.0";
+                OnPropertyChanged(nameof(WindowTitle));
 
                 // Step 7: Reset UI state
                 System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 7: Resetting UI state...");
@@ -1352,7 +1385,9 @@ namespace IndiLogs_3._0.ViewModels
 
                             if (IsVisualMode && VisualTimelineVM != null)
                             {
-                                VisualTimelineVM.LoadData(SessionVM.AllLogsCache.ToList(), Events);
+                                // Use filtered logs if time range is active
+                                var logsForVisual = FilterVM.IsGlobalTimeRangeActive ? Logs : SessionVM.AllLogsCache.ToList();
+                                VisualTimelineVM.LoadData(logsForVisual, Events);
                                 VisualTimelineVM.FocusOnState(state.StateName);
                             }
 

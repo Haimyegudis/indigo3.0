@@ -32,25 +32,62 @@ namespace IndiLogs_3._0.Services
                     // 1. איפוס צבע קיים (מוחק צבעים ישנים)
                     log.CustomColor = null;
 
-                    // 2. חוק משותף: שגיאה (Error) תמיד אדומה
+                    // 2. חוק מיוחד: PipelineCancellationProvider errors -> Strong Orange with Black text
+                    if (isAppLog &&
+                        string.Equals(log.Level, "Error", StringComparison.OrdinalIgnoreCase) &&
+                        log.Logger != null &&
+                        log.Logger.Contains("Press.BL.Printing.Pipeline.PipelineCancellationProvider"))
+                    {
+                        log.CustomColor = Color.FromRgb(255, 140, 0); // Strong Orange
+                        log.RowForeground = Brushes.Black;
+                        return;
+                    }
+
+                    // 3. חוק משותף: שגיאה (Error) תמיד אדומה
                     if (string.Equals(log.Level, "Error", StringComparison.OrdinalIgnoreCase))
                     {
-                        log.CustomColor = Color.FromRgb(180, 50, 50);
+                        log.CustomColor = Color.FromRgb(180, 50, 50); // Red
                         return; // סיימנו עם השורה הזו
                     }
 
-                    // 3. אם זה APP Log - עוצרים כאן (רק שגיאות נצבעות בדיפולט, כל השאר נקי)
+                    // 4. אם זה APP Log - עוצרים כאן (רק שגיאות נצבעות בדיפולט, כל השאר נקי)
                     if (isAppLog) return;
 
-                    // 4. חוקים ל-MAIN LOGS בלבד (הסט המלא שהיה לך קודם)
-                    if (Contains(log.Message, "PlcMngr:"))
-                        log.CustomColor = Color.FromRgb(100, 150, 200); // Blue
-                    else if (Contains(log.Message, "MechInit:"))
-                        log.CustomColor = Color.FromRgb(80, 150, 80);   // Green
-                    else if (Contains(log.ThreadName, "STIRCtrl"))
-                        log.CustomColor = Color.FromRgb(200, 120, 50);  // Orange
-                    else if (Contains(log.Logger, "Manager"))
-                        log.CustomColor = Color.FromRgb(180, 150, 50);  // Gold/Mustard
+                    // 5. חוקים ל-MAIN LOGS בלבד - PLC FILTERED Rules
+                    // Thread = Events -> Red
+                    if (string.Equals(log.ThreadName, "Events", StringComparison.OrdinalIgnoreCase))
+                    {
+                        log.CustomColor = Color.FromRgb(180, 50, 50); // Red
+                    }
+                    // Thread = Manager AND Message contains "->" AND Message begins with "PlcMngr:" -> Light Blue
+                    else if (string.Equals(log.ThreadName, "Manager", StringComparison.OrdinalIgnoreCase) &&
+                             log.Message != null &&
+                             log.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) &&
+                             log.Message.Contains("->"))
+                    {
+                        log.CustomColor = Color.FromRgb(173, 216, 230); // Light Blue
+                    }
+                    // Thread = Manager AND Message begins with "MechInit:" -> Orange
+                    else if (string.Equals(log.ThreadName, "Manager", StringComparison.OrdinalIgnoreCase) &&
+                             log.Message != null &&
+                             log.Message.StartsWith("MechInit:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        log.CustomColor = Color.FromRgb(255, 165, 0); // Orange
+                    }
+                    // Thread = Manager AND Message begins with "GetReady:" -> Light Green
+                    else if (string.Equals(log.ThreadName, "Manager", StringComparison.OrdinalIgnoreCase) &&
+                             log.Message != null &&
+                             log.Message.StartsWith("GetReady:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        log.CustomColor = Color.FromRgb(144, 238, 144); // Light Green
+                    }
+                    // Thread = Manager AND Message begins with "Print:" -> Green
+                    else if (string.Equals(log.ThreadName, "Manager", StringComparison.OrdinalIgnoreCase) &&
+                             log.Message != null &&
+                             log.Message.StartsWith("Print:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        log.CustomColor = Color.FromRgb(0, 128, 0); // Green
+                    }
                 });
             });
         }

@@ -150,6 +150,15 @@ namespace IndiLogs_3._0.Controls
             e.Handled = true;
         }
 
+        private void ActionsButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.ContextMenu != null)
+            {
+                button.ContextMenu.PlacementTarget = button;
+                button.ContextMenu.IsOpen = true;
+            }
+        }
+
         private void AttachColumnHeaderContextMenu()
         {
             AppLogsGrid.MouseRightButtonUp += DataGrid_MouseRightButtonUp;

@@ -11,8 +11,7 @@
     </UserControl.Resources>
 
     <Border VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,15,40,0" Panel.ZIndex="100"
-            Background="{DynamicResource BgCard}" CornerRadius="20" Padding="8,4"
-            Visibility="{Binding IsSearchPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            Background="{DynamicResource BgCard}" CornerRadius="20" Padding="8,4">
         <Border.Effect>
             <DropShadowEffect BlurRadius="15" ShadowDepth="4" Opacity="0.4" Color="Black"/>
         </Border.Effect>

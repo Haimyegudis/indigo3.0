@@ -60,18 +60,13 @@
                             <Setter Property="VerticalAlignment" Value="Center"/>
                             <Setter Property="HorizontalAlignment" Value="Left"/>
                             <Setter Property="Padding" Value="8,0"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
-                                    <Setter Property="Foreground" Value="Black"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Level}" Value="Error">
-                                    <Setter Property="Foreground" Value="White"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Level}" Value="ERROR">
-                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
-                                    <Setter Property="Foreground" Value="Black"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -84,18 +79,13 @@
                             <Setter Property="VerticalAlignment" Value="Center"/>
                             <Setter Property="HorizontalAlignment" Value="Left"/>
                             <Setter Property="Padding" Value="8,0"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
-                                    <Setter Property="Foreground" Value="Black"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Level}" Value="Error">
-                                    <Setter Property="Foreground" Value="White"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Level}" Value="ERROR">
-                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
-                                    <Setter Property="Foreground" Value="Black"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -112,19 +102,13 @@
                             <Setter Property="VerticalAlignment" Value="Center"/>
                             <Setter Property="HorizontalAlignment" Value="Left"/>
                             <Setter Property="Padding" Value="8,0"/>
-                            <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
-                                    <Setter Property="Foreground" Value="Black"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Level}" Value="Error">
-                                    <Setter Property="Foreground" Value="White"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Level}" Value="ERROR">
-                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
-                                    <Setter Property="Foreground" Value="Black"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -141,22 +125,16 @@
                             <Setter Property="VerticalAlignment" Value="Center"/>
                             <Setter Property="HorizontalAlignment" Value="Left"/>
                             <Setter Property="Padding" Value="8,0"/>
-                            <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
-                                    <Setter Property="Foreground" Value="Black"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Level}" Value="Error">
-                                    <Setter Property="Foreground" Value="White"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Level}" Value="ERROR">
-                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding ThreadName}" Value="Manager">
                                     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
-                                    <Setter Property="Foreground" Value="Black"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -173,19 +151,13 @@
                             <Setter Property="VerticalAlignment" Value="Center"/>
                             <Setter Property="HorizontalAlignment" Value="Left"/>
                             <Setter Property="Padding" Value="8,0"/>
-                            <Setter Property="Foreground" Value="{DynamicResource SecondaryColor}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
-                                    <Setter Property="Foreground" Value="Black"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Level}" Value="Error">
-                                    <Setter Property="Foreground" Value="White"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Level}" Value="ERROR">
-                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
-                                    <Setter Property="Foreground" Value="Black"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -203,16 +175,10 @@
                                         <Setter Property="TextWrapping" Value="NoWrap"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
-                                                <Setter Property="Foreground" Value="Black"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding Level}" Value="Error">
-                                                <Setter Property="Foreground" Value="White"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding Level}" Value="ERROR">
-                                                <Setter Property="Foreground" Value="White"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
-                                                <Setter Property="Foreground" Value="Black"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -221,6 +187,66 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
+
+                <DataGridTextColumn Header="Pattern" Binding="{Binding Pattern}" Width="150" Visibility="Collapsed">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="HorizontalAlignment" Value="Left"/>
+                            <Setter Property="Padding" Value="8,0"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Data" Binding="{Binding Data}" Width="200" Visibility="Collapsed">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="HorizontalAlignment" Value="Left"/>
+                            <Setter Property="Padding" Value="8,0"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Exception" Binding="{Binding Exception}" Width="250" Visibility="Collapsed">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="HorizontalAlignment" Value="Left"/>
+                            <Setter Property="Padding" Value="8,0"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
             </DataGrid.Columns>
 
             <DataGrid.RowDetailsTemplate>

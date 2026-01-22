@@ -135,6 +135,18 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        private bool _isLoggersMenuOpen;
+        public bool IsLoggersMenuOpen
+        {
+            get => _isLoggersMenuOpen;
+            set
+            {
+                _isLoggersMenuOpen = value;
+                OnPropertyChanged();
+                _parent?.NotifyPropertyChanged(nameof(_parent.IsLoggersMenuOpen));
+            }
+        }
+
         // Commands
         public ICommand BrowseTableCommand { get; }
         public ICommand RefreshConfigExplorerCommand { get; }

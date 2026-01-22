@@ -73,6 +73,11 @@ namespace IndiLogs_3._0.Models
         public string ProcessName { get; set; }
         public string Method { get; set; }
 
+        // ===== PARSED FIELDS =====
+        public string Pattern { get; set; }
+        public string Data { get; set; }
+        public string Exception { get; set; }
+
         // ===== MARKING & COLORING =====
         private bool _isMarked;
         public bool IsMarked
@@ -105,6 +110,20 @@ namespace IndiLogs_3._0.Models
         }
 
         // ===== ROW STYLING =====
+        private Brush _rowForeground;
+        public Brush RowForeground
+        {
+            get => _rowForeground;
+            set
+            {
+                if (_rowForeground != value)
+                {
+                    _rowForeground = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public Brush RowBackground
         {
             get

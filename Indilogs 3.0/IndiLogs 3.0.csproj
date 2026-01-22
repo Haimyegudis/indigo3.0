@@ -305,6 +305,7 @@
     <Compile Include="Services\ILogAnalyzer.cs" />
     <Compile Include="Services\LogColoringService.cs" />
     <Compile Include="Services\LogFileService.cs" />
+    <Compile Include="Services\LogParserService.cs" />
     <Compile Include="Services\FilterEditorViewModel.cs" />
     <Compile Include="Services\QueryParserService.cs" />
     <Compile Include="Services\SearchIndexService.cs" />
@@ -315,6 +316,9 @@
     </Compile>
     <Compile Include="Views\ThreadFilterWindow.xaml.cs">
       <DependentUpon>ThreadFilterWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\TimeRangeWindow.xaml.cs">
+      <DependentUpon>TimeRangeWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\StatsWindow.xaml.cs">
       <DependentUpon>StatsWindow.xaml</DependentUpon>
@@ -443,6 +447,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\ThreadFilterWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\TimeRangeWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
