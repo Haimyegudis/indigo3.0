@@ -144,6 +144,11 @@
                                                 <TextBlock Text="📌 Marked Lines"/>
                                             </Viewbox>
                                         </Button>
+                                        <Button Command="{Binding OpenGlobalGrepCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="🔍 Global Grep"/>
+                                            </Viewbox>
+                                        </Button>
                                         <Button Command="{Binding OpenStatesWindowCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsPLCTabSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
                                                 <TextBlock Text="🔄 States"/>
@@ -294,6 +299,11 @@
                                                 <TextBlock Text="📌 Marked Lines"/>
                                             </Viewbox>
                                         </Button>
+                                        <Button Command="{Binding OpenGlobalGrepCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="🔍 Global Grep"/>
+                                            </Viewbox>
+                                        </Button>
                                         <Button Command="{Binding OpenStatesWindowCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsPLCTabSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
                                                 <TextBlock Text="🔄 States"/>
@@ -395,7 +405,7 @@
                 <TabControl x:Name="MainTabs" Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}" BorderThickness="0" Background="Transparent" Padding="0" SelectionChanged="TabControl_SelectionChanged">
 
                     <TabItem Header="PLC LOGS">
-                        <controls:PlcLogsTabControl x:Name="PlcLogsTab" DataContext="{Binding}"/>
+                        <controls:PlcLogsTabControl x:Name="PlcLogsTab" DataContext="{Binding}" Loaded="PlcLogsTab_Loaded"/>
                     </TabItem>
 
                     <TabItem Header="PLC (FILTERED)">

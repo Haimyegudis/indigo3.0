@@ -19,22 +19,24 @@ namespace IndiLogs_3._0.Services
 {
     public class LogFileService
     {
-        // --- אופטימיזציה: מחלקת StringPool לאיחוד מחרוזות ---
+        // --- אופטימיזציה: מחלקת StringPool לאיחוד מחרוזות (Thread-Safe) ---
         public class StringPool
         {
-            private readonly Dictionary<string, string> _cache = new Dictionary<string, string>();
+            private readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _cache
+                = new System.Collections.Concurrent.ConcurrentDictionary<string, string>();
 
             public string Intern(string value)
             {
                 // אם הערך ריק או null, אין מה לשמור ב-Cache
                 if (string.IsNullOrEmpty(value)) return value;
 
-                // אם המחרוזת כבר קיימת, החזר את הרפרנס הקיים
-                if (_cache.TryGetValue(value, out var existing)) return existing;
+                // ConcurrentDictionary.GetOrAdd is thread-safe
+                return _cache.GetOrAdd(value, value);
+            }
 
-                // אחרת, שמור אותה והחזר אותה
-                _cache[value] = value;
-                return value;
+            public void Clear()
+            {
+                _cache.Clear();
             }
         }
         // ------------------------------------------------------
@@ -225,6 +227,7 @@ namespace IndiLogs_3._0.Services
 
                                     if (shouldProcess)
                                     {
+                                        // טוען את הקובץ לזיכרון (חייבים לעשות זאת בתוך using block של archive)
                                         entryData.Stream = CopyToMemory(entry);
                                         filesToProcess.Add(entryData);
                                     }
@@ -232,22 +235,15 @@ namespace IndiLogs_3._0.Services
 
                                 int totalFiles = filesToProcess.Count;
                                 int processedCount = 0;
+                                object progressLock = new object();
 
-                                // עיבוד מקבילי - מעבירים את ה-stringPool לכל ה-Threads
-                                // הערה: StringPool אינו ThreadSafe כברירת מחדל אם כותבים אליו במקביל ללא נעילה,
-                                // אך כאן אנו קוראים ConcurrentBag. ליתר ביטחון ב-LoadSession מרובה קבצים,
-                                // עדיף להשתמש ב-lock בתוך StringPool או שכל Thread ייצור Pool מקומי קטן (פחות יעיל לזיכרון).
-                                // *תיקון*: הגישה הבטוחה ביותר כאן היא להשתמש ב-lock בתוך ה-Intern או לוותר על המקביליות בפרסור
-                                // למען הזיכרון. למען הפשטות והביצועים כאן, נשתמש ב-Pool יחיד עם lock פנימי במידה ונרצה,
-                                // או שנריץ סדרתי. בקוד הנוכחי נריץ Parallel אבל נגן על ה-Pool (או נניח שאין התנגשות קריטית).
-                                // *שיפור*: בשביל לא לפגוע בביצועים, נשתמש ב-ConcurrentDictionary בתוך StringPool במימוש אמיתי,
-                                // או שנריץ לולאה רגילה. כאן אני אשנה ללולאה רגילה (לא Parallel) עבור הקבצים,
-                                // כי ה-IO הוא הצוואר בקבוק והזיכרון חשוב יותר.
-
-                                foreach (var item in filesToProcess) // שיניתי מ-Parallel ל-foreach רגיל לבטיחות ה-Pool
+                                // עיבוד מקבילי - StringPool כעת Thread-Safe עם ConcurrentDictionary
+                                // שימוש ב-Parallel.ForEach לאופטימיזציה מקסימלית
+                                Parallel.ForEach(filesToProcess, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, item =>
                                 {
                                     try
                                     {
+                                        // עובד עם ה-Stream שכבר נטען
                                         using (item.Stream)
                                         {
                                             if (item.Type == FileType.MainLog)
@@ -276,16 +272,19 @@ namespace IndiLogs_3._0.Services
                                     }
                                     finally
                                     {
-                                        processedCount++;
-                                        if (processedCount % 3 == 0)
+                                        lock (progressLock)
                                         {
-                                            double ratio = (double)processedCount / totalFiles;
-                                            double fileProg = (0.5 + (ratio * 0.5)) * currentFileSize;
-                                            double totalP = ((processedBytesGlobal + fileProg) / totalBytesAllFiles) * 100;
-                                            progress?.Report((Math.Min(99, totalP), $"Parsing files: {processedCount}/{totalFiles}"));
+                                            processedCount++;
+                                            if (processedCount % 3 == 0)
+                                            {
+                                                double ratio = (double)processedCount / totalFiles;
+                                                double fileProg = (0.5 + (ratio * 0.5)) * currentFileSize;
+                                                double totalP = ((processedBytesGlobal + fileProg) / totalBytesAllFiles) * 100;
+                                                progress?.Report((Math.Min(99, totalP), $"Parsing files: {processedCount}/{totalFiles}"));
+                                            }
                                         }
                                     }
-                                }
+                                });
                             }
                         }
                         else
@@ -639,7 +638,12 @@ namespace IndiLogs_3._0.Services
         }
 
         private enum FileType { MainLog, AppDevLog, EventsCsv }
-        private class ZipEntryData { public string Name; public FileType Type; public MemoryStream Stream; }
+        private class ZipEntryData
+        {
+            public string Name;
+            public FileType Type;
+            public MemoryStream Stream;
+        }
         private double CalculatePercent(long processed, long total) => total == 0 ? 0 : Math.Min(99, ((double)processed / total) * 100);
     }
 }

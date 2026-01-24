@@ -1,0 +1,343 @@
+<Window x:Class="IndiLogs_3._0.Views.GlobalGrepWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:IndiLogs_3._0.Controls"
+        xmlns:converters="clr-namespace:IndiLogs_3._0.Converters"
+        Title="Global Grep - Search All Sessions"
+        Height="700" Width="1200"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource BgDark}"
+        ResizeMode="CanResizeWithGrip">
+
+    <Window.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <!-- Group Box Style -->
+        <Style TargetType="GroupBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Padding" Value="8"/>
+        </Style>
+
+        <!-- CheckBox Style -->
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="5,2"/>
+        </Style>
+
+        <!-- RadioButton Style -->
+        <Style TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="5,2"/>
+        </Style>
+
+        <!-- TextBox Style -->
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource BgMedium}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Button Style -->
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Search controls -->
+            <RowDefinition Height="*"/>    <!-- Results grid -->
+            <RowDefinition Height="Auto"/> <!-- Status bar -->
+        </Grid.RowDefinitions>
+
+        <!-- Search Controls Panel -->
+        <Border Grid.Row="0" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
+                Background="{DynamicResource BgMedium}" Padding="10" Margin="0,0,0,10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Row 1: Search Query -->
+                <Grid Grid.Row="0" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="Search Query:"
+                               VerticalAlignment="Center" Margin="0,0,10,0"
+                               Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/>
+
+                    <TextBox Grid.Column="1" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                             FontFamily="Consolas" FontSize="13"
+                             ToolTip="Enter search text. Supports boolean operators (AND, OR, NOT) and quotes for exact phrases.">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding SearchCommand}"/>
+                        </TextBox.InputBindings>
+                    </TextBox>
+
+                    <CheckBox Grid.Column="2" Content="Use Regex" IsChecked="{Binding UseRegex}"
+                              Margin="15,0,0,0"
+                              ToolTip="Enable regular expression pattern matching"/>
+
+                    <Button Grid.Column="3" Content="Search" Command="{Binding SearchCommand}"
+                            Width="100" IsEnabled="{Binding IsNotSearching}"/>
+                </Grid>
+
+                <!-- Row 2: Search Mode Selection -->
+                <Grid Grid.Row="1" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Loaded Sessions Mode -->
+                    <GroupBox Grid.Column="0" Header="Search in Loaded Sessions (Fast)">
+                        <StackPanel>
+                            <RadioButton Content="Search currently loaded sessions in memory"
+                                        IsChecked="{Binding IsLoadedSessionsMode}"/>
+
+                            <TextBlock Text="Search Fields:" Margin="0,8,0,4" FontWeight="SemiBold"
+                                      Foreground="{DynamicResource TextPrimary}"/>
+                            <StackPanel Orientation="Horizontal">
+                                <CheckBox Content="Message" IsChecked="{Binding SearchMessage}"/>
+                                <CheckBox Content="Exception" IsChecked="{Binding SearchException}"/>
+                                <CheckBox Content="Method" IsChecked="{Binding SearchMethod}"/>
+                                <CheckBox Content="Data" IsChecked="{Binding SearchData}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <!-- External Files Mode -->
+                    <GroupBox Grid.Column="1" Header="Search in External Files (Comprehensive)">
+                        <StackPanel>
+                            <RadioButton Content="Search ZIP or directory on disk"
+                                        IsChecked="{Binding IsExternalFilesMode}"/>
+
+                            <Grid Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox Grid.Column="0" Text="{Binding ExternalPath, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsExternalFilesMode}"
+                                         ToolTip="Path to ZIP file or directory"/>
+
+                                <Button Grid.Column="1" Content="Browse..."
+                                        Click="BrowseButton_Click"
+                                        IsEnabled="{Binding IsExternalFilesMode}"
+                                        Width="80"/>
+                            </Grid>
+                        </StackPanel>
+                    </GroupBox>
+                </Grid>
+
+                <!-- Row 3: Log Type Filters -->
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="Log Types:"
+                               VerticalAlignment="Center" Margin="0,0,15,0"
+                               Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <CheckBox Content="PLC Logs" IsChecked="{Binding SearchPLC}"/>
+                        <CheckBox Content="APP Logs" IsChecked="{Binding SearchAPP}"/>
+                    </StackPanel>
+
+                    <Button Grid.Column="2" Content="Cancel" Command="{Binding CancelSearchCommand}"
+                            Width="100" Visibility="{Binding IsSearching, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                    <Button Grid.Column="3" Content="Clear Results" Command="{Binding ClearResultsCommand}"
+                            Width="120"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- Results DataGrid -->
+        <Border Grid.Row="1" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1">
+            <Grid>
+                <DataGrid x:Name="ResultsGrid"
+                          ItemsSource="{Binding Results}"
+                          SelectedItem="{Binding SelectedResult, Mode=TwoWay}"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          Foreground="{DynamicResource TextPrimary}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          RowStyle="{DynamicResource LogRowStyle}"
+                          SelectionMode="Single"
+                          SelectionUnit="FullRow"
+                          HorizontalScrollBarVisibility="Auto"
+                          MouseDoubleClick="ResultsGrid_MouseDoubleClick">
+
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Timestamp"
+                                          Binding="{Binding TimestampDisplay}"
+                                          Width="170"
+                                          FontWeight="Bold"/>
+
+                        <DataGridTextColumn Header="Session"
+                                          Binding="{Binding SessionName}"
+                                          Width="180">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="Type"
+                                          Binding="{Binding LogType}"
+                                          Width="60">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource SecondaryColor}"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="Field"
+                                          Binding="{Binding MatchedField}"
+                                          Width="100">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="Line"
+                                          Binding="{Binding LineNumber}"
+                                          Width="60">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="Preview"
+                                          Binding="{Binding PreviewText}"
+                                          Width="*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="FontFamily" Value="Consolas"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- No Results Overlay -->
+                <Border Background="{DynamicResource BgDark}" Opacity="0.9"
+                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ResultCount}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="No results found. Enter a search query and click Search."
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               FontSize="16"
+                               Foreground="{DynamicResource TextSecondary}"/>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1,1,1,0"
+                Background="{DynamicResource BgMedium}" Padding="10" Margin="0,10,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Results count and status -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="Results: " FontWeight="SemiBold"
+                              Foreground="{DynamicResource TextPrimary}"/>
+                    <TextBlock Text="{Binding ResultCount}" FontWeight="Bold"
+                              Foreground="{DynamicResource PrimaryColor}" Margin="0,0,15,0"/>
+
+                    <TextBlock Text="{Binding StatusMessage}"
+                              Foreground="{DynamicResource TextSecondary}"/>
+                </StackPanel>
+
+                <!-- Progress Bar (visible when searching) -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="15,0"
+                           Visibility="{Binding IsSearching, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <ProgressBar Width="200" Height="20"
+                                Minimum="0"
+                                Maximum="{Binding ProgressTotal}"
+                                Value="{Binding ProgressCurrent}"
+                                Margin="0,0,10,0"/>
+                    <TextBlock VerticalAlignment="Center"
+                              Foreground="{DynamicResource TextSecondary}">
+                        <Run Text="{Binding ProgressCurrent, Mode=OneWay}"/>
+                        <Run Text="/"/>
+                        <Run Text="{Binding ProgressTotal, Mode=OneWay}"/>
+                    </TextBlock>
+                </StackPanel>
+
+                <!-- Action Buttons -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button Content="Find First Occurrence"
+                            Command="{Binding FindFirstOccurrenceCommand}"
+                            Width="160"
+                            ToolTip="Chronologically sort and select the earliest match"/>
+
+                    <Button Content="Jump to Log"
+                            x:Name="JumpButton"
+                            Click="JumpToLog_Click"
+                            Width="120"
+                            ToolTip="Navigate to the selected log entry in the main window"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

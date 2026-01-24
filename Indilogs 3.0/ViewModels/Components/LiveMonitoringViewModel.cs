@@ -84,10 +84,15 @@ namespace IndiLogs_3._0.ViewModels.Components
         // Lock for thread-safe collection access
         private readonly object _collectionLock = new object();
 
+        // Buffering for performance
+        private readonly List<LogEntry> _pendingLogs = new List<LogEntry>();
+        private System.Threading.Timer _flushTimer;
+
         // Constants
-        private const int POLLING_INTERVAL_MS = 5000;
+        private const int POLLING_INTERVAL_MS = 2000; // Reduced from 5000 to 2000 for faster updates
         private const int INITIAL_LOAD_MINUTES = 2;
-        private const int MIN_REFRESH_INTERVAL_MS = 5000;
+        private const int MIN_REFRESH_INTERVAL_MS = 2000; // Reduced from 5000 to 2000
+        private const int MAX_LOGS_PER_BATCH = 5000; // Limit batch size to prevent UI freeze
 
         // Commands
         public ICommand LivePlayCommand { get; }
@@ -115,68 +120,34 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         public void StartLiveMonitoring(string path)
         {
-            // Cleanup
+            // 1. Cleanup old session
             StopLiveMonitoring();
             _parent.ClearCommand.Execute(null);
 
-            // UI Setup
+            // 2. UI Setup
             _sessionVM.LoadedFiles.Add(Path.GetFileName(path));
             _liveFilePath = path;
+
+            // יצירת קולקציה חדשה וחיבור שלה ל-SessionVM כדי שהתצוגה תתעדכן
             _liveLogsCollection = new ObservableRangeCollection<LogEntry>();
             _sessionVM.AllLogsCache = _liveLogsCollection;
             _sessionVM.Logs = _liveLogsCollection;
 
             IsLiveMode = true;
             IsRunning = true;
-            _parent.WindowTitle = "IndiLogs 3.0 - LIVE MONITORING (Custom)";
+            _parent.WindowTitle = "IndiLogs 3.0 - LIVE MONITORING";
 
-            // Initialize new mechanism
+            // 3. Initialize Control Token
             _liveCts = new CancellationTokenSource();
-            _customReader = new CustomLiveLogReader();
 
-            // Register events
-            _customReader.OnStatusChanged += (msg) =>
-            {
-                Application.Current.Dispatcher.Invoke(() => _sessionVM.StatusMessage = msg);
-            };
+            // 4. Reset Polling State (חשוב לאפס כדי שהקריאה הראשונה תהיה תקינה)
+            _lastFileSize = 0;
+            _lastStreamPosition = 0;
+            _lastParsedLogCount = 0;
 
-            _customReader.OnLogsReceived += (newLogs) =>
-            {
-                Task.Run(async () =>
-                {
-                    // 1. Apply colors (default + custom if exists)
-                    await _coloringService.ApplyDefaultColorsAsync(newLogs, false);
-
-                    // If there are active custom coloring rules
-                    if (_caseVM.MainColoringRules != null && _caseVM.MainColoringRules.Any())
-                    {
-                        await _coloringService.ApplyCustomColoringAsync(newLogs, _caseVM.MainColoringRules);
-                    }
-
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        lock (_collectionLock)
-                        {
-                            foreach (var log in newLogs) // Maintain chronological order
-                            {
-                                // A. Always add to main tab (PLC) and memory
-                                _liveLogsCollection.Insert(0, log);
-
-                                // B. Add to filtered tab (PLC FILTERED) only if meets conditions!
-                                if (ShouldShowInFilteredView(log))
-                                {
-                                    _filterVM.FilteredLogs.Insert(0, log);
-                                }
-                            }
-
-                            _sessionVM.StatusMessage = $"Live: {_filterVM.FilteredLogs.Count:N0} filtered / {_liveLogsCollection.Count:N0} total";
-                        }
-                    });
-                });
-            };
-
-            // Start in background
-            Task.Run(() => _customReader.StartMonitoring(path, _liveCts.Token));
+            // 5. Start the Polling Loop (זה החלק שהיה חסר!)
+            // מפעיל את הלולאה שבודקת את הקובץ כל 5 שניות
+            Task.Run(() => PollingLoop(_liveCts.Token));
         }
 
         public void StopLiveMonitoring()
@@ -291,158 +262,127 @@ namespace IndiLogs_3._0.ViewModels.Components
         public async Task RefreshLogsOptimized()
         {
             if (_isRefreshActive) return;
-
             _isRefreshActive = true;
-            Debug.WriteLine($">>> RefreshLogsOptimized STARTED");
 
             try
             {
-                await Task.Delay(100); // Wait for write to complete
+                // OPTIMIZATION: Remove unnecessary delay
+                // await Task.Delay(100); - REMOVED
 
-                long currentFileSize;
-                try
-                {
-                    var fileInfo = new FileInfo(_liveFilePath);
-                    currentFileSize = fileInfo.Length;
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"  ❌ Cannot access file: {ex.Message}");
-                    return;
-                }
+                var fileInfo = new FileInfo(_liveFilePath);
+                long currentFileSize = fileInfo.Length;
+                bool isFirstRun = _lastFileSize == 0;
 
-                const long MIN_GROWTH = 5120; // 5KB
-                long growth = currentFileSize - _lastFileSize;
-
-                if (growth < MIN_GROWTH)
+                // אם לא גדל משמעותית - דלג (minimum 1KB change required)
+                if (!isFirstRun && currentFileSize <= _lastFileSize + 1024)
                 {
-                    Debug.WriteLine($"  ℹ️ File grew by only {growth:N0} bytes - skipping");
+                    _isRefreshActive = false;
                     return;
                 }
 
                 _lastFileSize = currentFileSize;
-                Debug.WriteLine($"  File grew by {growth:N0} bytes");
 
-                // STRATEGY 1: Try to seek to last position (FAST!)
-                Debug.WriteLine($"  🎯 Attempting OPTIMIZED read from position {_lastStreamPosition:N0}...");
-
-                bool optimizedSuccess = false;
-                List<LogEntry> newLogs = null;
-
-                try
+                // קריאה ופארסינג ברקע - OPTIMIZED
+                List<LogEntry> newLogs = await Task.Run(() =>
                 {
-                    newLogs = await Task.Run(() =>
+                    try
                     {
                         using (var fs = new FileStream(_liveFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                         {
-                            // Try seeking to last known position
-                            if (_lastStreamPosition > 0 && _lastStreamPosition < fs.Length)
+                            // אופטימיזציה: אם זה טעינה ראשונית והקובץ ענק (>50MB), קרא רק את הסוף
+                            if (isFirstRun)
                             {
-                                Debug.WriteLine($"    Seeking to position {_lastStreamPosition:N0}...");
-                                fs.Seek(_lastStreamPosition, SeekOrigin.Begin);
-
-                                Debug.WriteLine($"    Creating reader from seeked position...");
-                                var result = _logService.ParseLogStream(fs);
-
-                                if (result.AllLogs != null && result.AllLogs.Count > 0)
+                                long maxBytes = 50 * 1024 * 1024; // 50MB limit
+                                if (fs.Length > maxBytes)
                                 {
-                                    Debug.WriteLine($"    ✅ SUCCESS! Parsed {result.AllLogs.Count:N0} new logs from seeked position!");
-
-                                    // Update position
-                                    _lastStreamPosition = fs.Position;
-
-                                    optimizedSuccess = true;
-                                    return result.AllLogs;
+                                    fs.Seek(fs.Length - maxBytes, SeekOrigin.Begin);
+                                    // דלג עד סוף השורה הקרובה כדי לא לקרוא זבל
+                                    int b;
+                                    while ((b = fs.ReadByte()) != -1 && b != '\n') { }
+                                    System.Diagnostics.Debug.WriteLine($"[LIVE] Optimization: Initial load limited to last 50MB.");
                                 }
                                 else
                                 {
-                                    Debug.WriteLine($"    ⚠️ No logs from seeked position, falling back...");
+                                    fs.Position = 0;
                                 }
                             }
-
-                            return null;
-                        }
-                    });
-                }
-                catch (Exception seekEx)
-                {
-                    Debug.WriteLine($"    ❌ Seek strategy failed: {seekEx.Message}");
-                }
-
-                // STRATEGY 2: Fallback - parse entire file (SLOW)
-                if (!optimizedSuccess || newLogs == null)
-                {
-                    Debug.WriteLine($"  ⚙️ Falling back to full file parse...");
-
-                    var sw = System.Diagnostics.Stopwatch.StartNew();
-
-                    newLogs = await Task.Run(() =>
-                    {
-                        using (var fs = new FileStream(_liveFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                        using (var ms = new MemoryStream())
-                        {
-                            fs.CopyTo(ms);
-                            ms.Position = 0;
-
-                            var result = _logService.ParseLogStream(ms);
-                            var allLogs = result.AllLogs;
-
-                            if (allLogs != null && allLogs.Count > _lastParsedLogCount)
+                            else
                             {
-                                var deltaLogs = allLogs.Skip(_lastParsedLogCount).ToList();
-                                _lastParsedLogCount = allLogs.Count;
-                                _lastStreamPosition = fs.Position; // Update position
-
-                                return deltaLogs;
+                                // ריצות המשך - המשך מאיפה שעצרנו
+                                if (_lastStreamPosition > 0 && _lastStreamPosition < fs.Length)
+                                    fs.Seek(_lastStreamPosition, SeekOrigin.Begin);
+                                else
+                                    fs.Position = 0;
                             }
 
-                            return null;
+                            var result = _logService.ParseLogStream(fs);
+                            _lastStreamPosition = fs.Position;
+                            return result.AllLogs ?? new List<LogEntry>();
                         }
-                    });
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[LIVE READ ERROR] {ex.Message}");
+                        return new List<LogEntry>();
+                    }
+                });
 
-                    sw.Stop();
-                    Debug.WriteLine($"  Full parse took {sw.ElapsedMilliseconds:N0}ms");
+                // OPTIMIZATION: Limit batch size to prevent UI freeze
+                if (newLogs != null && newLogs.Count > MAX_LOGS_PER_BATCH)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[LIVE] Batch too large ({newLogs.Count}), limiting to {MAX_LOGS_PER_BATCH}");
+                    newLogs = newLogs.Take(MAX_LOGS_PER_BATCH).ToList();
                 }
 
-                // Add new logs to UI
+                // עדכון UI
                 if (newLogs != null && newLogs.Count > 0)
                 {
-                    await _coloringService.ApplyDefaultColorsAsync(newLogs, false);
-                    if (_caseVM.MainColoringRules != null && _caseVM.MainColoringRules.Count > 0)
-                        await _coloringService.ApplyCustomColoringAsync(newLogs, _caseVM.MainColoringRules);
+                    // OPTIMIZATION: Sort and color in parallel
+                    var sortedLogs = newLogs.OrderByDescending(l => l.Date).ToList();
 
-                    Application.Current.Dispatcher.Invoke(() =>
+                    // החלת צבעים ברקע - בלי await כדי לא לחסום
+                    _ = Task.Run(async () =>
+                    {
+                        await _coloringService.ApplyDefaultColorsAsync(sortedLogs, false);
+                        if (_caseVM.MainColoringRules != null && _caseVM.MainColoringRules.Any())
+                            await _coloringService.ApplyCustomColoringAsync(sortedLogs, _caseVM.MainColoringRules);
+                    });
+
+                    // הוספה ל-UI מיידית (צבעים יתעדכנו אחרי)
+                    Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         lock (_collectionLock)
                         {
-                            foreach (var log in newLogs.OrderByDescending(l => l.Date))
+                            try
                             {
-                                _liveLogsCollection.Insert(0, log);
-                                _filterVM.FilteredLogs.Insert(0, log);
+                                // OPTIMIZATION: Batch insert instead of individual adds
+                                _liveLogsCollection.InsertRange(0, sortedLogs);
+
+                                var filteredToAdd = sortedLogs.Where(l => ShouldShowInFilteredView(l)).ToList();
+                                if (filteredToAdd.Count > 0)
+                                {
+                                    _filterVM.FilteredLogs.InsertRange(0, filteredToAdd);
+                                }
+
+                                _sessionVM.StatusMessage = $"Live: Added {newLogs.Count:N0} logs (Total: {_liveLogsCollection.Count:N0})";
                             }
-
-                            if (_parent.SelectedLog == null && _filterVM.FilteredLogs.Count > 0)
-                                _parent.SelectedLog = _filterVM.FilteredLogs[0];
-
-                            _sessionVM.StatusMessage = $"Live: {_filterVM.FilteredLogs.Count:N0} shown (+{newLogs.Count} new) | {_liveLogsCollection.Count:N0} total";
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[LIVE UI ERROR] {ex.Message}");
+                            }
                         }
-                    });
-
-                    string method = optimizedSuccess ? "OPTIMIZED SEEK" : "full parse";
-                    Debug.WriteLine($"  ✅ Added {newLogs.Count:N0} new logs via {method}");
+                    }, System.Windows.Threading.DispatcherPriority.Background);
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"❌ RefreshLogsOptimized error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[LIVE ERROR] {ex.Message}");
             }
             finally
             {
                 _isRefreshActive = false;
-                Debug.WriteLine($">>> RefreshLogsOptimized FINISHED");
             }
         }
-
         public async Task PollingLoop(CancellationToken token)
         {
             Debug.WriteLine($">>> PollingLoop STARTED");

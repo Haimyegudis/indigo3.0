@@ -28,28 +28,37 @@ namespace IndiLogs_3._0.Models
         }
 
         // --- אופטימיזציה קריטית ל-Live Monitoring (הכנסה לראש הרשימה) ---
+        // בתוך המחלקה ObservableRangeCollection<T>
         public void InsertRange(int index, IEnumerable<T> collection)
         {
             if (collection == null) throw new ArgumentNullException(nameof(collection));
 
-            // בדיקה האם הרשימה הפנימית היא List<T> לביצועים מהירים
-            if (Items is List<T> list)
+            var list = collection.ToList();
+            if (list.Count == 0) return;
+
+            CheckReentrancy();
+
+            // 1. הוספה מהירה לרשימה הפנימית (ללא עדכון UI עדיין)
+            if (Items is List<T> items)
             {
-                // זה מבצע הזזה אחת בזיכרון לכל הבלוק, במקום אלפי הזזות!
-                list.InsertRange(index, collection);
+                items.InsertRange(index, list);
             }
             else
             {
-                // Fallback למקרה שזה לא List (איטי יותר)
-                foreach (var i in collection)
-                {
-                    Items.Insert(index++, i);
-                }
+                // Fallback למקרה שזה לא List רגיל
+                int i = index;
+                foreach (var item in list) Items.Insert(i++, item);
             }
 
-            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-        }
+            // 2. תיקון קריטי ל-WPF: שימוש ב-Reset
+            // WPF לא תומך ב-Range Actions (הוספת רשימה). השימוש ב-Reset מודיע ל-UI
+            // שהרשימה השתנתה ומחייב רענון אחד בלבד. זה מונע את הקריסה ופותר את ה-Freeze.
+            OnCollectionChanged(new System.Collections.Specialized.NotifyCollectionChangedEventArgs(
+                System.Collections.Specialized.NotifyCollectionChangedAction.Reset));
 
+            OnPropertyChanged(new PropertyChangedEventArgs("Count"));
+            OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
+        }
         public void ReplaceAll(IEnumerable<T> collection)
         {
             if (collection == null) throw new ArgumentNullException(nameof(collection));

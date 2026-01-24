@@ -1,5 +1,6 @@
 using IndiLogs_3._0.Models;
 using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace IndiLogs_3._0.Services
@@ -23,6 +24,7 @@ namespace IndiLogs_3._0.Services
 
         /// <summary>
         /// Parse a log entry message to extract Pattern, Data, and Exception fields
+        /// OPTIMIZATION: Fast-path checks to avoid regex when not needed
         /// </summary>
         public static void ParseLogEntry(LogEntry log)
         {
@@ -31,42 +33,60 @@ namespace IndiLogs_3._0.Services
 
             string message = log.Message;
 
-            // Parse Pattern
-            var patternMatch = PatternRegex.Match(message);
-            if (patternMatch.Success)
-            {
-                log.Pattern = patternMatch.Groups[1].Value.Trim();
-            }
+            // OPTIMIZATION: Quick checks before running expensive regex
+            bool hasPattern = message.IndexOf("Pattern", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             message.IndexOf("pattern=", StringComparison.OrdinalIgnoreCase) >= 0;
+            bool hasData = message.IndexOf("Data", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                          message.IndexOf("data=", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                          message.IndexOf('{') >= 0;
+            bool hasException = message.IndexOf("Exception", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                               message.IndexOf("Error:", StringComparison.OrdinalIgnoreCase) >= 0;
 
-            // Parse Data
-            var dataMatch = DataRegex.Match(message);
-            if (dataMatch.Success)
+            // Parse Pattern - only if likely to have one
+            if (hasPattern)
             {
-                log.Data = dataMatch.Groups[1].Value.Trim();
-            }
-
-            // Parse Exception
-            // Try detailed exception pattern first
-            var exceptionMatch = ExceptionRegex.Match(message);
-            if (exceptionMatch.Success)
-            {
-                log.Exception = exceptionMatch.Groups[1].Value.Trim();
-            }
-            else
-            {
-                // Try to find exception class name
-                var exceptionClassMatch = ExceptionClassRegex.Match(message);
-                if (exceptionClassMatch.Success)
+                var patternMatch = PatternRegex.Match(message);
+                if (patternMatch.Success)
                 {
-                    // Extract from exception class to end of message or next log indicator
-                    int startIndex = exceptionClassMatch.Index;
-                    string exceptionPart = message.Substring(startIndex);
+                    log.Pattern = patternMatch.Groups[1].Value.Trim();
+                }
+            }
 
-                    // Limit to reasonable length (e.g., 500 characters)
-                    if (exceptionPart.Length > 500)
-                        exceptionPart = exceptionPart.Substring(0, 500) + "...";
+            // Parse Data - only if likely to have data
+            if (hasData)
+            {
+                var dataMatch = DataRegex.Match(message);
+                if (dataMatch.Success)
+                {
+                    log.Data = dataMatch.Groups[1].Value.Trim();
+                }
+            }
 
-                    log.Exception = exceptionPart.Trim();
+            // Parse Exception - only if likely to have exception
+            if (hasException)
+            {
+                // Try detailed exception pattern first
+                var exceptionMatch = ExceptionRegex.Match(message);
+                if (exceptionMatch.Success)
+                {
+                    log.Exception = exceptionMatch.Groups[1].Value.Trim();
+                }
+                else
+                {
+                    // Try to find exception class name
+                    var exceptionClassMatch = ExceptionClassRegex.Match(message);
+                    if (exceptionClassMatch.Success)
+                    {
+                        // Extract from exception class to end of message or next log indicator
+                        int startIndex = exceptionClassMatch.Index;
+                        string exceptionPart = message.Substring(startIndex);
+
+                        // Limit to reasonable length (e.g., 500 characters)
+                        if (exceptionPart.Length > 500)
+                            exceptionPart = exceptionPart.Substring(0, 500) + "...";
+
+                        log.Exception = exceptionPart.Trim();
+                    }
                 }
             }
 
@@ -76,11 +96,10 @@ namespace IndiLogs_3._0.Services
                 !string.IsNullOrEmpty(log.Level) &&
                 log.Level.Equals("Error", StringComparison.OrdinalIgnoreCase))
             {
-                // Check if message contains common error indicators
-                string lowerMessage = message.ToLowerInvariant();
-                if (lowerMessage.Contains("failed") ||
-                    lowerMessage.Contains("error") ||
-                    lowerMessage.Contains("exception"))
+                // OPTIMIZATION: Only create lower case if needed
+                if (message.IndexOf("failed", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    message.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    message.IndexOf("exception", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     // Extract first 200 characters as error description
                     log.Exception = message.Length > 200
@@ -92,6 +111,7 @@ namespace IndiLogs_3._0.Services
 
         /// <summary>
         /// Parse multiple log entries in batch (async version for performance)
+        /// OPTIMIZATION: Uses Parallel.ForEach with optimized partitioning
         /// </summary>
         public static async System.Threading.Tasks.Task ParseLogEntriesAsync(System.Collections.Generic.IEnumerable<LogEntry> logs)
         {
@@ -100,9 +120,25 @@ namespace IndiLogs_3._0.Services
 
             await System.Threading.Tasks.Task.Run(() =>
             {
-                System.Threading.Tasks.Parallel.ForEach(logs, log =>
+                // OPTIMIZATION: Convert to list once for better partitioning
+                var logsList = logs as System.Collections.Generic.List<LogEntry> ?? logs.ToList();
+
+                if (logsList.Count == 0)
+                    return;
+
+                // OPTIMIZATION: Use partitioner for better load balancing
+                var partitioner = System.Collections.Concurrent.Partitioner.Create(0, logsList.Count);
+
+                System.Threading.Tasks.Parallel.ForEach(partitioner, new System.Threading.Tasks.ParallelOptions
                 {
-                    ParseLogEntry(log);
+                    MaxDegreeOfParallelism = System.Environment.ProcessorCount
+                },
+                range =>
+                {
+                    for (int i = range.Item1; i < range.Item2; i++)
+                    {
+                        ParseLogEntry(logsList[i]);
+                    }
                 });
             });
         }

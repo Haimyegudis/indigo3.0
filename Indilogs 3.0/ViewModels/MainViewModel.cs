@@ -628,6 +628,7 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand DeleteAnnotationCommand { get; }
         public ICommand SaveCaseCommand { get; }
         public ICommand LoadCaseCommand { get; }
+        public ICommand OpenGlobalGrepCommand { get; }
 
         public MainViewModel()
         {
@@ -735,6 +736,7 @@ namespace IndiLogs_3._0.ViewModels
             OpenStatesWindowCommand = new RelayCommand(o => { OpenStatesWindow(o); IsExplorerMenuOpen = false; });
             ExportParsedDataCommand = new RelayCommand(o => { ExportParsedData(o); IsExplorerMenuOpen = false; });
             RunAnalysisCommand = new RelayCommand(o => { RunAnalysis(o); IsExplorerMenuOpen = false; });
+            OpenGlobalGrepCommand = new RelayCommand(o => { OpenGlobalGrepWindow(); IsExplorerMenuOpen = false; });
 
             ToggleSearchCommand = FilterVM.ToggleSearchCommand;
             CloseSearchCommand = FilterVM.CloseSearchCommand;
@@ -1653,6 +1655,72 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         private void OpenMarkedLogsWindow(object obj) => CaseVM?.OpenMarkedWindowCommand.Execute(obj);
+
+        private void OpenGlobalGrepWindow()
+        {
+            if (LoadedSessions == null || !LoadedSessions.Any())
+            {
+                MessageBox.Show(
+                    "No sessions are currently loaded. Please load at least one log file before using Global Grep.",
+                    "Global Grep",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var viewModel = new GlobalGrepViewModel(LoadedSessions);
+            var window = new GlobalGrepWindow(viewModel, NavigateToGrepResult);
+
+            window.Owner = Application.Current.MainWindow;
+            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            window.Show();
+        }
+
+        private void NavigateToGrepResult(GrepResult result)
+        {
+            if (result == null)
+                return;
+
+            // For in-memory results, navigate to the log entry
+            if (result.SessionIndex >= 0 && result.SessionIndex < LoadedSessions.Count)
+            {
+                // Switch to the correct session
+                SelectedSession = LoadedSessions[result.SessionIndex];
+
+                // Determine which tab to switch to based on LogType
+                if (result.LogType == "PLC")
+                {
+                    SelectedTabIndex = 0; // PLC tab
+                }
+                else if (result.LogType == "APP")
+                {
+                    SelectedTabIndex = 2; // APP tab
+                }
+
+                // Navigate to the log entry
+                if (result.ReferencedLogEntry != null)
+                {
+                    // Small delay to ensure tab switch and data binding complete
+                    Application.Current.Dispatcher.BeginInvoke(
+                        DispatcherPriority.Background,
+                        new Action(() =>
+                        {
+                            RequestScrollToLog?.Invoke(result.ReferencedLogEntry);
+                            StatusMessage = $"Navigated to {result.LogType} log at {result.TimestampDisplay}";
+                        })
+                    );
+                }
+            }
+            else
+            {
+                MessageBox.Show(
+                    "This result is from an external file search. Please load the file first to navigate to it.",
+                    "Navigation Not Available",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+        }
+
         private bool IsDefaultLog(LogEntry l) => FilterVM?.IsDefaultLog(l) ?? false;
         private void OpenUrl(string url) { try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); } catch { } }
         private void OpenOutlook(object obj) { try { Process.Start("outlook.exe", "/c ipm.note"); } catch { OpenUrl("mailto:"); } }
