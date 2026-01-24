@@ -4,10 +4,10 @@ echo IndiLogs Suite Installer Builder
 echo ========================================
 echo.
 
-echo Step 1: Preparing IndiChart.UI files...
-powershell -ExecutionPolicy Bypass -File PrepareIndiChartFiles.ps1
+echo Step 1: Preparing all files (IndiLogs + IndiChart)...
+powershell -ExecutionPolicy Bypass -File PrepareFiles.ps1
 if errorlevel 1 (
-    echo ERROR: Failed to prepare IndiChart files
+    echo ERROR: Failed to prepare files
     pause
     exit /b 1
 )

@@ -1,5 +1,9 @@
 ; IndiLogs Suite Installer Script
 ; Inno Setup Script - installs IndiLogs 3.0 and IndiChart.UI together
+;
+; INSTRUCTIONS:
+; 1. Run PrepareFiles.ps1 first to prepare all files
+; 2. Then compile this script with Inno Setup
 
 #define MyAppName "IndiLogs Suite"
 #define MyAppVersion "1.0.0"
@@ -31,17 +35,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "associateCsv"; Description: "Associate .csv files with IndiChart Viewer"; GroupDescription: "File Associations:"; Flags: unchecked
 
 [Files]
-; IndiLogs 3.0 main application and dependencies
-Source: "..\bin\Release\IndiLogs 3.0.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\bin\Release\IndiLogs 3.0.exe.config"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\bin\Release\*.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\bin\Release\x64\*"; DestDir: "{app}\x64"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\bin\Release\x86\*"; DestDir: "{app}\x86"; Flags: ignoreversion recursesubdirs createallsubdirs
-
-; IndiChart.UI application - extract from ClickOnce publish
-; Note: You need to copy IndiChart.UI files to a folder called "IndiChartFiles"
-; with all .deploy extensions removed
-Source: "IndiChartFiles\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; All prepared files (IndiLogs + IndiChart combined)
+; Run PrepareFiles.ps1 first to create the InstallerFiles folder
+Source: "InstallerFiles\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\IndiLogs 3.0"; Filename: "{app}\{#MyAppExeName}"
