@@ -1,19 +1,17 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using IndiLogs_3._0.Models;
+using Indigo.Infra.ICL.Core.Logging;
 
 namespace IndiLogs_3._0.Services
 {
-    /// <summary>
-    /// Service for performing global grep searches across loaded sessions or external files.
-    /// Supports both in-memory searches (fast) and file-based searches (comprehensive).
-    /// </summary>
     public class GlobalGrepService
     {
         private readonly QueryParserService _queryParser;
@@ -23,12 +21,6 @@ namespace IndiLogs_3._0.Services
             _queryParser = new QueryParserService();
         }
 
-        #region In-Memory Search (Loaded Sessions)
-
-        /// <summary>
-        /// Searches all loaded sessions for matches.
-        /// This is fast because data is already in memory.
-        /// </summary>
         public async Task<List<GrepResult>> SearchLoadedSessionsAsync(
             IEnumerable<LogSessionData> loadedSessions,
             string searchQuery,
@@ -43,454 +35,250 @@ namespace IndiLogs_3._0.Services
             var results = new List<GrepResult>();
             var sessionsList = loadedSessions.ToList();
             int totalSessions = sessionsList.Count;
-            int processedSessions = 0;
 
-            // Prepare search predicate
-            Func<string, bool> matchPredicate;
-            if (useRegex)
-            {
-                try
-                {
-                    var regex = new Regex(searchQuery, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-                    matchPredicate = text => !string.IsNullOrEmpty(text) && regex.IsMatch(text);
-                }
-                catch (ArgumentException)
-                {
-                    // Invalid regex - fall back to plain text search
-                    matchPredicate = text => !string.IsNullOrEmpty(text) &&
-                                            text.IndexOf(searchQuery, StringComparison.OrdinalIgnoreCase) >= 0;
-                }
-            }
-            else
-            {
-                // Check if query has boolean operators
-                if (_queryParser.HasBooleanOperators(searchQuery))
-                {
-                    var filterNode = _queryParser.Parse(searchQuery);
-                    matchPredicate = text => !string.IsNullOrEmpty(text) &&
-                                            EvaluateQueryOnText(text, filterNode);
-                }
-                else
-                {
-                    // Simple contains search
-                    matchPredicate = text => !string.IsNullOrEmpty(text) &&
-                                            text.IndexOf(searchQuery, StringComparison.OrdinalIgnoreCase) >= 0;
-                }
-            }
+            Func<string, bool> matchPredicate = CreateMatchPredicate(searchQuery, useRegex);
 
             await Task.Run(() =>
             {
                 for (int sessionIndex = 0; sessionIndex < sessionsList.Count; sessionIndex++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-
                     var session = sessionsList[sessionIndex];
                     string sessionName = Path.GetFileName(session.FileName) ?? $"Session {sessionIndex + 1}";
 
-                    // Search PLC logs
                     if (session.Logs != null)
-                    {
-                        foreach (var log in session.Logs)
-                        {
-                            cancellationToken.ThrowIfCancellationRequested();
+                        results.AddRange(SearchLogCollection(session.Logs, matchPredicate, searchMessage, searchException, searchMethod, searchData, session.FilePath, "PLC", sessionName, sessionIndex, cancellationToken));
 
-                            if (CheckLogEntryMatch(log, matchPredicate, searchMessage, searchException, searchMethod, searchData,
-                                                   out string matchedField))
-                            {
-                                results.Add(new GrepResult
-                                {
-                                    Timestamp = log.Date,
-                                    FilePath = session.FilePath,
-                                    LogType = "PLC",
-                                    PreviewText = TruncateText(log.Message, 500),
-                                    SessionName = sessionName,
-                                    ReferencedLogEntry = log,
-                                    SessionIndex = sessionIndex,
-                                    MatchedField = matchedField,
-                                    LineNumber = -1 // Not applicable for in-memory logs
-                                });
-                            }
-                        }
-                    }
-
-                    // Search APP logs
                     if (session.AppDevLogs != null)
-                    {
-                        foreach (var log in session.AppDevLogs)
-                        {
-                            cancellationToken.ThrowIfCancellationRequested();
+                        results.AddRange(SearchLogCollection(session.AppDevLogs, matchPredicate, searchMessage, searchException, searchMethod, searchData, session.FilePath, "APP", sessionName, sessionIndex, cancellationToken));
 
-                            if (CheckLogEntryMatch(log, matchPredicate, searchMessage, searchException, searchMethod, searchData,
-                                                   out string matchedField))
-                            {
-                                results.Add(new GrepResult
-                                {
-                                    Timestamp = log.Date,
-                                    FilePath = session.FilePath,
-                                    LogType = "APP",
-                                    PreviewText = TruncateText(log.Message, 500),
-                                    SessionName = sessionName,
-                                    ReferencedLogEntry = log,
-                                    SessionIndex = sessionIndex,
-                                    MatchedField = matchedField,
-                                    LineNumber = -1
-                                });
-                            }
-                        }
-                    }
-
-                    processedSessions++;
-                    progress?.Report((processedSessions, totalSessions, $"Searching session: {sessionName}"));
+                    progress?.Report((sessionIndex + 1, totalSessions, $"Searching: {sessionName}"));
                 }
             }, cancellationToken);
 
             return results;
         }
 
-        /// <summary>
-        /// Checks if a LogEntry matches the search criteria
-        /// </summary>
-        private bool CheckLogEntryMatch(
-            LogEntry log,
-            Func<string, bool> matchPredicate,
-            bool searchMessage,
-            bool searchException,
-            bool searchMethod,
-            bool searchData,
-            out string matchedField)
-        {
-            matchedField = null;
-
-            if (searchMessage && matchPredicate(log.Message))
-            {
-                matchedField = "Message";
-                return true;
-            }
-
-            if (searchException && matchPredicate(log.Exception))
-            {
-                matchedField = "Exception";
-                return true;
-            }
-
-            if (searchMethod && matchPredicate(log.Method))
-            {
-                matchedField = "Method";
-                return true;
-            }
-
-            if (searchData && matchPredicate(log.Data))
-            {
-                matchedField = "Data";
-                return true;
-            }
-
-            return false;
-        }
-
-        #endregion
-
-        #region File-Based Search (External Files)
-
-        /// <summary>
-        /// Searches external files (ZIP or directory) without loading them into memory.
-        /// This is slower but can search files that haven't been opened yet.
-        /// </summary>
         public async Task<List<GrepResult>> SearchExternalFilesAsync(
-            string path,
-            string searchQuery,
-            bool useRegex,
-            bool searchPLC,
-            bool searchAPP,
-            IProgress<(int current, int total, string status)> progress,
-            CancellationToken cancellationToken)
+            string path, string searchQuery, bool useRegex, bool searchPLC, bool searchAPP,
+            IProgress<(int current, int total, string status)> progress, CancellationToken cancellationToken)
         {
             var results = new List<GrepResult>();
+            if (string.IsNullOrWhiteSpace(path)) return results;
 
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path) && !Directory.Exists(path))
-            {
-                return results;
-            }
+            Regex regex = useRegex ? new Regex(searchQuery, RegexOptions.IgnoreCase | RegexOptions.Compiled) : null;
+            bool isZip = path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
 
-            // Prepare regex
-            Regex regex = null;
-            if (useRegex)
-            {
-                try
-                {
-                    regex = new Regex(searchQuery, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-                }
-                catch (ArgumentException)
-                {
-                    // Invalid regex - will fall back to contains search
-                }
-            }
-
-            bool isZip = File.Exists(path) && path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
-
-            await Task.Run(() =>
-            {
-                if (isZip)
-                {
-                    SearchZipFile(path, searchQuery, regex, useRegex, searchPLC, searchAPP, results, progress, cancellationToken);
-                }
-                else if (Directory.Exists(path))
-                {
-                    SearchDirectory(path, searchQuery, regex, useRegex, searchPLC, searchAPP, results, progress, cancellationToken);
-                }
+            await Task.Run(() => {
+                if (isZip) SearchZipFile(path, searchQuery, regex, useRegex, searchPLC, searchAPP, results, progress, cancellationToken);
+                else if (Directory.Exists(path)) SearchDirectory(path, searchQuery, regex, useRegex, searchPLC, searchAPP, results, progress, cancellationToken);
             }, cancellationToken);
 
-            return results;
+            return results.OrderBy(r => r.Timestamp).ToList();
         }
 
-        /// <summary>
-        /// Searches all log files within a ZIP archive
-        /// </summary>
-        private void SearchZipFile(
-            string zipPath,
-            string searchQuery,
-            Regex regex,
-            bool useRegex,
-            bool searchPLC,
-            bool searchAPP,
-            List<GrepResult> results,
-            IProgress<(int current, int total, string status)> progress,
-            CancellationToken cancellationToken)
-        {
-            using (var archive = ZipFile.OpenRead(zipPath))
-            {
-                var entries = archive.Entries.Where(e => IsLogFile(e.FullName, searchPLC, searchAPP)).ToList();
-                int totalEntries = entries.Count;
-                int processedEntries = 0;
-
-                foreach (var entry in entries)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    string logType = DetermineLogType(entry.FullName);
-                    progress?.Report((processedEntries, totalEntries, $"Scanning: {entry.FullName}"));
-
-                    using (var stream = entry.Open())
-                    using (var reader = new StreamReader(stream))
-                    {
-                        SearchStream(reader, zipPath, entry.FullName, logType, searchQuery, regex, useRegex, results, cancellationToken);
-                    }
-
-                    processedEntries++;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Searches all log files within a directory (recursively)
-        /// </summary>
-        private void SearchDirectory(
-            string directoryPath,
-            string searchQuery,
-            Regex regex,
-            bool useRegex,
-            bool searchPLC,
-            bool searchAPP,
-            List<GrepResult> results,
-            IProgress<(int current, int total, string status)> progress,
-            CancellationToken cancellationToken)
-        {
-            var files = Directory.GetFiles(directoryPath, "*.*", SearchOption.AllDirectories)
-                                 .Where(f => IsLogFile(f, searchPLC, searchAPP))
-                                 .ToList();
-
-            int totalFiles = files.Count;
-            int processedFiles = 0;
-
-            foreach (var filePath in files)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                string logType = DetermineLogType(filePath);
-                progress?.Report((processedFiles, totalFiles, $"Scanning: {Path.GetFileName(filePath)}"));
-
-                using (var reader = new StreamReader(filePath))
-                {
-                    SearchStream(reader, filePath, Path.GetFileName(filePath), logType, searchQuery, regex, useRegex, results, cancellationToken);
-                }
-
-                processedFiles++;
-            }
-        }
-
-        /// <summary>
-        /// Searches a text stream line by line for matches
-        /// </summary>
-        private void SearchStream(
-            StreamReader reader,
-            string filePath,
-            string fileName,
-            string logType,
-            string searchQuery,
-            Regex regex,
-            bool useRegex,
-            List<GrepResult> results,
-            CancellationToken cancellationToken)
+        private void SearchStream(Stream stream, string filePath, string fileName, string logType, string searchQuery, Regex regex, bool useRegex, List<GrepResult> results, CancellationToken cancellationToken)
         {
             int lineNumber = 0;
-            string line;
 
-            while ((line = reader.ReadLine()) != null)
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                lineNumber++;
+                // IndigoLogsReader requires a seekable stream, so copy to MemoryStream if needed
+                Stream seekableStream = stream;
+                MemoryStream memoryStream = null;
 
-                bool isMatch = false;
+                if (!stream.CanSeek)
+                {
+                    memoryStream = new MemoryStream();
+                    stream.CopyTo(memoryStream);
+                    memoryStream.Position = 0;
+                    seekableStream = memoryStream;
+                }
 
-                if (useRegex && regex != null)
+                try
                 {
-                    isMatch = regex.IsMatch(line);
-                }
-                else if (useRegex && regex == null)
+                    // Use IndigoLogsReader for proper parsing
+                    var logReader = new IndigoLogsReader(seekableStream);
+
+                    while (logReader.MoveToNext())
                 {
-                    // Invalid regex - fall back to contains
-                    isMatch = line.IndexOf(searchQuery, StringComparison.OrdinalIgnoreCase) >= 0;
-                }
-                else
-                {
-                    // Boolean query support
-                    if (_queryParser.HasBooleanOperators(searchQuery))
+                    cancellationToken.ThrowIfCancellationRequested();
+                    lineNumber++;
+
+                    var currentLog = logReader.Current;
+                    if (currentLog == null) continue;
+
+                    // Convert IndigoLog to LogEntry
+                    var entry = new LogEntry
                     {
-                        var filterNode = _queryParser.Parse(searchQuery);
-                        isMatch = EvaluateQueryOnText(line, filterNode);
+                        Date = currentLog.Time,
+                        Level = currentLog.Level?.ToString() ?? "INFO",
+                        ThreadName = currentLog.ThreadName ?? "",
+                        Logger = currentLog.LoggerName ?? "",
+                        Message = currentLog.Message ?? ""
+                    };
+
+                    // Parse Pattern, Data, Method, Exception from Message
+                    LogParserService.ParseLogEntry(entry);
+
+                    // Check if this log matches the search query
+                    bool isMatch = false;
+                    if (useRegex && regex != null)
+                    {
+                        isMatch = (!string.IsNullOrEmpty(entry.Message) && regex.IsMatch(entry.Message)) ||
+                                  (!string.IsNullOrEmpty(entry.Exception) && regex.IsMatch(entry.Exception)) ||
+                                  (!string.IsNullOrEmpty(entry.Method) && regex.IsMatch(entry.Method)) ||
+                                  (!string.IsNullOrEmpty(entry.Data) && regex.IsMatch(entry.Data));
                     }
                     else
                     {
-                        isMatch = line.IndexOf(searchQuery, StringComparison.OrdinalIgnoreCase) >= 0;
+                        isMatch = (!string.IsNullOrEmpty(entry.Message) && entry.Message.IndexOf(searchQuery, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                                  (!string.IsNullOrEmpty(entry.Exception) && entry.Exception.IndexOf(searchQuery, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                                  (!string.IsNullOrEmpty(entry.Method) && entry.Method.IndexOf(searchQuery, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                                  (!string.IsNullOrEmpty(entry.Data) && entry.Data.IndexOf(searchQuery, StringComparison.OrdinalIgnoreCase) >= 0);
+                    }
+
+                    if (isMatch)
+                    {
+                        // DEBUG: Log first 3 matches
+                        if (results.Count < 3)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[GREP] Match #{results.Count + 1} ({logType}):");
+                            System.Diagnostics.Debug.WriteLine($"  Level={entry.Level}, Thread={entry.ThreadName}, Logger={entry.Logger}");
+                            System.Diagnostics.Debug.WriteLine($"  Message={entry.Message?.Substring(0, Math.Min(50, entry.Message?.Length ?? 0))}...");
+                            System.Diagnostics.Debug.WriteLine($"  Method={entry.Method}, Pattern={entry.Pattern}, Data={entry.Data}");
+                        }
+
+                        results.Add(new GrepResult
+                        {
+                            Timestamp = entry.Date,
+                            FilePath = filePath,
+                            LineNumber = lineNumber,
+                            LogType = logType,
+                            PreviewText = entry.Message,
+                            SessionName = fileName,
+                            ReferencedLogEntry = entry,
+                            SessionIndex = -1
+                        });
                     }
                 }
+                }
 
+                finally
+                {
+                    memoryStream?.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[GREP] Error reading {fileName}: {ex.Message}");
+            }
+        }
+
+
+        private List<GrepResult> SearchLogCollection(IEnumerable<LogEntry> logs, Func<string, bool> predicate, bool msg, bool exc, bool meth, bool data, string path, string type, string name, int idx, CancellationToken ct)
+        {
+            var res = new List<GrepResult>();
+            int matchCount = 0;
+            foreach (var log in logs)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                // Ensure all fields are parsed (Pattern, Data, Exception) if not already
+                if (string.IsNullOrEmpty(log.Pattern) && !string.IsNullOrEmpty(log.Message))
+                {
+                    LogParserService.ParseLogEntry(log);
+                }
+
+                bool isMatch = (msg && !string.IsNullOrEmpty(log.Message) && predicate(log.Message)) ||
+                               (exc && !string.IsNullOrEmpty(log.Exception) && predicate(log.Exception)) ||
+                               (meth && !string.IsNullOrEmpty(log.Method) && predicate(log.Method)) ||
+                               (data && !string.IsNullOrEmpty(log.Data) && predicate(log.Data));
                 if (isMatch)
                 {
-                    results.Add(new GrepResult
+                    matchCount++;
+                    if (matchCount <= 3) // Only debug first 3 matches
                     {
-                        Timestamp = TryExtractTimestamp(line),
-                        FilePath = filePath,
-                        LineNumber = lineNumber,
-                        LogType = logType,
-                        PreviewText = TruncateText(line, 500),
-                        SessionName = fileName,
-                        SessionIndex = -1, // Not applicable for external files
-                        MatchedField = "RawLine"
-                    });
+                        System.Diagnostics.Debug.WriteLine($"[GREP] In-Memory Match #{matchCount} ({type}):");
+                        System.Diagnostics.Debug.WriteLine($"  Level={log.Level}, Thread={log.ThreadName}, Logger={log.Logger}");
+                        System.Diagnostics.Debug.WriteLine($"  Message={log.Message?.Substring(0, Math.Min(50, log.Message?.Length ?? 0))}...");
+                        System.Diagnostics.Debug.WriteLine($"  Method={log.Method}, Pattern={log.Pattern}, Data={log.Data}");
+                    }
+                    res.Add(new GrepResult { Timestamp = log.Date, FilePath = path, LogType = type, PreviewText = log.Message, SessionName = name, ReferencedLogEntry = log, SessionIndex = idx, LineNumber = -1 });
                 }
             }
+            return res;
         }
 
-        #endregion
-
-        #region Helper Methods
-
-        /// <summary>
-        /// Determines if a file is a log file based on its path
-        /// </summary>
-        private bool IsLogFile(string path, bool includePLC, bool includeAPP)
+        private bool IsLineMatch(string line, string query, Regex regex, bool useRegex)
         {
-            string lowerPath = path.ToLowerInvariant();
-
-            bool isPLC = lowerPath.Contains("enginegroupa.file") ||
-                         lowerPath.Contains("plc") ||
-                         lowerPath.Contains("main");
-
-            bool isAPP = lowerPath.Contains("appdev") ||
-                         lowerPath.Contains("press.host.app") ||
-                         lowerPath.Contains("app.log");
-
-            return (includePLC && isPLC) || (includeAPP && isAPP);
+            if (useRegex && regex != null) return regex.IsMatch(line);
+            // תיקון: שימוש בשם פרמטר נכון query במקום searchQuery
+            if (QueryParserService.HasBooleanOperators(query: query)) return EvaluateQueryOnText(line, _queryParser.Parse(query, out _));
+            return line.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        /// <summary>
-        /// Determines log type (PLC or APP) based on file path
-        /// </summary>
-        private string DetermineLogType(string path)
+        private Func<string, bool> CreateMatchPredicate(string q, bool useReg)
         {
-            string lowerPath = path.ToLowerInvariant();
-
-            if (lowerPath.Contains("appdev") || lowerPath.Contains("press.host.app") || lowerPath.Contains("app.log"))
-                return "APP";
-
-            return "PLC";
+            if (useReg) { try { var r = new Regex(q, RegexOptions.IgnoreCase); return t => !string.IsNullOrEmpty(t) && r.IsMatch(t); } catch { } }
+            if (QueryParserService.HasBooleanOperators(query: q)) { var node = _queryParser.Parse(q, out _); return t => !string.IsNullOrEmpty(t) && EvaluateQueryOnText(t, node); }
+            return t => !string.IsNullOrEmpty(t) && t.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        /// <summary>
-        /// Attempts to extract a timestamp from a raw log line
-        /// </summary>
-        private DateTime? TryExtractTimestamp(string line)
-        {
-            // Try common timestamp formats
-            // Format 1: yyyy-MM-dd HH:mm:ss.fff
-            var match = Regex.Match(line, @"\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d{3}");
-            if (match.Success && DateTime.TryParse(match.Value, out var dt1))
-                return dt1;
-
-            // Format 2: yyyy-MM-dd HH:mm:ss
-            match = Regex.Match(line, @"\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}");
-            if (match.Success && DateTime.TryParse(match.Value, out var dt2))
-                return dt2;
-
-            return null;
-        }
-
-        /// <summary>
-        /// Truncates text to a maximum length for UI display
-        /// </summary>
-        private string TruncateText(string text, int maxLength)
-        {
-            if (string.IsNullOrEmpty(text))
-                return string.Empty;
-
-            if (text.Length <= maxLength)
-                return text;
-
-            return text.Substring(0, maxLength) + "...";
-        }
-
-        /// <summary>
-        /// Evaluates a boolean query (FilterNode) against a text string.
-        /// This is a simplified version that works on raw text instead of LogEntry objects.
-        /// </summary>
         private bool EvaluateQueryOnText(string text, FilterNode node)
         {
-            if (node == null || string.IsNullOrEmpty(text))
-                return false;
-
-            if (node.NodeType == "Condition")
+            if (node == null || string.IsNullOrEmpty(text)) return false;
+            // תיקון: שימוש ב-node.Type (Enum) במקום node.NodeType (String)
+            if (node.Type == NodeType.Condition)
             {
-                // For text-based search, we only support "contains" style matching
-                string value = node.Value ?? string.Empty;
-                bool isNegated = node.LogicalOperator?.Contains("NOT") == true;
-
-                bool matches = text.IndexOf(value, StringComparison.OrdinalIgnoreCase) >= 0;
-                return isNegated ? !matches : matches;
+                bool match = text.IndexOf(node.Value ?? "", StringComparison.OrdinalIgnoreCase) >= 0;
+                return (node.LogicalOperator?.Contains("NOT") == true) ? !match : match;
             }
-            else if (node.NodeType == "Group" && node.Children != null)
-            {
-                bool isOr = node.LogicalOperator?.Contains("OR") == true;
-                bool isNegated = node.LogicalOperator?.Contains("NOT") == true;
-
-                var childResults = node.Children.Select(child => EvaluateQueryOnText(text, child)).ToList();
-
-                bool result;
-                if (isOr)
-                {
-                    result = childResults.Any(r => r);
-                }
-                else // AND
-                {
-                    result = childResults.All(r => r);
-                }
-
-                return isNegated ? !result : result;
-            }
-
-            return false;
+            if (node.Children == null) return false;
+            var results = node.Children.Select(c => EvaluateQueryOnText(text, c));
+            bool res = (node.LogicalOperator?.Contains("OR") == true) ? results.Any(r => r) : results.All(r => r);
+            return (node.LogicalOperator?.Contains("NOT") == true) ? !res : res;
         }
 
-        #endregion
+        private void SearchZipFile(string zipPath, string q, Regex r, bool u, bool plc, bool app, List<GrepResult> res, IProgress<(int, int, string)> prog, CancellationToken ct)
+        {
+            using (var archive = ZipFile.OpenRead(zipPath))
+            {
+                var entries = archive.Entries.Where(e => IsLogFile(e.FullName, plc, app)).ToList();
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    prog?.Report((i, entries.Count, $"Scanning: {entries[i].Name}"));
+                    using (var s = entries[i].Open())
+                    {
+                        SearchStream(s, zipPath, entries[i].Name, DetermineLogType(entries[i].FullName), q, r, u, res, ct);
+                    }
+                }
+            }
+        }
+
+        private void SearchDirectory(string path, string q, Regex r, bool u, bool plc, bool app, List<GrepResult> res, IProgress<(int, int, string)> prog, CancellationToken ct)
+        {
+            var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Where(f => IsLogFile(f, plc, app)).ToList();
+            for (int i = 0; i < files.Count; i++)
+            {
+                ct.ThrowIfCancellationRequested();
+                prog?.Report((i, files.Count, $"Scanning: {Path.GetFileName(files[i])}"));
+                using (var fs = new FileStream(files[i], FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    SearchStream(fs, files[i], Path.GetFileName(files[i]), DetermineLogType(files[i]), q, r, u, res, ct);
+                }
+            }
+        }
+
+        private bool IsLogFile(string p, bool plc, bool app)
+        {
+            string lp = p.ToLowerInvariant();
+            bool isPlc = lp.Contains("enginegroupa.file") || lp.Contains("plc") || lp.Contains("main");
+            bool isApp = lp.Contains("appdev") || lp.Contains("press.host.app") || lp.Contains("app.log");
+            return (plc && isPlc) || (app && isApp);
+        }
+
+        private string DetermineLogType(string p) => p.ToLowerInvariant().Contains("app") ? "APP" : "PLC";
     }
 }

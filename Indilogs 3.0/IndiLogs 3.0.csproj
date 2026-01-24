@@ -29,7 +29,7 @@
     <UpdateRequired>false</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
     <InstallUrl>\\iihome.inr.rd.hpicorp.net\softwareqa%24\QA-Utils\Indilogs\</InstallUrl>
-    <ApplicationRevision>12</ApplicationRevision>
+    <ApplicationRevision>13</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
@@ -118,7 +118,7 @@
     <Reference Include="DocumentFormat.OpenXml.Framework, Version=3.3.0.0, Culture=neutral, PublicKeyToken=8fb06cb64d019a17, processorArchitecture=MSIL">
       <HintPath>..\packages\DocumentFormat.OpenXml.Framework.3.3.0\lib\net46\DocumentFormat.OpenXml.Framework.dll</HintPath>
     </Reference>
-    <Reference Include="ExcelNumberFormat, &#xD;&#xA; Version=1.1.0.0, Culture=neutral, PublicKeyToken=23c6f5d73be07eca, processorArchitecture=MSIL">
+    <Reference Include="ExcelNumberFormat, Version=1.1.0.0, Culture=neutral, PublicKeyToken=23c6f5d73be07eca, processorArchitecture=MSIL">
       <HintPath>..\packages\ExcelNumberFormat.1.1.0\lib\net20\ExcelNumberFormat.dll</HintPath>
     </Reference>
     <Reference Include="Indigo.Infra.ICL">
@@ -232,15 +232,18 @@
     <Compile Include="Models\StateEntry.cs" />
     <Compile Include="Models\TimelineMarker.cs" />
     <Compile Include="Models\TimelineState.cs" />
+    <Compile Include="Models\GrepResult.cs" />
     <Compile Include="Services\Analysis\StateFailureAnalyzer.cs" />
     <Compile Include="Services\Analysis\UniversalStateFailureAnalyzer.cs" />
     <Compile Include="Services\CustomLiveLogReader.cs" />
+    <Compile Include="Services\GlobalGrepService.cs" />
     <Compile Include="ViewModels\Components\CaseManagementViewModel.cs" />
     <Compile Include="ViewModels\Components\ConfigExplorerViewModel.cs" />
     <Compile Include="ViewModels\Components\FilterSearchViewModel.cs" />
     <Compile Include="ViewModels\Components\LiveMonitoringViewModel.cs" />
     <Compile Include="ViewModels\Components\LogSessionViewModel.cs" />
     <Compile Include="ViewModels\VisualTimelineViewModel.cs" />
+    <Compile Include="ViewModels\GlobalGrepViewModel.cs" />
     <Compile Include="Views\BrowseTableWindow.xaml.cs">
       <DependentUpon>BrowseTableWindow.xaml</DependentUpon>
     </Compile>
@@ -301,6 +304,12 @@
     </Compile>
     <Compile Include="Views\SaveConfigWindow.xaml.cs">
       <DependentUpon>SaveConfigWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\GlobalGrepWindow.xaml.cs">
+      <DependentUpon>GlobalGrepWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\FileSelectionWindow.xaml.cs">
+      <DependentUpon>FileSelectionWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Services\ILogAnalyzer.cs" />
     <Compile Include="Services\LogColoringService.cs" />
@@ -474,6 +483,14 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Views\GlobalGrepWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\FileSelectionWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">
@@ -526,7 +543,7 @@
   <Target Name="RemoveOpenTK" BeforeTargets="CopyFilesToOutputDirectory">
     <ItemGroup>
       <IntermediateAssembly Remove="@(IntermediateAssembly)" Condition="'%(IntermediateAssembly.Filename)' == 'GLWpfControl'" />
-      <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="'%(FileName)' == 'GLWpfControl' &#xD;&#xA; or '%(FileName)' == 'OpenTK'" />
+      <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="'%(FileName)' == 'GLWpfControl' or '%(FileName)' == 'OpenTK'" />
       <AllItemsFullPathWithProjectReferenceTargets Remove="@(AllItemsFullPathWithProjectReferenceTargets)" Condition="'%(AllItemsFullPathWithProjectReferenceTargets.FileName)' == 'GLWpfControl'" />
     </ItemGroup>
   </Target>
@@ -534,7 +551,7 @@
   <Import Project="..\packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.2\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets" Condition="Exists('..\packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.2\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them. For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.2\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.2\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets'))" />
     <Error Condition="!Exists('..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.118.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.118.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets'))" />

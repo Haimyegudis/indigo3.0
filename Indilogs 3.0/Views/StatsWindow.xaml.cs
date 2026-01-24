@@ -6,6 +6,11 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows;
+using OxyPlot;
+using OxyPlot.Series;
+using OxyPlot.Axes;
+using OxyPlot.Wpf;
+using System.Windows.Media;
 
 namespace IndiLogs_3._0.Views
 {
@@ -13,6 +18,7 @@ namespace IndiLogs_3._0.Views
     {
         private readonly List<LogEntry> _plcLogs;
         private readonly List<LogEntry> _appLogs;
+        private readonly Action<string, string> _applyFilterCallback;
 
         // PLC Stats Data
         private List<ErrorStat> _plcErrorStats;
@@ -26,12 +32,17 @@ namespace IndiLogs_3._0.Views
         private List<LoadStat> _appLoggerStats;
         private List<GapInfo> _appGaps;
 
+        // Advanced Analytics - store logger and state data for drill-down
+        private List<(string Logger, int Count)> _loggerData;
+        private List<(string State, int Count)> _stateData;
+
         // ??? ??: ????? ???? ??? ??? ?????? ??????. ?? ????? ?? ?????? ?-StatsWindow ???? ????? ????.
-        public StatsWindow(IEnumerable<LogEntry> plcLogs, IEnumerable<LogEntry> appLogs)
+        public StatsWindow(IEnumerable<LogEntry> plcLogs, IEnumerable<LogEntry> appLogs, Action<string, string> applyFilterCallback = null)
         {
             InitializeComponent();
             _plcLogs = plcLogs?.ToList() ?? new List<LogEntry>();
             _appLogs = appLogs?.ToList() ?? new List<LogEntry>();
+            _applyFilterCallback = applyFilterCallback;
 
             System.Diagnostics.Debug.WriteLine($"[STATS] Initialized with {_plcLogs.Count} PLC logs and {_appLogs.Count} APP logs");
 
@@ -61,6 +72,7 @@ namespace IndiLogs_3._0.Views
             // ??????? ??? ??? ?????
             CalculatePlcStatistics();
             CalculateAppStatistics();
+            CalculateAdvancedAnalytics();
         }
 
         // ==========================================
@@ -348,6 +360,527 @@ namespace IndiLogs_3._0.Views
         }
 
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
+
+        // ==========================================
+        //  ADVANCED ANALYTICS
+        // ==========================================
+        private void CalculateAdvancedAnalytics()
+        {
+            System.Diagnostics.Debug.WriteLine("[STATS] Calculating advanced analytics...");
+
+            // Get all error logs (PLC + APP)
+            var allErrors = GetErrorLogs(_plcLogs.Concat(_appLogs).ToList());
+
+            if (!allErrors.Any())
+            {
+                AnalyticsSummaryText.Text = "No error logs available for advanced analytics.";
+                return;
+            }
+
+            AnalyticsSummaryText.Text = $"Advanced Analytics - Total Errors: {allErrors.Count:N0}";
+
+            // 1. Top 10 Loggers by Error Count (Bar Chart)
+            CreateLoggerBarChart(allErrors);
+
+            // 2. Errors by STATE (Pie Chart)
+            CreateStatePieChart(_plcLogs);
+
+            // 3. Error Density Timeline (Line Chart)
+            CreateErrorTimelineChart(allErrors);
+        }
+
+        private void CreateLoggerBarChart(List<LogEntry> errorLogs)
+        {
+            // For PLC logs, group by Thread instead of Logger
+            // For APP logs, group by Logger
+            var plcErrors = errorLogs.Where(l => l.Logger?.Contains("E1.PLC") == true || string.IsNullOrEmpty(l.Logger)).ToList();
+            var appErrors = errorLogs.Where(l => l.Logger?.Contains("E1.PLC") != true && !string.IsNullOrEmpty(l.Logger)).ToList();
+
+            List<(string Name, int Count)> combinedCounts = new List<(string, int)>();
+
+            // Add PLC errors by Thread
+            if (plcErrors.Any())
+            {
+                var plcThreadCounts = plcErrors
+                    .GroupBy(l => l.ThreadName ?? "Unknown")
+                    .Select(g => (Name: $"[PLC] {g.Key}", Count: g.Count()))
+                    .ToList();
+                combinedCounts.AddRange(plcThreadCounts);
+            }
+
+            // Add APP errors by Logger
+            if (appErrors.Any())
+            {
+                var appLoggerCounts = appErrors
+                    .GroupBy(l => l.Logger ?? "Unknown")
+                    .Select(g => (Name: GetShortLoggerName(g.Key), Count: g.Count()))
+                    .ToList();
+                combinedCounts.AddRange(appLoggerCounts);
+            }
+
+            var topCounts = combinedCounts
+                .OrderByDescending(x => x.Count)
+                .Take(10)
+                .ToList();
+
+            if (!topCounts.Any())
+            {
+                LoggerChartCountText.Text = "(No data)";
+                return;
+            }
+
+            // Store data for drill-down
+            _loggerData = topCounts.Select(x => (x.Name, x.Count)).ToList();
+
+            LoggerChartCountText.Text = $"({topCounts.Sum(x => x.Count):N0} errors) - Click bar to filter";
+
+            // Create OxyPlot model
+            var plotModel = new PlotModel
+            {
+                Title = "",
+                Background = OxyColors.Transparent,
+                PlotAreaBorderThickness = new OxyThickness(1),
+                PlotAreaBorderColor = OxyColor.FromRgb(60, 60, 60)
+            };
+
+            // Create bar series
+            var barSeries = new BarSeries
+            {
+                FillColor = OxyColor.FromRgb(231, 76, 60), // Danger color
+                StrokeThickness = 0,
+                LabelPlacement = LabelPlacement.Inside,
+                LabelFormatString = "{0}"
+            };
+
+            // Add data (reversed for display)
+            var reversedData = topCounts.AsEnumerable().Reverse().ToList();
+            foreach (var item in reversedData)
+            {
+                barSeries.Items.Add(new BarItem { Value = item.Count });
+            }
+
+            // Configure axes
+            var categoryAxis = new CategoryAxis
+            {
+                Position = AxisPosition.Left,
+                TextColor = OxyColor.FromRgb(200, 200, 200),
+                TicklineColor = OxyColors.Transparent,
+                FontSize = 11
+            };
+
+            foreach (var item in reversedData)
+            {
+                var displayName = item.Name.Length > 25 ? item.Name.Substring(0, 22) + "..." : item.Name;
+                categoryAxis.Labels.Add(displayName);
+            }
+
+            var valueAxis = new LinearAxis
+            {
+                Position = AxisPosition.Bottom,
+                TextColor = OxyColor.FromRgb(150, 150, 150),
+                TicklineColor = OxyColors.Transparent,
+                MajorGridlineStyle = LineStyle.Solid,
+                MajorGridlineColor = OxyColor.FromArgb(30, 255, 255, 255),
+                MinorGridlineStyle = LineStyle.None,
+                FontSize = 10
+            };
+
+            plotModel.Axes.Add(categoryAxis);
+            plotModel.Axes.Add(valueAxis);
+            plotModel.Series.Add(barSeries);
+
+            // Create PlotView and add to host
+            var plotView = new OxyPlot.Wpf.PlotView
+            {
+                Model = plotModel,
+                Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(45, 45, 48))
+            };
+
+            // Add click handler for drill-down
+            plotView.MouseDown += (s, e) =>
+            {
+                try
+                {
+                    var position = new ScreenPoint(e.GetPosition(plotView).X, e.GetPosition(plotView).Y);
+                    var hitResult = barSeries.GetNearestPoint(position, false);
+
+                    if (hitResult != null)
+                    {
+                        int index = (int)hitResult.Index;
+                        if (index >= 0 && index < reversedData.Count)
+                        {
+                            var selectedLogger = reversedData[index].Name;
+                            ApplyLoggerFilter(selectedLogger);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[CHART CLICK] Error: {ex.Message}");
+                }
+            };
+
+            LoggerBarChartHost.Children.Clear();
+            LoggerBarChartHost.Children.Add(plotView);
+        }
+
+        private void CreateStatePieChart(List<LogEntry> plcLogs)
+        {
+            // Get error logs from PLC
+            var plcErrors = GetErrorLogs(plcLogs);
+
+            if (!plcErrors.Any())
+            {
+                StateChartCountText.Text = "(No PLC errors)";
+                return;
+            }
+
+            // Build state entries using the same logic as StateFailureAnalyzer
+            var stateEntries = CalculateStateEntries(plcLogs);
+
+            if (!stateEntries.Any())
+            {
+                StateChartCountText.Text = "(No state transitions found)";
+                return;
+            }
+
+            // Map each error to its state based on timestamp
+            var errorsByState = new Dictionary<string, int>();
+
+            foreach (var error in plcErrors)
+            {
+                // Find the state this error occurred in (state that started before error and hasn't ended yet)
+                var state = stateEntries
+                    .Where(s => s.StartTime <= error.Date &&
+                               (s.EndTime == null || error.Date <= s.EndTime.Value))
+                    .FirstOrDefault();
+
+                if (state != null && !string.IsNullOrWhiteSpace(state.StateName))
+                {
+                    string stateName = state.StateName;
+                    if (!errorsByState.ContainsKey(stateName))
+                        errorsByState[stateName] = 0;
+                    errorsByState[stateName]++;
+                }
+            }
+
+            var stateCounts = errorsByState
+                .Select(kvp => new { State = kvp.Key, Count = kvp.Value })
+                .OrderByDescending(x => x.Count)
+                .Take(10)
+                .ToList();
+
+            if (!stateCounts.Any())
+            {
+                StateChartCountText.Text = "(No errors matched to states)";
+                return;
+            }
+
+            // Store state data for drill-down
+            _stateData = stateCounts.Select(x => (x.State, x.Count)).ToList();
+
+            StateChartCountText.Text = $"({stateCounts.Sum(x => x.Count):N0} errors with state info) - Click slice to filter";
+
+            // Create OxyPlot model
+            var plotModel = new PlotModel
+            {
+                Title = "",
+                Background = OxyColors.Transparent
+            };
+
+            var pieSeries = new PieSeries
+            {
+                StrokeThickness = 2.0,
+                InsideLabelPosition = 0.5,
+                AngleSpan = 360,
+                StartAngle = 0,
+                InsideLabelColor = OxyColors.White,
+                InsideLabelFormat = "{1}: {2:0}",
+                FontSize = 11
+            };
+
+            // Color palette
+            var colors = new[]
+            {
+                OxyColor.FromRgb(231, 76, 60),   // Red
+                OxyColor.FromRgb(241, 196, 15),  // Yellow
+                OxyColor.FromRgb(52, 152, 219),  // Blue
+                OxyColor.FromRgb(46, 204, 113),  // Green
+                OxyColor.FromRgb(155, 89, 182),  // Purple
+                OxyColor.FromRgb(230, 126, 34),  // Orange
+                OxyColor.FromRgb(149, 165, 166), // Gray
+                OxyColor.FromRgb(22, 160, 133),  // Teal
+                OxyColor.FromRgb(243, 156, 18),  // Light Orange
+                OxyColor.FromRgb(142, 68, 173)   // Dark Purple
+            };
+
+            for (int i = 0; i < stateCounts.Count; i++)
+            {
+                var item = stateCounts[i];
+                pieSeries.Slices.Add(new PieSlice(item.State, item.Count)
+                {
+                    IsExploded = false,
+                    Fill = colors[i % colors.Length]
+                });
+            }
+
+            plotModel.Series.Add(pieSeries);
+
+            // Create PlotView and add to host
+            var plotView = new OxyPlot.Wpf.PlotView
+            {
+                Model = plotModel,
+                Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(45, 45, 48))
+            };
+
+            // Add click handler for drill-down
+            plotView.MouseDown += (s, e) =>
+            {
+                try
+                {
+                    var position = new ScreenPoint(e.GetPosition(plotView).X, e.GetPosition(plotView).Y);
+                    var hitResult = pieSeries.GetNearestPoint(position, false);
+
+                    if (hitResult != null)
+                    {
+                        int index = (int)hitResult.Index;
+                        if (index >= 0 && index < stateCounts.Count)
+                        {
+                            var selectedState = stateCounts[index].State;
+                            ApplyStateFilter(selectedState);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[CHART CLICK] Error: {ex.Message}");
+                }
+            };
+
+            StatePieChartHost.Children.Clear();
+            StatePieChartHost.Children.Add(plotView);
+        }
+
+        private void CreateErrorTimelineChart(List<LogEntry> errorLogs)
+        {
+            if (!errorLogs.Any())
+            {
+                TimelineChartInfo.Text = "(No errors)";
+                return;
+            }
+
+            var sortedErrors = errorLogs.OrderBy(l => l.Date).ToList();
+            var firstTime = sortedErrors.First().Date;
+            var lastTime = sortedErrors.Last().Date;
+            var totalDuration = lastTime - firstTime;
+
+            // Determine bucket size based on duration
+            int bucketCount;
+            string timeUnit;
+            if (totalDuration.TotalMinutes < 2)
+            {
+                bucketCount = 60; // 60 buckets for short duration
+                timeUnit = "seconds";
+            }
+            else if (totalDuration.TotalMinutes < 30)
+            {
+                bucketCount = 100; // More detail for medium duration
+                timeUnit = "time";
+            }
+            else
+            {
+                bucketCount = 120; // High detail for long duration
+                timeUnit = "time";
+            }
+
+            var bucketSize = totalDuration.TotalSeconds / bucketCount;
+            var bucketSizeDisplay = bucketSize < 60 ? $"{bucketSize:F1}s" : $"{bucketSize / 60:F1}min";
+
+            TimelineChartInfo.Text = $"({sortedErrors.Count} errors over {totalDuration.TotalMinutes:F1} min, resolution: {bucketSizeDisplay})";
+
+            var buckets = new int[bucketCount];
+
+            foreach (var log in sortedErrors)
+            {
+                var elapsedSeconds = (log.Date - firstTime).TotalSeconds;
+                int bucketIndex = (int)(elapsedSeconds / bucketSize);
+                if (bucketIndex >= bucketCount) bucketIndex = bucketCount - 1;
+                if (bucketIndex < 0) bucketIndex = 0;
+                buckets[bucketIndex]++;
+            }
+
+            // Create OxyPlot model
+            var plotModel = new PlotModel
+            {
+                Title = "",
+                Background = OxyColors.Transparent,
+                PlotAreaBorderThickness = new OxyThickness(1),
+                PlotAreaBorderColor = OxyColor.FromRgb(60, 60, 60)
+            };
+
+            var lineSeries = new LineSeries
+            {
+                Color = OxyColor.FromRgb(52, 152, 219), // Primary color
+                StrokeThickness = 2,
+                MarkerType = OxyPlot.MarkerType.Circle,
+                MarkerSize = 3,
+                MarkerFill = OxyColor.FromRgb(52, 152, 219)
+            };
+
+            for (int i = 0; i < bucketCount; i++)
+            {
+                var bucketTime = firstTime.AddSeconds(i * bucketSize);
+                lineSeries.Points.Add(new DataPoint(DateTimeAxis.ToDouble(bucketTime), buckets[i]));
+            }
+
+            var dateAxis = new DateTimeAxis
+            {
+                Position = AxisPosition.Bottom,
+                StringFormat = "HH:mm:ss",
+                TextColor = OxyColor.FromRgb(150, 150, 150),
+                TicklineColor = OxyColors.Transparent,
+                MajorGridlineStyle = LineStyle.Solid,
+                MajorGridlineColor = OxyColor.FromArgb(30, 255, 255, 255),
+                FontSize = 10
+            };
+
+            var valueAxis = new LinearAxis
+            {
+                Position = AxisPosition.Left,
+                Title = "Error Count",
+                TitleColor = OxyColor.FromRgb(200, 200, 200),
+                TextColor = OxyColor.FromRgb(150, 150, 150),
+                TicklineColor = OxyColors.Transparent,
+                MajorGridlineStyle = LineStyle.Solid,
+                MajorGridlineColor = OxyColor.FromArgb(30, 255, 255, 255),
+                MinorGridlineStyle = LineStyle.None,
+                FontSize = 10
+            };
+
+            plotModel.Axes.Add(dateAxis);
+            plotModel.Axes.Add(valueAxis);
+            plotModel.Series.Add(lineSeries);
+
+            // Create PlotView and add to host
+            var plotView = new OxyPlot.Wpf.PlotView
+            {
+                Model = plotModel,
+                Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(45, 45, 48))
+            };
+
+            ErrorTimelineChartHost.Children.Clear();
+            ErrorTimelineChartHost.Children.Add(plotView);
+        }
+
+        // Calculate state entries using same logic as StateFailureAnalyzer
+        private List<StateEntry> CalculateStateEntries(List<LogEntry> plcLogs)
+        {
+            var statesList = new List<StateEntry>();
+            var sortedLogs = plcLogs.OrderBy(l => l.Date).ToList();
+
+            // Find PlcMngr transitions - use "Manager" thread (as in StateFailureAnalyzer)
+            var transitionLogs = sortedLogs
+                .Where(l => l.ThreadName != null &&
+                           l.ThreadName.Equals("Manager", StringComparison.OrdinalIgnoreCase) &&
+                           l.Message != null &&
+                           l.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) &&
+                           l.Message.Contains("->"))
+                .ToList();
+
+            if (transitionLogs.Count == 0) return statesList;
+
+            DateTime logEndLimit = sortedLogs.Last().Date;
+
+            for (int i = 0; i < transitionLogs.Count; i++)
+            {
+                var currentLog = transitionLogs[i];
+                var parts = currentLog.Message.Split(new[] { "->" }, StringSplitOptions.None);
+                if (parts.Length < 2) continue;
+
+                string fromStateRaw = parts[0].Replace("PlcMngr:", "").Trim();
+                string toStateRaw = parts[1].Trim();
+
+                var entry = new StateEntry
+                {
+                    StateName = toStateRaw,
+                    TransitionTitle = $"{fromStateRaw} -> {toStateRaw}",
+                    StartTime = currentLog.Date,
+                    LogReference = currentLog
+                };
+
+                // Set EndTime
+                if (i < transitionLogs.Count - 1)
+                    entry.EndTime = transitionLogs[i + 1].Date;
+                else
+                    entry.EndTime = logEndLimit;
+
+                statesList.Add(entry);
+            }
+
+            return statesList;
+        }
+
+        private string ExtractStateName(LogEntry log)
+        {
+            // Try to extract state name from Pattern or Data field
+            // Pattern example: "STATE_IDLE", "STATE_RUNNING", etc.
+            if (!string.IsNullOrWhiteSpace(log.Pattern) && log.Pattern.Contains("STATE"))
+                return log.Pattern;
+
+            if (!string.IsNullOrWhiteSpace(log.Data) && log.Data.Contains("State"))
+            {
+                // Try to parse "State=XXX" or "CurrentState=XXX"
+                var parts = log.Data.Split(new[] { '=', ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < parts.Length - 1; i++)
+                {
+                    if (parts[i].Trim().EndsWith("State", StringComparison.OrdinalIgnoreCase))
+                        return parts[i + 1].Trim();
+                }
+            }
+
+            return "Unknown";
+        }
+
+        // ==========================================
+        //  DRILL-DOWN FILTER HANDLERS
+        // ==========================================
+        private void ApplyLoggerFilter(string logger)
+        {
+            if (_applyFilterCallback == null)
+            {
+                MessageBox.Show($"Filter by Logger: {logger}\n\nNo filter callback configured.",
+                    "Logger Filter", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var result = MessageBox.Show($"Filter logs to show only Logger:\n\n{logger}\n\nThis will close the statistics window and apply the filter.",
+                "Apply Logger Filter", MessageBoxButton.OKCancel, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.OK)
+            {
+                _applyFilterCallback("Logger", logger);
+                Close();
+            }
+        }
+
+        private void ApplyStateFilter(string state)
+        {
+            if (_applyFilterCallback == null)
+            {
+                MessageBox.Show($"Filter by STATE: {state}\n\nNo filter callback configured.",
+                    "State Filter", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var result = MessageBox.Show($"Filter logs to show only STATE:\n\n{state}\n\nThis will close the statistics window and apply the filter.",
+                "Apply State Filter", MessageBoxButton.OKCancel, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.OK)
+            {
+                _applyFilterCallback("State", state);
+                Close();
+            }
+        }
     }
     public class LoadStat
     {
@@ -374,11 +907,12 @@ namespace IndiLogs_3._0.Views
     public class ErrorStat
     {
         public string Name { get; set; }      // ?? ?-Logger ?? ?-Thread
+        public string FullName { get; set; }  // Full name for tooltip
         public string Message { get; set; }   // ????? ?????? (???? ????????? ??????)
         public int Count { get; set; }
         public string DisplayText { get; set; }
         public double BarWidth { get; set; }
     }
     // Helper models (same as before but ensured they have necessary props)
-   
+
 }

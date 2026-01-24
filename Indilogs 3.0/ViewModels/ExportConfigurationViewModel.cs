@@ -261,6 +261,7 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         public ICommand ExportCommand { get; }
+        public ICommand OpenInViewerCommand { get; }
         public ICommand SavePresetCommand { get; }
         public ICommand LoadPresetCommand { get; }
         public ICommand SelectAllIOCommand { get; }
@@ -271,6 +272,20 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand DeselectAllAxisCommand { get; }
         public ICommand DeselectAllCHStepsCommand { get; }
         public ICommand DeselectAllThreadsCommand { get; }
+
+        private string _lastExportedFilePath;
+        public string LastExportedFilePath
+        {
+            get => _lastExportedFilePath;
+            set
+            {
+                _lastExportedFilePath = value;
+                OnPropertyChanged(nameof(LastExportedFilePath));
+                OnPropertyChanged(nameof(CanOpenInViewer));
+            }
+        }
+
+        public bool CanOpenInViewer => !string.IsNullOrEmpty(LastExportedFilePath) && File.Exists(LastExportedFilePath);
 
         public ExportConfigurationViewModel(LogSessionData sessionData, CsvExportService csvService)
         {
@@ -289,7 +304,8 @@ namespace IndiLogs_3._0.ViewModels
             };
             _searchDebounceTimer.Tick += SearchDebounceTimer_Tick;
 
-            ExportCommand = new RelayCommand(async _ => await ExecuteExport(), _ => CanExport());
+            ExportCommand = new RelayCommand(async _ => await ExecuteExport(false), _ => CanExport());
+            OpenInViewerCommand = new RelayCommand(async _ => await ExecuteExport(true), _ => CanExport());
             SavePresetCommand = new RelayCommand(_ => SavePreset());
             LoadPresetCommand = new RelayCommand(_ => LoadPreset());
             SelectAllIOCommand = new RelayCommand(_ => SelectAll(IOComponents));
@@ -542,7 +558,7 @@ namespace IndiLogs_3._0.ViewModels
                    ThreadItems.Any(x => x.IsSelected);
         }
 
-        private async Task ExecuteExport()
+        private async Task ExecuteExport(bool openInViewer = false)
         {
             try
             {
@@ -562,7 +578,17 @@ namespace IndiLogs_3._0.ViewModels
                         .Select(x => x.Name).ToList()
                 };
 
-                await _csvService.ExportLogsToCsvAsync(_sessionData.Logs, _sessionData.FileName, preset);
+                string exportedPath = await _csvService.ExportLogsToCsvAsync(_sessionData.Logs, _sessionData.FileName, preset);
+
+                if (!string.IsNullOrEmpty(exportedPath))
+                {
+                    LastExportedFilePath = exportedPath;
+
+                    if (openInViewer)
+                    {
+                        OpenInViewer();
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -679,6 +705,42 @@ namespace IndiLogs_3._0.ViewModels
         {
             foreach (var item in collection)
                 item.IsSelected = false;
+        }
+
+        private void OpenInViewer()
+        {
+            if (string.IsNullOrEmpty(LastExportedFilePath) || !File.Exists(LastExportedFilePath))
+            {
+                MessageBox.Show("No exported file available to open.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                // Look for IndiChart.UI.exe in the same directory as the current application
+                string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                string indiChartPath = Path.Combine(appDirectory, "IndiChart.UI.exe");
+
+                if (!File.Exists(indiChartPath))
+                {
+                    // Try looking in IndiChartSuite subdirectory
+                    indiChartPath = Path.Combine(appDirectory, "IndiChartSuite", "IndiChart.UI.exe");
+                }
+
+                if (File.Exists(indiChartPath))
+                {
+                    System.Diagnostics.Process.Start(indiChartPath, $"\"{LastExportedFilePath}\"");
+                }
+                else
+                {
+                    // Fallback: open with default CSV application
+                    System.Diagnostics.Process.Start(LastExportedFilePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to open viewer: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

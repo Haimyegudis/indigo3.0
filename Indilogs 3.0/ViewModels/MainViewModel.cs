@@ -1346,12 +1346,55 @@ namespace IndiLogs_3._0.ViewModels
                 return;
             }
 
-            // יצירת החלון עם שני הפרמטרים
-            var statsWindow = new Views.StatsWindow(plcLogs, appLogs);
+            // יצירת החלון עם שני הפרמטרים וקולבק לפילטור
+            var statsWindow = new Views.StatsWindow(plcLogs, appLogs, ApplyChartDrillDownFilter);
             statsWindow.Owner = Application.Current.MainWindow;
             statsWindow.Title = "Log Statistics Dashboard";
             statsWindow.Show();
         }
+
+        private void ApplyChartDrillDownFilter(string filterType, string filterValue)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[MAIN VM] Applying chart drill-down filter: {filterType} = {filterValue}");
+
+                if (filterType == "Logger")
+                {
+                    // Filter by Logger field - search for the logger name in the message
+                    FilterVM.SearchText = filterValue;
+                    FilterVM.IsMainFilterActive = true;
+                    FilterVM.ApplyMainLogsFilter();
+
+                    // Switch to PLC tab to show filtered results
+                    SelectedTabIndex = 0;
+
+                    int logCount = Logs?.Count() ?? 0;
+                    MessageBox.Show($"Filter applied: Logger = {filterValue}\n\nShowing {logCount} matching logs.",
+                        "Logger Filter Applied", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else if (filterType == "State")
+                {
+                    // Filter by STATE - search for the state name
+                    FilterVM.SearchText = filterValue;
+                    FilterVM.IsMainFilterActive = true;
+                    FilterVM.ApplyMainLogsFilter();
+
+                    // Switch to PLC tab to show filtered results
+                    SelectedTabIndex = 0;
+
+                    int logCount = Logs?.Count() ?? 0;
+                    MessageBox.Show($"Filter applied: STATE = {filterValue}\n\nShowing {logCount} matching logs.",
+                        "State Filter Applied", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error applying filter: {ex.Message}", "Filter Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void FilterToState(object obj)
         {
             if (obj is StateEntry state)
@@ -1658,18 +1701,18 @@ namespace IndiLogs_3._0.ViewModels
 
         private void OpenGlobalGrepWindow()
         {
-            if (LoadedSessions == null || !LoadedSessions.Any())
+            // יצירת אוסף ריק במידה ולא נטענו סשנים, כדי לאפשר לחלון להיפתח
+            var sessions = LoadedSessions ?? new ObservableCollection<LogSessionData>();
+
+            var viewModel = new GlobalGrepViewModel(sessions);
+
+            // אם אין קבצים טעונים, נגדיר את ברירת המחדל לחיפוש חיצוני
+            if (!sessions.Any())
             {
-                MessageBox.Show(
-                    "No sessions are currently loaded. Please load at least one log file before using Global Grep.",
-                    "Global Grep",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-                return;
+                viewModel.SearchMode = GlobalGrepViewModel.SearchModeType.ExternalFiles;
             }
 
-            var viewModel = new GlobalGrepViewModel(LoadedSessions);
-            var window = new GlobalGrepWindow(viewModel, NavigateToGrepResult);
+            var window = new GlobalGrepWindow(viewModel, NavigateToGrepResult, LoadMultipleFiles);
 
             window.Owner = Application.Current.MainWindow;
             window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -1678,46 +1721,99 @@ namespace IndiLogs_3._0.ViewModels
 
         private void NavigateToGrepResult(GrepResult result)
         {
-            if (result == null)
-                return;
+            if (result == null) return;
 
-            // For in-memory results, navigate to the log entry
-            if (result.SessionIndex >= 0 && result.SessionIndex < LoadedSessions.Count)
+            // If we have a direct reference to the log entry (in-memory search)
+            if (result.ReferencedLogEntry != null && result.SessionIndex >= 0)
             {
-                // Switch to the correct session
-                SelectedSession = LoadedSessions[result.SessionIndex];
+                // Navigate to the loaded session
+                if (result.SessionIndex < LoadedSessions.Count)
+                {
+                    SelectedSession = LoadedSessions[result.SessionIndex];
 
-                // Determine which tab to switch to based on LogType
-                if (result.LogType == "PLC")
-                {
-                    SelectedTabIndex = 0; // PLC tab
-                }
-                else if (result.LogType == "APP")
-                {
-                    SelectedTabIndex = 2; // APP tab
-                }
+                    // Switch to the appropriate tab (0 for PLC, 2 for APP)
+                    SelectedTabIndex = (result.LogType == "APP") ? 2 : 0;
 
-                // Navigate to the log entry
-                if (result.ReferencedLogEntry != null)
-                {
-                    // Small delay to ensure tab switch and data binding complete
+                    // Wait for UI to update, then scroll to the log entry
                     Application.Current.Dispatcher.BeginInvoke(
-                        DispatcherPriority.Background,
-                        new Action(() =>
-                        {
-                            RequestScrollToLog?.Invoke(result.ReferencedLogEntry);
-                            StatusMessage = $"Navigated to {result.LogType} log at {result.TimestampDisplay}";
-                        })
-                    );
+                        System.Windows.Threading.DispatcherPriority.Background,
+                        new Action(() => RequestScrollToLog?.Invoke(result.ReferencedLogEntry)));
                 }
+                return;
+            }
+
+            // If we don't have a direct reference (external file search)
+            if (string.IsNullOrEmpty(result.FilePath)) return;
+
+            // Check if the file is already loaded
+            var session = LoadedSessions.FirstOrDefault(s => s.FilePath == result.FilePath);
+
+            if (session != null)
+            {
+                SelectedSession = session;
+                JumpByTime(result, session);
             }
             else
             {
-                MessageBox.Show(
-                    "This result is from an external file search. Please load the file first to navigate to it.",
-                    "Navigation Not Available",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                // Load the file if not already loaded
+                ProcessFiles(new[] { result.FilePath }, (loadedSession) =>
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        SelectedSession = loadedSession;
+                        JumpByTime(result, loadedSession);
+                    });
+                });
+            }
+        }
+
+        private void JumpByTime(GrepResult result, LogSessionData session)
+        {
+            // Switch to the appropriate tab (0 for PLC, 2 for APP)
+            SelectedTabIndex = (result.LogType == "APP") ? 2 : 0;
+
+            // Get the appropriate log collection
+            var logs = (result.LogType == "APP") ? session.AppDevLogs : session.Logs;
+
+            // Find the exact log entry by Timestamp and Message
+            var target = logs?.FirstOrDefault(l =>
+                l.Date == result.Timestamp &&
+                l.Message == result.ReferencedLogEntry?.Message &&
+                l.ThreadName == result.ReferencedLogEntry?.ThreadName)
+                ?? logs?.FirstOrDefault(l => l.Date == result.Timestamp && l.Message == result.ReferencedLogEntry?.Message)
+                ?? logs?.FirstOrDefault(l => l.Date == result.Timestamp);
+
+            if (target != null)
+            {
+                // Wait for UI to update, then scroll to the log entry
+                Application.Current.Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    new Action(() => RequestScrollToLog?.Invoke(target)));
+            }
+        }
+
+        private void LoadMultipleFiles(List<(string FilePath, string SessionName)> fileList)
+        {
+            if (fileList == null || fileList.Count == 0) return;
+
+            // Get list of already loaded files
+            var loadedFilePaths = LoadedSessions.Select(s => s.FilePath).ToList();
+
+            // Show file selection window
+            var fileSelectionWindow = new Views.FileSelectionWindow(fileList, loadedFilePaths);
+            fileSelectionWindow.Owner = Application.Current.MainWindow;
+
+            if (fileSelectionWindow.ShowDialog() == true)
+            {
+                var filesToLoad = fileSelectionWindow.FilesToLoad;
+
+                if (filesToLoad != null && filesToLoad.Count > 0)
+                {
+                    // Load all files using ProcessFiles
+                    ProcessFiles(filesToLoad.ToArray(), null);
+
+                    MessageBox.Show($"Loaded {filesToLoad.Count} file(s).", "Open All Files", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
             }
         }
 

@@ -23,18 +23,17 @@ namespace IndiLogs_3._0.Services
             bool IsCancelled { get; }
         }
 
-        public async Task ExportLogsToCsvAsync(IEnumerable<LogEntry> logs, string defaultFileName, ExportPreset preset = null)
+        public async Task<string> ExportLogsToCsvAsync(IEnumerable<LogEntry> logs, string defaultFileName, ExportPreset preset = null)
         {
             if (preset != null)
             {
-                await ExportLogsWithPresetAsync(logs, defaultFileName, preset);
-                return;
+                return await ExportLogsWithPresetAsync(logs, defaultFileName, preset);
             }
 
-            await ExportLogsOriginalAsync(logs, defaultFileName);
+            return await ExportLogsOriginalAsync(logs, defaultFileName);
         }
 
-        private async Task ExportLogsOriginalAsync(IEnumerable<LogEntry> logs, string defaultFileName)
+        private async Task<string> ExportLogsOriginalAsync(IEnumerable<LogEntry> logs, string defaultFileName)
         {
             SaveFileDialog saveFileDialog = new SaveFileDialog
             {
@@ -42,7 +41,7 @@ namespace IndiLogs_3._0.Services
                 FileName = $"{defaultFileName}_CombinedData.csv"
             };
 
-            if (saveFileDialog.ShowDialog() != true) return;
+            if (saveFileDialog.ShowDialog() != true) return null;
 
             string filePath = saveFileDialog.FileName;
 
@@ -70,10 +69,11 @@ namespace IndiLogs_3._0.Services
                 }
             });
 
-            // Return immediately - export continues in background
+            // Return file path immediately - export continues in background
+            return filePath;
         }
 
-        private async Task ExportLogsWithPresetAsync(IEnumerable<LogEntry> logs, string defaultFileName, ExportPreset preset)
+        private async Task<string> ExportLogsWithPresetAsync(IEnumerable<LogEntry> logs, string defaultFileName, ExportPreset preset)
         {
             SaveFileDialog saveFileDialog = new SaveFileDialog
             {
@@ -81,7 +81,7 @@ namespace IndiLogs_3._0.Services
                 FileName = $"{defaultFileName}_Filtered.csv"
             };
 
-            if (saveFileDialog.ShowDialog() != true) return;
+            if (saveFileDialog.ShowDialog() != true) return null;
 
             string filePath = saveFileDialog.FileName;
 
@@ -109,7 +109,8 @@ namespace IndiLogs_3._0.Services
                 }
             });
 
-            // Return immediately - export continues in background
+            // Return file path immediately - export continues in background
+            return filePath;
         }
 
         // ===================================================================

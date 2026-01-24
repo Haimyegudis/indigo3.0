@@ -46,6 +46,7 @@ namespace IndiLogs_3._0.ViewModels
             CancelSearchCommand = new RelayCommand(_ => CancelSearch(), _ => IsSearching);
             FindFirstOccurrenceCommand = new RelayCommand(_ => FindFirstOccurrence(), _ => Results.Any());
             ClearResultsCommand = new RelayCommand(_ => ClearResults(), _ => Results.Any());
+            OpenAllFilesCommand = new RelayCommand(_ => OpenAllFiles(), _ => Results.Any());
         }
 
         #endregion
@@ -307,6 +308,7 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand CancelSearchCommand { get; }
         public ICommand FindFirstOccurrenceCommand { get; }
         public ICommand ClearResultsCommand { get; }
+        public ICommand OpenAllFilesCommand { get; }
 
         private bool CanExecuteSearch()
         {
@@ -429,6 +431,22 @@ namespace IndiLogs_3._0.ViewModels
             OnPropertyChanged(nameof(ResultCount));
             StatusMessage = "Results cleared.";
             SelectedResult = null;
+        }
+
+        private void OpenAllFiles()
+        {
+            // This will be handled by the code-behind which has access to MainViewModel
+        }
+
+        public List<(string FilePath, string SessionName)> GetUniqueFiles()
+        {
+            // Group by FilePath and SessionName to get unique file entries
+            return Results
+                .Where(r => !string.IsNullOrWhiteSpace(r.FilePath) && !string.IsNullOrWhiteSpace(r.SessionName))
+                .Select(r => (r.FilePath, r.SessionName))
+                .Distinct()
+                .OrderBy(f => f.SessionName)
+                .ToList();
         }
 
         #endregion
