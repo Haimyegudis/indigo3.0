@@ -6,7 +6,7 @@
   "compilationOptions": {},
   "targets": {
     ".NETCoreApp,Version=v8.0": {
-      "IndiChart.UI/1.0.0": {
+      "IndiChart.UI/1.0.0.0": {
         "dependencies": {
           "IndiChart.Core": "1.0.0",
           "SkiaSharp.Views.WPF": "2.88.8"
@@ -89,7 +89,7 @@
     }
   },
   "libraries": {
-    "IndiChart.UI/1.0.0": {
+    "IndiChart.UI/1.0.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

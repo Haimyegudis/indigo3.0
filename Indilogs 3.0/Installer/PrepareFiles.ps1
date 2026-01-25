@@ -4,7 +4,7 @@
 
 param(
     [string]$IndiLogsPublishPath = "C:\Users\yegudish\OneDrive - HP Inc\Desktop\HAIM",
-    [string]$IndiChartPublishPath = "..\IndiChartSuite\publish\Application Files\IndiChart.UI_1_0_0_0",
+    [string]$IndiChartPublishPath = "C:\Users\yegudish\source\repos\IndiChartSuite\IndiChart.UI\bin\Release\net8.0-windows",
     [string]$DestPath = ".\InstallerFiles"
 )
 
@@ -79,9 +79,13 @@ if (-not (Test-Path $IndiChartPublishPath)) {
     exit 1
 }
 
-# Copy IndiChart files (skip duplicates)
+# Copy IndiChart files (skip duplicates, but ALWAYS overwrite SkiaSharp files)
 $skippedFiles = 0
 $copiedFiles = 0
+$overwrittenFiles = 0
+
+# Files that IndiChart version should always overwrite (newer SkiaSharp)
+$alwaysOverwrite = @("libSkiaSharp.dll", "SkiaSharp.dll", "SkiaSharp.Views.Desktop.Common.dll", "SkiaSharp.Views.WPF.dll")
 
 Get-ChildItem -Path $IndiChartPublishPath -Recurse | ForEach-Object {
     $relativePath = $_.FullName.Substring((Get-Item $IndiChartPublishPath).FullName.Length + 1)
@@ -95,9 +99,22 @@ Get-ChildItem -Path $IndiChartPublishPath -Recurse | ForEach-Object {
         }
     }
     else {
-        # Skip if file already exists (from IndiLogs)
+        $fileName = $_.Name -replace '\.deploy$', ''
+        $shouldOverwrite = $alwaysOverwrite -contains $fileName
+
         if (Test-Path $destFile) {
-            $skippedFiles++
+            if ($shouldOverwrite) {
+                # Overwrite SkiaSharp files with IndiChart's newer version
+                $destDir = Split-Path $destFile -Parent
+                if (-not (Test-Path $destDir)) {
+                    New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+                }
+                Copy-Item $_.FullName -Destination $destFile -Force
+                $overwrittenFiles++
+            }
+            else {
+                $skippedFiles++
+            }
         }
         else {
             $destDir = Split-Path $destFile -Parent
@@ -124,7 +141,137 @@ Get-ChildItem -Path $DestPath -Recurse -Filter "*.deploy" | ForEach-Object {
 # Remove manifest files
 Get-ChildItem -Path $DestPath -Recurse -Filter "*.manifest" | Remove-Item -Force -ErrorAction SilentlyContinue
 
-Write-Host "  Copied $copiedFiles files (skipped $skippedFiles duplicates)" -ForegroundColor Green
+Write-Host "  Copied $copiedFiles files, overwritten $overwrittenFiles SkiaSharp files (skipped $skippedFiles duplicates)" -ForegroundColor Green
+
+# ========================================
+# STEP 3: Copy correct SkiaSharp libraries from NuGet packages
+# ========================================
+Write-Host ""
+Write-Host "Step 3: Copying correct SkiaSharp libraries from NuGet packages..." -ForegroundColor Cyan
+
+$packagesPath = "..\..\packages"
+
+# Copy SkiaSharp managed DLLs (3.119.0)
+$skiaManagedPath = Join-Path $packagesPath "SkiaSharp.3.119.0\lib\net8.0"
+if (Test-Path $skiaManagedPath) {
+    Copy-Item (Join-Path $skiaManagedPath "SkiaSharp.dll") -Destination $DestPath -Force
+    Write-Host "  Copied SkiaSharp.dll from NuGet package" -ForegroundColor Green
+}
+
+# Copy SkiaSharp.Views.Desktop.Common
+$skiaViewsCommonPath = Join-Path $packagesPath "SkiaSharp.Views.Desktop.Common.3.119.0\lib\net8.0"
+if (Test-Path $skiaViewsCommonPath) {
+    Copy-Item (Join-Path $skiaViewsCommonPath "SkiaSharp.Views.Desktop.Common.dll") -Destination $DestPath -Force
+    Write-Host "  Copied SkiaSharp.Views.Desktop.Common.dll from NuGet package" -ForegroundColor Green
+}
+
+# Copy SkiaSharp.Views.WPF
+$skiaViewsWpfPath = Join-Path $packagesPath "SkiaSharp.Views.WPF.3.119.0\lib\net8.0-windows10.0.19041"
+if (Test-Path $skiaViewsWpfPath) {
+    Copy-Item (Join-Path $skiaViewsWpfPath "SkiaSharp.Views.WPF.dll") -Destination $DestPath -Force
+    Write-Host "  Copied SkiaSharp.Views.WPF.dll from NuGet package" -ForegroundColor Green
+}
+
+# Copy native libraries
+$skiaPackagePath = Join-Path $packagesPath "SkiaSharp.NativeAssets.Win32.3.119.0\runtimes"
+
+if (Test-Path $skiaPackagePath) {
+    # Copy all runtime folders (win-x64, win-x86, win-arm64)
+    $runtimeDest = Join-Path $DestPath "runtimes"
+
+    # Copy win-x64
+    $srcX64 = Join-Path $skiaPackagePath "win-x64\native\libSkiaSharp.dll"
+    $destX64 = Join-Path $runtimeDest "win-x64\native\libSkiaSharp.dll"
+    if (Test-Path $srcX64) {
+        Copy-Item $srcX64 -Destination $destX64 -Force
+        Write-Host "  Copied libSkiaSharp.dll (win-x64) from NuGet package" -ForegroundColor Green
+    }
+
+    # Copy win-x86
+    $srcX86 = Join-Path $skiaPackagePath "win-x86\native\libSkiaSharp.dll"
+    $destX86 = Join-Path $runtimeDest "win-x86\native\libSkiaSharp.dll"
+    if (Test-Path $srcX86) {
+        Copy-Item $srcX86 -Destination $destX86 -Force
+        Write-Host "  Copied libSkiaSharp.dll (win-x86) from NuGet package" -ForegroundColor Green
+    }
+
+    # Copy win-arm64
+    $srcArm64 = Join-Path $skiaPackagePath "win-arm64\native\libSkiaSharp.dll"
+    $destArm64 = Join-Path $runtimeDest "win-arm64\native\libSkiaSharp.dll"
+    if (Test-Path $srcArm64) {
+        Copy-Item $srcArm64 -Destination $destArm64 -Force
+        Write-Host "  Copied libSkiaSharp.dll (win-arm64) from NuGet package" -ForegroundColor Green
+    }
+
+    # Also copy to root folder for .NET to find it
+    Copy-Item $srcX64 -Destination $DestPath -Force
+    Write-Host "  Copied libSkiaSharp.dll to root folder" -ForegroundColor Green
+}
+else {
+    Write-Host "  WARNING: SkiaSharp NuGet package not found at: $skiaPackagePath" -ForegroundColor Yellow
+}
+
+# ========================================
+# STEP 4: Copy SQLite.Interop.dll
+# ========================================
+Write-Host ""
+Write-Host "Step 4: Copying SQLite.Interop.dll..." -ForegroundColor Cyan
+
+# Try to find SQLite.Interop.dll from the publish folder or packages
+$sqliteInteropSrc = $null
+
+# First, check if it's in the x64 subfolder of the publish
+$sqliteInPublish = Join-Path $latestIndiLogs.FullName "x64\SQLite.Interop.dll"
+if (Test-Path $sqliteInPublish) {
+    $sqliteInteropSrc = $sqliteInPublish
+}
+
+# If not found, try the NuGet packages folder (correct path - going up from Installer folder)
+if (-not $sqliteInteropSrc) {
+    $sqlitePackagePath = "..\..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.118.0\build\net46\x64\SQLite.Interop.dll"
+    if (Test-Path $sqlitePackagePath) {
+        $sqliteInteropSrc = $sqlitePackagePath
+        Write-Host "  Found SQLite.Interop.dll in NuGet packages" -ForegroundColor Gray
+    }
+}
+
+# If still not found, try alternative package path
+if (-not $sqliteInteropSrc) {
+    $sqlitePackagePath2 = "..\..\packages\System.Data.SQLite.Core.1.0.118.0\build\net46\x64\SQLite.Interop.dll"
+    if (Test-Path $sqlitePackagePath2) {
+        $sqliteInteropSrc = $sqlitePackagePath2
+        Write-Host "  Found SQLite.Interop.dll in alternative NuGet package" -ForegroundColor Gray
+    }
+}
+
+# If still not found, try absolute path
+if (-not $sqliteInteropSrc) {
+    $sqlitePackagePath3 = "C:\Users\yegudish\source\repos\indilogs3.0\indigo3.0\indigo3.0\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.118.0\build\net46\x64\SQLite.Interop.dll"
+    if (Test-Path $sqlitePackagePath3) {
+        $sqliteInteropSrc = $sqlitePackagePath3
+        Write-Host "  Found SQLite.Interop.dll using absolute path" -ForegroundColor Gray
+    }
+}
+
+if ($sqliteInteropSrc) {
+    # Copy to root folder
+    Copy-Item $sqliteInteropSrc -Destination $DestPath -Force
+    Write-Host "  Copied SQLite.Interop.dll to root folder" -ForegroundColor Green
+
+    # Also copy to x64 subfolder for compatibility
+    $x64Dest = Join-Path $DestPath "x64"
+    if (-not (Test-Path $x64Dest)) {
+        New-Item -ItemType Directory -Path $x64Dest -Force | Out-Null
+    }
+    Copy-Item $sqliteInteropSrc -Destination $x64Dest -Force
+    Write-Host "  Copied SQLite.Interop.dll to x64 folder" -ForegroundColor Green
+}
+else {
+    Write-Host "  WARNING: SQLite.Interop.dll not found! DB browsing may not work." -ForegroundColor Yellow
+    Write-Host "  Looked in:" -ForegroundColor Yellow
+    Write-Host "    - $sqliteInPublish" -ForegroundColor Gray
+    Write-Host "    - NuGet packages folder" -ForegroundColor Gray
+}
 
 # ========================================
 # Summary

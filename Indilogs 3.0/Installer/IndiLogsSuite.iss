@@ -15,6 +15,10 @@
 #define DotNet8Url "https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/8.0.23/windowsdesktop-runtime-8.0.23-win-x64.exe"
 #define DotNet8InstallerName "windowsdesktop-runtime-8.0.23-win-x64.exe"
 
+; Icon paths (both icons are in Resources folder)
+#define IndiLogsIcon "..\Resources\indilogs.ico"
+#define IndiChartIcon "..\Resources\indichart.ico"
+
 [Setup]
 AppId={{8F4E6A32-9B5C-4D7E-A8C1-3F6B2E9D1A4C}
 AppName={#MyAppName}
@@ -25,6 +29,8 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=Output
 OutputBaseFilename=IndiLogsSuite_Setup
+SetupIconFile={#IndiLogsIcon}
+UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -39,13 +45,28 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 ; All prepared files (IndiLogs + IndiChart combined)
 Source: "InstallerFiles\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Copy libSkiaSharp.dll to root folder for .NET runtime to find it
+Source: "InstallerFiles\runtimes\win-x64\native\libSkiaSharp.dll"; DestDir: "{app}"; Flags: ignoreversion
+; Copy SQLite.Interop.dll to root folder for SQLite to work
+Source: "InstallerFiles\SQLite.Interop.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "InstallerFiles\x64\SQLite.Interop.dll"; DestDir: "{app}\x64"; Flags: ignoreversion skipifsourcedoesntexist
+; Copy icon files for shortcuts
+Source: "{#IndiLogsIcon}"; DestDir: "{app}"; DestName: "indilogs.ico"; Flags: ignoreversion
+Source: "{#IndiChartIcon}"; DestDir: "{app}"; DestName: "indichart.ico"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\IndiLogs 3.0"; Filename: "{app}\{#MyAppExeName}"
-Name: "{group}\IndiChart Viewer"; Filename: "{app}\{#ChartAppExeName}"
+Name: "{group}\IndiLogs 3.0"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\indilogs.ico"
+Name: "{group}\IndiChart Viewer"; Filename: "{app}\{#ChartAppExeName}"; IconFilename: "{app}\indichart.ico"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\IndiLogs 3.0"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
-Name: "{autodesktop}\IndiChart Viewer"; Filename: "{app}\{#ChartAppExeName}"; Tasks: desktopicon
+Name: "{autodesktop}\IndiLogs 3.0"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\indilogs.ico"; Tasks: desktopicon
+Name: "{autodesktop}\IndiChart Viewer"; Filename: "{app}\{#ChartAppExeName}"; IconFilename: "{app}\indichart.ico"; Tasks: desktopicon
+
+[Registry]
+; Associate .csv files with IndiChart Viewer (Open With option)
+Root: HKCR; Subkey: ".csv\OpenWithProgids"; ValueType: string; ValueName: "IndiChart.CSV"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKCR; Subkey: "IndiChart.CSV"; ValueType: string; ValueName: ""; ValueData: "IndiChart CSV File"; Flags: uninsdeletekey
+Root: HKCR; Subkey: "IndiChart.CSV\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\indichart.ico"
+Root: HKCR; Subkey: "IndiChart.CSV\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#ChartAppExeName}"" ""%1"""
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,IndiLogs 3.0}"; Flags: nowait postinstall skipifsilent

@@ -1208,16 +1208,10 @@ namespace IndiLogs_3._0.ViewModels.Components
             if (_sessionVM != null)
                 _sessionVM.Logs = logsList;
 
-            // עדכון ה-PLC Filtered Tab לפי החוקים
-            var filteredByRules = logsList
-                .Where(l =>
-                    string.Equals(l.ThreadName, "Manager", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(l.ThreadName, "Events", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(l.Level, "Error", StringComparison.OrdinalIgnoreCase)
-                )
-                .ToList();
-
-            FilteredLogs.ReplaceAll(filteredByRules);
+            // PLC Filtered Tab - לא מעדכנים כאן!
+            // הטאב הזה צריך להישאר עם הנתונים המקוריים (Manager, Events, Error)
+            // ולא להיות מושפע מהפילטר של PLC Logs.
+            // הנתונים נטענים פעם אחת ב-SwitchToSession ונשארים קבועים.
         }
 
         private void ApplyGlobalTimeRangeFilter()

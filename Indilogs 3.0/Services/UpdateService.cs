@@ -1,5 +1,7 @@
-﻿using System;
-using System.Deployment.Application; // Ensure System.Deployment reference exists
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -7,75 +9,93 @@ namespace IndiLogs_3._0.Services
 {
     public class UpdateService
     {
+        // Server paths - change these if server location changes
+        private const string VersionFileUrl = @"\\iihome.inr.rd.hpicorp.net\softwareqa$\QA-Utils\Indilogs2.0\version.txt";
+        private const string InstallerFolder = @"\\iihome.inr.rd.hpicorp.net\softwareqa$\QA-Utils\Indilogs2.0";
+
         public async Task CheckForUpdatesSimpleAsync()
         {
             await Task.Run(() =>
             {
-                System.Diagnostics.Debug.WriteLine("[UpdateService] Starting update check...");
-
-                // Check if running as ClickOnce
-                if (!ApplicationDeployment.IsNetworkDeployed)
-                {
-                    System.Diagnostics.Debug.WriteLine("[UpdateService] Not running as ClickOnce deployment - skipping update check");
-                    return;
-                }
-
-                System.Diagnostics.Debug.WriteLine("[UpdateService] Running as ClickOnce deployment");
-
                 try
                 {
-                    var deployment = ApplicationDeployment.CurrentDeployment;
-                    System.Diagnostics.Debug.WriteLine($"[UpdateService] Current version: {deployment.CurrentVersion}");
-                    System.Diagnostics.Debug.WriteLine($"[UpdateService] Update location: {deployment.UpdateLocation}");
+                    UpdateLogger.Log("Starting update check...");
 
-                    // Check for update
-                    System.Diagnostics.Debug.WriteLine("[UpdateService] Checking for updates...");
-                    UpdateCheckInfo info = deployment.CheckForDetailedUpdate();
-                    System.Diagnostics.Debug.WriteLine($"[UpdateService] Update available: {info.UpdateAvailable}");
+                    // Get current version from assembly
+                    Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
+                    UpdateLogger.Log($"Current version: {currentVersion}");
 
-                    if (info.UpdateAvailable)
+                    // Check if server is accessible
+                    if (!File.Exists(VersionFileUrl))
                     {
-                        System.Diagnostics.Debug.WriteLine($"[UpdateService] New version available: {info.AvailableVersion}");
-                        System.Diagnostics.Debug.WriteLine($"[UpdateService] Is required: {info.IsUpdateRequired}");
+                        UpdateLogger.Log($"Version file not found at: {VersionFileUrl}");
+                        return;
+                    }
 
-                        // Back to UI thread
+                    // Read version from server
+                    string serverVersionText = File.ReadAllText(VersionFileUrl).Trim();
+                    UpdateLogger.Log($"Server version text: {serverVersionText}");
+
+                    if (!Version.TryParse(serverVersionText, out Version serverVersion))
+                    {
+                        UpdateLogger.Log($"Failed to parse server version: {serverVersionText}");
+                        return;
+                    }
+
+                    UpdateLogger.Log($"Server version: {serverVersion}");
+
+                    // Compare versions
+                    if (serverVersion > currentVersion)
+                    {
+                        UpdateLogger.Log($"New version available: {serverVersion}");
+
+                        // Show dialog on UI thread
                         Application.Current.Dispatcher.Invoke(() =>
                         {
                             var result = MessageBox.Show(
-                                $"A new version is available: {info.AvailableVersion}\n" +
-                                $"Current version: {deployment.CurrentVersion}\n\n" +
-                                "Do you want to update now?",
-                                "Update Available",
+                                $"A new version is available!\n\n" +
+                                $"Current version: {currentVersion}\n" +
+                                $"New version: {serverVersion}\n\n" +
+                                "Do you want to open the update folder?",
+                                "IndiLogs Update Available",
                                 MessageBoxButton.YesNo,
-                                MessageBoxImage.Question);
+                                MessageBoxImage.Information);
 
                             if (result == MessageBoxResult.Yes)
                             {
-                                deployment.Update();
-                                MessageBox.Show("The application has been updated and will now restart.");
-                                System.Windows.Forms.Application.Restart();
-                                Application.Current.Shutdown();
+                                try
+                                {
+                                    // Open the installer folder in Explorer
+                                    Process.Start("explorer.exe", InstallerFolder);
+                                    UpdateLogger.Log("Opened installer folder");
+                                }
+                                catch (Exception ex)
+                                {
+                                    UpdateLogger.Log("Failed to open folder", ex);
+                                    MessageBox.Show($"Could not open folder:\n{InstallerFolder}\n\nError: {ex.Message}",
+                                        "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                                }
                             }
                         });
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine("[UpdateService] No update available - already at latest version");
+                        UpdateLogger.Log("Already at latest version");
                     }
-                }
-                catch (DeploymentDownloadException ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[UpdateService] Download error: {ex.Message}");
-                }
-                catch (InvalidDeploymentException ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[UpdateService] Invalid deployment: {ex.Message}");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[UpdateService] Error checking for updates: {ex.GetType().Name}: {ex.Message}");
+                    UpdateLogger.Log("Update check failed", ex);
                 }
             });
+        }
+
+        /// <summary>
+        /// Gets the current application version
+        /// </summary>
+        public static Version GetCurrentVersion()
+        {
+            return Assembly.GetExecutingAssembly().GetName().Version;
         }
     }
 }
