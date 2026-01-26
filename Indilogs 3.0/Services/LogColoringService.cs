@@ -43,6 +43,18 @@ namespace IndiLogs_3._0.Services
                         return;
                     }
 
+                    // 2b. חוק מיוחד: PressStateManager + FallToPressStateAsync -> Orange
+                    if (isAppLog &&
+                        log.Logger != null &&
+                        log.Logger.Contains("PressStateManager") &&
+                        log.Method != null &&
+                        log.Method.Contains("FallToPressStateAsync"))
+                    {
+                        log.CustomColor = Color.FromRgb(255, 165, 0); // Orange
+                        log.RowForeground = Brushes.Black;
+                        return;
+                    }
+
                     // 3. חוק משותף: שגיאה (Error) תמיד אדומה
                     if (string.Equals(log.Level, "Error", StringComparison.OrdinalIgnoreCase))
                     {
@@ -170,6 +182,9 @@ namespace IndiLogs_3._0.Services
                 case "threadname": textToCheck = log.ThreadName; break;
                 case "logger": textToCheck = log.Logger; break;
                 case "method": textToCheck = log.Method; break;
+                case "pattern": textToCheck = log.Pattern; break;
+                case "data": textToCheck = log.Data; break;
+                case "exception": textToCheck = log.Exception; break;
             }
 
             if (string.IsNullOrEmpty(textToCheck)) return false;

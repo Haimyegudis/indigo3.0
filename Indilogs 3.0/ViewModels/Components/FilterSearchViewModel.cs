@@ -525,6 +525,9 @@ namespace IndiLogs_3._0.ViewModels.Components
                     case "Logger": val = log.Logger; break;
                     case "ProcessName": val = log.ProcessName; break;
                     case "Method": val = log.Method; break;
+                    case "Pattern": val = log.Pattern; break;
+                    case "Data": val = log.Data; break;
+                    case "Exception": val = log.Exception; break;
                     default: val = log.Message; break;
                 }
 

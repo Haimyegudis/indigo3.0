@@ -57,12 +57,77 @@ namespace IndiLogs_3._0
                 vm.RequestScrollToLog += MapsToLogRow;
                 vm.PropertyChanged += ViewModel_PropertyChanged;
 
+                // Initialize column widths based on current ViewModel state
+                SyncPanelColumnsWithViewModel(vm);
             }
+        }
+
+        private void SyncPanelColumnsWithViewModel(MainViewModel vm)
+        {
+            // Left panel
+            if (vm.IsLeftPanelVisible)
+            {
+                LeftPanelColumn.Width = new GridLength(200);
+                LeftSplitterColumn.Width = GridLength.Auto;
+            }
+            else
+            {
+                LeftPanelColumn.Width = new GridLength(0);
+                LeftSplitterColumn.Width = new GridLength(0);
+            }
+
+            // Right panel
+            if (vm.IsRightPanelVisible)
+            {
+                RightPanelColumn.Width = new GridLength(200);
+                RightSplitterColumn.Width = GridLength.Auto;
+            }
+            else
+            {
+                RightPanelColumn.Width = new GridLength(0);
+                RightSplitterColumn.Width = new GridLength(0);
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[PANEL SYNC] Initialized: Left={vm.IsLeftPanelVisible}, Right={vm.IsRightPanelVisible}");
         }
 
         private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            // No longer needed - TimeSync button styling is now handled via XAML binding in HeaderControl
+            // Sync column widths with ViewModel panel visibility
+            if (e.PropertyName == nameof(MainViewModel.IsLeftPanelVisible))
+            {
+                if (sender is MainViewModel vm)
+                {
+                    if (vm.IsLeftPanelVisible)
+                    {
+                        LeftPanelColumn.Width = new GridLength(200);
+                        LeftSplitterColumn.Width = GridLength.Auto;
+                    }
+                    else
+                    {
+                        LeftPanelColumn.Width = new GridLength(0);
+                        LeftSplitterColumn.Width = new GridLength(0);
+                    }
+                    System.Diagnostics.Debug.WriteLine($"[PANEL SYNC] Left panel visibility changed to {vm.IsLeftPanelVisible}, Column width = {LeftPanelColumn.Width}");
+                }
+            }
+            else if (e.PropertyName == nameof(MainViewModel.IsRightPanelVisible))
+            {
+                if (sender is MainViewModel vm)
+                {
+                    if (vm.IsRightPanelVisible)
+                    {
+                        RightPanelColumn.Width = new GridLength(200);
+                        RightSplitterColumn.Width = GridLength.Auto;
+                    }
+                    else
+                    {
+                        RightPanelColumn.Width = new GridLength(0);
+                        RightSplitterColumn.Width = new GridLength(0);
+                    }
+                    System.Diagnostics.Debug.WriteLine($"[PANEL SYNC] Right panel visibility changed to {vm.IsRightPanelVisible}, Column width = {RightPanelColumn.Width}");
+                }
+            }
         }
 
         public void HandleExternalArguments(string[] args)
@@ -502,28 +567,13 @@ namespace IndiLogs_3._0
             if (sender is TabControl tabControl && e.Source == tabControl)
             {
                 int newTabIndex = tabControl.SelectedIndex;
+                _previousTabIndex = newTabIndex;
 
-                // Find the left panel column definition
-                var mainGrid = this.Content as Grid;
-                if (mainGrid != null && mainGrid.RowDefinitions.Count > 1)
+                // IMPORTANT: Don't change column widths here - they are controlled by IsLeftPanelVisible/IsRightPanelVisible
+                // Just sync with the ViewModel state to ensure columns match the panel visibility
+                if (DataContext is MainViewModel vm)
                 {
-                    var contentGrid = mainGrid.Children.OfType<Grid>().FirstOrDefault(g => Grid.GetRow(g) == 1);
-                    if (contentGrid != null && contentGrid.ColumnDefinitions.Count > 0)
-                    {
-                        var leftPanelColumn = contentGrid.ColumnDefinitions[0];
-
-                        // Save current width for previous tab
-                        if (leftPanelColumn.Width.IsAbsolute && leftPanelColumn.Width.Value > 0 && _previousTabIndex != 7)
-                        {
-                            _tabPanelWidths[_previousTabIndex] = leftPanelColumn.Width.Value;
-                        }
-
-                        // Restore width for other tabs (or use default)
-                        double newWidth = _tabPanelWidths.ContainsKey(newTabIndex) ? _tabPanelWidths[newTabIndex] : DEFAULT_PANEL_WIDTH;
-                        leftPanelColumn.Width = new GridLength(newWidth);
-
-                        _previousTabIndex = newTabIndex;
-                    }
+                    SyncPanelColumnsWithViewModel(vm);
                 }
             }
         }
@@ -533,6 +583,80 @@ namespace IndiLogs_3._0
         private void PlcLogsTab_Loaded(object sender, RoutedEventArgs e)
         {
 
+        }
+
+        // Panel toggle button handlers
+        private void LeftPanelHideButton_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is MainViewModel vm)
+            {
+                vm.IsLeftPanelVisible = false;
+                // Column sync happens in ViewModel_PropertyChanged
+            }
+        }
+
+        private void LeftPanelShowButton_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is MainViewModel vm)
+            {
+                vm.IsLeftPanelVisible = true;
+                // Column sync happens in ViewModel_PropertyChanged
+            }
+        }
+
+        private void DebugGridLayout(string context)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[DEBUG {context}] ========================================");
+                System.Diagnostics.Debug.WriteLine($"[DEBUG {context}] MainContentGrid ActualWidth: {MainContentGrid.ActualWidth}");
+                System.Diagnostics.Debug.WriteLine($"[DEBUG {context}] Column Definitions:");
+
+                for (int i = 0; i < MainContentGrid.ColumnDefinitions.Count; i++)
+                {
+                    var col = MainContentGrid.ColumnDefinitions[i];
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG {context}]   Col[{i}]: Width={col.Width}, ActualWidth={col.ActualWidth:F1}");
+                }
+                System.Diagnostics.Debug.WriteLine($"[DEBUG {context}] ========================================");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[DEBUG ERROR] {ex.Message}");
+            }
+        }
+
+        private void RightPanelHideButton_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is MainViewModel vm)
+            {
+                vm.IsRightPanelVisible = false;
+                // Column sync happens in ViewModel_PropertyChanged
+            }
+        }
+
+        private void RightPanelShowButton_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is MainViewModel vm)
+            {
+                vm.IsRightPanelVisible = true;
+                // Column sync happens in ViewModel_PropertyChanged
+            }
+        }
+
+        private void PanelShowButton_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (sender is Border border)
+            {
+                border.Opacity = 1;
+            }
+        }
+
+        private void PanelShowButton_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (sender is Border border)
+            {
+                border.Opacity = 0;
+            }
         }
     }
 }

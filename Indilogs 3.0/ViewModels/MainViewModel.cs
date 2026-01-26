@@ -282,6 +282,25 @@ namespace IndiLogs_3._0.ViewModels
             get => ConfigVM?.IsLoggersMenuOpen ?? false;
             set { if (ConfigVM != null) ConfigVM.IsLoggersMenuOpen = value; }
         }
+
+        // --- PANEL VISIBILITY ---
+        private bool _isLeftPanelVisible = true;
+        public bool IsLeftPanelVisible
+        {
+            get => _isLeftPanelVisible;
+            set { _isLeftPanelVisible = value; OnPropertyChanged(); }
+        }
+
+        private bool _isRightPanelVisible = true;
+        public bool IsRightPanelVisible
+        {
+            get => _isRightPanelVisible;
+            set { _isRightPanelVisible = value; OnPropertyChanged(); }
+        }
+
+        public ICommand ToggleLeftPanelCommand { get; }
+        public ICommand ToggleRightPanelCommand { get; }
+
         public ObservableCollection<string> AvailableFonts { get; set; }
         public ObservableCollection<string> TimeUnits { get; } = new ObservableCollection<string> { "Seconds", "Minutes" };
 
@@ -629,6 +648,7 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand SaveCaseCommand { get; }
         public ICommand LoadCaseCommand { get; }
         public ICommand OpenGlobalGrepCommand { get; }
+        public ICommand OpenStripeAnalysisCommand { get; }
 
         public MainViewModel()
         {
@@ -713,6 +733,8 @@ namespace IndiLogs_3._0.ViewModels
             ToggleConfigMenuCommand = new RelayCommand(o => IsConfigMenuOpen = !IsConfigMenuOpen);
             ToggleLoggersMenuCommand = new RelayCommand(o => IsLoggersMenuOpen = !IsLoggersMenuOpen);
             ToggleTimeSyncCommand = new RelayCommand(o => IsTimeSyncEnabled = !IsTimeSyncEnabled);
+            ToggleLeftPanelCommand = new RelayCommand(o => IsLeftPanelVisible = !IsLeftPanelVisible);
+            ToggleRightPanelCommand = new RelayCommand(o => IsRightPanelVisible = !IsRightPanelVisible);
             BrowseTableCommand = ConfigVM.BrowseTableCommand;
             CopyTableNameCommand = new RelayCommand(CopyTableName);
 
@@ -737,6 +759,7 @@ namespace IndiLogs_3._0.ViewModels
             ExportParsedDataCommand = new RelayCommand(o => { ExportParsedData(o); IsExplorerMenuOpen = false; });
             RunAnalysisCommand = new RelayCommand(o => { RunAnalysis(o); IsExplorerMenuOpen = false; });
             OpenGlobalGrepCommand = new RelayCommand(o => { OpenGlobalGrepWindow(); IsExplorerMenuOpen = false; });
+            OpenStripeAnalysisCommand = new RelayCommand(o => { OpenStripeAnalysisWindow(); IsExplorerMenuOpen = false; });
 
             ToggleSearchCommand = FilterVM.ToggleSearchCommand;
             CloseSearchCommand = FilterVM.CloseSearchCommand;
@@ -1717,6 +1740,44 @@ namespace IndiLogs_3._0.ViewModels
             window.Owner = Application.Current.MainWindow;
             window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
             window.Show();
+        }
+
+        private async void OpenStripeAnalysisWindow()
+        {
+            var logs = FilterVM?.AppDevLogsFiltered?.ToList();
+
+            if (logs == null || !logs.Any())
+            {
+                MessageBox.Show(
+                    "No APP logs loaded.\n\nPlease load a session with APP logs first, or switch to the APP tab.",
+                    "Stripe Analysis", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Quick pre-check: do we have any stripe data?
+            bool hasStripeData = logs.Any(l =>
+                (!string.IsNullOrEmpty(l.Data) && l.Data.Contains("stripeDescriptor")) ||
+                (!string.IsNullOrEmpty(l.Message) && l.Message.Contains("stripeDescriptor")));
+
+            if (!hasStripeData)
+            {
+                MessageBox.Show(
+                    "No stripe data found in APP logs.\n\n" +
+                    "This feature requires logs containing stripeDescriptor JSON data.",
+                    "Stripe Analysis", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var window = new StripeAnalysisWindow();
+            window.Owner = Application.Current.MainWindow;
+            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            window.Show();
+
+            // Load data asynchronously after window is shown
+            await Task.Run(() => { }).ContinueWith(_ =>
+            {
+                window.LoadFromLogs(logs);
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
         private void NavigateToGrepResult(GrepResult result)

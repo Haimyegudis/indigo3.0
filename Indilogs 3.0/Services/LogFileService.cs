@@ -192,7 +192,29 @@ namespace IndiLogs_3._0.Services
                                         entryData.Type = FileType.EventsCsv;
                                         shouldProcess = true;
                                     }
-                                    // 5. תמונות
+                                    // 5. קבצי .db מכל תיקייה (לא רק Configuration)
+                                    else if (entry.Name.EndsWith(".db", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        try
+                                        {
+                                            string fileNameOnly = Path.GetFileName(entry.Name);
+                                            using (var ms = CopyToMemory(entry))
+                                            {
+                                                byte[] dbBytes = ms.ToArray();
+                                                if (!session.DatabaseFiles.ContainsKey(fileNameOnly))
+                                                {
+                                                    session.DatabaseFiles.Add(fileNameOnly, dbBytes);
+                                                    Debug.WriteLine($"✅ Loaded DB file (non-config): {fileNameOnly} from {entry.FullName} ({dbBytes.Length} bytes)");
+                                                }
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            Debug.WriteLine($"Failed to read DB file {entry.Name}: {ex.Message}");
+                                        }
+                                        continue;
+                                    }
+                                    // 6. תמונות
                                     else if (entry.Name.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
                                              entry.Name.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase))
                                     {
@@ -200,7 +222,7 @@ namespace IndiLogs_3._0.Services
                                         if (bmp != null) screenshotsBag.Add(bmp);
                                         continue;
                                     }
-                                    // 6. קבצי מידע
+                                    // 7. קבצי מידע
                                     else if (entry.Name.Equals("Readme.txt", StringComparison.OrdinalIgnoreCase))
                                     {
                                         using (var ms = CopyToMemory(entry))
@@ -553,9 +575,7 @@ namespace IndiLogs_3._0.Services
             string message = match.Groups["Message"].Value.Trim();
             string exception = match.Groups["Exception"].Value.Trim();
             string data = match.Groups["Data"].Value.Trim();
-
-            if (!string.IsNullOrEmpty(exception)) message += $"\n[EXC]: {exception}";
-            if (!string.IsNullOrEmpty(data)) message += $"\n[DATA]: {data}";
+            string pattern = match.Groups["Pattern"].Value.Trim();
 
             return new LogEntry
             {
@@ -566,7 +586,10 @@ namespace IndiLogs_3._0.Services
                 Logger = pool.Intern(match.Groups["Logger"].Value),
                 Message = pool.Intern(message),
                 ProcessName = pool.Intern("APP"),
-                Method = pool.Intern(match.Groups["Location"].Value)
+                Method = pool.Intern(match.Groups["Location"].Value),
+                Pattern = string.IsNullOrEmpty(pattern) ? null : pool.Intern(pattern),
+                Data = string.IsNullOrEmpty(data) ? null : pool.Intern(data),
+                Exception = string.IsNullOrEmpty(exception) ? null : pool.Intern(exception)
             };
         }
 

@@ -22,6 +22,8 @@
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+        <converters:BoolToArrowConverter x:Key="BoolToArrowConverter"/>
+        <converters:BoolToArrowConverter x:Key="BoolToArrowConverterRight" TrueValue="▶" FalseValue="◀"/>
     </Window.Resources>
 
     <Window.DataContext>
@@ -50,28 +52,24 @@
 
         <controls:HeaderControl Grid.Row="0" DataContext="{Binding}"/>
 
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="1" x:Name="MainContentGrid">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition>
-                    <ColumnDefinition.Style>
-                        <Style TargetType="ColumnDefinition">
-                            <Setter Property="Width" Value="200"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedIndex, ElementName=LeftPanelTabs}" Value="1">
-                                    <Setter Property="Width" Value="Auto"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ColumnDefinition.Style>
-                </ColumnDefinition>
-                <ColumnDefinition Width="Auto"/>
+                <!-- Left panel - Column 0 -->
+                <ColumnDefinition x:Name="LeftPanelColumn" Width="200"/>
+                <!-- GridSplitter column - Column 1 -->
+                <ColumnDefinition x:Name="LeftSplitterColumn" Width="Auto"/>
+                <!-- Main content - Column 2 -->
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
+                <!-- Right splitter - Column 3 -->
+                <ColumnDefinition x:Name="RightSplitterColumn" Width="Auto"/>
+                <!-- Right panel - Column 4 -->
+                <ColumnDefinition x:Name="RightPanelColumn" Width="200"/>
             </Grid.ColumnDefinitions>
 
-            <Grid Grid.Column="0" MinWidth="220" Background="{DynamicResource BgPanel}">
-                <TabControl x:Name="LeftPanelTabs" Background="Transparent" BorderThickness="0" Margin="0" Padding="0" SelectedIndex="{Binding LeftTabIndex}">
+            <!-- Left Panel with hover toggle button -->
+            <Grid Grid.Column="0" Visibility="{Binding IsLeftPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid Background="{DynamicResource BgPanel}">
+                <TabControl x:Name="LeftPanelTabs" Background="Transparent" BorderThickness="0" Margin="0" Padding="0" SelectedIndex="{Binding LeftTabIndex}" Width="200">
                     <TabItem Header="EXPLORER">
                         <Grid>
                             <Grid.RowDefinitions>
@@ -162,6 +160,11 @@
                                         <Button Command="{Binding RunAnalysisCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5">
                                             <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
                                                 <TextBlock Text="⚙ Reports"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Button Command="{Binding OpenStripeAnalysisCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsAppTabSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="🖨 Stripe Analysis"/>
                                             </Viewbox>
                                         </Button>
                                         <Separator Margin="0,10,0,10" Background="{DynamicResource BorderColor}"/>
@@ -319,6 +322,11 @@
                                                 <TextBlock Text="⚙ Reports"/>
                                             </Viewbox>
                                         </Button>
+                                        <Button Command="{Binding OpenStripeAnalysisCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsAppTabSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="🖨 Stripe Analysis"/>
+                                            </Viewbox>
+                                        </Button>
                                         <Separator Margin="0,10,0,10" Background="{DynamicResource BorderColor}"/>
                                         <DockPanel LastChildFill="False" Margin="0,0,0,8">
                                             <TextBlock Text="Case File" FontWeight="Bold" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" FontSize="11"/>
@@ -387,9 +395,28 @@
                         </Grid>
                     </TabItem>
                 </TabControl>
+                </Grid>
+                <!-- Left panel hide button (appears on hover at right edge) -->
+                <Border x:Name="LeftPanelHideButton" Width="16" HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                        Background="Transparent" Cursor="Hand" Opacity="0.3"
+                        MouseLeftButtonDown="LeftPanelHideButton_Click">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource BgCardHover}"/>
+                                    <Setter Property="Opacity" Value="1"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="◀" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondary}"/>
+                </Border>
             </Grid>
 
-            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent" ShowsPreview="True"/>
+            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent" ShowsPreview="True"
+                          Visibility="{Binding IsLeftPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}"/>
 
             <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
@@ -652,49 +679,7 @@
                     </GridSplitter.Style>
                 </GridSplitter>
 
-                <Border Grid.Row="3" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="2">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="80"/>
-                        </Grid.RowDefinitions>
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Background="{DynamicResource BgDark}">
-                            <Border Background="{DynamicResource BgPanel}" BorderThickness="0,2,0,0" BorderBrush="{DynamicResource PrimaryColor}" Padding="15,6">
-                                <TextBlock Text="SELECTED LOG DETAILS" FontWeight="Bold" FontSize="11" Foreground="{DynamicResource PrimaryColor}"/>
-                            </Border>
-                        </StackPanel>
-                        <Grid Grid.Row="1" Margin="10,8,10,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="20"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="80"/>
-                                <ColumnDefinition Width="20"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Time:" Foreground="{DynamicResource TextSecondary}" Margin="0,0,8,0"/>
-                            <TextBlock Grid.Column="1" Text="{Binding SelectedLog.Date, StringFormat='yyyy-MM-dd HH:mm:ss.fff'}" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Column="3" Text="Level:" Foreground="{DynamicResource TextSecondary}" Margin="0,0,8,0"/>
-                            <TextBlock Grid.Column="4" Text="{Binding SelectedLog.Level}" Foreground="{DynamicResource TextPrimary}" FontWeight="Bold"/>
-                            <TextBlock Grid.Column="6" Text="Logger:" Foreground="{DynamicResource TextSecondary}" Margin="0,0,8,0"/>
-                            <TextBlock Grid.Column="7" Text="{Binding SelectedLog.Logger}" Foreground="{DynamicResource PrimaryColor}" TextTrimming="CharacterEllipsis"/>
-                        </Grid>
-                        <TextBox Grid.Row="2" Text="{Binding SelectedLog.Message, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" AcceptsReturn="True" FontFamily="{StaticResource ContentFontFamily}" FontSize="13" Background="Transparent" BorderThickness="0" Padding="10" Margin="0,5,0,0" Foreground="{DynamicResource TextPrimary}"/>
-                    </Grid>
-                </Border>
+                <!-- APP Selected Log Details Panel - REMOVED (use double-click to open Log Details Window instead) -->
 
                 <Border Grid.Row="4" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" Padding="15,8">
                     <Grid>
@@ -735,9 +720,76 @@
                 </Border>
             </Grid>
 
-            <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent" ShowsPreview="True"/>
+            <!-- Left panel show button (appears at left edge when panel is hidden) -->
+            <Border Grid.Column="2" Width="8" HorizontalAlignment="Left" VerticalAlignment="Stretch"
+                    Background="Transparent" Cursor="Hand"
+                    Visibility="{Binding IsLeftPanelVisible, Converter={StaticResource InverseBoolToVisibilityConverter}}"
+                    MouseLeftButtonDown="LeftPanelShowButton_Click"
+                    MouseEnter="PanelShowButton_MouseEnter"
+                    MouseLeave="PanelShowButton_MouseLeave"
+                    x:Name="LeftPanelShowButton">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <TextBlock Text="▶" FontSize="8" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
+                           Foreground="White" Opacity="0" x:Name="LeftPanelShowArrow">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsMouseOver, ElementName=LeftPanelShowButton}" Value="True">
+                                    <Setter Property="Opacity" Value="1"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Border>
 
-            <Border Grid.Column="4" Width="200" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1,0,0,0" Padding="15">
+            <!-- Right panel show button (appears at right edge when panel is hidden) -->
+            <Border Grid.Column="2" Width="8" HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                    Background="Transparent" Cursor="Hand"
+                    Visibility="{Binding IsRightPanelVisible, Converter={StaticResource InverseBoolToVisibilityConverter}}"
+                    MouseLeftButtonDown="RightPanelShowButton_Click"
+                    MouseEnter="PanelShowButton_MouseEnter"
+                    MouseLeave="PanelShowButton_MouseLeave"
+                    x:Name="RightPanelShowButton">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <TextBlock Text="◀" FontSize="8" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
+                           Foreground="White" Opacity="0" x:Name="RightPanelShowArrow">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsMouseOver, ElementName=RightPanelShowButton}" Value="True">
+                                    <Setter Property="Opacity" Value="1"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Border>
+
+            <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent" ShowsPreview="True"
+                          Visibility="{Binding IsRightPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+            <!-- Right Panel with hover toggle button -->
+            <Grid Grid.Column="4" Visibility="{Binding IsRightPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Border Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1,0,0,0" Padding="15">
                 <DockPanel>
                     <TextBlock Text="SAVED CONFIGURATIONS" Foreground="{DynamicResource TextSecondary}" FontWeight="Bold" FontSize="11" Margin="0,0,0,15" DockPanel.Dock="Top"/>
                     <Grid DockPanel.Dock="Bottom" VerticalAlignment="Bottom" Margin="0,15,0,0">
@@ -856,6 +908,25 @@
                     </ListView>
                 </DockPanel>
             </Border>
+                <!-- Right panel hide button (appears on hover at left edge of right panel) -->
+                <Border x:Name="RightPanelHideButton" Width="16" HorizontalAlignment="Left" VerticalAlignment="Stretch"
+                        Background="Transparent" Cursor="Hand" Opacity="0"
+                        MouseLeftButtonDown="RightPanelHideButton_Click">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource BgCardHover}"/>
+                                    <Setter Property="Opacity" Value="1"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="▶" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondary}"/>
+                </Border>
+            </Grid>
+
         </Grid>
 
         <controls:StatusBarControl Grid.Row="2" DataContext="{Binding}"/>
@@ -953,4 +1024,4 @@
             </Border>
         </Grid>
     </Grid>
-</Window>
+</Window>   

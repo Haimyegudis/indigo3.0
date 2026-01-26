@@ -300,7 +300,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="TabItem">
                         <Grid>
-                            <Border Name="Border" Padding="8,5" BorderThickness="0" Background="Transparent" CornerRadius="3,3,0,0">
+                            <Border x:Name="Border" Padding="8,5" BorderThickness="0" Background="Transparent" CornerRadius="3,3,0,0">
                                 <ContentPresenter x:Name="ContentSite" VerticalAlignment="Center" HorizontalAlignment="Center" ContentSource="Header"/>
                             </Border>
                             <Border x:Name="Indicator" Height="2" Background="{DynamicResource PrimaryColor}" VerticalAlignment="Bottom" Margin="3,0" Opacity="0"/>

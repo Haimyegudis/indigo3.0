@@ -1,0 +1,314 @@
+<Window x:Class="IndiLogs_3._0.Views.StripeAnalysisWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Advanced Stripe Analysis - Indigo Print Data" Height="800" Width="1400"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgDark}"
+        Foreground="{DynamicResource TextPrimary}"
+        Closing="Window_Closing">
+
+    <Window.Resources>
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource BgCard}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="SearchTextBox" TargetType="TextBox">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Padding" Value="4,2"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,10">
+            <TextBlock Text="Advanced Stripe Analysis" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
+            <TextBlock Text="Complete Indigo stripe/slice data with all BID, CR, ASID, LPH, EM, SPM, ILS parameters"
+                       Foreground="{DynamicResource TextSecondary}" Margin="0,5,0,0"/>
+        </StackPanel>
+
+        <!-- Quick Filters Toolbar -->
+        <Border Grid.Row="1" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Active Only -->
+                <CheckBox x:Name="ChkActiveOnly" Grid.Column="0" Content="Active Stations"
+                          IsChecked="True" VerticalAlignment="Center" Margin="0,0,20,0"
+                          Foreground="{DynamicResource TextPrimary}"
+                          Checked="Filter_Changed" Unchecked="Filter_Changed"/>
+
+                <!-- Type Filter -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,20,0">
+                    <TextBlock Text="Type:" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource TextSecondary}"/>
+                    <ComboBox x:Name="CmbStripeType" Width="110" SelectedIndex="0" SelectionChanged="Filter_Changed">
+                        <ComboBoxItem Content="All"/>
+                        <ComboBoxItem Content="Print-Image"/>
+                        <ComboBoxItem Content="Null-Gap"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Ink Filter -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,20,0">
+                    <TextBlock Text="Ink:" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource TextSecondary}"/>
+                    <ComboBox x:Name="CmbInkFilter" Width="100" SelectedIndex="0" SelectionChanged="Filter_Changed">
+                        <ComboBoxItem Content="All"/>
+                    </ComboBox>
+                </StackPanel>
+
+
+                <!-- Buttons -->
+                <StackPanel Grid.Column="5" Orientation="Horizontal">
+                    <Button x:Name="BtnManageColumns" Content="☰ Columns" Click="BtnManageColumns_Click"
+                            Style="{DynamicResource ModernBtn}" Width="90" Margin="0,0,8,0"
+                            ToolTip="Show/hide columns"/>
+                    <Button x:Name="BtnResetColumns" Content="Reset Columns" Click="BtnResetColumns_Click"
+                            Style="{DynamicResource ModernBtn}" Width="100" Margin="0,0,8,0"/>
+                    <Button x:Name="BtnRefresh" Content="Refresh" Click="BtnRefresh_Click"
+                            Style="{DynamicResource ModernBtn}" Width="70" Margin="0,0,8,0"/>
+                    <Button x:Name="BtnExport" Content="Export CSV" Click="BtnExport_Click"
+                            Style="{DynamicResource ModernBtn}" Background="{DynamicResource SuccessColor}"
+                            Foreground="White" Width="90"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Column Search Panel -->
+        <Border Grid.Row="2" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="Column Search:" VerticalAlignment="Center"
+                           Margin="0,0,10,0" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"/>
+
+                <!-- Column Selector -->
+                <ComboBox x:Name="CmbSearchColumn" Grid.Column="1" Width="140" Margin="0,0,10,0"
+                          VerticalAlignment="Center" SelectionChanged="CmbSearchColumn_SelectionChanged">
+                    <ComboBoxItem Content="All Columns" IsSelected="True"/>
+                    <ComboBoxItem Content="Spread"/>
+                    <ComboBoxItem Content="Stripe"/>
+                    <ComboBoxItem Content="Slice"/>
+                    <ComboBoxItem Content="Type"/>
+                    <ComboBoxItem Content="Ink"/>
+                    <ComboBoxItem Content="HV Target"/>
+                    <ComboBoxItem Content="vDeveloper"/>
+                    <ComboBoxItem Content="vElectrode"/>
+                    <ComboBoxItem Content="vSqueegee"/>
+                    <ComboBoxItem Content="vCleaner"/>
+                    <ComboBoxItem Content="CR vDc"/>
+                    <ComboBoxItem Content="CR vAc"/>
+                    <ComboBoxItem Content="vAsid"/>
+                    <ComboBoxItem Content="ScanLines"/>
+                    <ComboBoxItem Content="SPM Status"/>
+                    <ComboBoxItem Content="ILS Mode"/>
+                </ComboBox>
+
+                <!-- Search TextBox -->
+                <TextBox x:Name="TxtSearch" Grid.Column="2" Width="200" Style="{StaticResource SearchTextBox}"
+                         TextChanged="TxtSearch_TextChanged"/>
+
+                <!-- Clear Search -->
+                <Button x:Name="BtnClearSearch" Grid.Column="4" Content="Clear" Click="BtnClearSearch_Click"
+                        Style="{DynamicResource ModernBtn}" Width="60"/>
+            </Grid>
+        </Border>
+
+        <!-- Main Data Grid with ALL columns - virtualization enabled for performance -->
+        <DataGrid x:Name="StripeDataGrid" Grid.Row="3"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  SelectionMode="Extended"
+                  SelectionUnit="FullRow"
+                  GridLinesVisibility="Vertical"
+                  VerticalGridLinesBrush="{DynamicResource BorderColor}"
+                  Background="{DynamicResource BgPanel}"
+                  BorderBrush="{DynamicResource BorderColor}"
+                  RowBackground="{DynamicResource BgPanel}"
+                  AlternatingRowBackground="{DynamicResource BgCard}"
+                  HorizontalScrollBarVisibility="Visible"
+                  VerticalScrollBarVisibility="Auto"
+                  CanUserReorderColumns="True"
+                  CanUserResizeColumns="True"
+                  CanUserSortColumns="True"
+                  ColumnReordered="StripeDataGrid_ColumnReordered"
+                  FrozenColumnCount="0"
+                  EnableRowVirtualization="True"
+                  EnableColumnVirtualization="True"
+                  VirtualizingPanel.IsVirtualizing="True"
+                  VirtualizingPanel.VirtualizationMode="Recycling"
+                  VirtualizingPanel.IsContainerVirtualizable="True">
+
+            <DataGrid.Columns>
+                <!-- Time first, then priority columns: Spread, Stripe, Slice, Length, Type, Ink -->
+                <DataGridTextColumn Header="Time" Binding="{Binding Timestamp, StringFormat='HH:mm:ss.fff'}" Width="95"/>
+                <DataGridTextColumn Header="Spread" Binding="{Binding SpreadId}" Width="60"/>
+                <DataGridTextColumn Header="Stripe" Binding="{Binding StripeId}" Width="60"/>
+                <DataGridTextColumn Header="Slice" Binding="{Binding SliceIndex}" Width="50"/>
+                <DataGridTextColumn Header="Length" Binding="{Binding LengthMm, StringFormat=N2}" Width="70"/>
+                <DataGridTextColumn Header="Type" Binding="{Binding StripeType}" Width="90"/>
+                <DataGridTextColumn Header="Ink" Binding="{Binding DisplayInk}" Width="80"/>
+
+                <!-- Identification -->
+                <DataGridTextColumn Header="Group" Binding="{Binding SliceGroupIndex}" Width="55"/>
+                <DataGridTextColumn Header="SliceId" Binding="{Binding SliceId}" Width="60"/>
+                <DataGridTextColumn Header="Stamp" Binding="{Binding SliceStamp}" Width="60"/>
+                <DataGridTextColumn Header="SepId" Binding="{Binding ParentSeparationId}" Width="55"/>
+
+                <!-- BID Data -->
+                <DataGridTextColumn Header="vDev" Binding="{Binding VDeveloper}" Width="55"/>
+                <DataGridTextColumn Header="vElec" Binding="{Binding VElectrode}" Width="55"/>
+                <DataGridTextColumn Header="vSqg" Binding="{Binding VSqueegee}" Width="55"/>
+                <DataGridTextColumn Header="vCln" Binding="{Binding VCleaner}" Width="55"/>
+
+                <!-- CR Data -->
+                <DataGridTextColumn Header="CRvDc" Binding="{Binding CrVDc}" Width="55"/>
+                <DataGridTextColumn Header="CRvAc" Binding="{Binding CrVAc}" Width="55"/>
+
+                <!-- ASID -->
+                <DataGridTextColumn Header="vAsid" Binding="{Binding VAsid}" Width="55"/>
+
+                <!-- HV -->
+                <DataGridTextColumn Header="HV Target" Binding="{Binding HvTarget}" Width="100"/>
+
+                <!-- LPH -->
+                <DataGridTextColumn Header="ScanLines" Binding="{Binding NScanLines}" Width="75"/>
+
+                <!-- EM Data -->
+                <DataGridTextColumn Header="EM Active" Binding="{Binding EmIsActive}" Width="70"/>
+                <DataGridTextColumn Header="EM MeasId" Binding="{Binding EmMeasureId}" Width="75"/>
+
+                <!-- SPM Data -->
+                <DataGridTextColumn Header="SPM" Binding="{Binding SpmStatus}" Width="60"/>
+                <DataGridTextColumn Header="SPM MeasId" Binding="{Binding SpmMeasureId}" Width="80"/>
+                <DataGridTextColumn Header="SPM Dir" Binding="{Binding SpmScanDirection}" Width="70"/>
+                <DataGridTextColumn Header="SPM Mode" Binding="{Binding SpmMeasureMode}" Width="80"/>
+                <DataGridTextColumn Header="SPM Strips" Binding="{Binding SpmNumOfStrips}" Width="75"/>
+
+                <!-- ILS Data -->
+                <DataGridTextColumn Header="ILS Active" Binding="{Binding IlsIsActive}" Width="70"/>
+                <DataGridTextColumn Header="ILS Len" Binding="{Binding IlsScanLenMm, StringFormat=N2}" Width="70"/>
+                <DataGridTextColumn Header="ILS Mode" Binding="{Binding IlsScanMode}" Width="80"/>
+                <DataGridTextColumn Header="ILS Speed" Binding="{Binding IlsScanSpeedUmSec}" Width="75"/>
+
+                <!-- Position -->
+                <DataGridTextColumn Header="Start(mm)" Binding="{Binding StartPosMm, StringFormat=N2}" Width="75"/>
+                <DataGridTextColumn Header="End(mm)" Binding="{Binding EndPosMm, StringFormat=N2}" Width="70"/>
+
+                <!-- Blanket Loop -->
+                <DataGridTextColumn Header="WebScale" Binding="{Binding WebRepeatLenScalingFactor, StringFormat=N4}" Width="75"/>
+                <DataGridTextColumn Header="BL Repeat" Binding="{Binding BlanketLoopRepeatLenMm, StringFormat=N2}" Width="75"/>
+                <DataGridTextColumn Header="BL T2Tot" Binding="{Binding BlanketLoopT2TotalLenUm}" Width="70"/>
+                <DataGridTextColumn Header="1st BL" Binding="{Binding FirstInBlanketLoop}" Width="55"/>
+                <DataGridTextColumn Header="Last BL" Binding="{Binding LastInBlanketLoop}" Width="60"/>
+                <DataGridTextColumn Header="BL Start" Binding="{Binding StartPosInBlanketLoopMm, StringFormat=N2}" Width="70"/>
+
+                <!-- Other -->
+                <DataGridTextColumn Header="LastInSprd" Binding="{Binding LastStripeInSpread}" Width="75"/>
+                <DataGridTextColumn Header="ImgToBru" Binding="{Binding ImageToBru}" Width="70"/>
+                <DataGridTextColumn Header="DataXfer" Binding="{Binding DataTransferControl}" Width="80"/>
+                <DataGridTextColumn Header="Report" Binding="{Binding ReportPrintDetails}" Width="60"/>
+                <DataGridTextColumn Header="ReportId" Binding="{Binding ReportId}" Width="65"/>
+                <DataGridTextColumn Header="NGroups" Binding="{Binding NSliceGroups}" Width="65"/>
+                <DataGridTextColumn Header="Status" Binding="{Binding StationStatus}" Width="65"/>
+                <DataGridTextColumn Header="LenNS" Binding="{Binding LengthNotScaledMm, StringFormat=N2}" Width="65"/>
+            </DataGrid.Columns>
+
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                    <Style.Triggers>
+                        <!-- HV Mismatch -->
+                        <DataTrigger Binding="{Binding IsHvMismatch}" Value="True">
+                            <Setter Property="Background" Value="#FFCCCC"/>
+                            <Setter Property="Foreground" Value="Black"/>
+                        </DataTrigger>
+                        <!-- Null Stripe -->
+                        <DataTrigger Binding="{Binding IsNullStripe}" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                        </DataTrigger>
+                        <!-- Inactive Station -->
+                        <DataTrigger Binding="{Binding IsStationActive}" Value="False">
+                            <Setter Property="Opacity" Value="0.5"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
+        </DataGrid>
+
+        <!-- Statistics Panel -->
+        <Border Grid.Row="4" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="15" Margin="0,10,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Total Entries" Foreground="{DynamicResource TextSecondary}" FontSize="11"/>
+                    <TextBlock x:Name="TxtTotalEntries" Text="0" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource PrimaryColor}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="Print Stripes" Foreground="{DynamicResource TextSecondary}" FontSize="11"/>
+                    <TextBlock x:Name="TxtPrintStripes" Text="0" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SuccessColor}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Null Stripes" Foreground="{DynamicResource TextSecondary}" FontSize="11"/>
+                    <TextBlock x:Name="TxtNullStripes" Text="0" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextSecondary}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="3">
+                    <TextBlock Text="Total Length (m)" Foreground="{DynamicResource TextSecondary}" FontSize="11"/>
+                    <TextBlock x:Name="TxtTotalLength" Text="0.00" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource PrimaryColor}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="5" Background="{DynamicResource BgCard}" CornerRadius="4" Padding="10,5" Margin="0,10,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="TxtStatus" Text="Ready" Foreground="{DynamicResource TextSecondary}"/>
+                <TextBlock Grid.Column="1" Text="Tip: Drag column headers to reorder. Order is saved automatically."
+                           Foreground="{DynamicResource TextSecondary}" FontStyle="Italic" FontSize="11"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

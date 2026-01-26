@@ -188,7 +188,7 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTextColumn Header="Pattern" Binding="{Binding Pattern}" Width="150" Visibility="Collapsed">
+                <DataGridTextColumn Header="Pattern" Binding="{Binding Pattern}" Width="150">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
@@ -208,7 +208,7 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
 
-                <DataGridTextColumn Header="Data" Binding="{Binding Data}" Width="200" Visibility="Collapsed">
+                <DataGridTextColumn Header="Data" Binding="{Binding Data}" Width="200">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>

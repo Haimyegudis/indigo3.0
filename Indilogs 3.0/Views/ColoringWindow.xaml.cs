@@ -11,7 +11,7 @@ namespace IndiLogs_3._0.Views
     {
         public List<ColoringCondition> ResultConditions { get; private set; }
 
-        private readonly string[] _fields = new[] { "Level", "Message", "ThreadName", "Logger", "Method" };
+        private readonly string[] _fields = new[] { "Level", "Message", "ThreadName", "Logger", "Method", "Pattern", "Data", "Exception" };
         // הוספנו כאן את ה-Regex
         private readonly string[] _operators = new[] { "Contains", "Equals", "Begins With", "Ends With", "Regex" };
 

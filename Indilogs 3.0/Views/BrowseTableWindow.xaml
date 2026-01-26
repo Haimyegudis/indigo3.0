@@ -60,9 +60,10 @@
         </Border>
 
         <!-- Data Grid -->
-        <DataGrid Grid.Row="2" 
+        <DataGrid Grid.Row="2"
                   x:Name="DataBrowserGrid"
                   AutoGenerateColumns="True"
+                  AutoGeneratingColumn="DataBrowserGrid_AutoGeneratingColumn"
                   IsReadOnly="True"
                   Background="{DynamicResource BgDark}"
                   Foreground="{DynamicResource TextPrimary}"
@@ -82,7 +83,12 @@
                   SelectionMode="Extended"
                   SelectionUnit="CellOrRowHeader"
                   VerticalScrollBarVisibility="Auto"
-                  HorizontalScrollBarVisibility="Auto">
+                  HorizontalScrollBarVisibility="Auto"
+                  ColumnReordered="DataBrowserGrid_ColumnReordered"
+                  EnableRowVirtualization="True"
+                  EnableColumnVirtualization="True"
+                  VirtualizingPanel.IsVirtualizing="True"
+                  VirtualizingPanel.VirtualizationMode="Recycling">
             <DataGrid.ColumnHeaderStyle>
                 <Style TargetType="DataGridColumnHeader">
                     <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
@@ -116,19 +122,36 @@
 
         <!-- Footer -->
         <Border Grid.Row="3" Background="{DynamicResource BgPanel}" Padding="15" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Export to CSV" Width="120" Height="30" 
-                        Background="{DynamicResource BgCard}" 
-                        Foreground="{DynamicResource TextPrimary}"
-                        BorderBrush="{DynamicResource BorderColor}"
-                        Margin="0,0,10,0"
-                        Click="ExportButton_Click"/>
-                <Button Content="Close" Width="100" Height="30" 
-                        Background="{DynamicResource BgCard}" 
-                        Foreground="{DynamicResource TextPrimary}"
-                        BorderBrush="{DynamicResource BorderColor}"
-                        Click="CloseButton_Click"/>
-            </StackPanel>
+            <Grid>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <Button Content="☰ Columns" Width="90" Height="30"
+                            Background="{DynamicResource BgCard}"
+                            Foreground="{DynamicResource TextPrimary}"
+                            BorderBrush="{DynamicResource BorderColor}"
+                            Click="ManageColumnsButton_Click"
+                            ToolTip="Show/hide columns"/>
+                    <Button Content="Reset" Width="70" Height="30"
+                            Background="{DynamicResource BgCard}"
+                            Foreground="{DynamicResource TextPrimary}"
+                            BorderBrush="{DynamicResource BorderColor}"
+                            Margin="10,0,0,0"
+                            Click="ResetColumnsButton_Click"
+                            ToolTip="Reset column order"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Export to CSV" Width="120" Height="30"
+                            Background="{DynamicResource BgCard}"
+                            Foreground="{DynamicResource TextPrimary}"
+                            BorderBrush="{DynamicResource BorderColor}"
+                            Margin="0,0,10,0"
+                            Click="ExportButton_Click"/>
+                    <Button Content="Close" Width="100" Height="30"
+                            Background="{DynamicResource BgCard}"
+                            Foreground="{DynamicResource TextPrimary}"
+                            BorderBrush="{DynamicResource BorderColor}"
+                            Click="CloseButton_Click"/>
+                </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </Window>

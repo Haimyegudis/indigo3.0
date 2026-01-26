@@ -16,6 +16,9 @@
             <sys:String>Logger</sys:String>
             <sys:String>ProcessName</sys:String>
             <sys:String>Method</sys:String>
+            <sys:String>Pattern</sys:String>
+            <sys:String>Data</sys:String>
+            <sys:String>Exception</sys:String>
         </x:Array>
 
         <x:Array x:Key="ConditionOperators" Type="sys:String">

@@ -247,6 +247,11 @@
     <Compile Include="ViewModels\Components\LogSessionViewModel.cs" />
     <Compile Include="ViewModels\VisualTimelineViewModel.cs" />
     <Compile Include="ViewModels\GlobalGrepViewModel.cs" />
+    <Compile Include="Models\IndigoStripeEntry.cs" />
+    <Compile Include="Services\StripeDataParserService.cs" />
+    <Compile Include="Views\StripeAnalysisWindow.xaml.cs">
+      <DependentUpon>StripeAnalysisWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\BrowseTableWindow.xaml.cs">
       <DependentUpon>BrowseTableWindow.xaml</DependentUpon>
     </Compile>
@@ -491,6 +496,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\FileSelectionWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\StripeAnalysisWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
