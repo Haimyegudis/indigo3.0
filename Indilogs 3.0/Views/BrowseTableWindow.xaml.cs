@@ -18,6 +18,7 @@ namespace IndiLogs_3._0.Views
         private readonly string _tableName;
         private readonly byte[] _dbBytes;
         private DataTable _dataTable;
+        private DataTable _originalDataTable; // Stores the full data for row expansion
         private DataView _filteredView;
         private string _tempDbPath;
         private List<string> _columnNames;
@@ -111,6 +112,7 @@ namespace IndiLogs_3._0.Views
             try
             {
                 DataTable dataTable = null;
+                DataTable compactTable = null;
 
                 using (var connection = new SQLiteConnection($"Data Source={_tempDbPath};Version=3;"))
                 {
@@ -156,22 +158,15 @@ namespace IndiLogs_3._0.Views
                 }
 
                 System.Diagnostics.Debug.WriteLine($"[DB BROWSE] Loaded {dataTable.Rows.Count} rows from SQL");
-                if (dataTable.Rows.Count > 0)
-                {
-                    foreach (DataColumn col in dataTable.Columns)
-                    {
-                        var firstVal = dataTable.Rows[0][col]?.ToString() ?? "(null)";
-                        System.Diagnostics.Debug.WriteLine($"[DB BROWSE] Col '{col.ColumnName}' first value length: {firstVal.Length}");
-                    }
-                }
 
-                // Flatten JSON columns
-                var flattenedTable = FlattenJsonColumns(dataTable);
+                // Store original data and create compact view with ID + DATA columns
+                _originalDataTable = dataTable;
+                compactTable = CreateCompactTable(dataTable);
 
                 // Update UI on main thread
                 Dispatcher.Invoke(() =>
                 {
-                    _dataTable = flattenedTable;
+                    _dataTable = compactTable;
                     _filteredView = _dataTable.DefaultView;
                     DataBrowserGrid.ItemsSource = _filteredView;
 
@@ -180,11 +175,11 @@ namespace IndiLogs_3._0.Views
 
                     if (string.IsNullOrWhiteSpace(searchText))
                     {
-                        RowCountText.Text = $"{_dataTable.Rows.Count:N0} rows × {_dataTable.Columns.Count} columns";
+                        RowCountText.Text = $"{_originalDataTable.Rows.Count:N0} rows (double-click DATA to expand)";
                     }
                     else
                     {
-                        RowCountText.Text = $"Found {_dataTable.Rows.Count:N0} rows × {_dataTable.Columns.Count} columns";
+                        RowCountText.Text = $"Found {_originalDataTable.Rows.Count:N0} rows (double-click DATA to expand)";
                     }
 
                     UpdateFilteredCount();
@@ -202,6 +197,48 @@ namespace IndiLogs_3._0.Views
             {
                 System.Diagnostics.Debug.WriteLine($"[DB BROWSE ERROR] {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Creates a compact table with just ID and DATA columns.
+        /// DATA contains JSON of all other columns.
+        /// </summary>
+        private DataTable CreateCompactTable(DataTable sourceTable)
+        {
+            var compactTable = new DataTable();
+            compactTable.Columns.Add("ID", typeof(long));
+            compactTable.Columns.Add("DATA", typeof(string));
+
+            foreach (DataRow sourceRow in sourceTable.Rows)
+            {
+                var newRow = compactTable.NewRow();
+
+                // Get ID
+                newRow["ID"] = sourceRow["ID"];
+
+                // Create JSON from all other columns
+                var dataDict = new Dictionary<string, object>();
+                foreach (DataColumn col in sourceTable.Columns)
+                {
+                    if (col.ColumnName != "ID")
+                    {
+                        var value = sourceRow[col];
+                        if (value == DBNull.Value)
+                            dataDict[col.ColumnName] = null;
+                        else
+                            dataDict[col.ColumnName] = value;
+                    }
+                }
+
+                newRow["DATA"] = JsonConvert.SerializeObject(dataDict);
+                compactTable.Rows.Add(newRow);
+            }
+
+            // Mark DATA as JSON column for double-click handling
+            _jsonColumnNames.Clear();
+            _jsonColumnNames.Add("DATA");
+
+            return compactTable;
         }
 
         #region JSON Flattening
@@ -237,18 +274,283 @@ namespace IndiLogs_3._0.Views
 
             _jsonColumnNames = new HashSet<string>(jsonColumns);
 
-            // Collect all unique FIRST-LEVEL keys from all rows
-            var firstLevelKeys = new Dictionary<string, HashSet<string>>(); // columnName -> keys
-            foreach (var jsonCol in jsonColumns)
+            // Fully flatten JSON to individual values
+            return FullyFlattenJson(sourceTable, jsonColumns);
+        }
+
+        /// <summary>
+        /// Fully flattens JSON columns - each JSON path becomes a column with its primitive value.
+        /// Example: {"Conductivity": {"CondFactor": 1.0}} becomes column "Conductivity.CondFactor" with value "1.0"
+        /// </summary>
+        private DataTable FullyFlattenJson(DataTable sourceTable, List<string> jsonColumns)
+        {
+            var resultTable = new DataTable();
+
+            // Add non-JSON columns first, prioritizing ID
+            var priorityColumnPatterns = new List<string> { "ID", "Id", "Time", "Timestamp", "DateTime", "Date" };
+            var addedColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // Add priority columns first
+            foreach (var pattern in priorityColumnPatterns)
             {
-                firstLevelKeys[jsonCol] = new HashSet<string>();
+                foreach (DataColumn col in sourceTable.Columns)
+                {
+                    if (col.ColumnName.Equals(pattern, StringComparison.OrdinalIgnoreCase) &&
+                        !jsonColumns.Contains(col.ColumnName) &&
+                        !addedColumns.Contains(col.ColumnName))
+                    {
+                        resultTable.Columns.Add(col.ColumnName, typeof(object));
+                        addedColumns.Add(col.ColumnName);
+                        System.Diagnostics.Debug.WriteLine($"[JSON FLATTEN] Added priority column: '{col.ColumnName}'");
+                    }
+                }
             }
 
+            // Add remaining non-JSON columns
+            foreach (DataColumn col in sourceTable.Columns)
+            {
+                if (!jsonColumns.Contains(col.ColumnName) && !addedColumns.Contains(col.ColumnName))
+                {
+                    resultTable.Columns.Add(col.ColumnName, typeof(object));
+                    addedColumns.Add(col.ColumnName);
+                    System.Diagnostics.Debug.WriteLine($"[JSON FLATTEN] Added non-JSON column: '{col.ColumnName}'");
+                }
+            }
+
+            // Collect ALL unique JSON paths from ALL rows
+            var allPaths = new HashSet<string>();
+            int rowIndex = 0;
             foreach (DataRow row in sourceTable.Rows)
             {
                 foreach (var jsonCol in jsonColumns)
                 {
                     var jsonValue = row[jsonCol]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(jsonValue) && IsJson(jsonValue))
+                    {
+                        try
+                        {
+                            var obj = JObject.Parse(jsonValue);
+                            // Get all leaf values (JValue) and their paths
+                            var descendants = obj.Descendants().OfType<JValue>().ToList();
+                            if (rowIndex == 0)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[JSON FLATTEN] First row JSON '{jsonCol}': found {descendants.Count} leaf values");
+                                foreach (var d in descendants.Take(5))
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"[JSON FLATTEN]   Path: '{d.Path}' = '{d.Value}'");
+                                }
+                            }
+                            foreach (var token in descendants)
+                            {
+                                // Sanitize path for DataGrid binding - replace dots and brackets
+                                string path = SanitizeColumnName(token.Path);
+                                allPaths.Add(path);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[JSON FLATTEN] Parse error row {rowIndex}: {ex.Message}");
+                        }
+                    }
+                }
+                rowIndex++;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[JSON FLATTEN] Total unique paths found: {allPaths.Count}");
+
+            // Add columns for all JSON paths (sorted)
+            foreach (var path in allPaths.OrderBy(p => p))
+            {
+                if (!resultTable.Columns.Contains(path))
+                {
+                    resultTable.Columns.Add(path, typeof(object));
+                }
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[JSON FLATTEN] Created {resultTable.Columns.Count} columns ({allPaths.Count} from JSON)");
+
+            // Fill data
+            rowIndex = 0;
+            foreach (DataRow sourceRow in sourceTable.Rows)
+            {
+                var newRow = resultTable.NewRow();
+
+                // Copy non-JSON values
+                foreach (DataColumn col in sourceTable.Columns)
+                {
+                    if (!jsonColumns.Contains(col.ColumnName) && resultTable.Columns.Contains(col.ColumnName))
+                    {
+                        newRow[col.ColumnName] = sourceRow[col] ?? DBNull.Value;
+                    }
+                }
+
+                // Extract flattened JSON values
+                foreach (var jsonCol in jsonColumns)
+                {
+                    var jsonValue = sourceRow[jsonCol]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(jsonValue) && IsJson(jsonValue))
+                    {
+                        try
+                        {
+                            var obj = JObject.Parse(jsonValue);
+                            foreach (var token in obj.Descendants().OfType<JValue>())
+                            {
+                                // Use sanitized column name to match the column we created
+                                string path = SanitizeColumnName(token.Path);
+                                if (resultTable.Columns.Contains(path))
+                                {
+                                    newRow[path] = token.Value ?? DBNull.Value;
+                                    if (rowIndex == 0)
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"[JSON FLATTEN] Set row 0 '{path}' = '{token.Value}'");
+                                    }
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+                }
+
+                resultTable.Rows.Add(newRow);
+                rowIndex++;
+            }
+
+            // Clean empty columns - remove columns that have no data
+            resultTable = CleanEmptyColumns(resultTable);
+
+            System.Diagnostics.Debug.WriteLine($"[JSON FLATTEN] Final table has {resultTable.Columns.Count} columns, {resultTable.Rows.Count} rows");
+
+            // Debug: print first row values
+            if (resultTable.Rows.Count > 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[JSON FLATTEN] First row sample values:");
+                var firstRow = resultTable.Rows[0];
+                int colCount = 0;
+                foreach (DataColumn col in resultTable.Columns)
+                {
+                    var val = firstRow[col];
+                    if (val != DBNull.Value && !string.IsNullOrEmpty(val?.ToString()))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[JSON FLATTEN]   '{col.ColumnName}' = '{val}'");
+                        colCount++;
+                        if (colCount >= 10) break;
+                    }
+                }
+            }
+
+            return resultTable;
+        }
+
+        /// <summary>
+        /// Removes columns that are entirely empty or null
+        /// </summary>
+        private DataTable CleanEmptyColumns(DataTable table)
+        {
+            var columnsToRemove = new List<string>();
+
+            foreach (DataColumn col in table.Columns)
+            {
+                bool allEmpty = true;
+                foreach (DataRow row in table.Rows)
+                {
+                    var val = row[col];
+                    if (val != DBNull.Value && !string.IsNullOrEmpty(val?.ToString()))
+                    {
+                        allEmpty = false;
+                        break;
+                    }
+                }
+                if (allEmpty)
+                {
+                    columnsToRemove.Add(col.ColumnName);
+                }
+            }
+
+            foreach (var colName in columnsToRemove)
+            {
+                table.Columns.Remove(colName);
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[JSON FLATTEN] Removed {columnsToRemove.Count} empty columns");
+            return table;
+        }
+
+        /// <summary>
+        /// Expands JSON columns into separate columns for each first-level key.
+        /// Each first-level key becomes a column, and its value is shown as formatted JSON.
+        /// Example: {"Conductivity": {...}, "Level": {...}} becomes columns "Conductivity" and "Level"
+        /// </summary>
+        private DataTable ExpandFirstLevelJson(DataTable sourceTable, List<string> jsonColumns, Dictionary<string, HashSet<string>> firstLevelKeys)
+        {
+            var resultTable = new DataTable();
+
+            // Add non-JSON columns first, prioritizing ID
+            var priorityColumnPatterns = new List<string> { "ID", "Id", "Time", "Timestamp", "DateTime", "Date" };
+            var addedColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // Add priority columns first
+            foreach (var pattern in priorityColumnPatterns)
+            {
+                foreach (DataColumn col in sourceTable.Columns)
+                {
+                    if (col.ColumnName.Equals(pattern, StringComparison.OrdinalIgnoreCase) &&
+                        !jsonColumns.Contains(col.ColumnName) &&
+                        !addedColumns.Contains(col.ColumnName))
+                    {
+                        resultTable.Columns.Add(col.ColumnName, typeof(string));
+                        addedColumns.Add(col.ColumnName);
+                    }
+                }
+            }
+
+            // Add remaining non-JSON columns
+            foreach (DataColumn col in sourceTable.Columns)
+            {
+                if (!jsonColumns.Contains(col.ColumnName) && !addedColumns.Contains(col.ColumnName))
+                {
+                    resultTable.Columns.Add(col.ColumnName, typeof(string));
+                    addedColumns.Add(col.ColumnName);
+                }
+            }
+
+            // Add columns for each first-level JSON key (sorted alphabetically)
+            var allFirstLevelKeys = new HashSet<string>();
+            foreach (var jsonCol in jsonColumns)
+            {
+                foreach (var key in firstLevelKeys[jsonCol])
+                {
+                    allFirstLevelKeys.Add(key);
+                }
+            }
+
+            foreach (var key in allFirstLevelKeys.OrderBy(k => k))
+            {
+                if (!resultTable.Columns.Contains(key))
+                {
+                    resultTable.Columns.Add(key, typeof(string));
+                }
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[JSON EXPAND] Created {resultTable.Columns.Count} columns ({allFirstLevelKeys.Count} from JSON)");
+
+            // Fill data
+            foreach (DataRow sourceRow in sourceTable.Rows)
+            {
+                var newRow = resultTable.NewRow();
+
+                // Copy non-JSON values
+                foreach (DataColumn col in sourceTable.Columns)
+                {
+                    if (!jsonColumns.Contains(col.ColumnName) && resultTable.Columns.Contains(col.ColumnName))
+                    {
+                        newRow[col.ColumnName] = sourceRow[col]?.ToString() ?? "";
+                    }
+                }
+
+                // Extract first-level JSON values
+                foreach (var jsonCol in jsonColumns)
+                {
+                    var jsonValue = sourceRow[jsonCol]?.ToString();
                     if (!string.IsNullOrWhiteSpace(jsonValue))
                     {
                         try
@@ -258,55 +560,84 @@ namespace IndiLogs_3._0.Views
                             {
                                 foreach (var prop in obj.Properties())
                                 {
-                                    firstLevelKeys[jsonCol].Add(prop.Name);
+                                    if (resultTable.Columns.Contains(prop.Name))
+                                    {
+                                        // Format the value as JSON with key-value pairs
+                                        var formattedValue = FormatJsonValue(prop.Value);
+                                        newRow[prop.Name] = formattedValue;
+                                    }
                                 }
                             }
                         }
                         catch { }
                     }
                 }
-            }
-
-            // Expand first-level keys as columns, with their values as formatted JSON
-            return ExpandFirstLevelJson(sourceTable, jsonColumns, firstLevelKeys);
-        }
-
-        private DataTable FormatJsonColumns(DataTable sourceTable, List<string> jsonColumns)
-        {
-            // Just format JSON for readability, don't expand into columns
-            var resultTable = sourceTable.Clone();
-
-            foreach (DataRow sourceRow in sourceTable.Rows)
-            {
-                var newRow = resultTable.NewRow();
-
-                foreach (DataColumn col in sourceTable.Columns)
-                {
-                    var value = sourceRow[col]?.ToString() ?? "";
-
-                    if (jsonColumns.Contains(col.ColumnName) && IsJson(value))
-                    {
-                        try
-                        {
-                            // Format JSON with indentation for readability
-                            var token = JToken.Parse(value);
-                            newRow[col] = token.ToString(Formatting.Indented);
-                        }
-                        catch
-                        {
-                            newRow[col] = value;
-                        }
-                    }
-                    else
-                    {
-                        newRow[col] = value;
-                    }
-                }
 
                 resultTable.Rows.Add(newRow);
             }
 
+            System.Diagnostics.Debug.WriteLine($"[JSON EXPAND] Result table has {resultTable.Rows.Count} rows");
             return resultTable;
+        }
+
+        /// <summary>
+        /// Formats a JSON value for display in a cell.
+        /// For objects, shows key-value pairs in a readable format.
+        /// </summary>
+        private string FormatJsonValue(JToken token)
+        {
+            if (token == null)
+                return "";
+
+            switch (token.Type)
+            {
+                case JTokenType.Object:
+                    var obj = (JObject)token;
+                    var pairs = new List<string>();
+                    foreach (var prop in obj.Properties())
+                    {
+                        var value = FormatSimpleValue(prop.Value);
+                        pairs.Add($"\"{prop.Name}\": {value}");
+                    }
+                    return "{\n  " + string.Join(",\n  ", pairs) + "\n}";
+
+                case JTokenType.Array:
+                    var arr = (JArray)token;
+                    if (arr.Count == 0)
+                        return "[]";
+                    if (arr.Count <= 5 && arr.All(a => a.Type != JTokenType.Object && a.Type != JTokenType.Array))
+                    {
+                        // Simple array - show inline
+                        return "[" + string.Join(", ", arr.Select(a => FormatSimpleValue(a))) + "]";
+                    }
+                    return $"[{arr.Count} items]";
+
+                default:
+                    return FormatSimpleValue(token);
+            }
+        }
+
+        private string FormatSimpleValue(JToken token)
+        {
+            if (token == null)
+                return "null";
+
+            switch (token.Type)
+            {
+                case JTokenType.String:
+                    return $"\"{token}\"";
+                case JTokenType.Boolean:
+                    return token.ToString().ToLower();
+                case JTokenType.Null:
+                    return "null";
+                case JTokenType.Object:
+                    return "{...}";
+                case JTokenType.Array:
+                    var arr = (JArray)token;
+                    return $"[{arr.Count} items]";
+                default:
+                    return token.ToString();
+            }
         }
 
         private DataTable FlattenStructuredJson(DataTable sourceTable, List<string> jsonColumns, Dictionary<string, HashSet<string>> firstLevelKeys)
@@ -445,6 +776,18 @@ namespace IndiLogs_3._0.Views
                    (value.StartsWith("[") && value.EndsWith("]"));
         }
 
+        /// <summary>
+        /// Sanitizes a JSON path to be a valid DataGrid column name.
+        /// WPF DataGrid interprets dots as property paths, so we replace them with underscores.
+        /// Also replaces brackets for array indices.
+        /// </summary>
+        private string SanitizeColumnName(string path)
+        {
+            // Replace dots with underscores (WPF interprets . as property path)
+            // Replace brackets with underscores (for array indices like [0])
+            return path.Replace(".", "_").Replace("[", "_").Replace("]", "");
+        }
+
         private HashSet<string> GetJsonPaths(string json)
         {
             var paths = new HashSet<string>();
@@ -562,6 +905,43 @@ namespace IndiLogs_3._0.Views
         private void ClearSearchButton_Click(object sender, RoutedEventArgs e)
         {
             SearchTextBox.Clear();
+        }
+
+        private void DataBrowserGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            // Get the clicked cell
+            var cell = e.OriginalSource as FrameworkElement;
+            while (cell != null && !(cell is DataGridCell))
+            {
+                cell = cell.Parent as FrameworkElement;
+            }
+
+            if (cell is DataGridCell dataGridCell)
+            {
+                var column = dataGridCell.Column;
+                if (column == null) return;
+
+                var columnName = column.Header?.ToString();
+
+                // Check if this is the DATA column
+                if (columnName == "DATA")
+                {
+                    var rowView = dataGridCell.DataContext as DataRowView;
+                    if (rowView != null)
+                    {
+                        var jsonValue = rowView["DATA"]?.ToString();
+                        var rowId = rowView["ID"]?.ToString() ?? "";
+
+                        if (!string.IsNullOrWhiteSpace(jsonValue) && IsJson(jsonValue))
+                        {
+                            // Open row detail window showing data as a table
+                            var detailWindow = new RowDetailWindow(jsonValue, $"{_tableName} - Row {rowId}");
+                            detailWindow.Owner = this;
+                            detailWindow.Show();
+                        }
+                    }
+                }
+            }
         }
 
         private void ApplyFilter()

@@ -8,6 +8,7 @@ using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -78,7 +79,81 @@ namespace IndiLogs_3._0.ViewModels.Components
                     _configSearchText = value;
                     OnPropertyChanged();
                     _parent?.NotifyPropertyChanged(nameof(_parent.ConfigSearchText));
-                    FilterConfigContent();
+
+                    // Use debounce for DB tree filtering to avoid lag
+                    if (IsDbFileSelected)
+                    {
+                        DebouncedFilterDbTree();
+                    }
+                    else
+                    {
+                        FilterConfigContent();
+                    }
+                }
+            }
+        }
+
+        private async void DebouncedFilterDbTree()
+        {
+            // Cancel previous search
+            _searchDebounceToken?.Cancel();
+            _searchDebounceToken = new CancellationTokenSource();
+            var token = _searchDebounceToken.Token;
+
+            try
+            {
+                // Wait for debounce period
+                await Task.Delay(SearchDebounceMs, token);
+
+                if (!token.IsCancellationRequested)
+                {
+                    // Run filter on background thread then update UI
+                    await Task.Run(() =>
+                    {
+                        Application.Current.Dispatcher.Invoke(() => FilterDbTreeNodes());
+                    }, token);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                // Search was cancelled by newer search - this is expected
+            }
+        }
+
+        private void FilterDbTreeNodes()
+        {
+            // DbTreeNodes contains a root node "Tables (X)" with tables as children
+            foreach (var rootNode in DbTreeNodes)
+            {
+                if (string.IsNullOrWhiteSpace(ConfigSearchText))
+                {
+                    // No filter - show all tables
+                    rootNode.IsVisible = true;
+                    foreach (var tableNode in rootNode.Children)
+                    {
+                        SetNodeVisibility(tableNode, true);
+                    }
+                }
+                else
+                {
+                    string searchLower = ConfigSearchText.ToLower();
+                    rootNode.IsVisible = true;
+
+                    // Filter tables by name
+                    foreach (var tableNode in rootNode.Children)
+                    {
+                        bool matches = tableNode.Name?.ToLower().Contains(searchLower) == true;
+                        tableNode.IsVisible = matches;
+
+                        // If table matches, show all its children (columns)
+                        if (matches)
+                        {
+                            foreach (var child in tableNode.Children)
+                            {
+                                SetNodeVisibility(child, true);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -97,6 +172,10 @@ namespace IndiLogs_3._0.ViewModels.Components
         }
 
         private ObservableCollection<DbTreeNode> _allDbTreeNodes = new ObservableCollection<DbTreeNode>();
+
+        // Debounce for search
+        private CancellationTokenSource _searchDebounceToken;
+        private const int SearchDebounceMs = 300;
 
         private bool _isDbFileSelected;
         public bool IsDbFileSelected
@@ -242,29 +321,6 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         private void FilterConfigContent()
         {
-            // Filter DB tree if we're viewing a database
-            if (IsDbFileSelected)
-            {
-                if (string.IsNullOrWhiteSpace(ConfigSearchText))
-                {
-                    // No filter - show all nodes
-                    foreach (var node in DbTreeNodes)
-                    {
-                        SetNodeVisibility(node, true);
-                    }
-                    return;
-                }
-
-                string searchLower = ConfigSearchText.ToLower();
-
-                foreach (var tableNode in DbTreeNodes)
-                {
-                    bool tableHasMatch = FilterTreeNode(tableNode, searchLower);
-                    tableNode.IsVisible = tableHasMatch;
-                }
-                return;
-            }
-
             // Filter text content
             if (string.IsNullOrWhiteSpace(ConfigSearchText))
             {

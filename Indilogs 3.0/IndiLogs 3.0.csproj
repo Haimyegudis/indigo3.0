@@ -255,6 +255,12 @@
     <Compile Include="Views\BrowseTableWindow.xaml.cs">
       <DependentUpon>BrowseTableWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\RowDetailWindow.xaml.cs">
+      <DependentUpon>RowDetailWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\JsonDetailWindow.xaml.cs">
+      <DependentUpon>JsonDetailWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\ColorPaletteWindow.xaml.cs">
       <DependentUpon>ColorPaletteWindow.xaml</DependentUpon>
     </Compile>
@@ -392,6 +398,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\BrowseTableWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\RowDetailWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\JsonDetailWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

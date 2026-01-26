@@ -64,6 +64,7 @@
                   x:Name="DataBrowserGrid"
                   AutoGenerateColumns="True"
                   AutoGeneratingColumn="DataBrowserGrid_AutoGeneratingColumn"
+                  MouseDoubleClick="DataBrowserGrid_MouseDoubleClick"
                   IsReadOnly="True"
                   Background="{DynamicResource BgDark}"
                   Foreground="{DynamicResource TextPrimary}"
