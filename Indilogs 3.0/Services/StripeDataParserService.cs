@@ -13,21 +13,6 @@ namespace IndiLogs_3._0.Services
     /// </summary>
     public class StripeDataParserService
     {
-        // Ink ID to Name mapping (common Indigo inks)
-        private static readonly Dictionary<int, string> InkNames = new Dictionary<int, string>
-        {
-            { 0, "Cyan" },
-            { 1, "Magenta" },
-            { 2, "Yellow" },
-            { 3, "Black" },
-            { 4, "Light Cyan" },
-            { 5, "Light Magenta" },
-            { 6, "Orange" },
-            { 7, "Green" },
-            { 8, "Violet" },
-            { 9, "White" },
-            { 10, "Clear" }
-        };
 
         /// <summary>
         /// Parses stripe data from log entries - optimized version
@@ -386,9 +371,9 @@ namespace IndiLogs_3._0.Services
                     SliceStamp = sliceStamp,
                     ParentSeparationId = parentSeparationId,
 
-                    // Ink info
+                    // Ink info - just use the raw inkId, no name mapping
                     InkId = inkId,
-                    InkName = InkNames.TryGetValue(inkId, out string name) ? name : null,
+                    InkName = null, // No name mapping - display inkId directly
                     IsStationActive = isActive,
 
                     // Position

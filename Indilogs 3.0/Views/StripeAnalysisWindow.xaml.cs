@@ -13,6 +13,7 @@ using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using Microsoft.Win32;
 using Newtonsoft.Json;
+using WindowManager = IndiLogs_3._0.Services.WindowManager;
 
 namespace IndiLogs_3._0.Views
 {
@@ -204,8 +205,8 @@ namespace IndiLogs_3._0.Views
                     return entry.SliceIndex.ToString().IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0;
                 case "Type":
                     return ContainsText(entry.StripeType);
-                case "Ink":
-                    return ContainsText(entry.DisplayInk);
+                case "InkId":
+                    return entry.InkId.ToString().IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0;
                 case "HV Target":
                     return ContainsText(entry.HvTarget);
                 case "vDeveloper":
@@ -232,18 +233,17 @@ namespace IndiLogs_3._0.Views
                 default:
                     // Search all text and numeric fields
                     return ContainsText(entry.HvTarget) ||
-                           ContainsText(entry.DisplayInk) ||
                            ContainsText(entry.SpmStatus) ||
                            ContainsText(entry.StripeType) ||
                            ContainsText(entry.IlsScanMode) ||
                            ContainsText(entry.DataTransferControl) ||
                            ContainsText(entry.SpmScanDirection) ||
                            ContainsText(entry.SpmMeasureMode) ||
-                           ContainsText(entry.InkName) ||
                            ContainsText(entry.StationStatus) ||
                            entry.SpreadId.ToString().IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0 ||
                            entry.StripeId.ToString().IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0 ||
                            entry.SliceIndex.ToString().IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                           entry.InkId.ToString().IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0 ||
                            entry.VDeveloper.ToString().IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0 ||
                            entry.VElectrode.ToString().IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0 ||
                            entry.VSqueegee.ToString().IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0 ||
@@ -456,6 +456,46 @@ namespace IndiLogs_3._0.Views
             TxtStatus.Text = "Data refreshed";
         }
 
+        private void BtnTranspose_Click(object sender, RoutedEventArgs e)
+        {
+            if (_dataView == null || _allEntries == null || !_allEntries.Any())
+            {
+                MessageBox.Show("No data to transpose.", "Transpose", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Get currently filtered entries
+            var filteredEntries = _dataView.Cast<IndigoStripeEntry>().ToList();
+
+            if (filteredEntries.Count == 0)
+            {
+                MessageBox.Show("No entries match current filters.", "Transpose", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (filteredEntries.Count > 50)
+            {
+                var result = MessageBox.Show(
+                    $"You have {filteredEntries.Count} entries. Transpose view works best with fewer entries (up to ~50).\n\n" +
+                    "Do you want to continue with the first 50 entries?",
+                    "Many Entries",
+                    MessageBoxButton.YesNoCancel,
+                    MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Cancel)
+                    return;
+
+                if (result == MessageBoxResult.Yes)
+                    filteredEntries = filteredEntries.Take(50).ToList();
+            }
+
+            var transposeWindow = new TransposeViewWindow();
+            transposeWindow.LoadData(filteredEntries);
+            WindowManager.OpenWindow(transposeWindow, this);
+
+            TxtStatus.Text = $"Opened transpose view with {filteredEntries.Count} entries";
+        }
+
         private void BtnExport_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -498,7 +538,7 @@ namespace IndiLogs_3._0.Views
 
             // Header - all columns
             sb.AppendLine(string.Join(",",
-                "Timestamp", "SpreadId", "StripeId", "SliceIndex", "LengthMm", "StripeType", "InkName",
+                "Timestamp", "SpreadId", "StripeId", "SliceIndex", "LengthMm", "StripeType", "InkId",
                 "SliceGroupIndex", "SliceId", "SliceStamp", "ParentSeparationId",
                 "VDeveloper", "VElectrode", "VSqueegee", "VCleaner",
                 "CrVDc", "CrVAc", "VAsid",
@@ -524,7 +564,7 @@ namespace IndiLogs_3._0.Views
                     entry.SliceIndex,
                     entry.LengthMm.ToString("F2"),
                     EscapeCsv(entry.StripeType),
-                    EscapeCsv(entry.InkName),
+                    entry.InkId,
                     entry.SliceGroupIndex,
                     entry.SliceId,
                     entry.SliceStamp,

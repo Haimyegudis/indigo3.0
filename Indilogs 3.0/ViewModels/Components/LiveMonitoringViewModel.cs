@@ -133,6 +133,12 @@ namespace IndiLogs_3._0.ViewModels.Components
             _sessionVM.AllLogsCache = _liveLogsCollection;
             _sessionVM.Logs = _liveLogsCollection;
 
+            // Clear and prepare FilteredLogs for live mode
+            if (_filterVM.FilteredLogs != null)
+            {
+                _filterVM.FilteredLogs.Clear();
+            }
+
             IsLiveMode = true;
             IsRunning = true;
             _parent.WindowTitle = "IndiLogs 3.0 - LIVE MONITORING";
@@ -228,8 +234,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             bool hasSearch = !string.IsNullOrWhiteSpace(_parent.SearchText);
             bool hasActiveFilter = _filterVM.IsMainFilterActive || hasSearch || _filterVM.ActiveThreadFilters.Any();
 
-            // 3. If no filters active -> use default logic (Default Colors/Filter)
-            // This makes "PLC Filtered" tab look like normal loading
+            // 3. If no filters active -> use default PLC filter (same as regular file loading)
             if (!hasActiveFilter)
             {
                 return _filterVM.IsDefaultLog(log);
@@ -359,12 +364,24 @@ namespace IndiLogs_3._0.ViewModels.Components
                                 _liveLogsCollection.InsertRange(0, sortedLogs);
 
                                 var filteredToAdd = sortedLogs.Where(l => ShouldShowInFilteredView(l)).ToList();
+
+                                // Debug: Show sample log properties to understand GROUP A format
+                                if (filteredToAdd.Count == 0 && sortedLogs.Count > 0)
+                                {
+                                    var samples = sortedLogs.Take(5).ToList();
+                                    Debug.WriteLine($"[LIVE FILTER DEBUG] No logs passed filter. Sample logs:");
+                                    foreach (var s in samples)
+                                    {
+                                        Debug.WriteLine($"  Level='{s.Level}' Thread='{s.ThreadName}' Logger='{s.Logger}' Msg='{s.Message?.Substring(0, Math.Min(80, s.Message?.Length ?? 0))}'");
+                                    }
+                                }
+
                                 if (filteredToAdd.Count > 0)
                                 {
                                     _filterVM.FilteredLogs.InsertRange(0, filteredToAdd);
                                 }
 
-                                _sessionVM.StatusMessage = $"Live: Added {newLogs.Count:N0} logs (Total: {_liveLogsCollection.Count:N0})";
+                                _sessionVM.StatusMessage = $"Live: Added {newLogs.Count:N0} logs (Total: {_liveLogsCollection.Count:N0}, Filtered: {_filterVM.FilteredLogs.Count:N0})";
                             }
                             catch (Exception ex)
                             {

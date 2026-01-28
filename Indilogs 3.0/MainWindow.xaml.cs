@@ -1,4 +1,5 @@
 ﻿using IndiLogs_3._0.Models;
+using IndiLogs_3._0.Services;
 using IndiLogs_3._0.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -32,6 +33,9 @@ namespace IndiLogs_3._0
         {
             InitializeComponent();
             this.Loaded += MainWindow_Loaded;
+
+            // Initialize WindowManager with main window
+            WindowManager.Initialize(this);
 
             // Check arguments (Open with...)
             string[] args = Environment.GetCommandLineArgs();
@@ -585,9 +589,12 @@ namespace IndiLogs_3._0
 
         }
 
-        // Panel toggle button handlers
+        // Panel toggle button handlers - require double-click to prevent accidental toggles
         private void LeftPanelHideButton_Click(object sender, MouseButtonEventArgs e)
         {
+            // Only respond to double-click to prevent accidental panel closing while scrolling
+            if (e.ClickCount != 2) return;
+
             if (DataContext is MainViewModel vm)
             {
                 vm.IsLeftPanelVisible = false;
@@ -597,6 +604,9 @@ namespace IndiLogs_3._0
 
         private void LeftPanelShowButton_Click(object sender, MouseButtonEventArgs e)
         {
+            // Only respond to double-click to prevent accidental panel opening while scrolling
+            if (e.ClickCount != 2) return;
+
             if (DataContext is MainViewModel vm)
             {
                 vm.IsLeftPanelVisible = true;
@@ -627,6 +637,9 @@ namespace IndiLogs_3._0
 
         private void RightPanelHideButton_Click(object sender, MouseButtonEventArgs e)
         {
+            // Only respond to double-click to prevent accidental panel closing while scrolling
+            if (e.ClickCount != 2) return;
+
             if (DataContext is MainViewModel vm)
             {
                 vm.IsRightPanelVisible = false;
@@ -636,6 +649,9 @@ namespace IndiLogs_3._0
 
         private void RightPanelShowButton_Click(object sender, MouseButtonEventArgs e)
         {
+            // Only respond to double-click to prevent accidental panel opening while scrolling
+            if (e.ClickCount != 2) return;
+
             if (DataContext is MainViewModel vm)
             {
                 vm.IsRightPanelVisible = true;

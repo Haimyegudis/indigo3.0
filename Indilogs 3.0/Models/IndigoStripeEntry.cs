@@ -86,7 +86,7 @@ namespace IndiLogs_3._0.Models
 
         // === Calculated/Display Properties ===
         public string StationStatus => IsStationActive ? "Active" : "Inactive";
-        public string DisplayInk => !string.IsNullOrEmpty(InkName) ? InkName : $"Ink {InkId}";
+        public string DisplayInk => InkId.ToString(); // Just show the inkId number
         public double StartPosMm => Math.Round(StartPosUm / 1000.0, 2);
         public double EndPosMm => Math.Round(EndPosUm / 1000.0, 2);
         public double StartPosInBlanketLoopMm => Math.Round(StartPosInBlanketLoopUm / 1000.0, 2);

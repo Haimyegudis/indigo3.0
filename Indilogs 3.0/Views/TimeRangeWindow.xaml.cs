@@ -49,7 +49,7 @@ namespace IndiLogs_3._0.Views
         public DateTime? ResultEndDateTime { get; private set; }
         public bool ShouldClear { get; private set; }
 
-        public TimeRangeWindow(DateTime logStart, DateTime logEnd)
+        public TimeRangeWindow(DateTime logStart, DateTime logEnd, DateTime? currentFilterStart = null, DateTime? currentFilterEnd = null)
         {
             InitializeComponent();
             DataContext = this;
@@ -65,11 +65,22 @@ namespace IndiLogs_3._0.Views
             else
                 TotalDuration = $"{duration.Minutes} minutes, {duration.Seconds} seconds";
 
-            // Default to full range
-            StartDate = logStart.Date;
-            EndDate = logEnd.Date;
-            StartTimeText = logStart.ToString("HH:mm:ss");
-            EndTimeText = logEnd.ToString("HH:mm:ss");
+            // If there's an existing filter, use it as the default values
+            // Otherwise, default to full log range
+            if (currentFilterStart.HasValue && currentFilterEnd.HasValue)
+            {
+                StartDate = currentFilterStart.Value.Date;
+                EndDate = currentFilterEnd.Value.Date;
+                StartTimeText = currentFilterStart.Value.ToString("HH:mm:ss");
+                EndTimeText = currentFilterEnd.Value.ToString("HH:mm:ss");
+            }
+            else
+            {
+                StartDate = logStart.Date;
+                EndDate = logEnd.Date;
+                StartTimeText = logStart.ToString("HH:mm:ss");
+                EndTimeText = logEnd.ToString("HH:mm:ss");
+            }
         }
 
         private void ApplyButton_Click(object sender, RoutedEventArgs e)

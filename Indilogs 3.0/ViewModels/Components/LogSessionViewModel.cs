@@ -240,21 +240,36 @@ namespace IndiLogs_3._0.ViewModels.Components
                     fileName.IndexOf("engineGroup", StringComparison.OrdinalIgnoreCase) >= 0 ||
                     fileName.IndexOf("no-sn", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    // Check if file is actively being written (might grow)
+                    // Check if file is actively being written by another process
+                    // Try to open with exclusive access - if it fails, the file is locked (live)
+                    bool isLiveFile = false;
                     try
                     {
-                        using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        // Try to open with exclusive write access
+                        // If another process is writing to it, this will fail
+                        using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
                         {
-                            // If we can open with ReadWrite sharing, it's likely a live file
-                            // Start live monitoring instead of loading as static file
-                            _liveVM.StartLiveMonitoring(filePath);
-                            return;
+                            // If we CAN open exclusively, file is NOT being written to - load as static
+                            isLiveFile = false;
                         }
+                    }
+                    catch (IOException)
+                    {
+                        // File is locked by another process - it's a live file
+                        isLiveFile = true;
                     }
                     catch
                     {
-                        // If file is locked or not accessible, treat as static file
+                        // Other errors (permissions etc.) - treat as static file
+                        isLiveFile = false;
                     }
+
+                    if (isLiveFile)
+                    {
+                        _liveVM.StartLiveMonitoring(filePath);
+                        return;
+                    }
+                    // Otherwise, continue to load as static file below
                 }
             }
 
@@ -531,11 +546,25 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _parent.ResetTreeFilters();
 
                 // Apply default PLC filter to FilteredLogs - must be AFTER clearing filters
+                System.Diagnostics.Debug.WriteLine($"[SWITCH SESSION] session.Logs count: {session.Logs?.Count ?? 0}");
                 var defaultFilteredLogs = session.Logs.Where(l => _filterVM.IsDefaultLog(l)).ToList();
+                System.Diagnostics.Debug.WriteLine($"[SWITCH SESSION] defaultFilteredLogs count after IsDefaultLog filter: {defaultFilteredLogs.Count}");
+
+                // Debug: Show sample logs to understand why filter might not match
+                if (defaultFilteredLogs.Count == 0 && session.Logs.Count > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SWITCH SESSION] WARNING: No logs passed default filter! Sample logs:");
+                    foreach (var sample in session.Logs.Take(5))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  Level='{sample.Level}' Thread='{sample.ThreadName}' Logger='{sample.Logger}' Msg='{sample.Message?.Substring(0, Math.Min(80, sample.Message?.Length ?? 0))}'");
+                    }
+                }
+
                 if (_filterVM?.FilteredLogs != null)
                 {
                     _filterVM.FilteredLogs.ReplaceAll(defaultFilteredLogs);
                     _parent.NotifyPropertyChanged(nameof(_parent.FilteredLogs)); // Explicitly notify UI
+                    System.Diagnostics.Debug.WriteLine($"[SWITCH SESSION] FilteredLogs updated, count: {_filterVM.FilteredLogs.Count}");
                 }
                 if (_parent.FilteredLogs != null && _parent.FilteredLogs.Count > 0)
                     _parent.SelectedLog = _parent.FilteredLogs[0];

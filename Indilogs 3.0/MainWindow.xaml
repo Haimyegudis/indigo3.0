@@ -164,7 +164,7 @@
                                         </Button>
                                         <Button Command="{Binding OpenStripeAnalysisCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsAppTabSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-                                                <TextBlock Text="🖨 Stripe Analysis"/>
+                                                <TextBlock Text="🖨 Print Analysis"/>
                                             </Viewbox>
                                         </Button>
                                         <Separator Margin="0,10,0,10" Background="{DynamicResource BorderColor}"/>
@@ -324,7 +324,7 @@
                                         </Button>
                                         <Button Command="{Binding OpenStripeAnalysisCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsAppTabSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-                                                <TextBlock Text="🖨 Stripe Analysis"/>
+                                                <TextBlock Text="🖨 Print Analysis"/>
                                             </Viewbox>
                                         </Button>
                                         <Separator Margin="0,10,0,10" Background="{DynamicResource BorderColor}"/>
@@ -396,10 +396,11 @@
                     </TabItem>
                 </TabControl>
                 </Grid>
-                <!-- Left panel hide button (appears on hover at right edge) -->
+                <!-- Left panel hide button (appears on hover at right edge) - double-click to hide -->
                 <Border x:Name="LeftPanelHideButton" Width="16" HorizontalAlignment="Right" VerticalAlignment="Stretch"
                         Background="Transparent" Cursor="Hand" Opacity="0.3"
-                        MouseLeftButtonDown="LeftPanelHideButton_Click">
+                        MouseLeftButtonDown="LeftPanelHideButton_Click"
+                        ToolTip="Double-click to hide panel">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Style.Triggers>
@@ -720,14 +721,15 @@
                 </Border>
             </Grid>
 
-            <!-- Left panel show button (appears at left edge when panel is hidden) -->
+            <!-- Left panel show button (appears at left edge when panel is hidden) - double-click to show -->
             <Border Grid.Column="2" Width="8" HorizontalAlignment="Left" VerticalAlignment="Stretch"
                     Background="Transparent" Cursor="Hand"
                     Visibility="{Binding IsLeftPanelVisible, Converter={StaticResource InverseBoolToVisibilityConverter}}"
                     MouseLeftButtonDown="LeftPanelShowButton_Click"
                     MouseEnter="PanelShowButton_MouseEnter"
                     MouseLeave="PanelShowButton_MouseLeave"
-                    x:Name="LeftPanelShowButton">
+                    x:Name="LeftPanelShowButton"
+                    ToolTip="Double-click to show panel">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Background" Value="Transparent"/>
@@ -752,14 +754,15 @@
                 </TextBlock>
             </Border>
 
-            <!-- Right panel show button (appears at right edge when panel is hidden) -->
+            <!-- Right panel show button (appears at right edge when panel is hidden) - double-click to show -->
             <Border Grid.Column="2" Width="8" HorizontalAlignment="Right" VerticalAlignment="Stretch"
                     Background="Transparent" Cursor="Hand"
                     Visibility="{Binding IsRightPanelVisible, Converter={StaticResource InverseBoolToVisibilityConverter}}"
                     MouseLeftButtonDown="RightPanelShowButton_Click"
                     MouseEnter="PanelShowButton_MouseEnter"
                     MouseLeave="PanelShowButton_MouseLeave"
-                    x:Name="RightPanelShowButton">
+                    x:Name="RightPanelShowButton"
+                    ToolTip="Double-click to show panel">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Background" Value="Transparent"/>
@@ -908,10 +911,11 @@
                     </ListView>
                 </DockPanel>
             </Border>
-                <!-- Right panel hide button (appears on hover at left edge of right panel) -->
+                <!-- Right panel hide button (appears on hover at left edge of right panel) - double-click to hide -->
                 <Border x:Name="RightPanelHideButton" Width="16" HorizontalAlignment="Left" VerticalAlignment="Stretch"
                         Background="Transparent" Cursor="Hand" Opacity="0"
-                        MouseLeftButtonDown="RightPanelHideButton_Click">
+                        MouseLeftButtonDown="RightPanelHideButton_Click"
+                        ToolTip="Double-click to hide panel">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Style.Triggers>

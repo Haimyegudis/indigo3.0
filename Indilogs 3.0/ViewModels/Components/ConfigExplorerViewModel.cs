@@ -1,4 +1,5 @@
 using IndiLogs_3._0.Models;
+using IndiLogs_3._0.Services;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -505,8 +506,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     var dbBytes = _sessionVM.SelectedSession.DatabaseFiles[node.DatabaseFileName];
                     var window = new Views.BrowseTableWindow(node.Name, dbBytes);
-                    window.Owner = Application.Current.MainWindow;
-                    window.Show();
+                    WindowManager.OpenWindow(window);
                 }
                 catch (Exception ex)
                 {

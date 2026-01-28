@@ -379,10 +379,8 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                 _combinedMarkedWindow = new MarkedLogsWindow(collectionToShow, "Marked Lines (Combined - Main & App)");
                 _combinedMarkedWindow.DataContext = _parent;
-                _combinedMarkedWindow.Owner = Application.Current.MainWindow;
-                _combinedMarkedWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
                 _combinedMarkedWindow.Closed += (s, e) => _combinedMarkedWindow = null;
-                _combinedMarkedWindow.Show();
+                WindowManager.OpenWindow(_combinedMarkedWindow);
             }
             else
             {
@@ -393,30 +391,26 @@ namespace IndiLogs_3._0.ViewModels.Components
                     // Show App logs marked window
                     if (_markedAppLogsWindow != null && _markedAppLogsWindow.IsVisible)
                     {
-                        _markedAppLogsWindow.Activate();
+                        WindowManager.ActivateWindow(_markedAppLogsWindow);
                         return;
                     }
                     _markedAppLogsWindow = new MarkedLogsWindow(MarkedAppLogs, "Marked Lines (APP)");
                     _markedAppLogsWindow.DataContext = _parent;
-                    _markedAppLogsWindow.Owner = Application.Current.MainWindow;
-                    _markedAppLogsWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
                     _markedAppLogsWindow.Closed += (s, e) => _markedAppLogsWindow = null;
-                    _markedAppLogsWindow.Show();
+                    WindowManager.OpenWindow(_markedAppLogsWindow);
                 }
                 else
                 {
                     // Show Main logs marked window
                     if (_markedMainLogsWindow != null && _markedMainLogsWindow.IsVisible)
                     {
-                        _markedMainLogsWindow.Activate();
+                        WindowManager.ActivateWindow(_markedMainLogsWindow);
                         return;
                     }
                     _markedMainLogsWindow = new MarkedLogsWindow(MarkedLogs, "Marked Lines (LOGS)");
                     _markedMainLogsWindow.DataContext = _parent;
-                    _markedMainLogsWindow.Owner = Application.Current.MainWindow;
-                    _markedMainLogsWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
                     _markedMainLogsWindow.Closed += (s, e) => _markedMainLogsWindow = null;
-                    _markedMainLogsWindow.Show();
+                    WindowManager.OpenWindow(_markedMainLogsWindow);
                 }
             }
         }

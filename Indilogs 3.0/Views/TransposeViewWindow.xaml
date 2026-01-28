@@ -1,0 +1,149 @@
+<Window x:Class="IndiLogs_3._0.Views.TransposeViewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Print Analysis - Transpose View (Compare)" Height="700" Width="1100"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgDark}"
+        Foreground="{DynamicResource TextPrimary}">
+
+    <Window.Resources>
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource BgCard}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,10">
+            <TextBlock Text="Transpose View - Compare Values" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
+            <TextBlock Text="Rows = Properties, Columns = Spreads (for easy value comparison)"
+                       Foreground="{DynamicResource TextSecondary}" Margin="0,5,0,0"/>
+        </StackPanel>
+
+        <!-- Spread Filter Panel -->
+        <Border Grid.Row="1" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Spread Range Filter -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,20,0">
+                    <TextBlock Text="Spread Range:" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource TextSecondary}"/>
+                    <TextBox x:Name="TxtSpreadFrom" Width="60" VerticalAlignment="Center" Margin="0,0,5,0"
+                             ToolTip="From spread (leave empty for all)"/>
+                    <TextBlock Text="to" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource TextSecondary}"/>
+                    <TextBox x:Name="TxtSpreadTo" Width="60" VerticalAlignment="Center" Margin="0,0,10,0"
+                             ToolTip="To spread (leave empty for all)"/>
+                </StackPanel>
+
+                <!-- Single Spread -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,20,0">
+                    <TextBlock Text="Or single:" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource TextSecondary}"/>
+                    <ComboBox x:Name="CmbSingleSpread" Width="80" VerticalAlignment="Center"
+                              ToolTip="Select a single spread to view"/>
+                </StackPanel>
+
+                <!-- Apply Button -->
+                <Button Grid.Column="2" Content="Apply Filter" Click="BtnApplySpreadFilter_Click"
+                        Style="{DynamicResource ModernBtn}" Width="90" Margin="0,0,10,0"/>
+
+                <Button Grid.Column="3" Content="Show All" Click="BtnShowAll_Click"
+                        Style="{DynamicResource ModernBtn}" Width="75" Margin="0,0,20,0"/>
+
+                <!-- Info -->
+                <TextBlock Grid.Column="4" x:Name="TxtInfo" Text="0 entries" FontWeight="Bold"
+                           Foreground="{DynamicResource PrimaryColor}" VerticalAlignment="Center"/>
+
+                <!-- Row Visibility Button -->
+                <Button Grid.Column="5" Content="☰ Hide Rows" Click="BtnManageRows_Click"
+                        Style="{DynamicResource ModernBtn}" Width="100"
+                        ToolTip="Show/hide property rows"/>
+            </Grid>
+        </Border>
+
+        <!-- Loading Indicator -->
+        <Border Grid.Row="2" x:Name="LoadingPanel" Background="{DynamicResource BgCard}"
+                CornerRadius="8" Padding="12" Margin="0,0,0,8" Visibility="Collapsed">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <TextBlock x:Name="TxtLoading" Text="Loading data..." Foreground="{DynamicResource TextSecondary}"
+                           VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <ProgressBar x:Name="LoadingProgress" Width="200" Height="20" IsIndeterminate="True"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Transposed Data Grid -->
+        <DataGrid x:Name="TransposeGrid" Grid.Row="3"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  SelectionMode="Single"
+                  SelectionUnit="Cell"
+                  GridLinesVisibility="All"
+                  VerticalGridLinesBrush="{DynamicResource BorderColor}"
+                  HorizontalGridLinesBrush="{DynamicResource BorderColor}"
+                  Background="{DynamicResource BgPanel}"
+                  BorderBrush="{DynamicResource BorderColor}"
+                  RowBackground="{DynamicResource BgPanel}"
+                  AlternatingRowBackground="{DynamicResource BgCard}"
+                  HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Auto"
+                  CanUserReorderColumns="False"
+                  CanUserResizeColumns="True"
+                  CanUserSortColumns="False"
+                  EnableRowVirtualization="True"
+                  EnableColumnVirtualization="True"
+                  VirtualizingPanel.IsVirtualizing="True"
+                  VirtualizingPanel.VirtualizationMode="Recycling"
+                  FrozenColumnCount="1">
+
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                </Style>
+            </DataGrid.RowStyle>
+
+            <DataGrid.CellStyle>
+                <Style TargetType="DataGridCell">
+                    <Setter Property="Padding" Value="5,2"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                            <Setter Property="Foreground" Value="White"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.CellStyle>
+        </DataGrid>
+
+        <!-- Bottom Buttons -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <TextBlock x:Name="TxtStatus" Text="" Foreground="{DynamicResource TextSecondary}"
+                       VerticalAlignment="Center" Margin="0,0,20,0"/>
+            <Button Content="Export CSV" Click="BtnExportTranspose_Click"
+                    Style="{DynamicResource ModernBtn}" Background="{DynamicResource SuccessColor}"
+                    Foreground="White" Width="100" Margin="0,0,8,0"/>
+            <Button Content="Close" Click="BtnClose_Click"
+                    Style="{DynamicResource ModernBtn}" Width="80"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1249,13 +1249,11 @@ namespace IndiLogs_3._0.ViewModels
 
             if (SelectedSession.CachedStates != null && SelectedSession.CachedStates.Count > 0)
             {
-                if (_statesWindow != null && _statesWindow.IsVisible) { _statesWindow.Activate(); return; }
+                if (_statesWindow != null && _statesWindow.IsVisible) { WindowManager.ActivateWindow(_statesWindow); return; }
 
                 _statesWindow = new StatesWindow(SelectedSession.CachedStates, this);
-                _statesWindow.Owner = Application.Current.MainWindow;
-                _statesWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
                 _statesWindow.Closed += (s, e) => _statesWindow = null;
-                _statesWindow.Show();
+                WindowManager.OpenWindow(_statesWindow);
             }
             else
             {
@@ -1371,9 +1369,8 @@ namespace IndiLogs_3._0.ViewModels
 
             // יצירת החלון עם שני הפרמטרים וקולבק לפילטור
             var statsWindow = new Views.StatsWindow(plcLogs, appLogs, ApplyChartDrillDownFilter);
-            statsWindow.Owner = Application.Current.MainWindow;
             statsWindow.Title = "Log Statistics Dashboard";
-            statsWindow.Show();
+            WindowManager.OpenWindow(statsWindow);
         }
 
         private void ApplyChartDrillDownFilter(string filterType, string filterValue)
@@ -1513,7 +1510,7 @@ namespace IndiLogs_3._0.ViewModels
         {
             if (parameter is LogEntry log)
             {
-                new LogDetailsWindow(log).Show();
+                WindowManager.OpenWindow(new LogDetailsWindow(log));
             }
         }
         public async void SortAppLogs(string sortBy, bool ascending)
@@ -1610,31 +1607,26 @@ namespace IndiLogs_3._0.ViewModels
 
             if (_exportConfigWindow != null && _exportConfigWindow.IsLoaded)
             {
-                _exportConfigWindow.Activate();
-                _exportConfigWindow.Focus();
+                WindowManager.ActivateWindow(_exportConfigWindow);
                 return;
             }
 
             _exportConfigWindow = new ExportConfigurationWindow();
             var viewModel = new ExportConfigurationViewModel(SelectedSession, _csvService);
             _exportConfigWindow.DataContext = viewModel;
-            _exportConfigWindow.Owner = Application.Current.MainWindow;
-
             _exportConfigWindow.Closed += (s, e) => _exportConfigWindow = null;
-            _exportConfigWindow.Show();
+            WindowManager.OpenWindow(_exportConfigWindow);
         }
         private void OpenAnalysisWindow(List<AnalysisResult> results)
         {
             _analysisWindow = new AnalysisReportWindow(results);
-            _analysisWindow.Owner = Application.Current.MainWindow;
             _analysisWindow.Closed += (s, e) => _analysisWindow = null;
-            _analysisWindow.Show();
+            WindowManager.OpenWindow(_analysisWindow);
         }
         private void OpenSnakeGame(object obj)
         {
             var snakeWindow = new IndiLogs_3._0.Views.SnakeWindow();
-            snakeWindow.Owner = Application.Current.MainWindow;
-            snakeWindow.ShowDialog();
+            WindowManager.ShowDialog(snakeWindow);
         }
         private void LoadSavedConfigurations() => CaseVM?.LoadSavedConfigs();
         private void ApplyConfiguration(object parameter) { if (parameter is SavedConfiguration c) CaseVM?.ApplyConfiguration(c); }
@@ -1695,21 +1687,21 @@ namespace IndiLogs_3._0.ViewModels
         private void OpenSettingsWindow(object obj)
         {
             var win = new SettingsWindow { DataContext = this };
-            if (Application.Current.MainWindow != null && Application.Current.MainWindow != win)
-                win.Owner = Application.Current.MainWindow;
             if (obj is FrameworkElement button)
             {
+                // Position below the button on the same screen
                 Point buttonPosition = button.PointToScreen(new Point(0, 0));
+                win.WindowStartupLocation = WindowStartupLocation.Manual;
                 win.Left = buttonPosition.X;
                 win.Top = buttonPosition.Y + button.ActualHeight;
+                WindowManager.OpenWindow(win);
             }
             else
             {
-                win.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                WindowManager.OpenWindow(win);
             }
-            win.Show();
         }
-        private void OpenFontsWindow(object obj) { new FontsWindow { DataContext = this }.ShowDialog(); }
+        private void OpenFontsWindow(object obj) { WindowManager.ShowDialog(new FontsWindow { DataContext = this }); }
         private void UpdateContentFont(string fontName) { if (!string.IsNullOrEmpty(fontName) && Application.Current != null) UpdateResource(Application.Current.Resources, "ContentFontFamily", new FontFamily(fontName)); }
         private void UpdateContentFontWeight(bool isBold)
         {
@@ -1736,10 +1728,7 @@ namespace IndiLogs_3._0.ViewModels
             }
 
             var window = new GlobalGrepWindow(viewModel, NavigateToGrepResult, LoadMultipleFiles);
-
-            window.Owner = Application.Current.MainWindow;
-            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-            window.Show();
+            WindowManager.OpenWindow(window);
         }
 
         private async void OpenStripeAnalysisWindow()
@@ -1769,9 +1758,7 @@ namespace IndiLogs_3._0.ViewModels
             }
 
             var window = new StripeAnalysisWindow();
-            window.Owner = Application.Current.MainWindow;
-            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-            window.Show();
+            WindowManager.OpenWindow(window);
 
             // Load data asynchronously after window is shown
             await Task.Run(() => { }).ContinueWith(_ =>

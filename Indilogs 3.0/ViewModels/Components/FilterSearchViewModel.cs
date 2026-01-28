@@ -642,6 +642,53 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             if (win.ShowDialog() == true)
             {
+                // Check if user clicked "Reset" button to clear all filters
+                if (win.ShouldClearAllFilters)
+                {
+                    _sessionVM.IsBusy = true;
+
+                    await Task.Run(() =>
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            // Clear all filters for the current tab
+                            if (isAppTab)
+                            {
+                                AppFilterRoot = null;
+                                _activeLoggerFilters.Clear();
+                                _activeMethodFilters.Clear();
+                                _activeThreadFilters.Clear();
+                                IsAppFilterActive = false;
+                                IsAppTimeFocusActive = false;
+                                LastFilteredAppCache = null;
+                                ResetTreeFilters();
+                            }
+                            else
+                            {
+                                MainFilterRoot = null;
+                                _activeThreadFilters.Clear();
+                                IsMainFilterActive = false;
+                                IsMainFilterOutActive = false;
+                                IsTimeFocusActive = false;
+                                LastFilteredCache = null;
+                                _negativeFilters.Clear();
+                            }
+                        });
+                    });
+
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        if (isAppTab)
+                            ApplyAppLogsFilter();
+                        else
+                            ApplyMainLogsFilter();
+
+                        _parent.NotifyPropertyChanged(nameof(_parent.IsFilterActive));
+                        _sessionVM.IsBusy = false;
+                    });
+                    return;
+                }
+
                 var newRoot = win.ViewModel.RootNodes.FirstOrDefault();
                 bool hasAdvanced = newRoot != null && newRoot.Children.Count > 0;
                 _sessionVM.IsBusy = true;
@@ -717,8 +764,13 @@ namespace IndiLogs_3._0.ViewModels.Components
             bool isAppTab = _parent.SelectedTabIndex == 2;
             var cache = isAppTab ? _sessionVM.AllAppLogsCache : _sessionVM.AllLogsCache;
 
+            System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] OpenThreadFilter called. isAppTab={isAppTab}");
+            System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Cache count: {cache?.Count ?? 0}");
+
             if (cache == null || !cache.Any()) return;
             var threads = cache.Select(l => l.ThreadName).Where(t => !string.IsNullOrEmpty(t)).Distinct().OrderBy(t => t).ToList();
+
+            System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Found {threads.Count} unique threads: {string.Join(", ", threads.Take(10))}");
 
             var win = new Views.ThreadFilterWindow(threads) { Title = "Filter by Thread" };
 
@@ -726,16 +778,141 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 if (win.ShouldClear)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Clearing filters");
                     _activeThreadFilters.Clear();
+                    // Also remove thread conditions from the filter tree
+                    RemoveThreadConditionsFromFilterTree(isAppTab);
                     CheckIfFiltersEmpty(isAppTab);
                 }
                 else if (win.SelectedThreads != null && win.SelectedThreads.Any())
                 {
+                    System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Selected threads: {string.Join(", ", win.SelectedThreads)}");
                     _activeThreadFilters.Clear();
                     _activeThreadFilters.AddRange(win.SelectedThreads);
+                    System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Active thread filters now: {string.Join(", ", _activeThreadFilters)}");
+                    // Sync thread filters to filter tree so they appear in Filter Window
+                    SyncThreadFiltersToFilterTree(isAppTab, win.SelectedThreads);
                     SetFilterActive(isAppTab);
+                    System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] IsMainFilterActive={IsMainFilterActive}, IsAppFilterActive={IsAppFilterActive}");
                 }
+                System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Calling ToggleFilterView(true)");
                 ToggleFilterView(true); // Must re-trigger filter
+
+                // Debug: check results
+                if (isAppTab)
+                    System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] After filter: AppDevLogsFiltered count={AppDevLogsFiltered?.Count ?? 0}");
+                else
+                    System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] After filter: Logs count={_sessionVM?.Logs?.Count() ?? 0}");
+            }
+        }
+
+        /// <summary>
+        /// Syncs thread filters to the filter tree so they appear in the Filter Window.
+        /// Creates an OR group with all selected threads as conditions.
+        /// </summary>
+        private void SyncThreadFiltersToFilterTree(bool isAppTab, List<string> selectedThreads)
+        {
+            // Get or create the root filter node
+            var currentRoot = isAppTab ? AppFilterRoot : MainFilterRoot;
+
+            if (currentRoot == null)
+            {
+                currentRoot = new FilterNode { Type = NodeType.Group, LogicalOperator = "AND" };
+                if (isAppTab) AppFilterRoot = currentRoot;
+                else MainFilterRoot = currentRoot;
+            }
+
+            // First, remove any existing thread filter group
+            RemoveThreadConditionsFromFilterTree(isAppTab);
+
+            // If only one thread, add it directly as a condition
+            if (selectedThreads.Count == 1)
+            {
+                var condition = new FilterNode
+                {
+                    Type = NodeType.Condition,
+                    Field = "ThreadName",
+                    Operator = "Equals",
+                    Value = selectedThreads[0]
+                };
+                currentRoot.Children.Add(condition);
+            }
+            else if (selectedThreads.Count > 1)
+            {
+                // Create an OR group for multiple threads
+                var threadGroup = new FilterNode
+                {
+                    Type = NodeType.Group,
+                    LogicalOperator = "OR"
+                };
+
+                foreach (var thread in selectedThreads)
+                {
+                    var condition = new FilterNode
+                    {
+                        Type = NodeType.Condition,
+                        Field = "ThreadName",
+                        Operator = "Equals",
+                        Value = thread
+                    };
+                    threadGroup.Children.Add(condition);
+                }
+
+                currentRoot.Children.Add(threadGroup);
+            }
+
+            // Notify property changed
+            if (isAppTab) OnPropertyChanged(nameof(AppFilterRoot));
+            else OnPropertyChanged(nameof(MainFilterRoot));
+        }
+
+        /// <summary>
+        /// Removes all ThreadName conditions from the filter tree.
+        /// </summary>
+        private void RemoveThreadConditionsFromFilterTree(bool isAppTab)
+        {
+            var currentRoot = isAppTab ? AppFilterRoot : MainFilterRoot;
+            if (currentRoot == null || currentRoot.Children == null) return;
+
+            // Remove thread conditions recursively
+            RemoveThreadConditionsRecursive(currentRoot);
+
+            // Notify property changed
+            if (isAppTab) OnPropertyChanged(nameof(AppFilterRoot));
+            else OnPropertyChanged(nameof(MainFilterRoot));
+        }
+
+        private void RemoveThreadConditionsRecursive(FilterNode node)
+        {
+            if (node.Children == null) return;
+
+            // Find items to remove (ThreadName conditions and groups containing only ThreadName conditions)
+            var toRemove = new List<FilterNode>();
+
+            foreach (var child in node.Children)
+            {
+                if (child.Type == NodeType.Condition && child.Field == "ThreadName")
+                {
+                    toRemove.Add(child);
+                }
+                else if (child.Type == NodeType.Group)
+                {
+                    // Check if this group contains only ThreadName conditions
+                    if (child.Children != null && child.Children.All(c => c.Type == NodeType.Condition && c.Field == "ThreadName"))
+                    {
+                        toRemove.Add(child);
+                    }
+                    else
+                    {
+                        // Recursively clean nested groups
+                        RemoveThreadConditionsRecursive(child);
+                    }
+                }
+            }
+
+            foreach (var item in toRemove)
+            {
+                node.Children.Remove(item);
             }
         }
 
@@ -1103,7 +1280,8 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             Application.Current.Dispatcher.Invoke(() =>
             {
-                var window = new Views.TimeRangeWindow(earliestLog.Value, latestLog.Value);
+                // Pass current filter values so the window shows the already-filtered range
+                var window = new Views.TimeRangeWindow(earliestLog.Value, latestLog.Value, GlobalTimeRangeStart, GlobalTimeRangeEnd);
                 if (window.ShowDialog() == true)
                 {
                     if (window.ShouldClear)
@@ -1141,18 +1319,47 @@ namespace IndiLogs_3._0.ViewModels.Components
             bool isActive = _isMainFilterActive;
             IEnumerable<LogEntry> currentLogs;
             bool hasSearchText = !string.IsNullOrWhiteSpace(SearchText) && SearchText.Length >= 2;
+            bool hasThreadFilter = _activeThreadFilters.Any();
+
+            System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] isActive={isActive}, hasSearchText={hasSearchText}, hasThreadFilter={hasThreadFilter}");
+            System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Active thread filters: {string.Join(", ", _activeThreadFilters)}");
 
             // 1. קביעת מקור הנתונים
-            if (isActive || hasSearchText)
+            if (isActive || hasSearchText || hasThreadFilter)
             {
-                if ((_mainFilterRoot != null && _mainFilterRoot.Children != null && _mainFilterRoot.Children.Count > 0) || _isTimeFocusActive)
-                    currentLogs = _lastFilteredCache ?? new List<LogEntry>();
+                // Always start from AllLogsCache, then apply filters
+                // _lastFilteredCache is only used for TimeFocus mode
+                if (_isTimeFocusActive && _lastFilteredCache != null)
+                {
+                    currentLogs = _lastFilteredCache;
+                    System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Using _lastFilteredCache (TimeFocus), count={currentLogs.Count()}");
+                }
                 else
+                {
                     currentLogs = _sessionVM?.AllLogsCache ?? new List<LogEntry>();
+                    System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Using AllLogsCache, count={currentLogs.Count()}");
+                }
+
+                // Apply advanced filter from FilterWindow
+                if (_mainFilterRoot != null && _mainFilterRoot.Children != null && _mainFilterRoot.Children.Count > 0)
+                {
+                    var beforeAdvanced = currentLogs.Count();
+                    currentLogs = currentLogs.Where(l => EvaluateFilterNode(l, _mainFilterRoot));
+                    System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Advanced filter applied: before={beforeAdvanced}, after={currentLogs.Count()}");
+                }
 
                 // סינון לפי Threads (קיים בטאב PLC)
-                if (_activeThreadFilters.Any())
+                if (hasThreadFilter)
+                {
+                    var beforeCount = currentLogs.Count();
                     currentLogs = currentLogs.Where(l => _activeThreadFilters.Contains(l.ThreadName));
+                    var afterCount = currentLogs.Count();
+                    System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Thread filter: before={beforeCount}, after={afterCount}");
+
+                    // Debug: show sample thread names from source
+                    var sampleThreads = (_sessionVM?.AllLogsCache ?? new List<LogEntry>()).Take(5).Select(l => l.ThreadName).ToList();
+                    System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Sample ThreadNames in logs: {string.Join(", ", sampleThreads)}");
+                }
 
                 // סינון לפי טקסט חיפוש
                 if (hasSearchText)

@@ -29,7 +29,7 @@
     <UpdateRequired>false</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
     <InstallUrl>\\iihome.inr.rd.hpicorp.net\softwareqa%24\QA-Utils\Indilogs\</InstallUrl>
-    <ApplicationRevision>4</ApplicationRevision>
+    <ApplicationRevision>5</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
@@ -240,6 +240,7 @@
     <Compile Include="Services\Analysis\UniversalStateFailureAnalyzer.cs" />
     <Compile Include="Services\CustomLiveLogReader.cs" />
     <Compile Include="Services\GlobalGrepService.cs" />
+    <Compile Include="Services\WindowManager.cs" />
     <Compile Include="ViewModels\Components\CaseManagementViewModel.cs" />
     <Compile Include="ViewModels\Components\ConfigExplorerViewModel.cs" />
     <Compile Include="ViewModels\Components\FilterSearchViewModel.cs" />
@@ -251,6 +252,9 @@
     <Compile Include="Services\StripeDataParserService.cs" />
     <Compile Include="Views\StripeAnalysisWindow.xaml.cs">
       <DependentUpon>StripeAnalysisWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\TransposeViewWindow.xaml.cs">
+      <DependentUpon>TransposeViewWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\BrowseTableWindow.xaml.cs">
       <DependentUpon>BrowseTableWindow.xaml</DependentUpon>
@@ -514,6 +518,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\StripeAnalysisWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\TransposeViewWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -1,4 +1,5 @@
-﻿using IndiLogs_3._0.ViewModels;
+using IndiLogs_3._0.Services;
+using IndiLogs_3._0.ViewModels;
 using System.Windows;
 
 namespace IndiLogs_3._0.Views
@@ -17,14 +18,13 @@ namespace IndiLogs_3._0.Views
 
         private void OpenHelp_Click(object sender, RoutedEventArgs e)
         {
-            new HelpWindow().Show();
+            WindowManager.OpenWindow(new HelpWindow());
             Close();
         }
 
         private void OpenFonts_Click(object sender, RoutedEventArgs e)
         {
-            // ודא ש-FontsWindow קיים בפרויקט שלך
-            new FontsWindow { DataContext = this.DataContext }.ShowDialog();
+            WindowManager.ShowDialog(new FontsWindow { DataContext = this.DataContext });
         }
     }
 }

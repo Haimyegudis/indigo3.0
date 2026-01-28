@@ -10,6 +10,7 @@ using System.Windows.Controls;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using IndiLogs_3._0.Services;
 
 namespace IndiLogs_3._0.Views
 {
@@ -201,7 +202,7 @@ namespace IndiLogs_3._0.Views
 
         /// <summary>
         /// Creates a compact table with just ID and DATA columns.
-        /// DATA contains JSON of all other columns.
+        /// DATA contains JSON of all other columns, with proper nested JSON parsing.
         /// </summary>
         private DataTable CreateCompactTable(DataTable sourceTable)
         {
@@ -216,21 +217,43 @@ namespace IndiLogs_3._0.Views
                 // Get ID
                 newRow["ID"] = sourceRow["ID"];
 
-                // Create JSON from all other columns
-                var dataDict = new Dictionary<string, object>();
+                // Create JObject from all other columns - preserve nested JSON structure
+                var dataObj = new JObject();
                 foreach (DataColumn col in sourceTable.Columns)
                 {
                     if (col.ColumnName != "ID")
                     {
                         var value = sourceRow[col];
-                        if (value == DBNull.Value)
-                            dataDict[col.ColumnName] = null;
+                        if (value == DBNull.Value || value == null)
+                        {
+                            dataObj[col.ColumnName] = JValue.CreateNull();
+                        }
                         else
-                            dataDict[col.ColumnName] = value;
+                        {
+                            var strValue = value.ToString();
+                            // Check if value is already JSON - parse it to preserve structure
+                            if (IsJson(strValue))
+                            {
+                                try
+                                {
+                                    dataObj[col.ColumnName] = JToken.Parse(strValue);
+                                }
+                                catch
+                                {
+                                    // If parsing fails, use as string
+                                    dataObj[col.ColumnName] = JToken.FromObject(value);
+                                }
+                            }
+                            else
+                            {
+                                dataObj[col.ColumnName] = JToken.FromObject(value);
+                            }
+                        }
                     }
                 }
 
-                newRow["DATA"] = JsonConvert.SerializeObject(dataDict);
+                // Serialize with indentation for better display in cell
+                newRow["DATA"] = dataObj.ToString(Formatting.None);
                 compactTable.Rows.Add(newRow);
             }
 
@@ -936,8 +959,7 @@ namespace IndiLogs_3._0.Views
                         {
                             // Open row detail window showing data as a table
                             var detailWindow = new RowDetailWindow(jsonValue, $"{_tableName} - Row {rowId}");
-                            detailWindow.Owner = this;
-                            detailWindow.Show();
+                            WindowManager.OpenWindow(detailWindow, this);
                         }
                     }
                 }
