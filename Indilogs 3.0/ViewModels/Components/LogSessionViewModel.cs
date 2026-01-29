@@ -536,7 +536,8 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _filterVM.IsAppTimeFocusActive = false;
 
                 _filterVM.NegativeFilters.Clear();
-                _filterVM.ActiveThreadFilters.Clear();
+                _filterVM.ActivePlcThreadFilters.Clear();
+                _filterVM.ActiveAppThreadFilters.Clear();
 
                 _filterVM.MainFilterRoot = null;
                 _filterVM.AppFilterRoot = null;

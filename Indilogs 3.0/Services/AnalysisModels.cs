@@ -11,10 +11,14 @@ namespace IndiLogs_3._0.Models.Analysis
         public string ProcessName { get; set; }
         public AnalysisStatus Status { get; set; }
         public string Summary { get; set; }
+
+        // --- תוספת חדשה ---
+        public string AiInsight { get; set; }
+        // ------------------
+
         public List<AnalysisStep> Steps { get; set; } = new List<AnalysisStep>();
         public List<string> ErrorsFound { get; set; } = new List<string>();
 
-        // עזר ל-UI
         public Brush StatusColor => Status == AnalysisStatus.Success ? Brushes.Green :
                                     Status == AnalysisStatus.Warning ? Brushes.Orange : Brushes.Red;
     }

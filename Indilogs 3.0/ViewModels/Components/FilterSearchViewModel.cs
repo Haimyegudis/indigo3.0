@@ -231,10 +231,14 @@ namespace IndiLogs_3._0.ViewModels.Components
         private List<string> _negativeFilters = new List<string>();
         public List<string> NegativeFilters => _negativeFilters;
 
-        private List<string> _activeThreadFilters = new List<string>();
-        public List<string> ActiveThreadFilters => _activeThreadFilters;
+        // Separate thread filters for each tab (PLC and APP)
+        private List<string> _activePlcThreadFilters = new List<string>();
+        public List<string> ActivePlcThreadFilters => _activePlcThreadFilters;
 
-        // New Lists for independent column filtering
+        private List<string> _activeAppThreadFilters = new List<string>();
+        public List<string> ActiveAppThreadFilters => _activeAppThreadFilters;
+
+        // New Lists for independent column filtering (APP tab only)
         private List<string> _activeLoggerFilters = new List<string>();
         public List<string> ActiveLoggerFilters => _activeLoggerFilters;
 
@@ -431,7 +435,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             // -----------------------------------------------------
 
             // בדיקה האם יש פילטרים פעילים בתוך הטאב (עמודות, חיפוש וכו')
-            bool hasThreadFilter = _activeThreadFilters.Any();
+            bool hasThreadFilter = _activeAppThreadFilters.Any();
             bool hasLoggerFilter = _activeLoggerFilters.Any();
             bool hasMethodFilter = _activeMethodFilters.Any();
             bool hasSearch = !string.IsNullOrWhiteSpace(SearchText);
@@ -447,9 +451,9 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             var query = source.AsParallel().AsOrdered();
 
-            // 1. Thread Filter
+            // 1. Thread Filter (APP-specific)
             if (hasThreadFilter)
-                query = query.Where(l => _activeThreadFilters.Contains(l.ThreadName));
+                query = query.Where(l => _activeAppThreadFilters.Contains(l.ThreadName));
 
             // 2. Logger Filter
             if (hasLoggerFilter)
@@ -600,8 +604,9 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             _negativeFilters.Clear();
 
-            // Clear all column filters
-            _activeThreadFilters.Clear();
+            // Clear all column filters (both tabs)
+            _activePlcThreadFilters.Clear();
+            _activeAppThreadFilters.Clear();
             _activeLoggerFilters.Clear();
             _activeMethodFilters.Clear();
 
@@ -657,7 +662,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                                 AppFilterRoot = null;
                                 _activeLoggerFilters.Clear();
                                 _activeMethodFilters.Clear();
-                                _activeThreadFilters.Clear();
+                                _activeAppThreadFilters.Clear();
                                 IsAppFilterActive = false;
                                 IsAppTimeFocusActive = false;
                                 LastFilteredAppCache = null;
@@ -666,7 +671,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                             else
                             {
                                 MainFilterRoot = null;
-                                _activeThreadFilters.Clear();
+                                _activePlcThreadFilters.Clear();
                                 IsMainFilterActive = false;
                                 IsMainFilterOutActive = false;
                                 IsTimeFocusActive = false;
@@ -721,7 +726,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     }
                     else
                     {
-                        IsMainFilterActive = hasAdvanced || ActiveThreadFilters.Any();
+                        IsMainFilterActive = hasAdvanced || ActivePlcThreadFilters.Any();
                         ApplyMainLogsFilter();
                     }
                     _parent.NotifyPropertyChanged(nameof(_parent.IsFilterActive));
@@ -776,20 +781,23 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             if (win.ShowDialog() == true)
             {
+                // Use tab-specific thread filter list
+                var activeThreadFilters = isAppTab ? _activeAppThreadFilters : _activePlcThreadFilters;
+
                 if (win.ShouldClear)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Clearing filters");
-                    _activeThreadFilters.Clear();
+                    System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Clearing filters for {(isAppTab ? "APP" : "PLC")} tab");
+                    activeThreadFilters.Clear();
                     // Also remove thread conditions from the filter tree
                     RemoveThreadConditionsFromFilterTree(isAppTab);
                     CheckIfFiltersEmpty(isAppTab);
                 }
                 else if (win.SelectedThreads != null && win.SelectedThreads.Any())
                 {
-                    System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Selected threads: {string.Join(", ", win.SelectedThreads)}");
-                    _activeThreadFilters.Clear();
-                    _activeThreadFilters.AddRange(win.SelectedThreads);
-                    System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Active thread filters now: {string.Join(", ", _activeThreadFilters)}");
+                    System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Selected threads for {(isAppTab ? "APP" : "PLC")}: {string.Join(", ", win.SelectedThreads)}");
+                    activeThreadFilters.Clear();
+                    activeThreadFilters.AddRange(win.SelectedThreads);
+                    System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Active {(isAppTab ? "APP" : "PLC")} thread filters now: {string.Join(", ", activeThreadFilters)}");
                     // Sync thread filters to filter tree so they appear in Filter Window
                     SyncThreadFiltersToFilterTree(isAppTab, win.SelectedThreads);
                     SetFilterActive(isAppTab);
@@ -1020,12 +1028,12 @@ namespace IndiLogs_3._0.ViewModels.Components
         {
             if (isAppTab)
             {
-                if (!_activeThreadFilters.Any() && !_activeLoggerFilters.Any() && !_activeMethodFilters.Any() && _appFilterRoot == null)
+                if (!_activeAppThreadFilters.Any() && !_activeLoggerFilters.Any() && !_activeMethodFilters.Any() && _appFilterRoot == null)
                     IsAppFilterActive = false;
             }
             else
             {
-                if (!_activeThreadFilters.Any() && _mainFilterRoot == null)
+                if (!_activePlcThreadFilters.Any() && _mainFilterRoot == null)
                     IsMainFilterActive = false;
             }
         }
@@ -1319,10 +1327,10 @@ namespace IndiLogs_3._0.ViewModels.Components
             bool isActive = _isMainFilterActive;
             IEnumerable<LogEntry> currentLogs;
             bool hasSearchText = !string.IsNullOrWhiteSpace(SearchText) && SearchText.Length >= 2;
-            bool hasThreadFilter = _activeThreadFilters.Any();
+            bool hasThreadFilter = _activePlcThreadFilters.Any();
 
             System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] isActive={isActive}, hasSearchText={hasSearchText}, hasThreadFilter={hasThreadFilter}");
-            System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Active thread filters: {string.Join(", ", _activeThreadFilters)}");
+            System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Active PLC thread filters: {string.Join(", ", _activePlcThreadFilters)}");
 
             // 1. קביעת מקור הנתונים
             if (isActive || hasSearchText || hasThreadFilter)
@@ -1348,11 +1356,11 @@ namespace IndiLogs_3._0.ViewModels.Components
                     System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Advanced filter applied: before={beforeAdvanced}, after={currentLogs.Count()}");
                 }
 
-                // סינון לפי Threads (קיים בטאב PLC)
+                // סינון לפי Threads (PLC-specific)
                 if (hasThreadFilter)
                 {
                     var beforeCount = currentLogs.Count();
-                    currentLogs = currentLogs.Where(l => _activeThreadFilters.Contains(l.ThreadName));
+                    currentLogs = currentLogs.Where(l => _activePlcThreadFilters.Contains(l.ThreadName));
                     var afterCount = currentLogs.Count();
                     System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Thread filter: before={beforeCount}, after={afterCount}");
 

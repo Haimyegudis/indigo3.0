@@ -481,7 +481,8 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _parent.SearchText = "";
                 _parent.IsSearchPanelVisible = false;
                 _filterVM.NegativeFilters.Clear();
-                _filterVM.ActiveThreadFilters.Clear();
+                _filterVM.ActivePlcThreadFilters.Clear();
+                _filterVM.ActiveAppThreadFilters.Clear();
                 _filterVM.IsTimeFocusActive = false;
                 _filterVM.IsAppTimeFocusActive = false;
                 _filterVM.ResetTreeFilters();
@@ -578,7 +579,8 @@ namespace IndiLogs_3._0.ViewModels.Components
                             ActiveFilters = _filterVM.MainFilterRoot?.DeepClone(),
                             QuickSearchText = _parent.SearchText,
                             SelectedTab = _parent.SelectedTabIndex == 0 ? "MAIN" : _parent.SelectedTabIndex == 1 ? "FILTERED" : "APP",
-                            ActiveThreadFilters = _filterVM.ActiveThreadFilters.ToList(),
+                            ActivePlcThreadFilters = _filterVM.ActivePlcThreadFilters.ToList(),
+                            ActiveAppThreadFilters = _filterVM.ActiveAppThreadFilters.ToList(),
                             NegativeFilters = _filterVM.NegativeFilters.ToList()
                         },
                         MainColoringRules = MainColoringRules ?? new List<ColoringCondition>(),
@@ -807,12 +809,19 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _filterVM.MainFilterRoot = caseFile.ViewState.ActiveFilters;
                 _parent.SearchText = caseFile.ViewState.QuickSearchText ?? "";
 
-                // Restore active thread filters
-                _filterVM.ActiveThreadFilters.Clear();
-                if (caseFile.ViewState.ActiveThreadFilters != null)
+                // Restore active thread filters (separate for PLC and APP)
+                _filterVM.ActivePlcThreadFilters.Clear();
+                if (caseFile.ViewState.ActivePlcThreadFilters != null)
                 {
-                    foreach (var filter in caseFile.ViewState.ActiveThreadFilters)
-                        _filterVM.ActiveThreadFilters.Add(filter);
+                    foreach (var filter in caseFile.ViewState.ActivePlcThreadFilters)
+                        _filterVM.ActivePlcThreadFilters.Add(filter);
+                }
+
+                _filterVM.ActiveAppThreadFilters.Clear();
+                if (caseFile.ViewState.ActiveAppThreadFilters != null)
+                {
+                    foreach (var filter in caseFile.ViewState.ActiveAppThreadFilters)
+                        _filterVM.ActiveAppThreadFilters.Add(filter);
                 }
 
                 // Restore negative filters
@@ -885,7 +894,8 @@ namespace IndiLogs_3._0.ViewModels.Components
                     $"🎨 Coloring Rules: {MainColoringRules.Count} (Main) + {AppColoringRules.Count} (App)\n" +
                     $"🔍 Filters: {(_filterVM.MainFilterRoot != null && _filterVM.MainFilterRoot.Children.Count > 0 ? "Active" : "None")}\n" +
                     $"🔎 Search: {(string.IsNullOrEmpty(_parent.SearchText) ? "None" : $"\"{_parent.SearchText}\"")}\n" +
-                    $"🧵 Thread Filters: {_filterVM.ActiveThreadFilters.Count}\n" +
+                    $"🧵 PLC Thread Filters: {_filterVM.ActivePlcThreadFilters.Count}\n" +
+                    $"🧵 APP Thread Filters: {_filterVM.ActiveAppThreadFilters.Count}\n" +
                     $"🚫 Filter Out: {_filterVM.NegativeFilters.Count}",
                     "Case Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
             });

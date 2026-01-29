@@ -59,12 +59,15 @@ namespace IndiLogs_3._0.Models
         public FilterNode ActiveFilters { get; set; }
         public string QuickSearchText { get; set; }
         public string SelectedTab { get; set; }
-        public List<string> ActiveThreadFilters { get; set; }
+        // Separate thread filters for PLC and APP tabs
+        public List<string> ActivePlcThreadFilters { get; set; }
+        public List<string> ActiveAppThreadFilters { get; set; }
         public List<string> NegativeFilters { get; set; }
 
         public CaseViewState()
         {
-            ActiveThreadFilters = new List<string>();
+            ActivePlcThreadFilters = new List<string>();
+            ActiveAppThreadFilters = new List<string>();
             NegativeFilters = new List<string>();
         }
     }

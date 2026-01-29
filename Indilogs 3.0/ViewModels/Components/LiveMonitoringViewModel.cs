@@ -232,7 +232,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             // 2. Are there active filters? (search, trees, Threads)
             bool hasSearch = !string.IsNullOrWhiteSpace(_parent.SearchText);
-            bool hasActiveFilter = _filterVM.IsMainFilterActive || hasSearch || _filterVM.ActiveThreadFilters.Any();
+            bool hasActiveFilter = _filterVM.IsMainFilterActive || hasSearch || _filterVM.ActivePlcThreadFilters.Any();
 
             // 3. If no filters active -> use default PLC filter (same as regular file loading)
             if (!hasActiveFilter)
@@ -242,10 +242,10 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             // 4. Check active filters
 
-            // Thread Filter
-            if (_filterVM.ActiveThreadFilters.Any())
+            // Thread Filter (PLC-specific)
+            if (_filterVM.ActivePlcThreadFilters.Any())
             {
-                if (!_filterVM.ActiveThreadFilters.Contains(log.ThreadName)) return false;
+                if (!_filterVM.ActivePlcThreadFilters.Contains(log.ThreadName)) return false;
             }
 
             // Search Text

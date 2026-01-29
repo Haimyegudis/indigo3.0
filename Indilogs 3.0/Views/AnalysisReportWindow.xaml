@@ -91,7 +91,6 @@
                             <DataTemplate.Triggers>
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
                                     <Setter TargetName="NameTxt" Property="Foreground" Value="White"/>
-
                                 </DataTrigger>
                             </DataTemplate.Triggers>
                         </DataTemplate>
@@ -155,6 +154,28 @@
                         <TextBlock Text="RESULT OVERVIEW" Foreground="{DynamicResource TextSecondary}" FontSize="11" FontWeight="Bold" Margin="0,0,0,5"/>
                         <TextBlock Text="{Binding Summary}" Foreground="{DynamicResource TextPrimary}" FontSize="15" TextWrapping="Wrap" LineHeight="22" Margin="0,0,0,25"/>
 
+                        <Border Background="#252530" BorderBrush="#8A2BE2" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,25">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding AiInsight}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding AiInsight}" Value="">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <TextBlock Text="🤖 AI ROOT CAUSE ANALYSIS" Foreground="#BD93F9" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding AiInsight}" Foreground="#F8F8F2" FontSize="14" TextWrapping="Wrap" FontFamily="Segoe UI"/>
+                            </StackPanel>
+                        </Border>
                         <StackPanel>
                             <StackPanel.Style>
                                 <Style TargetType="StackPanel">

@@ -240,6 +240,7 @@
     <Compile Include="Services\Analysis\UniversalStateFailureAnalyzer.cs" />
     <Compile Include="Services\CustomLiveLogReader.cs" />
     <Compile Include="Services\GlobalGrepService.cs" />
+    <Compile Include="Services\LlmService.cs" />
     <Compile Include="Services\WindowManager.cs" />
     <Compile Include="ViewModels\Components\CaseManagementViewModel.cs" />
     <Compile Include="ViewModels\Components\ConfigExplorerViewModel.cs" />

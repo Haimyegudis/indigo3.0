@@ -170,7 +170,8 @@ namespace IndiLogs_3._0.ViewModels
             set { if (FilterVM != null) FilterVM.SavedFilterRoot = value; }
         }
         public List<string> NegativeFilters => FilterVM?.NegativeFilters;
-        public List<string> ActiveThreadFilters => FilterVM?.ActiveThreadFilters;
+        public List<string> ActivePlcThreadFilters => FilterVM?.ActivePlcThreadFilters;
+        public List<string> ActiveAppThreadFilters => FilterVM?.ActiveAppThreadFilters;
         public List<LogEntry> LastFilteredCache
         {
             get => FilterVM?.LastFilteredCache;
@@ -1136,8 +1137,10 @@ namespace IndiLogs_3._0.ViewModels
                         FilterVM.LastFilteredCache.Clear();
                     if (FilterVM.NegativeFilters != null)
                         FilterVM.NegativeFilters.Clear();
-                    if (FilterVM.ActiveThreadFilters != null)
-                        FilterVM.ActiveThreadFilters.Clear();
+                    if (FilterVM.ActivePlcThreadFilters != null)
+                        FilterVM.ActivePlcThreadFilters.Clear();
+                    if (FilterVM.ActiveAppThreadFilters != null)
+                        FilterVM.ActiveAppThreadFilters.Clear();
                     if (FilterVM.ActiveLoggerFilters != null)
                         FilterVM.ActiveLoggerFilters.Clear();
                     if (FilterVM.ActiveMethodFilters != null)
@@ -1280,7 +1283,8 @@ namespace IndiLogs_3._0.ViewModels
             FilterVM.IsAppFilterActive = false;
             FilterVM.IsMainFilterOutActive = false;
             FilterVM.IsAppFilterOutActive = false;
-            FilterVM.ActiveThreadFilters.Clear();
+            FilterVM.ActivePlcThreadFilters.Clear();
+            FilterVM.ActiveAppThreadFilters.Clear();
             FilterVM.NegativeFilters.Clear();
             ResetTreeFilters();
 
@@ -1589,7 +1593,7 @@ namespace IndiLogs_3._0.ViewModels
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     if (isAppTab) { FilterVM.IsAppFilterActive = hasAdvanced; ApplyAppLogsFilter(); }
-                    else { FilterVM.IsMainFilterActive = hasAdvanced || FilterVM.ActiveThreadFilters.Any(); UpdateMainLogsFilter(FilterVM.IsMainFilterActive); }
+                    else { FilterVM.IsMainFilterActive = hasAdvanced || FilterVM.ActivePlcThreadFilters.Any(); UpdateMainLogsFilter(FilterVM.IsMainFilterActive); }
                     OnPropertyChanged(nameof(IsFilterActive));
                     IsBusy = false;
                 });
