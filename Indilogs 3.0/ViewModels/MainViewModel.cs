@@ -649,6 +649,7 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand LoadCaseCommand { get; }
         public ICommand OpenGlobalGrepCommand { get; }
         public ICommand OpenStripeAnalysisCommand { get; }
+        public ICommand OpenComparisonCommand { get; }
 
         public MainViewModel()
         {
@@ -760,6 +761,7 @@ namespace IndiLogs_3._0.ViewModels
             RunAnalysisCommand = new RelayCommand(o => { RunAnalysis(o); IsExplorerMenuOpen = false; });
             OpenGlobalGrepCommand = new RelayCommand(o => { OpenGlobalGrepWindow(); IsExplorerMenuOpen = false; });
             OpenStripeAnalysisCommand = new RelayCommand(o => { OpenStripeAnalysisWindow(); IsExplorerMenuOpen = false; });
+            OpenComparisonCommand = new RelayCommand(o => { OpenComparisonWindow(); }, o => SessionVM.AllLogsCache?.Count > 0 || SessionVM.AllAppLogsCache?.Count > 0);
 
             ToggleSearchCommand = FilterVM.ToggleSearchCommand;
             CloseSearchCommand = FilterVM.CloseSearchCommand;
@@ -1729,6 +1731,18 @@ namespace IndiLogs_3._0.ViewModels
 
             var window = new GlobalGrepWindow(viewModel, NavigateToGrepResult, LoadMultipleFiles);
             WindowManager.OpenWindow(window);
+        }
+
+        private void OpenComparisonWindow()
+        {
+            var comparisonWindow = WindowManager.GetOrCreate<Views.ComparisonWindow>(
+                () => new Views.ComparisonWindow(new LogComparisonViewModel(
+                    SessionVM.AllLogsCache,
+                    SessionVM.AllAppLogsCache,
+                    this
+                )),
+                Application.Current.MainWindow
+            );
         }
 
         private async void OpenStripeAnalysisWindow()

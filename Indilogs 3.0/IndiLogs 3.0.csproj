@@ -224,9 +224,11 @@
       <DependentUpon>StatusBarControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\TimelineCanvas.cs" />
+    <Compile Include="Controls\DiffHighlightTextBlock.cs" />
     <Compile Include="Converters\AnnotationTextBrushConverter.cs" />
     <Compile Include="Converters\ArrayConverter.cs" />
     <Compile Include="Converters\BoolToVisibilityConverter.cs" />
+    <Compile Include="Converters\DiffSegmentsConverter.cs" />
     <Compile Include="Converters\InverseBooleanConverter.cs" />
     <Compile Include="IndigoLogsReaderExplorer.cs" />
     <Compile Include="Models\ColumnSettings.cs" />
@@ -246,6 +248,9 @@
     <Compile Include="ViewModels\Components\FilterSearchViewModel.cs" />
     <Compile Include="ViewModels\Components\LiveMonitoringViewModel.cs" />
     <Compile Include="ViewModels\Components\LogSessionViewModel.cs" />
+    <Compile Include="ViewModels\Components\ComparisonPaneViewModel.cs" />
+    <Compile Include="Services\DiffEngine.cs" />
+    <Compile Include="Services\ComparisonDebugLogger.cs" />
     <Compile Include="ViewModels\VisualTimelineViewModel.cs" />
     <Compile Include="ViewModels\GlobalGrepViewModel.cs" />
     <Compile Include="Models\IndigoStripeEntry.cs" />
@@ -256,6 +261,10 @@
     <Compile Include="Views\TransposeViewWindow.xaml.cs">
       <DependentUpon>TransposeViewWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\ComparisonWindow.xaml.cs">
+      <DependentUpon>ComparisonWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="ViewModels\LogComparisonViewModel.cs" />
     <Compile Include="Views\BrowseTableWindow.xaml.cs">
       <DependentUpon>BrowseTableWindow.xaml</DependentUpon>
     </Compile>
@@ -522,6 +531,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\TransposeViewWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ComparisonWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

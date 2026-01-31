@@ -40,6 +40,20 @@
         <SolidColorBrush x:Key="AnimColor3" Color="#FFFF00"/>
         <SolidColorBrush x:Key="AnimText" Color="#FFFFFF"/>
 
+        <!-- Diff Comparison Colors -->
+        <SolidColorBrush x:Key="DiffAddedBg" Color="#90EE90"/>      <!-- Light Green -->
+        <SolidColorBrush x:Key="DiffRemovedBg" Color="#F08080"/>    <!-- Light Coral -->
+        <SolidColorBrush x:Key="DiffRowDifferent" Color="#2A1515"/> <!-- Dark red tint for row bg -->
+
+        <!-- Delta Indicator Colors -->
+        <SolidColorBrush x:Key="DeltaSync" Color="#10B981"/>        <!-- Green: <100ms -->
+        <SolidColorBrush x:Key="DeltaSmall" Color="#F59E0B"/>       <!-- Yellow: 100-1000ms -->
+        <SolidColorBrush x:Key="DeltaLarge" Color="#EF4444"/>       <!-- Red: >1000ms -->
+
+        <!-- Gap Indicator -->
+        <SolidColorBrush x:Key="GapIndicatorBg" Color="#333340"/>
+        <SolidColorBrush x:Key="GapIndicatorFg" Color="#808080"/>
+
         <!-- Modern thin scrollbar style -->
         <Style TargetType="ScrollBar">
             <Setter Property="Background" Value="Transparent"/>
