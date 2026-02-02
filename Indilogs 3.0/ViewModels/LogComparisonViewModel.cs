@@ -78,6 +78,7 @@ namespace IndiLogs_3._0.ViewModels
                     _mainViewModel.ScrollToLog(log);
                 };
             }
+            IgnoreMaskPattern = @"\d{2}:\d{2}:\d{2}(\.\d+)?|\d+";
         }
 
         #endregion

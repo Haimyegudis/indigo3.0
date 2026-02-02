@@ -455,22 +455,62 @@ namespace IndiLogs_3._0.ViewModels
             get => SelectedTabIndex == 2 ? IsAppFilterActive : IsMainFilterActive;
             set
             {
+                System.Diagnostics.Debug.WriteLine($"[IsFilterActive SET] value={value}, Tab={SelectedTabIndex}");
+
+                // Save the currently selected log BEFORE changing filter state
+                var savedSelectedLog = SelectedLog;
+
                 if (SelectedTabIndex == 2)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[IsFilterActive SET] APP: Current={FilterVM?.IsAppFilterActive}, HasStored={FilterVM?.HasAppStoredFilter}");
                     if (FilterVM != null && FilterVM.IsAppFilterActive != value)
                     {
+                        // Only toggle if there's a stored filter to show/hide
+                        // If no stored filter and trying to activate, do nothing
+                        if (value && !FilterVM.HasAppStoredFilter)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[IsFilterActive SET] APP: No stored filter, returning");
+                            return;
+                        }
+
                         FilterVM.IsAppFilterActive = value;
                         OnPropertyChanged();
                         ApplyAppLogsFilter();
+
+                        // Restore the selected log and scroll to it
+                        if (savedSelectedLog != null)
+                        {
+                            SelectedLog = savedSelectedLog;
+                            ScrollToLog(savedSelectedLog);
+                        }
                     }
                 }
                 else
                 {
+                    System.Diagnostics.Debug.WriteLine($"[IsFilterActive SET] MAIN: Current={FilterVM?.IsMainFilterActive}, HasStored={FilterVM?.HasMainStoredFilter}");
+                    System.Diagnostics.Debug.WriteLine($"[IsFilterActive SET] MAIN: _mainFilterRoot={FilterVM?.MainFilterRoot != null}, ThreadFilters={FilterVM?.ActiveThreadFilters?.Count ?? 0}, TimeFocus={FilterVM?.IsTimeFocusActive}");
+
                     if (FilterVM != null && FilterVM.IsMainFilterActive != value)
                     {
+                        // Only toggle if there's a stored filter to show/hide
+                        // If no stored filter and trying to activate, do nothing
+                        if (value && !FilterVM.HasMainStoredFilter)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[IsFilterActive SET] MAIN: No stored filter, returning");
+                            return;
+                        }
+
+                        System.Diagnostics.Debug.WriteLine($"[IsFilterActive SET] MAIN: Setting IsMainFilterActive to {value}");
                         FilterVM.IsMainFilterActive = value;
                         OnPropertyChanged();
                         UpdateMainLogsFilter(value);
+
+                        // Restore the selected log and scroll to it
+                        if (savedSelectedLog != null)
+                        {
+                            SelectedLog = savedSelectedLog;
+                            ScrollToLog(savedSelectedLog);
+                        }
                     }
                 }
             }
@@ -481,22 +521,47 @@ namespace IndiLogs_3._0.ViewModels
             get => SelectedTabIndex == 2 ? IsAppFilterOutActive : IsMainFilterOutActive;
             set
             {
+                // Save the currently selected log BEFORE changing filter state
+                var savedSelectedLog = SelectedLog;
+
                 if (SelectedTabIndex == 2)
                 {
                     if (FilterVM != null && FilterVM.IsAppFilterOutActive != value)
                     {
+                        // Only toggle if there's a stored filter out to show/hide
+                        if (value && !FilterVM.HasAppStoredFilterOut)
+                            return;
+
                         FilterVM.IsAppFilterOutActive = value;
                         OnPropertyChanged();
                         ApplyAppLogsFilter();
+
+                        // Restore the selected log and scroll to it
+                        if (savedSelectedLog != null)
+                        {
+                            SelectedLog = savedSelectedLog;
+                            ScrollToLog(savedSelectedLog);
+                        }
                     }
                 }
                 else
                 {
                     if (FilterVM != null && FilterVM.IsMainFilterOutActive != value)
                     {
+                        // Only toggle if there's a stored filter out to show/hide
+                        if (value && !FilterVM.HasMainStoredFilterOut)
+                            return;
+
                         FilterVM.IsMainFilterOutActive = value;
                         OnPropertyChanged();
                         UpdateMainLogsFilter(FilterVM.IsMainFilterActive);
+
+                        // Restore the selected log and scroll to it
+                        if (savedSelectedLog != null)
+                        {
+                            SelectedLog = savedSelectedLog;
+                            ScrollToLog(savedSelectedLog);
+                        }
                     }
                 }
             }
@@ -819,7 +884,17 @@ namespace IndiLogs_3._0.ViewModels
 
         private void OnSearchTimerTick(object sender, EventArgs e)
         {
+            // Save the currently selected log BEFORE toggling filter
+            var savedSelectedLog = SelectedLog;
+
             ToggleFilterView(IsFilterActive);
+
+            // Restore the selected log and scroll to it
+            if (savedSelectedLog != null)
+            {
+                SelectedLog = savedSelectedLog;
+                ScrollToLog(savedSelectedLog);
+            }
         }
 
         private void InitializeVisualMode()

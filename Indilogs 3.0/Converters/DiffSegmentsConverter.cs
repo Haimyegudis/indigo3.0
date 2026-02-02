@@ -13,8 +13,7 @@ namespace IndiLogs_3._0.Converters
 {
     /// <summary>
     /// Converts a LogEntry to DiffSegments by comparing with the corresponding row in the other pane.
-    /// When both panes show the same filtered data (e.g., same thread), compares by row index.
-    /// Otherwise, compares by timestamp.
+    /// FIX: Now enforces Time-Based comparison for all cases to handle shifted logs correctly.
     /// </summary>
     public class DiffSegmentsConverter : IMultiValueConverter
     {
@@ -27,7 +26,7 @@ namespace IndiLogs_3._0.Converters
             // Basic validation
             if (values == null || values.Length < 3)
             {
-                ComparisonDebugLogger.Log("CONVERTER", $"[{_convertCallCount}] SKIP: values null or < 3 elements");
+                // ComparisonDebugLogger.Log("CONVERTER", $"[{_convertCallCount}] SKIP: values null or < 3 elements");
                 return null;
             }
 
@@ -35,7 +34,6 @@ namespace IndiLogs_3._0.Converters
                 values[1] == DependencyProperty.UnsetValue ||
                 values[2] == DependencyProperty.UnsetValue)
             {
-                ComparisonDebugLogger.Log("CONVERTER", $"[{_convertCallCount}] SKIP: UnsetValue in bindings");
                 return null;
             }
 
@@ -46,18 +44,15 @@ namespace IndiLogs_3._0.Converters
 
             if (logEntry == null || viewModel == null || string.IsNullOrEmpty(paneIndicator))
             {
-                ComparisonDebugLogger.Log("CONVERTER", $"[{_convertCallCount}] SKIP: logEntry={logEntry != null}, viewModel={viewModel != null}, pane={paneIndicator}");
                 return null;
             }
 
             if (!viewModel.ShowDiffs)
             {
-                ComparisonDebugLogger.Log("CONVERTER", $"[{_convertCallCount}] SKIP: ShowDiffs is OFF");
                 return null;
             }
 
-            ComparisonDebugLogger.Log("CONVERTER", $"[{_convertCallCount}] Processing {paneIndicator} pane, DiffVersion={diffVersion}");
-            ComparisonDebugLogger.Log("CONVERTER", $"  LogEntry.Date={logEntry.Date:HH:mm:ss.fff}, Message={Truncate(logEntry.Message, 50)}");
+            // ComparisonDebugLogger.Log("CONVERTER", $"[{_convertCallCount}] Processing {paneIndicator} pane");
 
             // Determine which pane this is
             ComparisonPaneViewModel sourcePane;
@@ -74,10 +69,9 @@ namespace IndiLogs_3._0.Converters
                 targetPane = viewModel.LeftPane;
             }
 
-            ComparisonDebugLogger.Log("CONVERTER", $"  SourcePane: Type={sourcePane.SelectedSourceType}, Filter={sourcePane.SelectedFilter ?? "(none)"}, Count={sourcePane.FilteredLogs.Count}");
-            ComparisonDebugLogger.Log("CONVERTER", $"  TargetPane: Type={targetPane.SelectedSourceType}, Filter={targetPane.SelectedFilter ?? "(none)"}, Count={targetPane.FilteredLogs.Count}");
-
-            // Find the index of this log in the source pane
+            // Find the index of this log in the source pane (needed mostly for debug/logging)
+            // Note: In a high-performance scenario, we might want to skip this linear search if not needed.
+            /*
             int sourceIndex = -1;
             for (int i = 0; i < sourcePane.FilteredLogs.Count; i++)
             {
@@ -87,75 +81,49 @@ namespace IndiLogs_3._0.Converters
                     break;
                 }
             }
+            */
 
-            if (sourceIndex < 0)
+            // --- CRITICAL FIX: ALWAYS USE TIME MATCHING ---
+            // Previously, there was logic here that checked 'if (sameSource)'.
+            // That logic caused issues when comparing two runs of the same type where row counts differed.
+            // We now force BinarySearchNearest based on Timestamp.
+
+            int correspondingIndex = targetPane.BinarySearchNearest(logEntry.Date);
+            LogEntry correspondingLog = targetPane.GetLogAtIndex(correspondingIndex);
+
+            // Optional: Sanity check for time difference.
+            // If the nearest log is too far away (e.g., > 2 seconds), treat it as "no match" to avoid showing misleading diffs.
+            if (correspondingLog != null)
             {
-                ComparisonDebugLogger.Log("CONVERTER", $"[{_convertCallCount}] SKIP: Could not find logEntry in source pane");
-                return null;
-            }
-
-            // Check if both panes have the same source type and filter
-            bool sameSource = sourcePane.SelectedSourceType == targetPane.SelectedSourceType &&
-                              sourcePane.SelectedFilter == targetPane.SelectedFilter;
-
-            LogEntry correspondingLog;
-            int correspondingIndex;
-
-            if (sameSource && sourceIndex < targetPane.FilteredLogs.Count)
-            {
-                // Same source - compare by row index
-                correspondingIndex = sourceIndex;
-                correspondingLog = targetPane.GetLogAtIndex(correspondingIndex);
-                ComparisonDebugLogger.Log("CONVERTER", $"  SAME SOURCE: Using index match. SourceIdx={sourceIndex}, TargetIdx={correspondingIndex}");
-            }
-            else
-            {
-                // Different sources - compare by timestamp
-                correspondingIndex = targetPane.BinarySearchNearest(logEntry.Date);
-                correspondingLog = targetPane.GetLogAtIndex(correspondingIndex);
-                ComparisonDebugLogger.Log("CONVERTER", $"  DIFF SOURCE: Using time match. SourceIdx={sourceIndex}, TargetIdx={correspondingIndex}");
-                if (correspondingLog != null)
+                double deltaMs = Math.Abs((logEntry.Date - correspondingLog.Date).TotalMilliseconds);
+                if (deltaMs > 2000) // 2 seconds threshold
                 {
-                    var delta = Math.Abs((logEntry.Date - correspondingLog.Date).TotalMilliseconds);
-                    ComparisonDebugLogger.Log("CONVERTER", $"    Time delta: {delta:F0}ms");
+                    // Too far apart - likely not the corresponding line.
+                    // ComparisonDebugLogger.Log("CONVERTER", $"SKIP: Time delta {deltaMs:F0}ms > 2000ms threshold");
+                    return null;
                 }
             }
 
             if (correspondingLog == null)
             {
-                ComparisonDebugLogger.Log("CONVERTER", $"[{_convertCallCount}] SKIP: No corresponding log found");
                 return null;
             }
-
-            ComparisonDebugLogger.Log("CONVERTER", $"  Corresponding: Date={correspondingLog.Date:HH:mm:ss.fff}, Message={Truncate(correspondingLog.Message, 50)}");
 
             // Get diff result
             var diffResult = viewModel.DiffEngine.Compare(logEntry.Message, correspondingLog.Message);
 
             if (diffResult == null)
             {
-                ComparisonDebugLogger.Log("CONVERTER", $"[{_convertCallCount}] SKIP: DiffResult is null");
                 return null;
             }
 
             if (diffResult.AreEqual)
             {
-                ComparisonDebugLogger.Log("CONVERTER", $"[{_convertCallCount}] SKIP: Messages are EQUAL (after masking)");
-                return null;
+                return null; // Return null to use default coloring (no diff highlight)
             }
 
+            // Return the segments relevant to the current pane (Left or Right)
             var segments = paneIndicator == "Left" ? diffResult.LeftSegments : diffResult.RightSegments;
-            ComparisonDebugLogger.Log("CONVERTER", $"[{_convertCallCount}] RESULT: {segments?.Count ?? 0} diff segments");
-
-            if (segments != null)
-            {
-                foreach (var seg in segments.Take(5))
-                {
-                    ComparisonDebugLogger.Log("CONVERTER", $"    Segment: Type={seg.Type}, Text=\"{Truncate(seg.Text, 30)}\"");
-                }
-                if (segments.Count > 5)
-                    ComparisonDebugLogger.Log("CONVERTER", $"    ... and {segments.Count - 5} more segments");
-            }
 
             return segments;
         }

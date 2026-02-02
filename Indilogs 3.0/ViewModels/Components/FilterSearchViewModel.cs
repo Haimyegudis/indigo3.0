@@ -13,6 +13,31 @@ using System.Windows.Threading;
 
 namespace IndiLogs_3._0.ViewModels.Components
 {
+    // Debug helper class to track who clears a list
+    public class TrackedList<T> : List<T>, IList<T>
+    {
+        private readonly string _name;
+
+        public TrackedList(string name) { _name = name; }
+
+        public new void Clear()
+        {
+            System.Diagnostics.Debug.WriteLine($"[{_name}] CLEAR called! Count before: {Count}");
+            System.Diagnostics.Debug.WriteLine($"[{_name}] Stack trace:");
+            System.Diagnostics.Debug.WriteLine(new System.Diagnostics.StackTrace().ToString());
+            base.Clear();
+        }
+
+        // Override ICollection<T>.Clear explicitly
+        void ICollection<T>.Clear()
+        {
+            System.Diagnostics.Debug.WriteLine($"[{_name}] ICollection.CLEAR called! Count before: {Count}");
+            System.Diagnostics.Debug.WriteLine($"[{_name}] Stack trace:");
+            System.Diagnostics.Debug.WriteLine(new System.Diagnostics.StackTrace().ToString());
+            base.Clear();
+        }
+    }
+
     public class FilterSearchViewModel : INotifyPropertyChanged
     {
         private readonly MainViewModel _parent;
@@ -127,7 +152,14 @@ namespace IndiLogs_3._0.ViewModels.Components
         public FilterNode MainFilterRoot
         {
             get => _mainFilterRoot;
-            set { _mainFilterRoot = value; OnPropertyChanged(); _parent?.NotifyPropertyChanged(nameof(_parent.MainFilterRoot)); }
+            set
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainFilterRoot SET] Setting to {(value == null ? "NULL" : $"node with {value.Children?.Count ?? 0} children")}");
+                System.Diagnostics.Debug.WriteLine($"[MainFilterRoot SET] Stack trace:\n{new System.Diagnostics.StackTrace()}");
+                _mainFilterRoot = value;
+                OnPropertyChanged();
+                _parent?.NotifyPropertyChanged(nameof(_parent.MainFilterRoot));
+            }
         }
 
         private FilterNode _appFilterRoot;
@@ -151,6 +183,8 @@ namespace IndiLogs_3._0.ViewModels.Components
             get => _isMainFilterActive;
             set
             {
+                System.Diagnostics.Debug.WriteLine($"[IsMainFilterActive SET] value={value}, _activeThreadFilters.Count={_activeThreadFilters.Count}, _mainFilterRoot null={_mainFilterRoot == null}, Children={_mainFilterRoot?.Children?.Count ?? -1}");
+                System.Diagnostics.Debug.WriteLine($"[IsMainFilterActive SET] Stack trace:\n{new System.Diagnostics.StackTrace()}");
                 _isMainFilterActive = value;
                 OnPropertyChanged();
                 _parent?.NotifyPropertyChanged(nameof(_parent.IsMainFilterActive));
@@ -231,8 +265,8 @@ namespace IndiLogs_3._0.ViewModels.Components
         private List<string> _negativeFilters = new List<string>();
         public List<string> NegativeFilters => _negativeFilters;
 
-        private List<string> _activeThreadFilters = new List<string>();
-        public List<string> ActiveThreadFilters => _activeThreadFilters;
+        private TrackedList<string> _activeThreadFilters = new TrackedList<string>("ActiveThreadFilters");
+        public TrackedList<string> ActiveThreadFilters => _activeThreadFilters;
 
         // New Lists for independent column filtering
         private List<string> _activeLoggerFilters = new List<string>();
@@ -240,6 +274,36 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         private List<string> _activeMethodFilters = new List<string>();
         public List<string> ActiveMethodFilters => _activeMethodFilters;
+
+        // --- HasStoredFilter properties ---
+        // These indicate whether there's a filter definition stored (regardless of checkbox state)
+        public bool HasMainStoredFilter
+        {
+            get
+            {
+                bool hasAdvanced = _mainFilterRoot != null && _mainFilterRoot.Children != null && _mainFilterRoot.Children.Count > 0;
+                bool hasThread = _activeThreadFilters.Any();
+                bool hasTimeFocus = _isTimeFocusActive;
+                bool result = hasAdvanced || hasThread || hasTimeFocus;
+                System.Diagnostics.Debug.WriteLine($"[HasMainStoredFilter] hasAdvanced={hasAdvanced}, hasThread={hasThread} (count={_activeThreadFilters.Count}), hasTimeFocus={hasTimeFocus} => {result}");
+                return result;
+            }
+        }
+
+        public bool HasAppStoredFilter =>
+            (_appFilterRoot != null && _appFilterRoot.Children != null && _appFilterRoot.Children.Count > 0) ||
+            _activeThreadFilters.Any() ||
+            _activeLoggerFilters.Any() ||
+            _activeMethodFilters.Any() ||
+            _treeShowOnlyLogger != null ||
+            _treeShowOnlyPrefix != null ||
+            _treeHiddenLoggers.Count > 0 ||
+            _treeHiddenPrefixes.Count > 0 ||
+            _isAppTimeFocusActive;
+
+        // HasStoredFilterOut - indicates whether there are negative filters stored
+        public bool HasMainStoredFilterOut => _negativeFilters.Any();
+        public bool HasAppStoredFilterOut => false; // App tab doesn't have filter out functionality
 
         // --- Caches ---
         private List<LogEntry> _lastFilteredCache = null;
@@ -331,7 +395,22 @@ namespace IndiLogs_3._0.ViewModels.Components
             CloseSearchCommand = new RelayCommand(o =>
             {
                 System.Diagnostics.Debug.WriteLine("[SEARCH] CloseSearchCommand executed");
+
+                // Save the currently selected log BEFORE clearing search
+                var savedSelectedLog = _parent.SelectedLog;
+
+                SearchText = "";  // Clear the search text
                 IsSearchPanelVisible = false;
+                // Refresh the logs to show all (without search filter)
+                ApplyMainLogsFilter();
+                ApplyAppLogsFilter();
+
+                // Restore the selected log and scroll to it
+                if (savedSelectedLog != null)
+                {
+                    _parent.SelectedLog = savedSelectedLog;
+                    _parent.ScrollToLog(savedSelectedLog);
+                }
             });
             OpenFilterWindowCommand = new RelayCommand(OpenFilterWindow);
             FilterOutCommand = new RelayCommand(FilterOut);
@@ -362,8 +441,19 @@ namespace IndiLogs_3._0.ViewModels.Components
         private void OnSearchTimerTick(object sender, EventArgs e)
         {
             _searchDebounceTimer.Stop();
+
+            // Save the currently selected log BEFORE applying search filter
+            var savedSelectedLog = _parent.SelectedLog;
+
             ApplyMainLogsFilter();
             ApplyAppLogsFilter();
+
+            // Restore the selected log and scroll to it
+            if (savedSelectedLog != null)
+            {
+                _parent.SelectedLog = savedSelectedLog;
+                _parent.ScrollToLog(savedSelectedLog);
+            }
         }
 
         public void BuildLoggerTree(IEnumerable<LogEntry> logs)
@@ -416,9 +506,11 @@ namespace IndiLogs_3._0.ViewModels.Components
             // הגנה מפני קריסה אם המטמון ריק
             if (_sessionVM?.AllAppLogsCache == null) return;
 
+            bool isActive = _isAppFilterActive;
+
             // קביעת מקור הנתונים (Cache רגיל או Cache של Focus Context)
             var source = _sessionVM.AllAppLogsCache;
-            if (_isAppFilterActive && _isAppTimeFocusActive && _lastFilteredAppCache != null)
+            if (isActive && _isAppTimeFocusActive && _lastFilteredAppCache != null)
             {
                 source = _lastFilteredAppCache;
             }
@@ -430,16 +522,17 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
             // -----------------------------------------------------
 
-            // בדיקה האם יש פילטרים פעילים בתוך הטאב (עמודות, חיפוש וכו')
-            bool hasThreadFilter = _activeThreadFilters.Any();
-            bool hasLoggerFilter = _activeLoggerFilters.Any();
-            bool hasMethodFilter = _activeMethodFilters.Any();
+            // בדיקה האם יש פילטרים שמורים (Stored) - אבל נחיל אותם רק אם הצ'קבוקס מסומן
             bool hasSearch = !string.IsNullOrWhiteSpace(SearchText);
-            bool hasTreeFilter = _treeShowOnlyLogger != null || _treeShowOnlyPrefix != null || _treeHiddenLoggers.Count > 0 || _treeHiddenPrefixes.Count > 0;
-            bool hasAdvancedFilter = _appFilterRoot != null && _appFilterRoot.Children.Count > 0;
+            // Filters are only applied when checkbox is checked (isActive)
+            bool hasThreadFilter = isActive && _activeThreadFilters.Any();
+            bool hasLoggerFilter = isActive && _activeLoggerFilters.Any();
+            bool hasMethodFilter = isActive && _activeMethodFilters.Any();
+            bool hasTreeFilter = isActive && (_treeShowOnlyLogger != null || _treeShowOnlyPrefix != null || _treeHiddenLoggers.Count > 0 || _treeHiddenPrefixes.Count > 0);
+            bool hasAdvancedFilter = isActive && _appFilterRoot != null && _appFilterRoot.Children.Count > 0;
 
-            // אם אין שום פילטר נוסף, מציגים את המקור (שכבר עבר סינון זמן אם היה צריך)
-            if (!_isAppFilterActive && !hasSearch && !hasThreadFilter && !hasLoggerFilter && !hasMethodFilter && !hasTreeFilter)
+            // אם הצ'קבוקס לא מסומן ואין חיפוש, מציגים את הכל
+            if (!isActive && !hasSearch)
             {
                 AppDevLogsFiltered.ReplaceAll(source);
                 return;
@@ -447,26 +540,26 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             var query = source.AsParallel().AsOrdered();
 
-            // 1. Thread Filter
+            // 1. Thread Filter (only if checkbox checked)
             if (hasThreadFilter)
                 query = query.Where(l => _activeThreadFilters.Contains(l.ThreadName));
 
-            // 2. Logger Filter
+            // 2. Logger Filter (only if checkbox checked)
             if (hasLoggerFilter)
             {
                 query = query.Where(l => _activeLoggerFilters.Any(filter => string.Equals(l.Logger, filter, StringComparison.OrdinalIgnoreCase)));
             }
 
-            // 3. Method Filter
+            // 3. Method Filter (only if checkbox checked)
             if (hasMethodFilter)
                 query = query.Where(l => _activeMethodFilters.Contains(l.Method));
 
-            // 4. Advanced Filter
+            // 4. Advanced Filter (only if checkbox checked)
             if (hasAdvancedFilter)
                 query = query.Where(l => EvaluateFilterNode(l, _appFilterRoot));
 
-            // 5. Tree Filter
-            if (_isAppFilterActive)
+            // 5. Tree Filter (only if checkbox checked)
+            if (hasTreeFilter)
             {
                 if (_treeShowOnlyLogger != null)
                 {
@@ -489,7 +582,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 }
             }
 
-            // 6. Search
+            // 6. Search (always applied, regardless of checkbox)
             if (hasSearch)
             {
                 string search = SearchText;
@@ -630,9 +723,20 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         private async void OpenFilterWindow(object obj)
         {
+            // Save the currently selected log BEFORE opening the dialog
+            var savedSelectedLog = _parent.SelectedLog;
+
             var win = new Views.FilterWindow();
             bool isAppTab = _parent.SelectedTabIndex == 2;
             var currentRoot = isAppTab ? AppFilterRoot : MainFilterRoot;
+
+            // Position window near the button that was clicked
+            if (obj is FrameworkElement buttonElement)
+            {
+                win.Owner = Application.Current.MainWindow;
+                win.WindowStartupLocation = WindowStartupLocation.Manual;
+                win.PositionNearElement(buttonElement);
+            }
 
             if (currentRoot != null)
             {
@@ -685,6 +789,13 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                         _parent.NotifyPropertyChanged(nameof(_parent.IsFilterActive));
                         _sessionVM.IsBusy = false;
+
+                        // Restore the selected log and scroll to it
+                        if (savedSelectedLog != null)
+                        {
+                            _parent.SelectedLog = savedSelectedLog;
+                            _parent.ScrollToLog(savedSelectedLog);
+                        }
                     });
                     return;
                 }
@@ -692,6 +803,10 @@ namespace IndiLogs_3._0.ViewModels.Components
                 var newRoot = win.ViewModel.RootNodes.FirstOrDefault();
                 bool hasAdvanced = newRoot != null && newRoot.Children.Count > 0;
                 _sessionVM.IsBusy = true;
+
+                // Clear separate thread filters since FilterWindow now contains all filter conditions
+                // This prevents duplicate filtering when user modifies a ThreadFilter condition in FilterWindow
+                _activeThreadFilters.Clear();
 
                 await Task.Run(() =>
                 {
@@ -721,7 +836,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     }
                     else
                     {
-                        IsMainFilterActive = hasAdvanced || ActiveThreadFilters.Any();
+                        IsMainFilterActive = hasAdvanced;
                         ApplyMainLogsFilter();
                     }
                     _parent.NotifyPropertyChanged(nameof(_parent.IsFilterActive));
@@ -772,7 +887,18 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Found {threads.Count} unique threads: {string.Join(", ", threads.Take(10))}");
 
+            // Save the currently selected log BEFORE opening the dialog
+            var savedSelectedLog = _parent.SelectedLog;
+
             var win = new Views.ThreadFilterWindow(threads) { Title = "Filter by Thread" };
+
+            // Position window near the button that was clicked
+            if (obj is FrameworkElement buttonElement)
+            {
+                win.Owner = Application.Current.MainWindow;
+                win.WindowStartupLocation = WindowStartupLocation.Manual;
+                win.PositionNearElement(buttonElement);
+            }
 
             if (win.ShowDialog() == true)
             {
@@ -797,6 +923,13 @@ namespace IndiLogs_3._0.ViewModels.Components
                 }
                 System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Calling ToggleFilterView(true)");
                 ToggleFilterView(true); // Must re-trigger filter
+
+                // Restore the selected log and scroll to it after CLEAR
+                if (win.ShouldClear && savedSelectedLog != null)
+                {
+                    _parent.SelectedLog = savedSelectedLog;
+                    _parent.ScrollToLog(savedSelectedLog);
+                }
 
                 // Debug: check results
                 if (isAppTab)
@@ -945,7 +1078,19 @@ namespace IndiLogs_3._0.ViewModels.Components
             System.Diagnostics.Debug.WriteLine($"[LOGGER FILTER] Found {loggers.Count} unique loggers");
             System.Diagnostics.Debug.WriteLine($"[LOGGER FILTER] Current active filters: {string.Join(", ", _activeLoggerFilters)}");
 
+            // Save the currently selected log BEFORE opening the dialog
+            var savedSelectedLog = _parent.SelectedLog;
+
             var win = new Views.ThreadFilterWindow(loggers) { Title = "Filter by Logger" };
+
+            // Position window near the button that was clicked
+            if (obj is FrameworkElement buttonElement)
+            {
+                win.Owner = Application.Current.MainWindow;
+                win.WindowStartupLocation = WindowStartupLocation.Manual;
+                win.PositionNearElement(buttonElement);
+            }
+
             System.Diagnostics.Debug.WriteLine($"[LOGGER FILTER] Opening dialog window...");
 
             if (win.ShowDialog() == true)
@@ -973,6 +1118,13 @@ namespace IndiLogs_3._0.ViewModels.Components
                 System.Diagnostics.Debug.WriteLine($"[LOGGER FILTER] Calling ToggleFilterView(true)...");
                 ToggleFilterView(true);
                 System.Diagnostics.Debug.WriteLine($"[LOGGER FILTER] After filter: AppDevLogsFiltered count={_appDevLogsFiltered?.Count ?? 0}");
+
+                // Restore the selected log and scroll to it (only on clear)
+                if (win.ShouldClear && savedSelectedLog != null)
+                {
+                    _parent.SelectedLog = savedSelectedLog;
+                    _parent.ScrollToLog(savedSelectedLog);
+                }
             }
             else
             {
@@ -991,7 +1143,18 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             var methods = cache.Select(l => l.Method).Where(m => !string.IsNullOrEmpty(m)).Distinct().OrderBy(m => m).ToList();
 
+            // Save the currently selected log BEFORE opening the dialog
+            var savedSelectedLog = _parent.SelectedLog;
+
             var win = new Views.ThreadFilterWindow(methods) { Title = "Filter by Method" };
+
+            // Position window near the button that was clicked
+            if (obj is FrameworkElement buttonElement)
+            {
+                win.Owner = Application.Current.MainWindow;
+                win.WindowStartupLocation = WindowStartupLocation.Manual;
+                win.PositionNearElement(buttonElement);
+            }
 
             if (win.ShowDialog() == true)
             {
@@ -1007,26 +1170,49 @@ namespace IndiLogs_3._0.ViewModels.Components
                     SetFilterActive(true);
                 }
                 ToggleFilterView(true);
+
+                // Restore the selected log and scroll to it (only on clear)
+                if (win.ShouldClear && savedSelectedLog != null)
+                {
+                    _parent.SelectedLog = savedSelectedLog;
+                    _parent.ScrollToLog(savedSelectedLog);
+                }
             }
         }
 
         private void SetFilterActive(bool isAppTab)
         {
+            System.Diagnostics.Debug.WriteLine($"[SetFilterActive] isAppTab={isAppTab}, Setting filter to ACTIVE");
+            System.Diagnostics.Debug.WriteLine($"[SetFilterActive] BEFORE: _activeThreadFilters.Count={_activeThreadFilters.Count}, _mainFilterRoot={_mainFilterRoot != null}");
             if (isAppTab) IsAppFilterActive = true;
             else IsMainFilterActive = true;
+            System.Diagnostics.Debug.WriteLine($"[SetFilterActive] AFTER: IsMainFilterActive={IsMainFilterActive}, IsAppFilterActive={IsAppFilterActive}");
         }
 
         private void CheckIfFiltersEmpty(bool isAppTab)
         {
             if (isAppTab)
             {
-                if (!_activeThreadFilters.Any() && !_activeLoggerFilters.Any() && !_activeMethodFilters.Any() && _appFilterRoot == null)
+                // Check if app filter root is empty (null or has no children)
+                bool appFilterRootEmpty = _appFilterRoot == null || _appFilterRoot.Children == null || _appFilterRoot.Children.Count == 0;
+                bool noTreeFilters = _treeShowOnlyLogger == null && _treeShowOnlyPrefix == null && _treeHiddenLoggers.Count == 0 && _treeHiddenPrefixes.Count == 0;
+
+                if (!_activeThreadFilters.Any() && !_activeLoggerFilters.Any() && !_activeMethodFilters.Any() && appFilterRootEmpty && noTreeFilters)
+                {
                     IsAppFilterActive = false;
+                    _parent?.NotifyPropertyChanged(nameof(_parent.IsFilterActive));
+                }
             }
             else
             {
-                if (!_activeThreadFilters.Any() && _mainFilterRoot == null)
+                // Check if main filter root is empty (null or has no children)
+                bool mainFilterRootEmpty = _mainFilterRoot == null || _mainFilterRoot.Children == null || _mainFilterRoot.Children.Count == 0;
+
+                if (!_activeThreadFilters.Any() && mainFilterRootEmpty)
+                {
                     IsMainFilterActive = false;
+                    _parent?.NotifyPropertyChanged(nameof(_parent.IsFilterActive));
+                }
             }
         }
 
@@ -1282,6 +1468,15 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 // Pass current filter values so the window shows the already-filtered range
                 var window = new Views.TimeRangeWindow(earliestLog.Value, latestLog.Value, GlobalTimeRangeStart, GlobalTimeRangeEnd);
+
+                // Position window near the button that was clicked
+                if (obj is FrameworkElement buttonElement)
+                {
+                    window.Owner = Application.Current.MainWindow;
+                    window.WindowStartupLocation = WindowStartupLocation.Manual;
+                    window.PositionNearElement(buttonElement);
+                }
+
                 if (window.ShowDialog() == true)
                 {
                     if (window.ShouldClear)
@@ -1319,17 +1514,21 @@ namespace IndiLogs_3._0.ViewModels.Components
             bool isActive = _isMainFilterActive;
             IEnumerable<LogEntry> currentLogs;
             bool hasSearchText = !string.IsNullOrWhiteSpace(SearchText) && SearchText.Length >= 2;
-            bool hasThreadFilter = _activeThreadFilters.Any();
+            // Only apply thread filter if checkbox is checked (isActive) AND there are stored thread filters
+            bool hasThreadFilter = isActive && _activeThreadFilters.Any();
+            // Check if there's an advanced filter to apply
+            bool hasAdvancedFilter = isActive && _mainFilterRoot != null && _mainFilterRoot.Children != null && _mainFilterRoot.Children.Count > 0;
 
-            System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] isActive={isActive}, hasSearchText={hasSearchText}, hasThreadFilter={hasThreadFilter}");
-            System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Active thread filters: {string.Join(", ", _activeThreadFilters)}");
+            System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] isActive={isActive}, hasSearchText={hasSearchText}, hasThreadFilter={hasThreadFilter}, hasAdvancedFilter={hasAdvancedFilter}");
+            System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Stored thread filters: {string.Join(", ", _activeThreadFilters)}");
+            System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] _mainFilterRoot is null: {_mainFilterRoot == null}, Children count: {_mainFilterRoot?.Children?.Count ?? -1}");
 
             // 1. קביעת מקור הנתונים
-            if (isActive || hasSearchText || hasThreadFilter)
+            if (isActive || hasSearchText)
             {
                 // Always start from AllLogsCache, then apply filters
                 // _lastFilteredCache is only used for TimeFocus mode
-                if (_isTimeFocusActive && _lastFilteredCache != null)
+                if (isActive && _isTimeFocusActive && _lastFilteredCache != null)
                 {
                     currentLogs = _lastFilteredCache;
                     System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Using _lastFilteredCache (TimeFocus), count={currentLogs.Count()}");
@@ -1340,15 +1539,15 @@ namespace IndiLogs_3._0.ViewModels.Components
                     System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Using AllLogsCache, count={currentLogs.Count()}");
                 }
 
-                // Apply advanced filter from FilterWindow
-                if (_mainFilterRoot != null && _mainFilterRoot.Children != null && _mainFilterRoot.Children.Count > 0)
+                // Apply advanced filter from FilterWindow (only if checkbox is checked)
+                if (hasAdvancedFilter)
                 {
                     var beforeAdvanced = currentLogs.Count();
                     currentLogs = currentLogs.Where(l => EvaluateFilterNode(l, _mainFilterRoot));
                     System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Advanced filter applied: before={beforeAdvanced}, after={currentLogs.Count()}");
                 }
 
-                // סינון לפי Threads (קיים בטאב PLC)
+                // סינון לפי Threads (only if checkbox is checked)
                 if (hasThreadFilter)
                 {
                     var beforeCount = currentLogs.Count();
@@ -1361,7 +1560,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Sample ThreadNames in logs: {string.Join(", ", sampleThreads)}");
                 }
 
-                // סינון לפי טקסט חיפוש
+                // סינון לפי טקסט חיפוש (always apply search, regardless of checkbox)
                 if (hasSearchText)
                 {
                     if (QueryParserService.HasBooleanOperators(SearchText))
@@ -1381,7 +1580,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
             else
             {
-                // כשאין פילטרים פעילים, מציגים את הכל
+                // כשאין פילטרים פעילים (checkbox unchecked), מציגים את הכל
                 currentLogs = _sessionVM?.AllLogsCache ?? new List<LogEntry>();
             }
 

@@ -695,9 +695,9 @@
                 <Border Grid.Row="4" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" Padding="15,8">
                     <Grid>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Content="🔍 Edit Filters..." Command="{Binding OpenFilterWindowCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgCard}"/>
+                            <Button Content="🔍 Edit Filters..." Command="{Binding OpenFilterWindowCommand}" CommandParameter="{Binding RelativeSource={RelativeSource Self}}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgCard}"/>
                             <Button Content="🎨 Color Rules..." Command="{Binding OpenColoringWindowCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgCard}"/>
-                            <Button Content="⏱" Command="{Binding OpenTimeRangeFilterCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgCard}" ToolTip="Filter by Time Range" FontSize="16" Padding="8,4" Margin="5,0,0,0"/>
+                            <Button Content="⏱" Command="{Binding OpenTimeRangeFilterCommand}" CommandParameter="{Binding RelativeSource={RelativeSource Self}}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgCard}" ToolTip="Filter by Time Range" FontSize="16" Padding="8,4" Margin="5,0,0,0"/>
                             <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="10,4"/>
                             <CheckBox Content="APPLY FILTER OUT" IsChecked="{Binding IsFilterOutActive}" ToolTip="Uncheck to reveal hidden logs" VerticalAlignment="Center" Margin="10,0,15,0" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/>
                             <CheckBox Content="APPLY FILTER" IsChecked="{Binding IsFilterActive}" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/>
@@ -732,17 +732,19 @@
             </Grid>
 
             <!-- Left panel show button (appears at left edge when panel is hidden) - double-click to show -->
-            <Border Grid.Column="2" Width="8" HorizontalAlignment="Left" VerticalAlignment="Stretch"
-                    Background="Transparent" Cursor="Hand"
+            <Border Grid.Column="2" Width="20" HorizontalAlignment="Left" VerticalAlignment="Stretch"
+                    Cursor="Hand"
                     Visibility="{Binding IsLeftPanelVisible, Converter={StaticResource InverseBoolToVisibilityConverter}}"
                     MouseLeftButtonDown="LeftPanelShowButton_Click"
                     MouseEnter="PanelShowButton_MouseEnter"
                     MouseLeave="PanelShowButton_MouseLeave"
                     x:Name="LeftPanelShowButton"
-                    ToolTip="Double-click to show panel">
+                    ToolTip="Double-click to show left panel">
                 <Border.Style>
                     <Style TargetType="Border">
-                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="Background" Value="{DynamicResource BgCard}"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+                        <Setter Property="BorderThickness" Value="0,0,1,0"/>
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
@@ -750,46 +752,14 @@
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <TextBlock Text="▶" FontSize="8" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
-                           Foreground="White" Opacity="0" x:Name="LeftPanelShowArrow">
+                <TextBlock Text="▶" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
+                           x:Name="LeftPanelShowArrow">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsMouseOver, ElementName=LeftPanelShowButton}" Value="True">
-                                    <Setter Property="Opacity" Value="1"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-            </Border>
-
-            <!-- Right panel show button (appears at right edge when panel is hidden) - double-click to show -->
-            <Border Grid.Column="2" Width="8" HorizontalAlignment="Right" VerticalAlignment="Stretch"
-                    Background="Transparent" Cursor="Hand"
-                    Visibility="{Binding IsRightPanelVisible, Converter={StaticResource InverseBoolToVisibilityConverter}}"
-                    MouseLeftButtonDown="RightPanelShowButton_Click"
-                    MouseEnter="PanelShowButton_MouseEnter"
-                    MouseLeave="PanelShowButton_MouseLeave"
-                    x:Name="RightPanelShowButton"
-                    ToolTip="Double-click to show panel">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="Background" Value="Transparent"/>
-                        <Style.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-                <TextBlock Text="◀" FontSize="8" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
-                           Foreground="White" Opacity="0" x:Name="RightPanelShowArrow">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsMouseOver, ElementName=RightPanelShowButton}" Value="True">
-                                    <Setter Property="Opacity" Value="1"/>
+                                    <Setter Property="Foreground" Value="White"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -923,7 +893,7 @@
             </Border>
                 <!-- Right panel hide button (appears on hover at left edge of right panel) - double-click to hide -->
                 <Border x:Name="RightPanelHideButton" Width="16" HorizontalAlignment="Left" VerticalAlignment="Stretch"
-                        Background="Transparent" Cursor="Hand" Opacity="0"
+                        Background="Transparent" Cursor="Hand" Opacity="0.3"
                         MouseLeftButtonDown="RightPanelHideButton_Click"
                         ToolTip="Double-click to hide panel">
                     <Border.Style>
@@ -942,6 +912,42 @@
             </Grid>
 
         </Grid>
+
+        <!-- Right panel show button - placed outside MainContentGrid to avoid blocking scrollbar -->
+        <Border Grid.Row="1" Width="20" HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                Cursor="Hand" Panel.ZIndex="10"
+                Visibility="{Binding IsRightPanelVisible, Converter={StaticResource InverseBoolToVisibilityConverter}}"
+                MouseLeftButtonDown="RightPanelShowButton_Click"
+                MouseEnter="PanelShowButton_MouseEnter"
+                MouseLeave="PanelShowButton_MouseLeave"
+                x:Name="RightPanelShowButton"
+                ToolTip="Double-click to show right panel">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Background" Value="{DynamicResource BgCard}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+                    <Setter Property="BorderThickness" Value="1,0,0,0"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <TextBlock Text="◀" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
+                       x:Name="RightPanelShowArrow">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMouseOver, ElementName=RightPanelShowButton}" Value="True">
+                                <Setter Property="Foreground" Value="White"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Border>
 
         <controls:StatusBarControl Grid.Row="2" DataContext="{Binding}"/>
 

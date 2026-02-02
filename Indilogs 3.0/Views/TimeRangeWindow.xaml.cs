@@ -7,6 +7,7 @@ namespace IndiLogs_3._0.Views
 {
     public partial class TimeRangeWindow : Window, INotifyPropertyChanged
     {
+        private FrameworkElement _anchorElement;
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
 
@@ -53,6 +54,7 @@ namespace IndiLogs_3._0.Views
         {
             InitializeComponent();
             DataContext = this;
+            this.Loaded += TimeRangeWindow_Loaded;
 
             LogStartTime = logStart;
             LogEndTime = logEnd;
@@ -80,6 +82,70 @@ namespace IndiLogs_3._0.Views
                 EndDate = logEnd.Date;
                 StartTimeText = logStart.ToString("HH:mm:ss");
                 EndTimeText = logEnd.ToString("HH:mm:ss");
+            }
+        }
+
+        private void TimeRangeWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Position after loaded
+            if (_anchorElement != null)
+            {
+                PositionWindowNearElement();
+            }
+        }
+
+        /// <summary>
+        /// Position the window near the specified button/element
+        /// </summary>
+        public void PositionNearElement(FrameworkElement element)
+        {
+            _anchorElement = element;
+        }
+
+        private void PositionWindowNearElement()
+        {
+            if (_anchorElement == null) return;
+
+            try
+            {
+                // Find the main window
+                var mainWindow = Application.Current.MainWindow;
+                if (mainWindow == null) return;
+
+                // Get the position of the anchor element relative to the main window
+                var transform = _anchorElement.TransformToVisual(mainWindow);
+                var positionInMainWindow = transform.Transform(new Point(0, _anchorElement.ActualHeight));
+
+                // Convert to screen coordinates
+                var mainWindowPosition = mainWindow.PointToScreen(new Point(0, 0));
+
+                double screenX = mainWindowPosition.X + positionInMainWindow.X;
+                double screenY = mainWindowPosition.Y + positionInMainWindow.Y;
+
+                // Set the window position
+                this.Left = screenX;
+                this.Top = screenY;
+
+                // Make sure window doesn't go off screen
+                var screen = System.Windows.SystemParameters.WorkArea;
+                if (this.Left + this.ActualWidth > screen.Right)
+                    this.Left = screen.Right - this.ActualWidth;
+                if (this.Top + this.ActualHeight > screen.Bottom)
+                    this.Top = screenY - _anchorElement.ActualHeight - this.ActualHeight; // Show above
+                if (this.Left < screen.Left)
+                    this.Left = screen.Left;
+                if (this.Top < screen.Top)
+                    this.Top = screen.Top;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TIME RANGE WINDOW] Position failed: {ex.Message}");
+                // Fallback - center on owner
+                if (this.Owner != null)
+                {
+                    this.Left = this.Owner.Left + (this.Owner.Width - this.Width) / 2;
+                    this.Top = this.Owner.Top + (this.Owner.Height - this.Height) / 2;
+                }
             }
         }
 

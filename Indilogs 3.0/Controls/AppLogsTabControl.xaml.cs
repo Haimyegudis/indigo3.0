@@ -128,25 +128,25 @@ namespace IndiLogs_3._0.Controls
 
         }
 
-        // Column filter button click handlers
+        // Column filter button click handlers - pass button as parameter for positioning
         private void LoggerFilterButton_Click(object sender, RoutedEventArgs e)
         {
             var vm = DataContext as ViewModels.MainViewModel;
-            vm?.OpenLoggerFilterCommand?.Execute(null);
+            vm?.OpenLoggerFilterCommand?.Execute(sender as FrameworkElement);
             e.Handled = true;
         }
 
         private void ThreadFilterButton_Click(object sender, RoutedEventArgs e)
         {
             var vm = DataContext as ViewModels.MainViewModel;
-            vm?.OpenThreadFilterCommand?.Execute(null);
+            vm?.OpenThreadFilterCommand?.Execute(sender as FrameworkElement);
             e.Handled = true;
         }
 
         private void MethodFilterButton_Click(object sender, RoutedEventArgs e)
         {
             var vm = DataContext as ViewModels.MainViewModel;
-            vm?.OpenMethodFilterCommand?.Execute(null);
+            vm?.OpenMethodFilterCommand?.Execute(sender as FrameworkElement);
             e.Handled = true;
         }
 

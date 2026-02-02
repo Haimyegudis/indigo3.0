@@ -23,6 +23,24 @@ namespace IndiLogs_3._0.Services
         [DllImport("user32.dll")]
         private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
 
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool BringWindowToTop(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+        [DllImport("user32.dll")]
+        private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+        [DllImport("kernel32.dll")]
+        private static extern uint GetCurrentThreadId();
+
         private const uint MONITOR_DEFAULTTONEAREST = 2;
 
         [StructLayout(LayoutKind.Sequential)]
@@ -63,15 +81,77 @@ namespace IndiLogs_3._0.Services
             // DON'T set Owner for non-modal windows - this allows free switching between windows
             // Owner would make the window stay on top of owner and block interaction
 
-            // Position on same screen as reference/main window
-            PositionOnSameScreen(childWindow, referenceWindow);
-
             // Track child window
             TrackWindow(childWindow);
 
-            // Show and activate
+            // Store reference for positioning after window is loaded
+            var refWindow = referenceWindow ?? _mainWindow;
+
+            // Position window on same screen - do it before Show()
+            PositionOnSameScreen(childWindow, refWindow);
+
+            // Handle Loaded event - reposition and bring to front after window is fully loaded
+            childWindow.Loaded += (s, e) =>
+            {
+                PositionOnSameScreen(childWindow, refWindow);
+                BringWindowToFront(childWindow);
+            };
+
+            // Show the window first
             childWindow.Show();
-            childWindow.Activate();
+
+            // Force window to front using aggressive approach
+            BringWindowToFront(childWindow);
+        }
+
+        /// <summary>
+        /// Aggressively brings a window to the foreground using multiple Win32 techniques
+        /// </summary>
+        private static void BringWindowToFront(Window window)
+        {
+            if (window == null) return;
+
+            try
+            {
+                // First, use WPF methods
+                window.Activate();
+                window.Topmost = true;
+                window.Topmost = false;
+                window.Focus();
+
+                // Get the window handle
+                var hwnd = new WindowInteropHelper(window).Handle;
+                if (hwnd == IntPtr.Zero) return;
+
+                // Get foreground window info
+                var foregroundWindow = GetForegroundWindow();
+                uint foregroundThreadId = GetWindowThreadProcessId(foregroundWindow, out _);
+                uint currentThreadId = GetCurrentThreadId();
+
+                // Attach to foreground thread to steal focus
+                if (foregroundThreadId != currentThreadId)
+                {
+                    AttachThreadInput(currentThreadId, foregroundThreadId, true);
+                    SetForegroundWindow(hwnd);
+                    BringWindowToTop(hwnd);
+                    AttachThreadInput(currentThreadId, foregroundThreadId, false);
+                }
+                else
+                {
+                    SetForegroundWindow(hwnd);
+                    BringWindowToTop(hwnd);
+                }
+
+                // Final WPF activation
+                window.Activate();
+                window.Focus();
+            }
+            catch
+            {
+                // Fallback to basic activation
+                window.Activate();
+                window.Focus();
+            }
         }
 
         /// <summary>
@@ -107,7 +187,7 @@ namespace IndiLogs_3._0.Services
 
             // Get the reference window (provided or main window)
             var refWindow = referenceWindow ?? _mainWindow;
-            if (refWindow == null)
+            if (refWindow == null || !refWindow.IsLoaded)
             {
                 // Fallback to center screen
                 window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
@@ -137,28 +217,48 @@ namespace IndiLogs_3._0.Services
                     var workWidth = workArea.Right - workArea.Left;
                     var workHeight = workArea.Bottom - workArea.Top;
 
-                    // Calculate centered position
-                    var left = workArea.Left + (workWidth - window.Width) / 2;
-                    var top = workArea.Top + (workHeight - window.Height) / 2;
+                    // Get window dimensions - use ActualWidth/Height if available, otherwise use Width/Height
+                    double windowWidth = window.Width;
+                    double windowHeight = window.Height;
 
-                    // Ensure window is within bounds
+                    // If Width/Height are NaN, use default or ActualWidth/Height
+                    if (double.IsNaN(windowWidth) || windowWidth <= 0)
+                        windowWidth = window.ActualWidth > 0 ? window.ActualWidth : 800;
+                    if (double.IsNaN(windowHeight) || windowHeight <= 0)
+                        windowHeight = window.ActualHeight > 0 ? window.ActualHeight : 600;
+
+                    // Calculate centered position on the SAME monitor as the reference window
+                    var left = workArea.Left + (workWidth - windowWidth) / 2;
+                    var top = workArea.Top + (workHeight - windowHeight) / 2;
+
+                    // Ensure window is within bounds of the target monitor
                     if (left < workArea.Left) left = workArea.Left;
                     if (top < workArea.Top) top = workArea.Top;
-                    if (left + window.Width > workArea.Right) left = workArea.Right - window.Width;
-                    if (top + window.Height > workArea.Bottom) top = workArea.Bottom - window.Height;
+                    if (left + windowWidth > workArea.Right) left = workArea.Right - windowWidth;
+                    if (top + windowHeight > workArea.Bottom) top = workArea.Bottom - windowHeight;
 
                     window.Left = left;
                     window.Top = top;
                 }
                 else
                 {
-                    window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                    // Fallback: position relative to reference window
+                    window.Left = refWindow.Left + 50;
+                    window.Top = refWindow.Top + 50;
                 }
             }
             catch
             {
-                // Fallback
-                window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                // Fallback: position relative to reference window if available
+                if (refWindow != null && refWindow.IsLoaded)
+                {
+                    window.Left = refWindow.Left + 50;
+                    window.Top = refWindow.Top + 50;
+                }
+                else
+                {
+                    window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                }
             }
         }
 

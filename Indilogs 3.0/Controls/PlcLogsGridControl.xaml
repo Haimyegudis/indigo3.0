@@ -148,7 +148,7 @@
 
             <DataGridTextColumn Binding="{Binding ThreadName}" Width="130">
                 <DataGridTextColumn.Header>
-                    <Button Content="🔍 Thread" Command="{Binding DataContext.OpenThreadFilterCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" Cursor="Hand" ToolTip="Click to filter by thread" FontSize="12" Padding="6,2"/>
+                    <Button Content="🔍 Thread" Command="{Binding DataContext.OpenThreadFilterCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding RelativeSource={RelativeSource Self}}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" Cursor="Hand" ToolTip="Click to filter by thread" FontSize="12" Padding="6,2"/>
                 </DataGridTextColumn.Header>
                 <DataGridTextColumn.ElementStyle>
                     <Style TargetType="TextBlock">

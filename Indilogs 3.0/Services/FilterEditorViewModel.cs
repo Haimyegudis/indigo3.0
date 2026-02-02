@@ -1,4 +1,5 @@
 ﻿using IndiLogs_3._0.Models;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -9,6 +10,10 @@ namespace IndiLogs_3._0.ViewModels
     public class FilterEditorViewModel : INotifyPropertyChanged
     {
         public ObservableCollection<FilterNode> RootNodes { get; set; }
+
+        // Available values for dropdowns
+        public List<string> AvailableThreads { get; set; } = new List<string>();
+        public List<string> AvailableLoggers { get; set; } = new List<string>();
 
         // פקודות לעריכת העץ
         public ICommand AddGroupCommand { get; }

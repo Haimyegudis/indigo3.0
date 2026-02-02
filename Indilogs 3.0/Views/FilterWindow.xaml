@@ -86,10 +86,11 @@
                             </Style>
                         </StackPanel.Style>
 
-                        <TextBlock Text="{Binding LogicalOperator}" 
-                                   Style="{StaticResource OperatorLinkStyle}" 
-                                   ToolTip="Right-click to change logic or add items"
-                                   Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                        <TextBlock Text="{Binding LogicalOperator}"
+                                   Style="{StaticResource OperatorLinkStyle}"
+                                   ToolTip="Click to change logic or add items"
+                                   Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
+                                   MouseLeftButtonUp="OperatorTextBlock_MouseLeftButtonUp">
                             <TextBlock.ContextMenu>
                                 <ContextMenu FontSize="13">
                                     <MenuItem Header="AND (All must match)" Command="{Binding PlacementTarget.Tag.SetAndCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
@@ -141,9 +142,63 @@
 
                         <TextBlock Grid.Column="0" Text="Where" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="14" FontWeight="SemiBold"/>
 
-                        <ComboBox Grid.Column="1" ItemsSource="{StaticResource FilterFields}" SelectedItem="{Binding Field}"/>
-                        <ComboBox Grid.Column="2" ItemsSource="{StaticResource ConditionOperators}" SelectedItem="{Binding Operator}"/>
-                        <TextBox Grid.Column="3" Text="{Binding Value}"/>
+                        <ComboBox Grid.Column="1" ItemsSource="{StaticResource FilterFields}" SelectedItem="{Binding Field, Mode=TwoWay}"/>
+                        <ComboBox Grid.Column="2" ItemsSource="{StaticResource ConditionOperators}" SelectedItem="{Binding Operator, Mode=TwoWay}"/>
+
+                        <!-- Value input: TextBox for regular fields -->
+                        <TextBox Grid.Column="3" Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Field}" Value="ThreadName">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Field}" Value="Logger">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
+
+                        <!-- Value input: ComboBox dropdown for ThreadName -->
+                        <ComboBox Grid.Column="3"
+                                  ItemsSource="{Binding DataContext.AvailableThreads, RelativeSource={RelativeSource AncestorType=Window}}"
+                                  Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  IsEditable="True"
+                                  IsTextSearchEnabled="True"
+                                  StaysOpenOnEdit="True">
+                            <ComboBox.Style>
+                                <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Field}" Value="ThreadName">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ComboBox.Style>
+                        </ComboBox>
+
+                        <!-- Value input: ComboBox dropdown for Logger -->
+                        <ComboBox Grid.Column="3"
+                                  ItemsSource="{Binding DataContext.AvailableLoggers, RelativeSource={RelativeSource AncestorType=Window}}"
+                                  Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  IsEditable="True"
+                                  IsTextSearchEnabled="True"
+                                  StaysOpenOnEdit="True">
+                            <ComboBox.Style>
+                                <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Field}" Value="Logger">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ComboBox.Style>
+                        </ComboBox>
 
                         <Button Grid.Column="4" Command="{Binding DataContext.RemoveNodeCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
                                 CommandParameter="{Binding}" 
