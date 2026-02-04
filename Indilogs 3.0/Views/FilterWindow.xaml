@@ -165,6 +165,7 @@
                         <!-- Value input: ComboBox dropdown for ThreadName -->
                         <ComboBox Grid.Column="3"
                                   ItemsSource="{Binding DataContext.AvailableThreads, RelativeSource={RelativeSource AncestorType=Window}}"
+                                  SelectedItem="{Binding Value, Mode=TwoWay}"
                                   Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                   IsEditable="True"
                                   IsTextSearchEnabled="True"
@@ -184,6 +185,7 @@
                         <!-- Value input: ComboBox dropdown for Logger -->
                         <ComboBox Grid.Column="3"
                                   ItemsSource="{Binding DataContext.AvailableLoggers, RelativeSource={RelativeSource AncestorType=Window}}"
+                                  SelectedItem="{Binding Value, Mode=TwoWay}"
                                   Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                   IsEditable="True"
                                   IsTextSearchEnabled="True"

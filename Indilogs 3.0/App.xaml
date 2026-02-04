@@ -14,18 +14,18 @@
         <converters:AnnotationTextBrushConverter x:Key="AnnotationTextBrushConverter"/>
 
 
-        <SolidColorBrush x:Key="BgDark" Color="#121212"/>
-        <SolidColorBrush x:Key="BgPanel" Color="#1E1E24"/>
-        <SolidColorBrush x:Key="BgCard" Color="#25252D"/>
-        <SolidColorBrush x:Key="BgCardHover" Color="#2D2D36"/>
+        <SolidColorBrush x:Key="BgDark" Color="#0D1B2A"/>
+        <SolidColorBrush x:Key="BgPanel" Color="#1B2838"/>
+        <SolidColorBrush x:Key="BgCard" Color="#1E3A5F"/>
+        <SolidColorBrush x:Key="BgCardHover" Color="#274472"/>
 
         <SolidColorBrush x:Key="SidebarBg" Color="#F3F4F6"/>
         <SolidColorBrush x:Key="SidebarText" Color="#1F2937"/>
         <SolidColorBrush x:Key="SidebarBorder" Color="#E5E7EB"/>
 
         <SolidColorBrush x:Key="TextPrimary" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="TextSecondary" Color="#B0B0B0"/>
-        <SolidColorBrush x:Key="BorderColor" Color="#333333"/>
+        <SolidColorBrush x:Key="TextSecondary" Color="#B4B4B9"/>
+        <SolidColorBrush x:Key="BorderColor" Color="#2D4A6F"/>
 
         <SolidColorBrush x:Key="PrimaryColor" Color="#3B82F6"/>
         <SolidColorBrush x:Key="PrimaryHover" Color="#60A5FA"/>
@@ -51,8 +51,8 @@
         <SolidColorBrush x:Key="DeltaLarge" Color="#EF4444"/>       <!-- Red: >1000ms -->
 
         <!-- Gap Indicator -->
-        <SolidColorBrush x:Key="GapIndicatorBg" Color="#333340"/>
-        <SolidColorBrush x:Key="GapIndicatorFg" Color="#808080"/>
+        <SolidColorBrush x:Key="GapIndicatorBg" Color="#1B3554"/>
+        <SolidColorBrush x:Key="GapIndicatorFg" Color="#6B8CAE"/>
 
         <!-- Modern thin scrollbar style -->
         <Style TargetType="ScrollBar">
@@ -254,38 +254,44 @@
             </Setter>
 
             <Style.Triggers>
-                <DataTrigger Binding="{Binding Level}" Value="Error">
-                    <Setter Property="Foreground" Value="White"/>
-                </DataTrigger>
+                <!-- Hover רק כשלא נבחר ואין צבע מותאם או סימון -->
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
+                        <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsSelected}" Value="False"/>
+                        <Condition Binding="{Binding IsMarked}" Value="False"/>
+                        <Condition Binding="{Binding HasAnnotation}" Value="False"/>
+                        <Condition Binding="{Binding CustomColor}" Value="{x:Null}"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Background" Value="#1AFFFFFF"/>
+                </MultiDataTrigger>
 
-                <DataTrigger Binding="{Binding Level}" Value="ERROR">
-                    <Setter Property="Foreground" Value="White"/>
-                </DataTrigger>
-
-                <DataTrigger Binding="{Binding Level}" Value="Fatal">
-                    <Setter Property="Foreground" Value="White"/>
-                </DataTrigger>
-
-                <!-- ✅ רק תיקון הצבע של Selection -->
+                <!-- בחירה - צהוב בהיר עם טקסט שחור -->
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#3078D4"/>
-                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Background" Value="#FFFACD"/>
+                    <Setter Property="Foreground" Value="Black"/>
                     <Setter Property="BorderBrush" Value="Transparent"/>
                 </Trigger>
 
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#1AFFFFFF"/>
-                </Trigger>
+                <!-- ✅ שורה מסומנת ונבחרת - ירוק בהיר מיידי עם טקסט שחור (עדיפות גבוהה ביותר) -->
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsSelected}" Value="True"/>
+                        <Condition Binding="{Binding IsMarked}" Value="True"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Background" Value="#90EE90"/>
+                    <Setter Property="Foreground" Value="Black"/>
+                </MultiDataTrigger>
             </Style.Triggers>
         </Style>
 
         <Style TargetType="DataGrid">
-            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Background" Value="{DynamicResource BgCard}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-            <Setter Property="RowBackground" Value="Transparent"/>
-            <Setter Property="AlternatingRowBackground" Value="#05FFFFFF"/>
+            <Setter Property="RowBackground" Value="{DynamicResource BgCard}"/>
+            <Setter Property="AlternatingRowBackground" Value="{DynamicResource BgCardHover}"/>
             <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-            <Setter Property="HorizontalGridLinesBrush" Value="#22888888"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderColor}"/>
             <Setter Property="VerticalGridLinesBrush" Value="Transparent"/>
             <Setter Property="HeadersVisibility" Value="Column"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -301,6 +307,18 @@
             <Setter Property="BorderThickness" Value="0,0,0,2"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
             <Setter Property="FontFamily" Value="{StaticResource UIFontFamily}"/>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Foreground" Value="Black"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style TargetType="TabItem">

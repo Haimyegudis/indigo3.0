@@ -64,6 +64,8 @@
                 <ColumnDefinition x:Name="RightSplitterColumn" Width="Auto"/>
                 <!-- Right panel - Column 4 -->
                 <ColumnDefinition x:Name="RightPanelColumn" Width="200"/>
+                <!-- Right panel show button column - Column 5 (visible only when right panel is closed) -->
+                <ColumnDefinition x:Name="RightShowButtonColumn" Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <!-- Left Panel with hover toggle button -->
@@ -147,7 +149,7 @@
                                                 <TextBlock Text="🔍 Global Grep"/>
                                             </Viewbox>
                                         </Button>
-                                        <Button Command="{Binding OpenComparisonCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" ToolTip="Compare logs from different sources">
+                                        <Button Command="{Binding OpenComparisonCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" ToolTip="Compare logs from different sources" Visibility="Collapsed">
                                             <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
                                                 <TextBlock Text="🔀 Compare"/>
                                             </Viewbox>
@@ -312,7 +314,7 @@
                                                 <TextBlock Text="🔍 Global Grep"/>
                                             </Viewbox>
                                         </Button>
-                                        <Button Command="{Binding OpenComparisonCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" ToolTip="Compare logs from different sources">
+                                        <Button Command="{Binding OpenComparisonCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" ToolTip="Compare logs from different sources" Visibility="Collapsed">
                                             <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
                                                 <TextBlock Text="🔀 Compare"/>
                                             </Viewbox>
@@ -911,43 +913,43 @@
                 </Border>
             </Grid>
 
-        </Grid>
-
-        <!-- Right panel show button - placed outside MainContentGrid to avoid blocking scrollbar -->
-        <Border Grid.Row="1" Width="20" HorizontalAlignment="Right" VerticalAlignment="Stretch"
-                Cursor="Hand" Panel.ZIndex="10"
-                Visibility="{Binding IsRightPanelVisible, Converter={StaticResource InverseBoolToVisibilityConverter}}"
-                MouseLeftButtonDown="RightPanelShowButton_Click"
-                MouseEnter="PanelShowButton_MouseEnter"
-                MouseLeave="PanelShowButton_MouseLeave"
-                x:Name="RightPanelShowButton"
-                ToolTip="Double-click to show right panel">
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Setter Property="Background" Value="{DynamicResource BgCard}"/>
-                    <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
-                    <Setter Property="BorderThickness" Value="1,0,0,0"/>
-                    <Style.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
-            <TextBlock Text="◀" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
-                       x:Name="RightPanelShowArrow">
-                <TextBlock.Style>
-                    <Style TargetType="TextBlock">
-                        <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <!-- Right panel show button - Column 5 (visible only when right panel is closed) -->
+            <Border Grid.Column="5" Width="20" VerticalAlignment="Stretch"
+                    Cursor="Hand"
+                    Visibility="{Binding IsRightPanelVisible, Converter={StaticResource InverseBoolToVisibilityConverter}}"
+                    MouseLeftButtonDown="RightPanelShowButton_Click"
+                    MouseEnter="PanelShowButton_MouseEnter"
+                    MouseLeave="PanelShowButton_MouseLeave"
+                    x:Name="RightPanelShowButton"
+                    ToolTip="Double-click to show right panel">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="{DynamicResource BgCard}"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+                        <Setter Property="BorderThickness" Value="1,0,0,0"/>
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsMouseOver, ElementName=RightPanelShowButton}" Value="True">
-                                <Setter Property="Foreground" Value="White"/>
-                            </DataTrigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                            </Trigger>
                         </Style.Triggers>
                     </Style>
-                </TextBlock.Style>
-            </TextBlock>
-        </Border>
+                </Border.Style>
+                <TextBlock Text="◀" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
+                           x:Name="RightPanelShowArrow">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsMouseOver, ElementName=RightPanelShowButton}" Value="True">
+                                    <Setter Property="Foreground" Value="White"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Border>
+
+        </Grid>
 
         <controls:StatusBarControl Grid.Row="2" DataContext="{Binding}"/>
 

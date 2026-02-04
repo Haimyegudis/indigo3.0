@@ -396,8 +396,12 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 System.Diagnostics.Debug.WriteLine("[SEARCH] CloseSearchCommand executed");
 
-                // Save the currently selected log BEFORE clearing search
+                // Save the currently selected log and its scroll position BEFORE clearing search
                 var savedSelectedLog = _parent.SelectedLog;
+                if (savedSelectedLog != null)
+                {
+                    _parent.SaveScrollPosition(savedSelectedLog);
+                }
 
                 SearchText = "";  // Clear the search text
                 IsSearchPanelVisible = false;
@@ -405,11 +409,18 @@ namespace IndiLogs_3._0.ViewModels.Components
                 ApplyMainLogsFilter();
                 ApplyAppLogsFilter();
 
-                // Restore the selected log and scroll to it
+                // Restore the selected log and scroll to it, preserving visual position
+                // Use Dispatcher to ensure UI has fully updated before scrolling
                 if (savedSelectedLog != null)
                 {
-                    _parent.SelectedLog = savedSelectedLog;
-                    _parent.ScrollToLog(savedSelectedLog);
+                    var logToRestore = savedSelectedLog;
+                    Application.Current.Dispatcher.BeginInvoke(
+                        System.Windows.Threading.DispatcherPriority.ContextIdle,
+                        new Action(() =>
+                        {
+                            _parent.SelectedLog = logToRestore;
+                            _parent.ScrollToLogPreservePosition(logToRestore);
+                        }));
                 }
             });
             OpenFilterWindowCommand = new RelayCommand(OpenFilterWindow);
@@ -442,17 +453,27 @@ namespace IndiLogs_3._0.ViewModels.Components
         {
             _searchDebounceTimer.Stop();
 
-            // Save the currently selected log BEFORE applying search filter
+            // Save the currently selected log and its scroll position BEFORE applying search filter
             var savedSelectedLog = _parent.SelectedLog;
+            if (savedSelectedLog != null)
+            {
+                _parent.SaveScrollPosition(savedSelectedLog);
+            }
 
             ApplyMainLogsFilter();
             ApplyAppLogsFilter();
 
-            // Restore the selected log and scroll to it
+            // Restore the selected log and scroll to it, preserving visual position
             if (savedSelectedLog != null)
             {
-                _parent.SelectedLog = savedSelectedLog;
-                _parent.ScrollToLog(savedSelectedLog);
+                var logToRestore = savedSelectedLog;
+                Application.Current.Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.ContextIdle,
+                    new Action(() =>
+                    {
+                        _parent.SelectedLog = logToRestore;
+                        _parent.ScrollToLogPreservePosition(logToRestore);
+                    }));
             }
         }
 
@@ -723,8 +744,12 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         private async void OpenFilterWindow(object obj)
         {
-            // Save the currently selected log BEFORE opening the dialog
+            // Save the currently selected log and its scroll position BEFORE opening the dialog
             var savedSelectedLog = _parent.SelectedLog;
+            if (savedSelectedLog != null)
+            {
+                _parent.SaveScrollPosition(savedSelectedLog);
+            }
 
             var win = new Views.FilterWindow();
             bool isAppTab = _parent.SelectedTabIndex == 2;
@@ -790,11 +815,17 @@ namespace IndiLogs_3._0.ViewModels.Components
                         _parent.NotifyPropertyChanged(nameof(_parent.IsFilterActive));
                         _sessionVM.IsBusy = false;
 
-                        // Restore the selected log and scroll to it
+                        // Restore the selected log and scroll to it, preserving visual position
                         if (savedSelectedLog != null)
                         {
-                            _parent.SelectedLog = savedSelectedLog;
-                            _parent.ScrollToLog(savedSelectedLog);
+                            var logToRestore = savedSelectedLog;
+                            Application.Current.Dispatcher.BeginInvoke(
+                                System.Windows.Threading.DispatcherPriority.ContextIdle,
+                                new Action(() =>
+                                {
+                                    _parent.SelectedLog = logToRestore;
+                                    _parent.ScrollToLogPreservePosition(logToRestore);
+                                }));
                         }
                     });
                     return;
@@ -803,6 +834,19 @@ namespace IndiLogs_3._0.ViewModels.Components
                 var newRoot = win.ViewModel.RootNodes.FirstOrDefault();
                 bool hasAdvanced = newRoot != null && newRoot.Children.Count > 0;
                 _sessionVM.IsBusy = true;
+
+                // Debug: Log filter conditions
+                if (newRoot != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[FILTER WINDOW] Apply clicked. Root has {newRoot.Children.Count} children");
+                    foreach (var child in newRoot.Children)
+                    {
+                        if (child.Type == NodeType.Condition)
+                            System.Diagnostics.Debug.WriteLine($"[FILTER WINDOW] Condition: Field={child.Field}, Operator={child.Operator}, Value={child.Value}");
+                        else
+                            System.Diagnostics.Debug.WriteLine($"[FILTER WINDOW] Group: {child.LogicalOperator} with {child.Children.Count} children");
+                    }
+                }
 
                 // Clear separate thread filters since FilterWindow now contains all filter conditions
                 // This prevents duplicate filtering when user modifies a ThreadFilter condition in FilterWindow
@@ -887,8 +931,12 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Found {threads.Count} unique threads: {string.Join(", ", threads.Take(10))}");
 
-            // Save the currently selected log BEFORE opening the dialog
+            // Save the currently selected log and its scroll position BEFORE opening the dialog
             var savedSelectedLog = _parent.SelectedLog;
+            if (savedSelectedLog != null)
+            {
+                _parent.SaveScrollPosition(savedSelectedLog);
+            }
 
             var win = new Views.ThreadFilterWindow(threads) { Title = "Filter by Thread" };
 

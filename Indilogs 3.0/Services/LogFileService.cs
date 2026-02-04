@@ -41,7 +41,7 @@ namespace IndiLogs_3._0.Services
         }
         // ------------------------------------------------------
 
-        // Regex לפרסור לוגים של אפליקציה
+        // Regex לפרסור לוגים של אפליקציה - פורמט ישן עם \x1e כמפריד
         private readonly Regex _appDevRegex = new Regex(
             @"(?<Timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})\x1e" +
             @"(?<Thread>[^\x1e]*)\x1e" +
@@ -55,6 +55,14 @@ namespace IndiLogs_3._0.Services
             @"(?<Message>.*?)\x1e" +
             @"(?<Exception>.*?)\x1e" +
             @"(?<Data>.*?)(\x1e|$)",
+            RegexOptions.Singleline | RegexOptions.Compiled);
+
+        // Regex לפרסור לוגים של אפליקציה - פורמט חדש עם | כמפריד
+        // Format: 2026-01-29 10:32:38,073 |Thread| |RootIFlowId| |IFlowId| |IFlowName| |Pattern| |Context| LEVEL  Logger
+        // Next line: |Method|
+        // Next lines: --> or <-- or message text, followed by optional data/JSON, ending with ||
+        private readonly Regex _appDevRegexPipe = new Regex(
+            @"^(?<Timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})\s*\|(?<Thread>[^|]*)\|\s*\|(?<RootIFlowId>[^|]*)\|\s*\|(?<IFlowId>[^|]*)\|\s*\|(?<IFlowName>[^|]*)\|\s*\|(?<Pattern>[^|]*)\|\s*\|(?<Context>[^|]*)\|\s*(?<Level>\w+)\s+(?<Logger>[^\r\n]*)[\r\n]+\|(?<Location>[^|]*)\|[\r\n]+(?<Message>.*?)\s*\|\|",
             RegexOptions.Singleline | RegexOptions.Compiled);
 
         private readonly Regex _dateStartPattern = new Regex(@"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}", RegexOptions.Compiled);
@@ -337,12 +345,12 @@ namespace IndiLogs_3._0.Services
 
                     session.VersionsInfo = $"SW: {detectedSwVersion} | PLC: {detectedPlcVersion}";
 
-                    // המרה ל-List סופי
-                    session.Logs = logsBag.OrderByDescending(x => x.Date).ToList();
+                    // המרה ל-List סופי - מיון מהישן לחדש (חדשים למטה)
+                    session.Logs = logsBag.OrderBy(x => x.Date).ToList();
                     session.StateTransitions = transitionsBag.OrderBy(x => x.Date).ToList();
                     session.CriticalFailureEvents = failuresBag.OrderBy(x => x.Date).ToList();
-                    session.AppDevLogs = appDevLogsBag.OrderByDescending(x => x.Date).ToList();
-                    session.Events = eventsBag.OrderByDescending(x => x.Time).ToList();
+                    session.AppDevLogs = appDevLogsBag.OrderBy(x => x.Date).ToList();
+                    session.Events = eventsBag.OrderBy(x => x.Time).ToList();
                     session.Screenshots = screenshotsBag.ToList();
 
                     progress?.Report((100, "Done"));
@@ -561,7 +569,15 @@ namespace IndiLogs_3._0.Services
 
         private LogEntry ProcessAppDevBuffer(string rawText, StringPool pool)
         {
+            // נסה קודם את הפורמט הישן עם \x1e
             var match = _appDevRegex.Match(rawText);
+
+            // אם לא הצליח, נסה את הפורמט החדש עם |
+            if (!match.Success)
+            {
+                match = _appDevRegexPipe.Match(rawText);
+            }
+
             if (!match.Success) return null;
 
             string timestampStr = match.Groups["Timestamp"].Value;
@@ -572,10 +588,29 @@ namespace IndiLogs_3._0.Services
                 DateTime.TryParse(timestampStr, out date);
             }
 
-            string message = match.Groups["Message"].Value.Trim();
-            string exception = match.Groups["Exception"].Value.Trim();
-            string data = match.Groups["Data"].Value.Trim();
-            string pattern = match.Groups["Pattern"].Value.Trim();
+            string message = match.Groups["Message"].Success ? match.Groups["Message"].Value.Trim() : "";
+            string exception = match.Groups["Exception"].Success ? match.Groups["Exception"].Value.Trim() : "";
+            string data = match.Groups["Data"].Success ? match.Groups["Data"].Value.Trim() : "";
+            string pattern = match.Groups["Pattern"].Success ? match.Groups["Pattern"].Value.Trim() : "";
+            string location = match.Groups["Location"].Success ? match.Groups["Location"].Value.Trim() : "";
+
+            // בפורמט החדש, ה-Direction (-->/<--) יכול לשמש כחלק מההודעה
+            string direction = match.Groups["Direction"].Success ? match.Groups["Direction"].Value.Trim() : "";
+
+            // בפורמט החדש, אם אין Message נפרד, נשתמש ב-Direction + Data כהודעה
+            if (string.IsNullOrEmpty(message) && !string.IsNullOrEmpty(direction))
+            {
+                message = direction;
+                if (!string.IsNullOrEmpty(data))
+                {
+                    // אם ה-Data הוא JSON, נשמור אותו בשדה Data
+                    if (!data.TrimStart().StartsWith("{") && !data.TrimStart().StartsWith("["))
+                    {
+                        message = $"{direction} {data}";
+                        data = "";
+                    }
+                }
+            }
 
             return new LogEntry
             {
@@ -583,10 +618,10 @@ namespace IndiLogs_3._0.Services
                 // --- אופטימיזציה: שימוש ב-StringPool ---
                 ThreadName = pool.Intern(match.Groups["Thread"].Value),
                 Level = pool.Intern(match.Groups["Level"].Value.ToUpper()),
-                Logger = pool.Intern(match.Groups["Logger"].Value),
+                Logger = pool.Intern(match.Groups["Logger"].Value.Trim()),
                 Message = pool.Intern(message),
                 ProcessName = pool.Intern("APP"),
-                Method = pool.Intern(match.Groups["Location"].Value),
+                Method = pool.Intern(location),
                 Pattern = string.IsNullOrEmpty(pattern) ? null : pool.Intern(pattern),
                 Data = string.IsNullOrEmpty(data) ? null : pool.Intern(data),
                 Exception = string.IsNullOrEmpty(exception) ? null : pool.Intern(exception)

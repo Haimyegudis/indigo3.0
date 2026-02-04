@@ -62,11 +62,20 @@
                             <Setter Property="Padding" Value="8,0"/>
                             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                             <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                    <Setter Property="Foreground" Value="#DC3232"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                    <Setter Property="Foreground" Value="Black"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="Foreground" Value="Black"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -81,11 +90,20 @@
                             <Setter Property="Padding" Value="8,0"/>
                             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                             <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                    <Setter Property="Foreground" Value="#DC3232"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                    <Setter Property="Foreground" Value="Black"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="Foreground" Value="Black"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -104,11 +122,20 @@
                             <Setter Property="Padding" Value="8,0"/>
                             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                             <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                    <Setter Property="Foreground" Value="#DC3232"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                    <Setter Property="Foreground" Value="Black"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="Foreground" Value="Black"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -127,14 +154,20 @@
                             <Setter Property="Padding" Value="8,0"/>
                             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                    <Setter Property="Foreground" Value="#DC3232"/>
                                 </DataTrigger>
-                                <DataTrigger Binding="{Binding ThreadName}" Value="Manager">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                    <Setter Property="Foreground" Value="Black"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="Foreground" Value="Black"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -153,11 +186,20 @@
                             <Setter Property="Padding" Value="8,0"/>
                             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                             <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                    <Setter Property="Foreground" Value="#DC3232"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                    <Setter Property="Foreground" Value="Black"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="Foreground" Value="Black"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -174,11 +216,20 @@
                                         <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
                                         <Setter Property="TextWrapping" Value="NoWrap"/>
                                         <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                                <Setter Property="Foreground" Value="#DC3232"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                                <Setter Property="Foreground" Value="Black"/>
+                                            </DataTrigger>
                                             <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
-                                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                                <Setter Property="Foreground" Value="Black"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                                <Setter Property="Foreground" Value="Black"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
-                                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                                <Setter Property="Foreground" Value="Black"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -197,11 +248,20 @@
                             <Setter Property="Padding" Value="8,0"/>
                             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                             <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                    <Setter Property="Foreground" Value="#DC3232"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                    <Setter Property="Foreground" Value="Black"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="Foreground" Value="Black"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -217,11 +277,20 @@
                             <Setter Property="Padding" Value="8,0"/>
                             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                             <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                    <Setter Property="Foreground" Value="#DC3232"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                    <Setter Property="Foreground" Value="Black"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="Foreground" Value="Black"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -237,11 +306,20 @@
                             <Setter Property="Padding" Value="8,0"/>
                             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
                             <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                    <Setter Property="Foreground" Value="#DC3232"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                    <Setter Property="Foreground" Value="Black"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="Foreground" Value="Black"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>

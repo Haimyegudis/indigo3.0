@@ -24,6 +24,11 @@ namespace IndiLogs_3._0
         // Flag to distinguish between user clicks and code-driven scrolling
         private bool _isProgrammaticScroll = false;
 
+        // Saved scroll position for preserving row position during filter changes
+        private double _savedScrollOffset = 0;
+        private int _savedLogIndexInView = -1;
+        private double _savedLogOffsetInViewport = 0;
+
         // Per-tab panel width storage (default is 200 for all tabs)
         private System.Collections.Generic.Dictionary<int, double> _tabPanelWidths = new System.Collections.Generic.Dictionary<int, double>();
         private const double DEFAULT_PANEL_WIDTH = 200;
@@ -59,6 +64,8 @@ namespace IndiLogs_3._0
             if (DataContext is MainViewModel vm)
             {
                 vm.RequestScrollToLog += MapsToLogRow;
+                vm.RequestScrollToLogPreservePosition += ScrollToLogPreservingPosition;
+                vm.RequestSaveScrollPosition += SaveScrollPositionForLog;
                 vm.PropertyChanged += ViewModel_PropertyChanged;
 
                 // Initialize column widths based on current ViewModel state
@@ -256,11 +263,17 @@ namespace IndiLogs_3._0
                 // Allow scrolling for this programmatic action
                 _isProgrammaticScroll = true;
 
-                // Scroll to the exact vertical position
-                scrollViewer.ScrollToVerticalOffset(logIndex);
-
-                // Select the item
+                // Select the item first
                 targetGrid.SelectedItem = log;
+
+                // Use ScrollIntoView to properly scroll to the row
+                targetGrid.ScrollIntoView(log);
+
+                // If we want to scroll to top of list (index 0), scroll to top
+                if (logIndex == 0)
+                {
+                    scrollViewer.ScrollToTop();
+                }
 
                 _isProgrammaticScroll = false;
 
@@ -270,6 +283,195 @@ namespace IndiLogs_3._0
             {
                 _isProgrammaticScroll = false;
                 System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Scrolls to a log entry while preserving its visual position on screen.
+        /// When clearing/applying filters, this keeps the selected row in the same position
+        /// rather than jumping to the bottom or top of the viewport.
+        ///
+        /// NOTE: WPF DataGrid with VirtualizingStackPanel uses ITEM-BASED scrolling (VerticalOffset = item index),
+        /// not pixel-based scrolling. So we save/restore in terms of item indices.
+        /// </summary>
+        private void ScrollToLogPreservingPosition(LogEntry log, bool preservePosition)
+        {
+            if (log == null) return;
+
+            // Use dispatcher with ContextIdle priority - this runs after all rendering and layout is complete
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new Action(() =>
+            {
+                try
+                {
+                    DataGrid targetGrid = null;
+                    string gridName = "";
+
+                    System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] Looking for log in grids...");
+
+                    // Find the grid containing this log
+                    if (PlcLogsTab?.LogsGrid?.InnerDataGrid != null && PlcLogsTab.LogsGrid.InnerDataGrid.Items.Contains(log))
+                    {
+                        targetGrid = PlcLogsTab.LogsGrid.InnerDataGrid;
+                        gridName = "MainLogsGrid";
+                        System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] Found in MainLogsGrid, Items.Count={targetGrid.Items.Count}");
+                    }
+                    else if (PlcFilteredTab?.LogsGrid?.InnerDataGrid != null && PlcFilteredTab.LogsGrid.InnerDataGrid.Items.Contains(log))
+                    {
+                        targetGrid = PlcFilteredTab.LogsGrid.InnerDataGrid;
+                        gridName = "FilteredLogsGrid";
+                        System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] Found in FilteredLogsGrid, Items.Count={targetGrid.Items.Count}");
+                    }
+                    else if (AppLogsTab?.InnerDataGrid != null && AppLogsTab.InnerDataGrid.Items.Contains(log))
+                    {
+                        targetGrid = AppLogsTab.InnerDataGrid;
+                        gridName = "AppLogsGrid";
+                        System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] Found in AppLogsGrid, Items.Count={targetGrid.Items.Count}");
+                    }
+
+                    if (targetGrid == null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] Log not found in any grid. PlcLogsTab Items.Count={PlcLogsTab?.LogsGrid?.InnerDataGrid?.Items?.Count ?? -1}");
+                        return;
+                    }
+
+                    int newLogIndex = targetGrid.Items.IndexOf(log);
+                    if (newLogIndex < 0)
+                    {
+                        System.Diagnostics.Debug.WriteLine("[SCROLL PRESERVE] Log index not found");
+                        return;
+                    }
+
+                    // Get or find the ScrollViewer
+                    ScrollViewer scrollViewer = null;
+                    if (!string.IsNullOrEmpty(gridName) && _scrollViewerCache.ContainsKey(gridName))
+                    {
+                        scrollViewer = _scrollViewerCache[gridName];
+                    }
+                    else
+                    {
+                        scrollViewer = FindVisualChild<ScrollViewer>(targetGrid);
+                    }
+
+                    if (scrollViewer == null)
+                    {
+                        System.Diagnostics.Debug.WriteLine("[SCROLL PRESERVE] ScrollViewer not found");
+                        MapsToLogRow(log); // Fallback to normal scrolling
+                        return;
+                    }
+
+                    // For VirtualizingStackPanel, VerticalOffset is the INDEX of the first visible item (not pixels!)
+                    // _savedLogOffsetInViewport is how many ITEMS from the first visible item the selected row was
+                    // So: targetOffset = newLogIndex - savedItemOffsetInViewport
+
+                    double targetOffset;
+                    if (_savedLogOffsetInViewport >= 0)
+                    {
+                        // Calculate the scroll offset that will place this log at the same position in viewport
+                        targetOffset = newLogIndex - _savedLogOffsetInViewport;
+                        System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] NewIndex={newLogIndex}, SavedItemOffset={_savedLogOffsetInViewport}, TargetScrollOffset={targetOffset}");
+                    }
+                    else
+                    {
+                        // Default: put the row near the middle of viewport
+                        double viewportItems = scrollViewer.ViewportHeight; // This is in items, not pixels
+                        targetOffset = newLogIndex - (viewportItems / 2);
+                        System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] No saved offset, centering row at index {newLogIndex}, ViewportItems={viewportItems}");
+                    }
+
+                    // Clamp to valid scroll range
+                    targetOffset = Math.Max(0, Math.Min(targetOffset, scrollViewer.ScrollableHeight));
+
+                    _isProgrammaticScroll = true;
+
+                    // Select the item
+                    targetGrid.SelectedItem = log;
+
+                    // Scroll to position
+                    scrollViewer.ScrollToVerticalOffset(targetOffset);
+
+                    _isProgrammaticScroll = false;
+
+                    // Clear saved position after using it
+                    _savedLogIndexInView = -1;
+                    _savedLogOffsetInViewport = -1;
+                    _savedScrollOffset = -1;
+
+                    System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] ✅ Scrolled to offset {targetOffset} (log at row {_savedLogOffsetInViewport} from top of viewport)");
+                }
+                catch (Exception ex)
+                {
+                    _isProgrammaticScroll = false;
+                    System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] Error: {ex.Message}");
+                    MapsToLogRow(log); // Fallback to normal scrolling
+                }
+            }));
+        }
+
+        /// <summary>
+        /// Saves the current scroll position before filter changes.
+        /// Call this BEFORE applying any filter changes.
+        ///
+        /// NOTE: WPF DataGrid with VirtualizingStackPanel uses ITEM-BASED scrolling (VerticalOffset = item index),
+        /// not pixel-based scrolling. So we save/restore in terms of item indices.
+        /// </summary>
+        public void SaveScrollPositionForLog(LogEntry log)
+        {
+            if (log == null) return;
+
+            try
+            {
+                DataGrid targetGrid = null;
+                string gridName = "";
+
+                // Find the grid containing this log
+                if (PlcLogsTab?.LogsGrid?.InnerDataGrid != null && PlcLogsTab.LogsGrid.InnerDataGrid.Items.Contains(log))
+                {
+                    targetGrid = PlcLogsTab.LogsGrid.InnerDataGrid;
+                    gridName = "MainLogsGrid";
+                }
+                else if (PlcFilteredTab?.LogsGrid?.InnerDataGrid != null && PlcFilteredTab.LogsGrid.InnerDataGrid.Items.Contains(log))
+                {
+                    targetGrid = PlcFilteredTab.LogsGrid.InnerDataGrid;
+                    gridName = "FilteredLogsGrid";
+                }
+                else if (AppLogsTab?.InnerDataGrid != null && AppLogsTab.InnerDataGrid.Items.Contains(log))
+                {
+                    targetGrid = AppLogsTab.InnerDataGrid;
+                    gridName = "AppLogsGrid";
+                }
+
+                if (targetGrid == null) return;
+
+                int logIndex = targetGrid.Items.IndexOf(log);
+                if (logIndex < 0) return;
+
+                // Get ScrollViewer
+                ScrollViewer scrollViewer = null;
+                if (!string.IsNullOrEmpty(gridName) && _scrollViewerCache.ContainsKey(gridName))
+                {
+                    scrollViewer = _scrollViewerCache[gridName];
+                }
+                else
+                {
+                    scrollViewer = FindVisualChild<ScrollViewer>(targetGrid);
+                }
+
+                if (scrollViewer == null) return;
+
+                // For VirtualizingStackPanel, VerticalOffset IS the index of the first visible item
+                // So the item's offset within the viewport = itemIndex - scrollOffset
+                double currentScrollOffset = scrollViewer.VerticalOffset;
+
+                // Save how many ITEMS from the top of the viewport this item is
+                _savedLogIndexInView = logIndex;
+                _savedLogOffsetInViewport = logIndex - currentScrollOffset;
+                _savedScrollOffset = currentScrollOffset;
+
+                System.Diagnostics.Debug.WriteLine($"[SCROLL SAVE] Index={logIndex}, ScrollOffset={currentScrollOffset}, ItemOffsetInViewport={_savedLogOffsetInViewport}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SCROLL SAVE] Error: {ex.Message}");
             }
         }
 

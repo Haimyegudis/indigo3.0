@@ -506,7 +506,25 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     var dbBytes = _sessionVM.SelectedSession.DatabaseFiles[node.DatabaseFileName];
                     var window = new Views.BrowseTableWindow(node.Name, dbBytes);
+                    window.Owner = Application.Current.MainWindow;
+
+                    // Ensure window opens in front
+                    window.Loaded += (s, e) =>
+                    {
+                        window.Activate();
+                        window.Focus();
+                    };
+
                     WindowManager.OpenWindow(window);
+
+                    // Force to front after a short delay
+                    Application.Current.Dispatcher.BeginInvoke(
+                        System.Windows.Threading.DispatcherPriority.Background,
+                        new Action(() =>
+                        {
+                            window.Activate();
+                            window.Focus();
+                        }));
                 }
                 catch (Exception ex)
                 {

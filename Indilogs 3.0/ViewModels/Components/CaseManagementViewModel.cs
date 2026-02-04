@@ -332,20 +332,25 @@ namespace IndiLogs_3._0.ViewModels.Components
         {
             if (_parent.SelectedLog != null)
             {
-                _parent.SelectedLog.IsMarked = !_parent.SelectedLog.IsMarked;
+                var currentLog = _parent.SelectedLog;
+                currentLog.IsMarked = !currentLog.IsMarked;
+
+                // Force UI refresh by re-notifying RowBackground
+                currentLog.OnPropertyChanged(nameof(currentLog.RowBackground));
+
                 bool isAppTab = _parent.SelectedTabIndex == 2;
                 var targetList = isAppTab ? MarkedAppLogs : MarkedLogs;
 
-                if (_parent.SelectedLog.IsMarked)
+                if (currentLog.IsMarked)
                 {
-                    targetList.Add(_parent.SelectedLog);
+                    targetList.Add(currentLog);
                     var sorted = targetList.OrderByDescending(x => x.Date).ToList();
                     targetList.Clear();
                     foreach (var l in sorted) targetList.Add(l);
                 }
                 else
                 {
-                    targetList.Remove(_parent.SelectedLog);
+                    targetList.Remove(currentLog);
                 }
             }
         }

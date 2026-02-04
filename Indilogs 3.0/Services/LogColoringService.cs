@@ -31,6 +31,8 @@ namespace IndiLogs_3._0.Services
 
                     // 1. איפוס צבע קיים (מוחק צבעים ישנים)
                     log.CustomColor = null;
+                    log.IsErrorOrEvents = false;
+                    log.RowForeground = null;
 
                     // 2. חוק מיוחד: PipelineCancellationProvider errors -> Strong Orange with Black text
                     if (isAppLog &&
@@ -55,10 +57,10 @@ namespace IndiLogs_3._0.Services
                         return;
                     }
 
-                    // 3. חוק משותף: שגיאה (Error) תמיד אדומה
+                    // 3. חוק משותף: שגיאה (Error) - טקסט אדום (לא רקע)
                     if (string.Equals(log.Level, "Error", StringComparison.OrdinalIgnoreCase))
                     {
-                        log.CustomColor = Color.FromRgb(180, 50, 50); // Red
+                        log.IsErrorOrEvents = true; // Mark for red text in XAML
                         return; // סיימנו עם השורה הזו
                     }
 
@@ -66,40 +68,21 @@ namespace IndiLogs_3._0.Services
                     if (isAppLog) return;
 
                     // 5. חוקים ל-MAIN LOGS בלבד - PLC FILTERED Rules
-                    // Thread = Events -> Red
+                    // Thread = Events -> Red text (לא רקע)
                     if (string.Equals(log.ThreadName, "Events", StringComparison.OrdinalIgnoreCase))
                     {
-                        log.CustomColor = Color.FromRgb(180, 50, 50); // Red
+                        log.IsErrorOrEvents = true; // Mark for red text in XAML
                     }
-                    // Thread = Manager AND Message contains "->" AND Message begins with "PlcMngr:" -> Light Blue
+                    // Thread = Manager AND Message contains "->" AND Message begins with "PlcMngr:" -> Light Blue (state transitions only)
                     else if (string.Equals(log.ThreadName, "Manager", StringComparison.OrdinalIgnoreCase) &&
                              log.Message != null &&
                              log.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) &&
                              log.Message.Contains("->"))
                     {
                         log.CustomColor = Color.FromRgb(173, 216, 230); // Light Blue
+                        log.RowForeground = Brushes.Black; // Black text on light blue background
                     }
-                    // Thread = Manager AND Message begins with "MechInit:" -> Orange
-                    else if (string.Equals(log.ThreadName, "Manager", StringComparison.OrdinalIgnoreCase) &&
-                             log.Message != null &&
-                             log.Message.StartsWith("MechInit:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        log.CustomColor = Color.FromRgb(255, 165, 0); // Orange
-                    }
-                    // Thread = Manager AND Message begins with "GetReady:" -> Light Green
-                    else if (string.Equals(log.ThreadName, "Manager", StringComparison.OrdinalIgnoreCase) &&
-                             log.Message != null &&
-                             log.Message.StartsWith("GetReady:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        log.CustomColor = Color.FromRgb(144, 238, 144); // Light Green
-                    }
-                    // Thread = Manager AND Message begins with "Print:" -> Green
-                    else if (string.Equals(log.ThreadName, "Manager", StringComparison.OrdinalIgnoreCase) &&
-                             log.Message != null &&
-                             log.Message.StartsWith("Print:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        log.CustomColor = Color.FromRgb(0, 128, 0); // Green
-                    }
+                    // הוסרו: MechInit, GetReady, Print - לא צובעים יותר
                 });
             });
         }

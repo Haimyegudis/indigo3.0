@@ -110,6 +110,21 @@ namespace IndiLogs_3._0.Models
         }
 
         // ===== ROW STYLING =====
+        private bool _isErrorOrEvents;
+        public bool IsErrorOrEvents
+        {
+            get => _isErrorOrEvents;
+            set
+            {
+                if (_isErrorOrEvents != value)
+                {
+                    _isErrorOrEvents = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        // Legacy property for compatibility - will be removed
         private Brush _rowForeground;
         public Brush RowForeground
         {
@@ -130,7 +145,7 @@ namespace IndiLogs_3._0.Models
             {
                 // Priority order: Marked > Annotation > Custom Color > Transparent
                 if (IsMarked)
-                    return new SolidColorBrush(Color.FromRgb(204, 153, 255)); // Purple
+                    return new SolidColorBrush(Color.FromRgb(144, 238, 144)); // Light Green
 
                 if (HasAnnotation)
                     return new SolidColorBrush(Color.FromRgb(255, 255, 200)); // Yellow

@@ -359,6 +359,18 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _filterVM.ApplyAppLogsFilter();
                 System.Diagnostics.Debug.WriteLine($"[FILTERING] Initial filter application complete");
 
+                // Scroll to the last log (bottom) after loading
+                if (_parent.Logs != null && _parent.Logs.Any())
+                {
+                    var lastLog = _parent.Logs.LastOrDefault();
+                    if (lastLog != null)
+                    {
+                        _parent.SelectedLog = lastLog;
+                        _parent.ScrollToLog(lastLog);
+                        System.Diagnostics.Debug.WriteLine($"[SCROLL] Scrolled to last log after initial load");
+                    }
+                }
+
                 CurrentProgress = 100;
                 StatusMessage = "Logs Loaded. Running Analysis in Background...";
                 IsBusy = false;
@@ -567,7 +579,12 @@ namespace IndiLogs_3._0.ViewModels.Components
                     System.Diagnostics.Debug.WriteLine($"[SWITCH SESSION] FilteredLogs updated, count: {_filterVM.FilteredLogs.Count}");
                 }
                 if (_parent.FilteredLogs != null && _parent.FilteredLogs.Count > 0)
-                    _parent.SelectedLog = _parent.FilteredLogs[0];
+                {
+                    // Scroll to bottom (last log) after loading new logs
+                    var lastLog = _parent.FilteredLogs[_parent.FilteredLogs.Count - 1];
+                    _parent.SelectedLog = lastLog;
+                    _parent.ScrollToLog(lastLog);
+                }
 
                 // Mark filter as inactive since this is just default filtering, not user-applied filter
                 _filterVM.IsMainFilterActive = false;

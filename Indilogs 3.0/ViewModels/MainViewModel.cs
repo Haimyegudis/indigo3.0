@@ -306,6 +306,8 @@ namespace IndiLogs_3._0.ViewModels
 
 
         public event Action<LogEntry> RequestScrollToLog;
+        public event Action<LogEntry, bool> RequestScrollToLogPreservePosition;
+        public event Action<LogEntry> RequestSaveScrollPosition;
 
         /// <summary>
         /// Public method to trigger scroll to log event from child ViewModels
@@ -313,6 +315,22 @@ namespace IndiLogs_3._0.ViewModels
         public void ScrollToLog(LogEntry log)
         {
             RequestScrollToLog?.Invoke(log);
+        }
+
+        /// <summary>
+        /// Scrolls to log while preserving its visual position on screen (used when filter changes)
+        /// </summary>
+        public void ScrollToLogPreservePosition(LogEntry log)
+        {
+            RequestScrollToLogPreservePosition?.Invoke(log, true);
+        }
+
+        /// <summary>
+        /// Saves the current scroll position before filter changes (call BEFORE applying filters)
+        /// </summary>
+        public void SaveScrollPosition(LogEntry log)
+        {
+            RequestSaveScrollPosition?.Invoke(log);
         }
 
         // --- SELECTED TAB INDEX ---
@@ -457,8 +475,12 @@ namespace IndiLogs_3._0.ViewModels
             {
                 System.Diagnostics.Debug.WriteLine($"[IsFilterActive SET] value={value}, Tab={SelectedTabIndex}");
 
-                // Save the currently selected log BEFORE changing filter state
+                // Save the currently selected log and its scroll position BEFORE changing filter state
                 var savedSelectedLog = SelectedLog;
+                if (savedSelectedLog != null)
+                {
+                    SaveScrollPosition(savedSelectedLog);
+                }
 
                 if (SelectedTabIndex == 2)
                 {
@@ -477,11 +499,18 @@ namespace IndiLogs_3._0.ViewModels
                         OnPropertyChanged();
                         ApplyAppLogsFilter();
 
-                        // Restore the selected log and scroll to it
+                        // Restore the selected log and scroll to it, preserving visual position
+                        // Use Dispatcher to ensure UI has fully updated before scrolling
                         if (savedSelectedLog != null)
                         {
-                            SelectedLog = savedSelectedLog;
-                            ScrollToLog(savedSelectedLog);
+                            var logToRestore = savedSelectedLog;
+                            Application.Current.Dispatcher.BeginInvoke(
+                                System.Windows.Threading.DispatcherPriority.ContextIdle,
+                                new Action(() =>
+                                {
+                                    SelectedLog = logToRestore;
+                                    ScrollToLogPreservePosition(logToRestore);
+                                }));
                         }
                     }
                 }
@@ -505,11 +534,24 @@ namespace IndiLogs_3._0.ViewModels
                         OnPropertyChanged();
                         UpdateMainLogsFilter(value);
 
-                        // Restore the selected log and scroll to it
+                        // Restore the selected log and scroll to it, preserving visual position
+                        // Use Dispatcher to ensure UI has fully updated before scrolling
                         if (savedSelectedLog != null)
                         {
-                            SelectedLog = savedSelectedLog;
-                            ScrollToLog(savedSelectedLog);
+                            System.Diagnostics.Debug.WriteLine($"[IsFilterActive SET] MAIN: Restoring selection to log at index {Logs?.ToList().IndexOf(savedSelectedLog) ?? -1}");
+                            var logToRestore = savedSelectedLog;
+                            Application.Current.Dispatcher.BeginInvoke(
+                                System.Windows.Threading.DispatcherPriority.ContextIdle,
+                                new Action(() =>
+                                {
+                                    SelectedLog = logToRestore;
+                                    ScrollToLogPreservePosition(logToRestore);
+                                    System.Diagnostics.Debug.WriteLine($"[IsFilterActive SET] MAIN: Dispatched scroll to log");
+                                }));
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[IsFilterActive SET] MAIN: savedSelectedLog is null, not restoring");
                         }
                     }
                 }
@@ -521,8 +563,12 @@ namespace IndiLogs_3._0.ViewModels
             get => SelectedTabIndex == 2 ? IsAppFilterOutActive : IsMainFilterOutActive;
             set
             {
-                // Save the currently selected log BEFORE changing filter state
+                // Save the currently selected log and its scroll position BEFORE changing filter state
                 var savedSelectedLog = SelectedLog;
+                if (savedSelectedLog != null)
+                {
+                    SaveScrollPosition(savedSelectedLog);
+                }
 
                 if (SelectedTabIndex == 2)
                 {
@@ -536,11 +582,18 @@ namespace IndiLogs_3._0.ViewModels
                         OnPropertyChanged();
                         ApplyAppLogsFilter();
 
-                        // Restore the selected log and scroll to it
+                        // Restore the selected log and scroll to it, preserving visual position
+                        // Use Dispatcher to ensure UI has fully updated before scrolling
                         if (savedSelectedLog != null)
                         {
-                            SelectedLog = savedSelectedLog;
-                            ScrollToLog(savedSelectedLog);
+                            var logToRestore = savedSelectedLog;
+                            Application.Current.Dispatcher.BeginInvoke(
+                                System.Windows.Threading.DispatcherPriority.ContextIdle,
+                                new Action(() =>
+                                {
+                                    SelectedLog = logToRestore;
+                                    ScrollToLogPreservePosition(logToRestore);
+                                }));
                         }
                     }
                 }
@@ -556,11 +609,18 @@ namespace IndiLogs_3._0.ViewModels
                         OnPropertyChanged();
                         UpdateMainLogsFilter(FilterVM.IsMainFilterActive);
 
-                        // Restore the selected log and scroll to it
+                        // Restore the selected log and scroll to it, preserving visual position
+                        // Use Dispatcher to ensure UI has fully updated before scrolling
                         if (savedSelectedLog != null)
                         {
-                            SelectedLog = savedSelectedLog;
-                            ScrollToLog(savedSelectedLog);
+                            var logToRestore = savedSelectedLog;
+                            Application.Current.Dispatcher.BeginInvoke(
+                                System.Windows.Threading.DispatcherPriority.ContextIdle,
+                                new Action(() =>
+                                {
+                                    SelectedLog = logToRestore;
+                                    ScrollToLogPreservePosition(logToRestore);
+                                }));
                         }
                     }
                 }
@@ -884,16 +944,27 @@ namespace IndiLogs_3._0.ViewModels
 
         private void OnSearchTimerTick(object sender, EventArgs e)
         {
-            // Save the currently selected log BEFORE toggling filter
+            // Save the currently selected log and its scroll position BEFORE toggling filter
             var savedSelectedLog = SelectedLog;
+            if (savedSelectedLog != null)
+            {
+                SaveScrollPosition(savedSelectedLog);
+            }
 
             ToggleFilterView(IsFilterActive);
 
-            // Restore the selected log and scroll to it
+            // Restore the selected log and scroll to it, preserving visual position
+            // Use Dispatcher to ensure UI has fully updated before scrolling
             if (savedSelectedLog != null)
             {
-                SelectedLog = savedSelectedLog;
-                ScrollToLog(savedSelectedLog);
+                var logToRestore = savedSelectedLog;
+                Application.Current.Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.ContextIdle,
+                    new Action(() =>
+                    {
+                        SelectedLog = logToRestore;
+                        ScrollToLogPreservePosition(logToRestore);
+                    }));
             }
         }
 
@@ -1118,7 +1189,8 @@ namespace IndiLogs_3._0.ViewModels
 
                 statesList.Add(entry);
             }
-            return statesList.OrderByDescending(s => s.StartTime).ToList();
+            // מיון מהישן לחדש (חדשים למטה)
+            return statesList.OrderBy(s => s.StartTime).ToList();
         }
 
         public void StartBackgroundAnalysis(LogSessionData session)
@@ -1715,16 +1787,17 @@ namespace IndiLogs_3._0.ViewModels
             var dict = Application.Current.Resources;
             if (isDark)
             {
-                UpdateResource(dict, "BgDark", new SolidColorBrush(Color.FromRgb(18, 18, 18)));
-                UpdateResource(dict, "BgPanel", new SolidColorBrush(Color.FromRgb(30, 30, 36)));
-                UpdateResource(dict, "BgCard", new SolidColorBrush(Color.FromRgb(37, 37, 45)));
-                UpdateResource(dict, "BgCardHover", new SolidColorBrush(Color.FromRgb(45, 45, 54)));
+                // Dark mode colors - deep navy blue theme (like reference image)
+                UpdateResource(dict, "BgDark", new SolidColorBrush(Color.FromRgb(10, 18, 30)));    // #0A121E - very deep navy
+                UpdateResource(dict, "BgPanel", new SolidColorBrush(Color.FromRgb(15, 25, 40)));   // #0F1928 - dark navy panel
+                UpdateResource(dict, "BgCard", new SolidColorBrush(Color.FromRgb(20, 35, 55)));    // #142337 - navy card
+                UpdateResource(dict, "BgCardHover", new SolidColorBrush(Color.FromRgb(30, 50, 75))); // #1E324B - lighter navy hover
 
-                UpdateResource(dict, "TextPrimary", new SolidColorBrush(Colors.White));
-                UpdateResource(dict, "TextSecondary", new SolidColorBrush(Color.FromRgb(176, 176, 176)));
-                UpdateResource(dict, "BorderColor", new SolidColorBrush(Color.FromRgb(51, 51, 51)));
+                UpdateResource(dict, "TextPrimary", new SolidColorBrush(Color.FromRgb(220, 230, 240))); // Soft white-blue
+                UpdateResource(dict, "TextSecondary", new SolidColorBrush(Color.FromRgb(140, 160, 180))); // Muted blue-gray
+                UpdateResource(dict, "BorderColor", new SolidColorBrush(Color.FromRgb(40, 60, 85))); // #283C55 - subtle blue border
 
-                UpdateResource(dict, "AnimColor1", new SolidColorBrush(Color.FromRgb(0, 229, 255)));
+                UpdateResource(dict, "AnimColor1", new SolidColorBrush(Color.FromRgb(0, 200, 220)));  // Teal/Cyan
                 UpdateResource(dict, "AnimColor2", new SolidColorBrush(Color.FromRgb(245, 0, 87)));
                 UpdateResource(dict, "AnimText", new SolidColorBrush(Colors.White));
             }
@@ -1764,17 +1837,52 @@ namespace IndiLogs_3._0.ViewModels
         private void OpenSettingsWindow(object obj)
         {
             var win = new SettingsWindow { DataContext = this };
+            win.WindowStartupLocation = WindowStartupLocation.Manual;
+
             if (obj is FrameworkElement button)
             {
-                // Position below the button on the same screen
+                // Get DPI scale factor for accurate positioning
+                var source = PresentationSource.FromVisual(button);
+                double dpiScale = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
+
+                // Position below the button, aligned to its left edge
                 Point buttonPosition = button.PointToScreen(new Point(0, 0));
-                win.WindowStartupLocation = WindowStartupLocation.Manual;
-                win.Left = buttonPosition.X;
-                win.Top = buttonPosition.Y + button.ActualHeight;
-                WindowManager.OpenWindow(win);
+                double buttonHeight = button.ActualHeight * dpiScale;
+
+                // Get screen bounds to ensure window stays on screen
+                var screen = System.Windows.Forms.Screen.FromPoint(
+                    new System.Drawing.Point((int)buttonPosition.X, (int)buttonPosition.Y));
+                var workingArea = screen.WorkingArea;
+
+                // Position below the button
+                double left = buttonPosition.X / dpiScale;
+                double top = (buttonPosition.Y + buttonHeight + 5) / dpiScale;
+
+                // Ensure window doesn't go off the right edge
+                if (left + win.Width > workingArea.Right / dpiScale)
+                {
+                    left = workingArea.Right / dpiScale - win.Width - 10;
+                }
+
+                // Ensure window doesn't go off the bottom - if so, show above button
+                double estimatedHeight = 350;
+                if (top + estimatedHeight > workingArea.Bottom / dpiScale)
+                {
+                    top = buttonPosition.Y / dpiScale - estimatedHeight - 5;
+                }
+
+                win.Left = left;
+                win.Top = top;
+
+                // Show the window directly instead of using WindowManager
+                // to preserve our manual positioning
+                win.Show();
+                win.Activate();
+                win.Focus();
             }
             else
             {
+                // Fallback: use WindowManager for centering
                 WindowManager.OpenWindow(win);
             }
         }
