@@ -751,8 +751,14 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _parent.SaveScrollPosition(savedSelectedLog);
             }
 
-            var win = new Views.FilterWindow();
             bool isAppTab = _parent.SelectedTabIndex == 2;
+
+            // Get available threads and loggers from the appropriate cache
+            var cache = isAppTab ? _sessionVM.AllAppLogsCache : _sessionVM.AllLogsCache;
+            var threads = cache?.Select(l => l.ThreadName).Where(t => !string.IsNullOrEmpty(t)).Distinct().OrderBy(t => t).ToList() ?? new List<string>();
+            var loggers = cache?.Select(l => l.Logger).Where(l => !string.IsNullOrEmpty(l)).Distinct().OrderBy(l => l).ToList() ?? new List<string>();
+
+            var win = new Views.FilterWindow(threads, loggers);
             var currentRoot = isAppTab ? AppFilterRoot : MainFilterRoot;
 
             // Position window near the button that was clicked

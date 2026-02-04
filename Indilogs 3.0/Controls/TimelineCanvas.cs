@@ -81,7 +81,7 @@ namespace IndiLogs_3._0.Controls
             _currentToolTip = new ToolTip
             {
                 Content = content,
-                Background = new SolidColorBrush(Color.FromRgb(30, 30, 30)),
+                Background = new SolidColorBrush(Color.FromRgb(15, 25, 40)), // BgPanel blue
                 Foreground = Brushes.White,
                 BorderBrush = Brushes.Cyan,
                 Placement = PlacementMode.Mouse
@@ -100,7 +100,8 @@ namespace IndiLogs_3._0.Controls
 
         protected override void OnRender(DrawingContext dc)
         {
-            dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(30, 30, 30)), null, new Rect(0, 0, ActualWidth, ActualHeight));
+            // Dark blue background matching BgDark theme color (#0A121E)
+            dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(10, 18, 30)), null, new Rect(0, 0, ActualWidth, ActualHeight));
 
             if (States == null || !States.Any()) return;
 

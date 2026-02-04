@@ -28,7 +28,7 @@
     <UpdatePeriodically>true</UpdatePeriodically>
     <UpdateRequired>false</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
-    <ApplicationRevision>2</ApplicationRevision>
+    <ApplicationRevision>3</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
@@ -210,6 +210,9 @@
     <Compile Include="Controls\PlcFilteredTabControl.xaml.cs">
       <DependentUpon>PlcFilteredTabControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\LogHeatmapControl.xaml.cs">
+      <DependentUpon>LogHeatmapControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\PlcLogsGridControl.xaml.cs">
       <DependentUpon>PlcLogsGridControl.xaml</DependentUpon>
     </Compile>
@@ -390,6 +393,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\PlcFilteredTabControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\LogHeatmapControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

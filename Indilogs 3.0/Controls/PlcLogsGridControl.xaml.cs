@@ -60,6 +60,21 @@ namespace IndiLogs_3._0.Controls
 
             // ✅ FIX: Manual annotation expansion management
             LogsDataGrid.LoadingRow += OnRowLoading;
+
+            // Connect heatmap scroll event
+            HeatmapControl.RequestScrollToLog += OnHeatmapRequestScrollToLog;
+        }
+
+        private void OnHeatmapRequestScrollToLog(LogEntry log)
+        {
+            if (log == null) return;
+
+            // Select and scroll to the log entry
+            LogsDataGrid.SelectedItem = log;
+            LogsDataGrid.ScrollIntoView(log);
+
+            // Focus the grid so user can continue navigating
+            LogsDataGrid.Focus();
         }
 
         // ✅ NEW: Handle annotation expansion manually (FIXED - no duplicate handlers)

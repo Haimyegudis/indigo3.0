@@ -4,8 +4,13 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:controls="clr-namespace:IndiLogs_3._0.Controls"
-             mc:Ignorable="d" 
+             xmlns:converters="clr-namespace:IndiLogs_3._0.Converters"
+             mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </UserControl.Resources>
 
     <Grid Background="{DynamicResource BgDark}">
         <Grid.RowDefinitions>
@@ -83,67 +88,192 @@
                 <TextBlock Text="{Binding SelectedStateErrors}" Foreground="#FF6B6B" FontWeight="Bold"/>
             </StackPanel>
 
-            <DataGrid Grid.Row="1" x:Name="DetailLogGrid"
-                      ItemsSource="{Binding SelectedState.RelatedLogs}"
-                      AutoGenerateColumns="False"
-                      Background="{DynamicResource BgDark}"
-                      BorderThickness="0"
-                      RowBackground="Transparent"
-                      GridLinesVisibility="Horizontal"
-                      HorizontalGridLinesBrush="{DynamicResource BorderColor}"
-                      RowStyle="{DynamicResource LogRowStyle}"
-                      HeadersVisibility="Column"
-                      IsReadOnly="True">
+            <Grid Grid.Row="1">
+                <DataGrid x:Name="DetailLogGrid"
+                          Margin="0,0,12,0"
+                          ItemsSource="{Binding SelectedState.RelatedLogs}"
+                          SelectedItem="{Binding DataContext.SelectedLog, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay}"
+                          AutoGenerateColumns="False"
+                          Background="{DynamicResource BgDark}"
+                          BorderThickness="0"
+                          GridLinesVisibility="Horizontal"
+                          HorizontalGridLinesBrush="{DynamicResource BorderColor}"
+                          HeadersVisibility="Column"
+                          IsReadOnly="True"
+                          SelectionMode="Extended"
+                          SelectionUnit="FullRow">
 
-                <DataGrid.Resources>
-                    <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
-                        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-                        <Setter Property="Padding" Value="5"/>
-                    </Style>
-                </DataGrid.Resources>
+                    <DataGrid.InputBindings>
+                        <MouseBinding Gesture="LeftDoubleClick"
+                                      Command="{Binding DataContext.ViewLogDetailsCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                      CommandParameter="{Binding DataContext.SelectedLog, RelativeSource={RelativeSource AncestorType=Window}}" />
+                    </DataGrid.InputBindings>
 
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Lvl" Binding="{Binding Level}" Width="50" FontWeight="Bold">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Level}" Value="Error">
-                                        <Setter Property="Foreground" Value="#FF6B6B"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                            <Setter Property="Padding" Value="5"/>
+                        </Style>
 
-                    <DataGridTextColumn Header="Time" Binding="{Binding Date, StringFormat='HH:mm:ss.fff'}" Width="120">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                        <!-- Row Style for Visual Mode with proper colors -->
+                        <Style TargetType="DataGridRow">
+                            <Setter Property="Background" Value="{Binding RowBackground}" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Padding" Value="4"/>
+                            <Setter Property="Margin" Value="0,1"/>
+                            <Style.Triggers>
+                                <!-- Error rows - red text for entire row -->
+                                <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                    <Setter Property="Foreground" Value="#FF6B6B"/>
+                                </DataTrigger>
 
-                    <DataGridTextColumn Header="Thread" Binding="{Binding ThreadName}" Width="100">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="#4CA1AF"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                                <!-- Thread=Events rows - red text for entire row -->
+                                <DataTrigger Binding="{Binding ThreadName}" Value="Events">
+                                    <Setter Property="Foreground" Value="#FF6B6B"/>
+                                </DataTrigger>
 
-                    <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*" MinWidth="400">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-                                <Setter Property="TextWrapping" Value="NoWrap"/>
-                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-                </DataGrid.Columns>
-            </DataGrid>
+                                <!-- State transition rows (light blue) - black text -->
+                                <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </DataTrigger>
+
+                                <!-- Selected row - yellow background with black text -->
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#FFFACD"/>
+                                    <Setter Property="Foreground" Value="Black"/>
+                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                </Trigger>
+
+                                <!-- Marked row selected - green background with black text -->
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsSelected}" Value="True"/>
+                                        <Condition Binding="{Binding IsMarked}" Value="True"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Background" Value="#90EE90"/>
+                                    <Setter Property="Foreground" Value="Black"/>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.Resources>
+
+                    <DataGrid.Columns>
+                        <!-- Annotation Icon Column -->
+                        <DataGridTemplateColumn Header="" Width="30" CanUserSort="False">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding AnnotationIcon}"
+                                               FontSize="14"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Visibility="{Binding HasAnnotation, Converter={StaticResource BoolToVisibilityConverter}}"
+                                               ToolTip="{Binding Annotation}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="Lvl" Binding="{Binding Level}" Width="50" FontWeight="Bold">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                            <Setter Property="Foreground" Value="#FF6B6B"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding ThreadName}" Value="Events">
+                                            <Setter Property="Foreground" Value="#FF6B6B"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="Time" Binding="{Binding Date, StringFormat='HH:mm:ss.fff'}" Width="120">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                            <Setter Property="Foreground" Value="#FF6B6B"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding ThreadName}" Value="Events">
+                                            <Setter Property="Foreground" Value="#FF6B6B"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="Thread" Binding="{Binding ThreadName}" Width="100">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#4CA1AF"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                            <Setter Property="Foreground" Value="#FF6B6B"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding ThreadName}" Value="Events">
+                                            <Setter Property="Foreground" Value="#FF6B6B"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*" MinWidth="400">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="TextWrapping" Value="NoWrap"/>
+                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                            <Setter Property="Foreground" Value="#FF6B6B"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding ThreadName}" Value="Events">
+                                            <Setter Property="Foreground" Value="#FF6B6B"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- Heatmap for Visual Mode -->
+                <controls:LogHeatmapControl x:Name="VisualHeatmapControl"
+                                            Width="10"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Stretch"
+                                            Margin="0,22,0,18"
+                                            ItemsSource="{Binding SelectedState.RelatedLogs}"/>
+            </Grid>
         </Grid>
     </Grid>
 </UserControl>

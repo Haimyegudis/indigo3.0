@@ -11,6 +11,19 @@ namespace IndiLogs_3._0.Views
         public VisualTimelineView()
         {
             InitializeComponent();
+
+            // Connect heatmap scroll event
+            VisualHeatmapControl.RequestScrollToLog += OnHeatmapRequestScrollToLog;
+        }
+
+        private void OnHeatmapRequestScrollToLog(LogEntry log)
+        {
+            if (log == null) return;
+
+            // Select and scroll to the log entry in the detail grid
+            DetailLogGrid.SelectedItem = log;
+            DetailLogGrid.ScrollIntoView(log);
+            DetailLogGrid.Focus();
         }
 
         private void OnStateClicked(object sender, TimelineState e)

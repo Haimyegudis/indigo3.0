@@ -1421,7 +1421,7 @@ namespace IndiLogs_3._0.ViewModels
 
             FilterVM.IsTimeFocusActive = false;
             FilterVM.IsAppTimeFocusActive = false;
-            FilterVM.LastFilteredCache.Clear();
+            FilterVM.LastFilteredCache?.Clear();
             FilterVM.LastFilteredAppCache = null;
             FilterVM.SavedFilterRoot = null;
             SearchText = string.Empty;

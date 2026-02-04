@@ -10,7 +10,11 @@
     <UserControl.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </UserControl.Resources>
-    <DataGrid x:Name="LogsDataGrid"
+
+    <Grid>
+        <!-- DataGrid -->
+        <DataGrid x:Name="LogsDataGrid"
+              Margin="0,0,12,0"
               ItemsSource="{Binding LogsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
               SelectedItem="{Binding SelectedLog, Mode=TwoWay}"
               FontSize="{Binding GridFontSize}"
@@ -33,9 +37,14 @@
             <Style TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
                 <Setter Property="Visibility" Value="Visible"/>
                 <Style.Triggers>
-                    <DataTrigger Binding="{Binding IsVisualMode}" Value="True">
+                    <!-- Only hide in visual mode if this is the main PLC grid (not PLC FILTERED) -->
+                    <MultiDataTrigger>
+                        <MultiDataTrigger.Conditions>
+                            <Condition Binding="{Binding IsVisualMode}" Value="True"/>
+                            <Condition Binding="{Binding GridType, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="PLC"/>
+                        </MultiDataTrigger.Conditions>
                         <Setter Property="Visibility" Value="Collapsed"/>
-                    </DataTrigger>
+                    </MultiDataTrigger>
                 </Style.Triggers>
             </Style>
         </DataGrid.Style>
@@ -406,4 +415,13 @@
             </Style>
         </DataGrid.RowStyle>
     </DataGrid>
+
+        <!-- Log Heatmap Scrollbar - positioned on the right edge -->
+        <controls:LogHeatmapControl x:Name="HeatmapControl"
+                                    Width="10"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Stretch"
+                                    Margin="0,22,0,18"
+                                    ItemsSource="{Binding LogsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+    </Grid>
 </UserControl>
