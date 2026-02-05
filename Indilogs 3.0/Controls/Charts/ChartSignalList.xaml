@@ -1,0 +1,84 @@
+<UserControl x:Class="IndiLogs_3._0.Controls.Charts.ChartSignalList"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="400" d:DesignWidth="220"
+             Background="{DynamicResource BgDark}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Category Filter -->
+        <ComboBox x:Name="CategoryCombo" Grid.Row="0" Margin="5"
+                  Background="{DynamicResource BgCard}" Foreground="{DynamicResource TextPrimary}"
+                  SelectionChanged="CategoryCombo_SelectionChanged">
+            <ComboBoxItem Content="All Signals" IsSelected="True"/>
+            <ComboBoxItem Content="Axis / Motion"/>
+            <ComboBoxItem Content="IO / Sensors"/>
+            <ComboBoxItem Content="States / Logic"/>
+            <ComboBoxItem Content="Temperature"/>
+            <ComboBoxItem Content="Pressure"/>
+        </ComboBox>
+
+        <!-- Search Box -->
+        <TextBox x:Name="SearchBox" Grid.Row="1" Margin="5,0,5,5"
+                 Background="{DynamicResource BgCard}" Foreground="{DynamicResource TextPrimary}"
+                 BorderBrush="{DynamicResource BorderColor}" Padding="5,3"
+                 TextChanged="SearchBox_TextChanged">
+            <TextBox.Style>
+                <Style TargetType="TextBox">
+                    <Style.Triggers>
+                        <Trigger Property="Text" Value="">
+                            <Setter Property="Background">
+                                <Setter.Value>
+                                    <VisualBrush Stretch="None" AlignmentX="Left">
+                                        <VisualBrush.Visual>
+                                            <TextBlock Text="Search signals..." Foreground="#666" Margin="5,0,0,0" FontStyle="Italic"/>
+                                        </VisualBrush.Visual>
+                                    </VisualBrush>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBox.Style>
+        </TextBox>
+
+        <!-- Signal List -->
+        <ListBox x:Name="SignalListBox" Grid.Row="2" Margin="5,0,5,5"
+                 Background="{DynamicResource BgDark}"
+                 BorderBrush="{DynamicResource BorderColor}"
+                 Foreground="{DynamicResource TextPrimary}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 MouseDoubleClick="SignalListBox_MouseDoubleClick">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="11"
+                               Foreground="{DynamicResource TextPrimary}"
+                               TextTrimming="CharacterEllipsis" Margin="2"/>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                    <Setter Property="Padding" Value="4,2"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                            <Setter Property="Foreground" Value="White"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource BgCardHover}"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </ListBox.ItemContainerStyle>
+        </ListBox>
+    </Grid>
+</UserControl>

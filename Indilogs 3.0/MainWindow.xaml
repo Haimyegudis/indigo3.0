@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:IndiLogs_3._0.ViewModels"
         xmlns:controls="clr-namespace:IndiLogs_3._0.Controls"
+        xmlns:charts="clr-namespace:IndiLogs_3._0.Controls.Charts"
         xmlns:views="clr-namespace:IndiLogs_3._0.Views"
         xmlns:converters="clr-namespace:IndiLogs_3._0.Converters"
         mc:Ignorable="d"
@@ -676,6 +677,10 @@
 
                     <TabItem Header="SETUP INFO">
                         <TextBox Text="{Binding SetupInfo}" IsReadOnly="True" FontFamily="{DynamicResource ContentFontFamily}" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderThickness="0" VerticalScrollBarVisibility="Auto" Padding="10"/>
+                    </TabItem>
+
+                    <TabItem Header="CHARTS">
+                        <charts:ChartTabControl x:Name="ChartTab"/>
                     </TabItem>
                 </TabControl>
 

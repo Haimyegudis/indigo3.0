@@ -1,0 +1,59 @@
+<UserControl x:Class="IndiLogs_3._0.Controls.Charts.ChartToolbar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="40" d:DesignWidth="800"
+             Background="{DynamicResource BgPanel}">
+    <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="10,5">
+        <StackPanel Orientation="Horizontal">
+            <!-- Load CSV Button -->
+            <Button x:Name="LoadCsvButton" Content="Load CSV" Click="LoadCsvButton_Click"
+                    Style="{DynamicResource ModernBtn}" Background="{DynamicResource PrimaryColor}"
+                    Foreground="White" Padding="12,5" Margin="0,0,10,0"/>
+
+            <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="5,2"/>
+
+            <!-- Playback Controls -->
+            <Button x:Name="PlayButton" Content="▶" Click="PlayButton_Click"
+                    Style="{DynamicResource ModernBtn}" Width="35" Margin="5,0"
+                    ToolTip="Play/Pause"/>
+            <Button x:Name="StopButton" Content="■" Click="StopButton_Click"
+                    Style="{DynamicResource ModernBtn}" Width="35" Margin="0,0,5,0"
+                    ToolTip="Stop"/>
+
+            <!-- Speed Selector -->
+            <ComboBox x:Name="SpeedCombo" Width="70" Margin="5,0"
+                      Background="{DynamicResource BgCard}" Foreground="{DynamicResource TextPrimary}"
+                      SelectedIndex="1" SelectionChanged="SpeedCombo_SelectionChanged">
+                <ComboBoxItem Content="x0.5"/>
+                <ComboBoxItem Content="x1"/>
+                <ComboBoxItem Content="x10"/>
+                <ComboBoxItem Content="x50"/>
+            </ComboBox>
+
+            <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="5,2"/>
+
+            <!-- Chart Management -->
+            <Button x:Name="AddChartButton" Content="+ Add Chart" Click="AddChartButton_Click"
+                    Style="{DynamicResource ModernBtn}" Margin="5,0"
+                    ToolTip="Add a new chart panel"/>
+            <Button x:Name="RemoveChartButton" Content="- Remove" Click="RemoveChartButton_Click"
+                    Style="{DynamicResource ModernBtn}" Margin="0,0,5,0"
+                    ToolTip="Remove selected chart"/>
+
+            <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="5,2"/>
+
+            <!-- View Options -->
+            <CheckBox x:Name="ShowStatesCheckBox" Content="Show States" IsChecked="True"
+                      Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center"
+                      Margin="10,0" Checked="ShowStatesCheckBox_Changed" Unchecked="ShowStatesCheckBox_Changed"/>
+
+            <!-- Zoom Controls -->
+            <Button x:Name="ZoomFitButton" Content="Fit All" Click="ZoomFitButton_Click"
+                    Style="{DynamicResource ModernBtn}" Margin="5,0"
+                    ToolTip="Fit all data in view"/>
+        </StackPanel>
+    </Border>
+</UserControl>

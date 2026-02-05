@@ -70,6 +70,12 @@ namespace IndiLogs_3._0
 
                 // Initialize column widths based on current ViewModel state
                 SyncPanelColumnsWithViewModel(vm);
+
+                // Connect Chart tab to ChartVM for bidirectional sync
+                if (ChartTab != null && vm.ChartVM != null)
+                {
+                    vm.ChartVM.SetChartControl(ChartTab);
+                }
             }
         }
 
@@ -788,7 +794,17 @@ namespace IndiLogs_3._0
 
         private void PlcLogsTab_Loaded(object sender, RoutedEventArgs e)
         {
-
+            // Wire up log selection to chart sync
+            if (sender is Controls.PlcLogsTabControl plcTab && plcTab.LogsGrid?.InnerDataGrid != null)
+            {
+                plcTab.LogsGrid.InnerDataGrid.SelectionChanged += (s, args) =>
+                {
+                    if (DataContext is MainViewModel vm && args.AddedItems.Count > 0 && args.AddedItems[0] is LogEntry entry)
+                    {
+                        vm.OnLogEntrySelected(entry);
+                    }
+                };
+            }
         }
 
         // Panel toggle button handlers - require double-click to prevent accidental toggles

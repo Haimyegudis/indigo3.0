@@ -35,6 +35,7 @@ namespace IndiLogs_3._0.ViewModels
         public CaseManagementViewModel CaseVM { get; private set; }
         public ConfigExplorerViewModel ConfigVM { get; private set; }
         public VisualTimelineViewModel VisualTimelineVM { get; set; } = new VisualTimelineViewModel();
+        public ChartTabViewModel ChartVM { get; private set; }
 
         private bool _isVisualMode;
         public bool IsVisualMode
@@ -789,6 +790,7 @@ namespace IndiLogs_3._0.ViewModels
             CaseVM = new CaseManagementViewModel(this, SessionVM, FilterVM);
             LiveVM = new LiveMonitoringViewModel(this, SessionVM, FilterVM, CaseVM, _logService, _coloringService);
             ConfigVM = new ConfigExplorerViewModel(this, SessionVM);
+            ChartVM = new ChartTabViewModel(this);
 
             // Set dependencies
             SessionVM.SetDependencies(FilterVM, CaseVM, ConfigVM, LiveVM);
@@ -2215,6 +2217,36 @@ namespace IndiLogs_3._0.ViewModels
             finally
             {
                 _isSyncScrolling = false;
+            }
+        }
+
+        /// <summary>
+        /// Navigate to a log entry by time (called from Charts when user clicks on a point)
+        /// </summary>
+        public void NavigateToLogTime(DateTime time)
+        {
+            if (FilteredLogs == null || FilteredLogs.Count == 0) return;
+
+            // Find the nearest log entry by time
+            var nearestLog = FilteredLogs
+                .OrderBy(l => Math.Abs((l.Date - time).TotalMilliseconds))
+                .FirstOrDefault();
+
+            if (nearestLog != null)
+            {
+                // Request the UI to scroll to this log
+                RequestScrollToLog?.Invoke(nearestLog);
+            }
+        }
+
+        /// <summary>
+        /// Sync chart cursor when a log entry is selected (called from DataGrid selection)
+        /// </summary>
+        public void OnLogEntrySelected(LogEntry entry)
+        {
+            if (entry != null && ChartVM?.HasData == true)
+            {
+                ChartVM.SyncToLogTime(entry.Date);
             }
         }
 

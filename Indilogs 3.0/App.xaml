@@ -397,5 +397,25 @@
             </Setter>
         </Style>
 
+        <!-- Chart Styles -->
+        <Style x:Key="ChartCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Margin" Value="5"/>
+        </Style>
+
+        <Style x:Key="ChartListBoxStyle" TargetType="ListBox">
+            <Setter Property="Background" Value="{DynamicResource BgDark}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        </Style>
+
+        <Style x:Key="ChartToolbarButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernBtn}">
+            <Setter Property="MinWidth" Value="30"/>
+            <Setter Property="Padding" Value="8,4"/>
+        </Style>
+
     </Application.Resources>
 </Application>

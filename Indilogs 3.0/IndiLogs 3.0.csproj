@@ -15,6 +15,7 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
     <LangVersion>8.0</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
     <IsWebBootstrapper>false</IsWebBootstrapper>
@@ -28,7 +29,7 @@
     <UpdatePeriodically>true</UpdatePeriodically>
     <UpdateRequired>false</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
-    <ApplicationRevision>3</ApplicationRevision>
+    <ApplicationRevision>4</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
@@ -227,6 +228,21 @@
     </Compile>
     <Compile Include="Controls\TimelineCanvas.cs" />
     <Compile Include="Controls\DiffHighlightTextBlock.cs" />
+    <Compile Include="Controls\Charts\ChartGraphView.xaml.cs">
+      <DependentUpon>ChartGraphView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\Charts\ChartStateTimeline.xaml.cs">
+      <DependentUpon>ChartStateTimeline.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\Charts\ChartSignalList.xaml.cs">
+      <DependentUpon>ChartSignalList.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\Charts\ChartToolbar.xaml.cs">
+      <DependentUpon>ChartToolbar.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\Charts\ChartTabControl.xaml.cs">
+      <DependentUpon>ChartTabControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Converters\AnnotationTextBrushConverter.cs" />
     <Compile Include="Converters\ArrayConverter.cs" />
     <Compile Include="Converters\BoolToVisibilityConverter.cs" />
@@ -240,11 +256,15 @@
     <Compile Include="Models\TimelineMarker.cs" />
     <Compile Include="Models\TimelineState.cs" />
     <Compile Include="Models\GrepResult.cs" />
+    <Compile Include="Models\Charts\ChartModels.cs" />
+    <Compile Include="Models\Charts\ChartStateConfig.cs" />
     <Compile Include="Services\Analysis\StateFailureAnalyzer.cs" />
     <Compile Include="Services\Analysis\UniversalStateFailureAnalyzer.cs" />
     <Compile Include="Services\CustomLiveLogReader.cs" />
     <Compile Include="Services\GlobalGrepService.cs" />
     <Compile Include="Services\WindowManager.cs" />
+    <Compile Include="Services\Charts\ChartDataService.cs" />
+    <Compile Include="Services\Charts\ChartSyncService.cs" />
     <Compile Include="ViewModels\Components\CaseManagementViewModel.cs" />
     <Compile Include="ViewModels\Components\ConfigExplorerViewModel.cs" />
     <Compile Include="ViewModels\Components\FilterSearchViewModel.cs" />
@@ -254,6 +274,7 @@
     <Compile Include="Services\DiffEngine.cs" />
     <Compile Include="Services\ComparisonDebugLogger.cs" />
     <Compile Include="ViewModels\VisualTimelineViewModel.cs" />
+    <Compile Include="ViewModels\ChartTabViewModel.cs" />
     <Compile Include="ViewModels\GlobalGrepViewModel.cs" />
     <Compile Include="Models\IndigoStripeEntry.cs" />
     <Compile Include="Services\StripeDataParserService.cs" />
@@ -413,6 +434,26 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\StatusBarControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\Charts\ChartGraphView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\Charts\ChartStateTimeline.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\Charts\ChartSignalList.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\Charts\ChartToolbar.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\Charts\ChartTabControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -608,10 +649,19 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.2\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.2\build\Microsoft.NETFramework.ReferenceAssemblies.net48.targets'))" />
     <Error Condition="!Exists('..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.118.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.118.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets'))" />
+    <Error Condition="!Exists('..\packages\SkiaSharp.NativeAssets.Win32.3.119.0\build\net462\SkiaSharp.NativeAssets.Win32.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\SkiaSharp.NativeAssets.Win32.3.119.0\build\net462\SkiaSharp.NativeAssets.Win32.targets'))" />
+    <Error Condition="!Exists('..\packages\HarfBuzzSharp.NativeAssets.Win32.8.3.1.1\buildTransitive\net462\HarfBuzzSharp.NativeAssets.Win32.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\HarfBuzzSharp.NativeAssets.Win32.8.3.1.1\buildTransitive\net462\HarfBuzzSharp.NativeAssets.Win32.targets'))" />
   </Target>
   <Import Project="..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.118.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets" Condition="Exists('..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.118.0\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets')" />
+  <Import Project="..\packages\SkiaSharp.NativeAssets.Win32.3.119.0\build\net462\SkiaSharp.NativeAssets.Win32.targets" Condition="Exists('..\packages\SkiaSharp.NativeAssets.Win32.3.119.0\build\net462\SkiaSharp.NativeAssets.Win32.targets')" />
+  <Import Project="..\packages\HarfBuzzSharp.NativeAssets.Win32.8.3.1.1\buildTransitive\net462\HarfBuzzSharp.NativeAssets.Win32.targets" Condition="Exists('..\packages\HarfBuzzSharp.NativeAssets.Win32.8.3.1.1\buildTransitive\net462\HarfBuzzSharp.NativeAssets.Win32.targets')" />
   <!-- Copy SQLite.Interop.dll from x64 folder to output directory -->
   <Target Name="CopySQLiteInterop" AfterTargets="Build">
     <Copy SourceFiles="$(OutputPath)x64\SQLite.Interop.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('$(OutputPath)x64\SQLite.Interop.dll')" />
+  </Target>
+  <!-- Copy SkiaSharp native DLLs from x64 folder to output directory (SkiaSharp 3.x LibraryLoader expects them in the app directory) -->
+  <Target Name="CopySkiaNativeLibs" AfterTargets="Build">
+    <Copy SourceFiles="$(OutputPath)x64\libSkiaSharp.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('$(OutputPath)x64\libSkiaSharp.dll')" />
+    <Copy SourceFiles="$(OutputPath)x64\libHarfBuzzSharp.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('$(OutputPath)x64\libHarfBuzzSharp.dll')" />
   </Target>
 </Project>
