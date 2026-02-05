@@ -9,6 +9,8 @@ using System.Windows.Threading;
 using SkiaSharp;
 using IndiLogs_3._0.Models.Charts;
 using IndiLogs_3._0.Services.Charts;
+using IndiLogs_3._0.Models;
+using IndiLogs_3._0.Views;
 
 namespace IndiLogs_3._0.Controls.Charts
 {
@@ -49,6 +51,8 @@ namespace IndiLogs_3._0.Controls.Charts
             SKColor.Parse("#6366F1"), // Indigo
         };
         private int _colorIndex = 0;
+        private bool _isSignalPanelVisible = true;
+        private int _referenceLineCounter = 0;
 
         public ChartTabControl()
         {
@@ -63,17 +67,32 @@ namespace IndiLogs_3._0.Controls.Charts
             Toolbar.OnLoadCsvRequested += LoadCsv;
             Toolbar.OnPlayRequested += TogglePlayback;
             Toolbar.OnStopRequested += StopPlayback;
-            Toolbar.OnSpeedChanged += speed => _playbackSpeed = speed;
+            Toolbar.OnSpeedChanged += speed =>
+            {
+                _playbackSpeed = speed;
+                // Update running timer with new speed
+                if (_isPlaying)
+                {
+                    _playbackTimer.Stop();
+                    _playbackTimer.Interval = TimeSpan.FromMilliseconds(50 / _playbackSpeed);
+                    _playbackTimer.Start();
+                }
+            };
             Toolbar.OnAddChartRequested += AddNewChart;
             Toolbar.OnRemoveChartRequested += RemoveSelectedChart;
             Toolbar.OnShowStatesChanged += SetShowStates;
             Toolbar.OnZoomFitRequested += ZoomFit;
+            Toolbar.OnAddHorizontalLineRequested += AddHorizontalReferenceLine;
+            Toolbar.OnAddVerticalLineRequested += AddVerticalReferenceLine;
+            Toolbar.OnShowTransitionsRequested += ShowStateTransitions;
+            Toolbar.OnTogglePanelRequested += ToggleSignalPanel;
 
             // Wire up signal list events
             SignalList.OnSignalDoubleClicked += AddSignalToChart;
 
             // Wire up timeline events
             StateTimeline.OnTimelineClicked += OnTimelineClick;
+            StateTimeline.OnStateClicked += OnStateClick;
 
             // Setup playback timer
             _playbackTimer = new DispatcherTimer();
@@ -326,6 +345,12 @@ namespace IndiLogs_3._0.Controls.Charts
             SetCursorPosition(index);
         }
 
+        private void OnStateClick(int startIndex, int endIndex)
+        {
+            // Zoom to show the state time window
+            SyncAllViewRanges(startIndex, endIndex);
+        }
+
         private void ZoomFit()
         {
             if (_totalDataLength > 0)
@@ -473,7 +498,152 @@ namespace IndiLogs_3._0.Controls.Charts
             }
 
             _cursorIndex++;
-            SyncAllCursors(_cursorIndex);
+
+            // Force update all chart views explicitly
+            foreach (var chart in _charts)
+            {
+                var graphView = FindGraphViewForChart(chart);
+                if (graphView != null)
+                {
+                    graphView.SyncCursor(_cursorIndex);
+                }
+            }
+
+            StateTimeline.SyncCursor(_cursorIndex);
+        }
+
+        #endregion
+
+        #region Reference Lines
+
+        private void AddHorizontalReferenceLine()
+        {
+            if (_charts.Count == 0 || !HasData) return;
+
+            var chart = _charts.Last();
+            if (chart.Series.Count == 0) return;
+
+            // Get value at cursor position from first visible signal
+            var firstVisible = chart.Series.FirstOrDefault(s => s.IsVisible);
+            if (firstVisible == null || firstVisible.Data == null) return;
+
+            double value = 0;
+            if (_cursorIndex >= 0 && _cursorIndex < firstVisible.Data.Length)
+            {
+                value = firstVisible.Data[_cursorIndex];
+                if (double.IsNaN(value)) value = 0;
+            }
+
+            _referenceLineCounter++;
+            chart.ReferenceLines.Add(new ReferenceLine
+            {
+                Name = $"H{_referenceLineCounter}",
+                Value = value,
+                Type = ReferenceLineType.Horizontal,
+                Color = SKColors.Yellow,
+                Thickness = 1.5f,
+                IsDashed = true,
+                YAxis = firstVisible.YAxisType
+            });
+
+            RefreshChartViews();
+        }
+
+        private void AddVerticalReferenceLine()
+        {
+            if (_charts.Count == 0 || !HasData) return;
+
+            var chart = _charts.Last();
+
+            _referenceLineCounter++;
+            chart.ReferenceLines.Add(new ReferenceLine
+            {
+                Name = $"V{_referenceLineCounter}",
+                Value = _cursorIndex,
+                Type = ReferenceLineType.Vertical,
+                Color = SKColors.Cyan,
+                Thickness = 1.5f,
+                IsDashed = true
+            });
+
+            RefreshChartViews();
+        }
+
+        #endregion
+
+        #region State Transitions
+
+        private void ShowStateTransitions()
+        {
+            if (_globalStates == null || _globalStates.Count == 0)
+            {
+                MessageBox.Show("No state data available.", "State Transitions", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var entries = ConvertStatesToEntries();
+            var window = new StatesWindow(entries, null);
+            window.Owner = Window.GetWindow(this);
+            window.Show();
+        }
+
+        private List<StateEntry> ConvertStatesToEntries()
+        {
+            var entries = new List<StateEntry>();
+            string prevState = null;
+
+            foreach (var interval in _globalStates)
+            {
+                string currentState = ChartStateConfig.GetName(interval.StateId);
+                string transition = prevState != null
+                    ? $"{prevState} -> {currentState}"
+                    : currentState;
+
+                DateTime startTime = _syncService.GetTimeForIndex(interval.StartIndex);
+                DateTime endTime = _syncService.GetTimeForIndex(interval.EndIndex);
+
+                entries.Add(new StateEntry
+                {
+                    StateName = currentState,
+                    TransitionTitle = transition,
+                    StartTime = startTime,
+                    EndTime = endTime,
+                    Status = "",
+                    StatusColor = System.Windows.Media.Brushes.Gray
+                });
+
+                prevState = currentState;
+            }
+            return entries;
+        }
+
+        #endregion
+
+        #region Panel Toggle
+
+        private void ToggleSignalPanel(bool isVisible)
+        {
+            _isSignalPanelVisible = isVisible;
+
+            if (_isSignalPanelVisible)
+            {
+                SignalListColumn.Width = new GridLength(220);
+                SplitterColumn.Width = GridLength.Auto;
+            }
+            else
+            {
+                SignalListColumn.Width = new GridLength(0);
+                SplitterColumn.Width = new GridLength(0);
+            }
+        }
+
+        private void ToggleAxisButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is SignalSeries series)
+            {
+                series.YAxisType = series.YAxisType == AxisType.Left ? AxisType.Right : AxisType.Left;
+                RefreshChartViews();
+            }
         }
 
         #endregion

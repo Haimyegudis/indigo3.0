@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using Microsoft.Win32;
 
 namespace IndiLogs_3._0.Controls.Charts
@@ -15,8 +16,12 @@ namespace IndiLogs_3._0.Controls.Charts
         public event Action OnRemoveChartRequested;
         public event Action<bool> OnShowStatesChanged;
         public event Action OnZoomFitRequested;
+        public event Action OnAddReferenceLineRequested;
+        public event Action<bool> OnTogglePanelRequested;
+        public event Action<bool> OnLayoutChanged; // true = grid, false = stack
 
         private bool _isPlaying = false;
+        private bool _isPanelVisible = true;
 
         public ChartToolbar()
         {
@@ -87,6 +92,26 @@ namespace IndiLogs_3._0.Controls.Charts
         private void ZoomFitButton_Click(object sender, RoutedEventArgs e)
         {
             OnZoomFitRequested?.Invoke();
+        }
+
+        private void AddRefLineButton_Click(object sender, RoutedEventArgs e)
+        {
+            OnAddReferenceLineRequested?.Invoke();
+        }
+
+        private void GridLayoutToggle_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is ToggleButton toggle)
+            {
+                OnLayoutChanged?.Invoke(toggle.IsChecked == true);
+            }
+        }
+
+        private void TogglePanelButton_Click(object sender, RoutedEventArgs e)
+        {
+            _isPanelVisible = !_isPanelVisible;
+            TogglePanelButton.Content = _isPanelVisible ? "◀" : "▶";
+            OnTogglePanelRequested?.Invoke(_isPanelVisible);
         }
     }
 }

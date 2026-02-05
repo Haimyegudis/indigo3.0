@@ -1,4 +1,5 @@
-﻿using IndiLogs_3._0.Models;
+﻿using IndiLogs_3._0.Interfaces;
+using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.ViewModels;
 using System;
@@ -14,7 +15,7 @@ using System.Windows.Media;
 
 namespace IndiLogs_3._0
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : Window, ITabHost
     {
         public ObservableCollection<LogEntry> MarkedAppLogs { get; set; }
         private Point _lastMousePosition;
@@ -34,6 +35,12 @@ namespace IndiLogs_3._0
         private const double DEFAULT_PANEL_WIDTH = 200;
         private int _previousTabIndex = 0;
 
+        // Drag-to-detach support
+        private Point _tabDragStartPoint;
+        private bool _isTabDragging;
+        private TabItem _draggingTabItem;
+        private System.Windows.Controls.Primitives.Popup _dragPopup;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -41,6 +48,14 @@ namespace IndiLogs_3._0
 
             // Initialize WindowManager with main window
             WindowManager.Initialize(this);
+
+            // Initialize TabTearOffManager
+            TabTearOffManager.Initialize(this, MainTabs);
+
+            // Setup drag-to-detach on tab headers
+            MainTabs.PreviewMouseLeftButtonDown += MainTabs_PreviewMouseLeftButtonDown;
+            MainTabs.PreviewMouseMove += MainTabs_PreviewMouseMove;
+            MainTabs.PreviewMouseLeftButtonUp += MainTabs_PreviewMouseLeftButtonUp;
 
             // Check arguments (Open with...)
             string[] args = Environment.GetCommandLineArgs();
@@ -54,9 +69,167 @@ namespace IndiLogs_3._0
 
         protected override void OnClosed(EventArgs e)
         {
+            TabTearOffManager.ReattachAll();
             base.OnClosed(e);
             Application.Current.Shutdown();
             Environment.Exit(0);
+        }
+
+        // ============================================
+        //  Drag-to-Detach Tab Handlers
+        // ============================================
+
+        private void MainTabs_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Only start drag if clicking on a TabItem header area
+            var tabItem = FindTabItemFromPoint(e);
+            if (tabItem == null || !TabTearOffManager.IsTabDetachable(tabItem))
+                return;
+
+            _tabDragStartPoint = e.GetPosition(null);
+            _draggingTabItem = tabItem;
+            _isTabDragging = false;
+        }
+
+        private void MainTabs_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (_draggingTabItem == null || e.LeftButton != MouseButtonState.Pressed)
+            {
+                CleanupDrag();
+                return;
+            }
+
+            Point currentPos = e.GetPosition(null);
+            Vector diff = currentPos - _tabDragStartPoint;
+
+            // Check if we've moved beyond the drag threshold
+            if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance * 2 ||
+                Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance * 2)
+            {
+                if (!_isTabDragging)
+                {
+                    _isTabDragging = true;
+                    ShowDragPopup(_draggingTabItem.Header?.ToString() ?? "");
+                }
+
+                // Update popup position
+                UpdateDragPopupPosition();
+
+                // Check if the cursor has left the tab header area
+                Point screenPos = PointToScreen(currentPos);
+                Point tabControlScreenPos = MainTabs.PointToScreen(new Point(0, 0));
+                double tabHeaderHeight = 35; // Approximate tab header height
+
+                bool outsideTabHeaders = screenPos.Y < tabControlScreenPos.Y - 20 ||
+                                          screenPos.Y > tabControlScreenPos.Y + tabHeaderHeight + 20 ||
+                                          screenPos.X < tabControlScreenPos.X - 50 ||
+                                          screenPos.X > tabControlScreenPos.X + MainTabs.ActualWidth + 50;
+
+                if (outsideTabHeaders)
+                {
+                    var tabItem = _draggingTabItem;
+                    CleanupDrag();
+
+                    // Detach the tab at the current mouse screen position
+                    TabTearOffManager.DetachTab(tabItem, screenPos);
+                }
+            }
+        }
+
+        private void MainTabs_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            CleanupDrag();
+        }
+
+        private void CleanupDrag()
+        {
+            _draggingTabItem = null;
+            _isTabDragging = false;
+            HideDragPopup();
+        }
+
+        private void ShowDragPopup(string headerText)
+        {
+            if (_dragPopup != null) return;
+
+            var border = new System.Windows.Controls.Border
+            {
+                Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 27, 40, 56)),
+                BorderBrush = (System.Windows.Media.Brush)Application.Current.FindResource("PrimaryColor"),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(12, 6, 12, 6),
+                Child = new TextBlock
+                {
+                    Text = headerText,
+                    Foreground = System.Windows.Media.Brushes.White,
+                    FontSize = 12,
+                    FontWeight = FontWeights.SemiBold
+                }
+            };
+
+            _dragPopup = new System.Windows.Controls.Primitives.Popup
+            {
+                Child = border,
+                AllowsTransparency = true,
+                Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint,
+                HorizontalOffset = 15,
+                VerticalOffset = 10,
+                IsOpen = true,
+                IsHitTestVisible = false
+            };
+        }
+
+        private void UpdateDragPopupPosition()
+        {
+            if (_dragPopup == null) return;
+            // Force popup to re-position by toggling placement
+            _dragPopup.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            _dragPopup.HorizontalOffset = 15;
+            _dragPopup.VerticalOffset = 10;
+        }
+
+        private void HideDragPopup()
+        {
+            if (_dragPopup != null)
+            {
+                _dragPopup.IsOpen = false;
+                _dragPopup = null;
+            }
+        }
+
+        private TabItem FindTabItemFromPoint(MouseButtonEventArgs e)
+        {
+            // Walk up the visual tree from the click source to find a TabItem
+            DependencyObject source = e.OriginalSource as DependencyObject;
+            while (source != null && !(source is TabItem))
+            {
+                // Stop if we've gone past the tab header into content
+                if (source is TabControl) return null;
+                source = VisualTreeHelper.GetParent(source);
+            }
+
+            if (source is TabItem tabItem && MainTabs.Items.Contains(tabItem))
+                return tabItem;
+
+            return null;
+        }
+
+        /// <summary>
+        /// Detach button click handler (called from tab header buttons)
+        /// </summary>
+        public void DetachTab_Click(object sender, RoutedEventArgs e)
+        {
+            // Find the TabItem that contains this button
+            if (sender is Button button)
+            {
+                var tabItem = FindVisualParent<TabItem>(button);
+                if (tabItem != null && TabTearOffManager.IsTabDetachable(tabItem))
+                {
+                    Point screenPos = PointToScreen(Mouse.GetPosition(this));
+                    TabTearOffManager.DetachTab(tabItem, screenPos);
+                }
+            }
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -164,6 +337,38 @@ namespace IndiLogs_3._0
             }
         }
 
+        /// <summary>
+        /// Finds the DataGrid containing a specific log entry, searching both
+        /// local (attached) tabs and detached floating windows.
+        /// </summary>
+        private DataGrid FindGridForLog(LogEntry log)
+        {
+            if (log == null) return null;
+
+            // Check local (still-attached) grids first
+            if (PlcLogsTab?.LogsGrid?.InnerDataGrid != null && PlcLogsTab.LogsGrid.InnerDataGrid.Items.Contains(log))
+                return PlcLogsTab.LogsGrid.InnerDataGrid;
+            if (PlcFilteredTab?.LogsGrid?.InnerDataGrid != null && PlcFilteredTab.LogsGrid.InnerDataGrid.Items.Contains(log))
+                return PlcFilteredTab.LogsGrid.InnerDataGrid;
+            if (AppLogsTab?.InnerDataGrid != null && AppLogsTab.InnerDataGrid.Items.Contains(log))
+                return AppLogsTab.InnerDataGrid;
+
+            // Check detached windows
+            var detachedPlc = TabTearOffManager.GetDetachedControl<Controls.PlcLogsTabControl>("PLC LOGS");
+            if (detachedPlc?.LogsGrid?.InnerDataGrid?.Items.Contains(log) == true)
+                return detachedPlc.LogsGrid.InnerDataGrid;
+
+            var detachedFiltered = TabTearOffManager.GetDetachedControl<Controls.PlcFilteredTabControl>("PLC (FILTERED)");
+            if (detachedFiltered?.LogsGrid?.InnerDataGrid?.Items.Contains(log) == true)
+                return detachedFiltered.LogsGrid.InnerDataGrid;
+
+            var detachedApp = TabTearOffManager.GetDetachedControl<Controls.AppLogsTabControl>("APP");
+            if (detachedApp?.InnerDataGrid?.Items.Contains(log) == true)
+                return detachedApp.InnerDataGrid;
+
+            return null;
+        }
+
         private void MapsToLogRow(LogEntry log)
         {
             if (log == null)
@@ -174,24 +379,7 @@ namespace IndiLogs_3._0
 
             System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] Attempting to scroll to: {log.Date:HH:mm:ss.fff}");
 
-            DataGrid targetGrid = null;
-
-            // Determine which grid to scroll based on which contains the log
-            if (PlcLogsTab?.LogsGrid?.InnerDataGrid != null && PlcLogsTab.LogsGrid.InnerDataGrid.Items.Contains(log))
-            {
-                targetGrid = PlcLogsTab.LogsGrid.InnerDataGrid;
-                System.Diagnostics.Debug.WriteLine("[SCROLL TO LOG] Target: MainLogsGrid");
-            }
-            else if (PlcFilteredTab?.LogsGrid?.InnerDataGrid != null && PlcFilteredTab.LogsGrid.InnerDataGrid.Items.Contains(log))
-            {
-                targetGrid = PlcFilteredTab.LogsGrid.InnerDataGrid;
-                System.Diagnostics.Debug.WriteLine("[SCROLL TO LOG] Target: FilteredLogsGrid");
-            }
-            else if (AppLogsTab?.InnerDataGrid != null && AppLogsTab.InnerDataGrid.Items.Contains(log))
-            {
-                targetGrid = AppLogsTab.InnerDataGrid;
-                System.Diagnostics.Debug.WriteLine("[SCROLL TO LOG] Target: AppLogsGrid");
-            }
+            DataGrid targetGrid = FindGridForLog(log);
 
             if (targetGrid == null)
             {
@@ -309,30 +497,10 @@ namespace IndiLogs_3._0
             {
                 try
                 {
-                    DataGrid targetGrid = null;
-                    string gridName = "";
-
                     System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] Looking for log in grids...");
 
-                    // Find the grid containing this log
-                    if (PlcLogsTab?.LogsGrid?.InnerDataGrid != null && PlcLogsTab.LogsGrid.InnerDataGrid.Items.Contains(log))
-                    {
-                        targetGrid = PlcLogsTab.LogsGrid.InnerDataGrid;
-                        gridName = "MainLogsGrid";
-                        System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] Found in MainLogsGrid, Items.Count={targetGrid.Items.Count}");
-                    }
-                    else if (PlcFilteredTab?.LogsGrid?.InnerDataGrid != null && PlcFilteredTab.LogsGrid.InnerDataGrid.Items.Contains(log))
-                    {
-                        targetGrid = PlcFilteredTab.LogsGrid.InnerDataGrid;
-                        gridName = "FilteredLogsGrid";
-                        System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] Found in FilteredLogsGrid, Items.Count={targetGrid.Items.Count}");
-                    }
-                    else if (AppLogsTab?.InnerDataGrid != null && AppLogsTab.InnerDataGrid.Items.Contains(log))
-                    {
-                        targetGrid = AppLogsTab.InnerDataGrid;
-                        gridName = "AppLogsGrid";
-                        System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] Found in AppLogsGrid, Items.Count={targetGrid.Items.Count}");
-                    }
+                    DataGrid targetGrid = FindGridForLog(log);
+                    string gridName = targetGrid?.Name ?? "";
 
                     if (targetGrid == null)
                     {
@@ -426,25 +594,8 @@ namespace IndiLogs_3._0
 
             try
             {
-                DataGrid targetGrid = null;
-                string gridName = "";
-
-                // Find the grid containing this log
-                if (PlcLogsTab?.LogsGrid?.InnerDataGrid != null && PlcLogsTab.LogsGrid.InnerDataGrid.Items.Contains(log))
-                {
-                    targetGrid = PlcLogsTab.LogsGrid.InnerDataGrid;
-                    gridName = "MainLogsGrid";
-                }
-                else if (PlcFilteredTab?.LogsGrid?.InnerDataGrid != null && PlcFilteredTab.LogsGrid.InnerDataGrid.Items.Contains(log))
-                {
-                    targetGrid = PlcFilteredTab.LogsGrid.InnerDataGrid;
-                    gridName = "FilteredLogsGrid";
-                }
-                else if (AppLogsTab?.InnerDataGrid != null && AppLogsTab.InnerDataGrid.Items.Contains(log))
-                {
-                    targetGrid = AppLogsTab.InnerDataGrid;
-                    gridName = "AppLogsGrid";
-                }
+                DataGrid targetGrid = FindGridForLog(log);
+                string gridName = targetGrid?.Name ?? "";
 
                 if (targetGrid == null) return;
 

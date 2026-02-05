@@ -4,56 +4,149 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             d:DesignHeight="40" d:DesignWidth="800"
+             d:DesignHeight="32" d:DesignWidth="900"
              Background="{DynamicResource BgPanel}">
-    <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="10,5">
+    <UserControl.Resources>
+        <!-- Compact Modern Button Style -->
+        <Style x:Key="CompactToolbarBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="Margin" Value="1,0"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource BgCardHover}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Icon Button Style -->
+        <Style x:Key="IconToolbarBtn" BasedOn="{StaticResource CompactToolbarBtn}" TargetType="Button">
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- Primary Button Style -->
+        <Style x:Key="PrimaryToolbarBtn" BasedOn="{StaticResource CompactToolbarBtn}" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
+        </Style>
+
+        <!-- Toggle Button Style -->
+        <Style x:Key="ToggleToolbarBtn" TargetType="ToggleButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="Margin" Value="1,0"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource BgCardHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="6,3">
         <StackPanel Orientation="Horizontal">
             <!-- Load CSV Button -->
-            <Button x:Name="LoadCsvButton" Content="Load CSV" Click="LoadCsvButton_Click"
-                    Style="{DynamicResource ModernBtn}" Background="{DynamicResource PrimaryColor}"
-                    Foreground="White" Padding="12,5" Margin="0,0,10,0"/>
+            <Button x:Name="LoadCsvButton" Content="CSV" Click="LoadCsvButton_Click"
+                    Style="{StaticResource PrimaryToolbarBtn}" ToolTip="Load CSV file"/>
 
-            <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="5,2"/>
+            <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="4,2"/>
 
             <!-- Playback Controls -->
             <Button x:Name="PlayButton" Content="▶" Click="PlayButton_Click"
-                    Style="{DynamicResource ModernBtn}" Width="35" Margin="5,0"
-                    ToolTip="Play/Pause"/>
+                    Style="{StaticResource IconToolbarBtn}" ToolTip="Play/Pause (Space)"/>
             <Button x:Name="StopButton" Content="■" Click="StopButton_Click"
-                    Style="{DynamicResource ModernBtn}" Width="35" Margin="0,0,5,0"
-                    ToolTip="Stop"/>
-
-            <!-- Speed Selector -->
-            <ComboBox x:Name="SpeedCombo" Width="70" Margin="5,0"
+                    Style="{StaticResource IconToolbarBtn}" ToolTip="Stop"/>
+            <ComboBox x:Name="SpeedCombo" Width="55" Height="22" Margin="2,0" FontSize="10"
                       Background="{DynamicResource BgCard}" Foreground="{DynamicResource TextPrimary}"
-                      SelectedIndex="1" SelectionChanged="SpeedCombo_SelectionChanged">
+                      SelectedIndex="1" SelectionChanged="SpeedCombo_SelectionChanged" ToolTip="Playback speed">
                 <ComboBoxItem Content="x0.5"/>
                 <ComboBoxItem Content="x1"/>
                 <ComboBoxItem Content="x10"/>
                 <ComboBoxItem Content="x50"/>
             </ComboBox>
 
-            <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="5,2"/>
+            <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="4,2"/>
 
             <!-- Chart Management -->
-            <Button x:Name="AddChartButton" Content="+ Add Chart" Click="AddChartButton_Click"
-                    Style="{DynamicResource ModernBtn}" Margin="5,0"
-                    ToolTip="Add a new chart panel"/>
-            <Button x:Name="RemoveChartButton" Content="- Remove" Click="RemoveChartButton_Click"
-                    Style="{DynamicResource ModernBtn}" Margin="0,0,5,0"
-                    ToolTip="Remove selected chart"/>
+            <Button x:Name="AddChartButton" Content="+" Click="AddChartButton_Click"
+                    Style="{StaticResource IconToolbarBtn}" FontWeight="Bold" ToolTip="Add chart"/>
+            <Button x:Name="RemoveChartButton" Content="−" Click="RemoveChartButton_Click"
+                    Style="{StaticResource IconToolbarBtn}" FontWeight="Bold" ToolTip="Remove chart"/>
 
-            <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="5,2"/>
+            <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="4,2"/>
 
             <!-- View Options -->
-            <CheckBox x:Name="ShowStatesCheckBox" Content="Show States" IsChecked="True"
+            <CheckBox x:Name="ShowStatesCheckBox" Content="States" IsChecked="True"
                       Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center"
-                      Margin="10,0" Checked="ShowStatesCheckBox_Changed" Unchecked="ShowStatesCheckBox_Changed"/>
+                      Margin="4,0" FontSize="11" Checked="ShowStatesCheckBox_Changed" Unchecked="ShowStatesCheckBox_Changed"
+                      ToolTip="Show state backgrounds"/>
 
-            <!-- Zoom Controls -->
-            <Button x:Name="ZoomFitButton" Content="Fit All" Click="ZoomFitButton_Click"
-                    Style="{DynamicResource ModernBtn}" Margin="5,0"
-                    ToolTip="Fit all data in view"/>
+            <Button x:Name="ZoomFitButton" Content="Fit" Click="ZoomFitButton_Click"
+                    Style="{StaticResource CompactToolbarBtn}" ToolTip="Fit all data in view"/>
+
+            <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="4,2"/>
+
+            <!-- Reference Line -->
+            <Button x:Name="AddRefLineButton" Content="📏 Line" Click="AddRefLineButton_Click"
+                    Style="{StaticResource CompactToolbarBtn}" ToolTip="Add reference line"/>
+
+            <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="4,2"/>
+
+            <!-- Layout Toggle -->
+            <ToggleButton x:Name="GridLayoutToggle" Content="⊞"
+                          Style="{StaticResource ToggleToolbarBtn}" Width="26" Height="22"
+                          Click="GridLayoutToggle_Click" ToolTip="Toggle grid/stack layout"/>
+
+            <!-- Panel Toggle -->
+            <Button x:Name="TogglePanelButton" Content="◀" Click="TogglePanelButton_Click"
+                    Style="{StaticResource IconToolbarBtn}" ToolTip="Toggle signal panel"/>
         </StackPanel>
     </Border>
 </UserControl>

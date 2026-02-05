@@ -446,14 +446,80 @@
                 <TabControl x:Name="MainTabs" Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}" BorderThickness="0" Background="Transparent" Padding="0" SelectionChanged="TabControl_SelectionChanged">
 
                     <TabItem Header="PLC LOGS">
+                        <TabItem.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="PLC LOGS" VerticalAlignment="Center"/>
+                                    <Button Content="&#x29C9;" FontSize="10" Margin="6,0,0,0" Padding="2,0" VerticalAlignment="Center" Cursor="Hand"
+                                            ToolTip="Detach to separate window" Click="DetachTab_Click"
+                                            Background="Transparent" BorderThickness="0"
+                                            Foreground="{DynamicResource TextSecondary}" Opacity="0.5">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Opacity" Value="1"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </TabItem.HeaderTemplate>
                         <controls:PlcLogsTabControl x:Name="PlcLogsTab" DataContext="{Binding}" Loaded="PlcLogsTab_Loaded"/>
                     </TabItem>
 
                     <TabItem Header="PLC (FILTERED)">
+                        <TabItem.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="PLC (FILTERED)" VerticalAlignment="Center"/>
+                                    <Button Content="&#x29C9;" FontSize="10" Margin="6,0,0,0" Padding="2,0" VerticalAlignment="Center" Cursor="Hand"
+                                            ToolTip="Detach to separate window" Click="DetachTab_Click"
+                                            Background="Transparent" BorderThickness="0"
+                                            Foreground="{DynamicResource TextSecondary}" Opacity="0.5">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Opacity" Value="1"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </TabItem.HeaderTemplate>
                         <controls:PlcFilteredTabControl x:Name="PlcFilteredTab" DataContext="{Binding}"/>
                     </TabItem>
 
                     <TabItem Header="APP">
+                        <TabItem.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="APP" VerticalAlignment="Center"/>
+                                    <Button Content="&#x29C9;" FontSize="10" Margin="6,0,0,0" Padding="2,0" VerticalAlignment="Center" Cursor="Hand"
+                                            ToolTip="Detach to separate window" Click="DetachTab_Click"
+                                            Background="Transparent" BorderThickness="0"
+                                            Foreground="{DynamicResource TextSecondary}" Opacity="0.5">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Opacity" Value="1"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </TabItem.HeaderTemplate>
                         <controls:AppLogsTabControl x:Name="AppLogsTab" DataContext="{Binding}"/>
                     </TabItem>
 
@@ -680,6 +746,28 @@
                     </TabItem>
 
                     <TabItem Header="CHARTS">
+                        <TabItem.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="CHARTS" VerticalAlignment="Center"/>
+                                    <Button Content="&#x29C9;" FontSize="10" Margin="6,0,0,0" Padding="2,0" VerticalAlignment="Center" Cursor="Hand"
+                                            ToolTip="Detach to separate window" Click="DetachTab_Click"
+                                            Background="Transparent" BorderThickness="0"
+                                            Foreground="{DynamicResource TextSecondary}" Opacity="0.5">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Opacity" Value="1"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </TabItem.HeaderTemplate>
                         <charts:ChartTabControl x:Name="ChartTab"/>
                     </TabItem>
                 </TabControl>

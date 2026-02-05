@@ -243,11 +243,13 @@
     <Compile Include="Controls\Charts\ChartTabControl.xaml.cs">
       <DependentUpon>ChartTabControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Interfaces\ITabHost.cs" />
     <Compile Include="Converters\AnnotationTextBrushConverter.cs" />
     <Compile Include="Converters\ArrayConverter.cs" />
     <Compile Include="Converters\BoolToVisibilityConverter.cs" />
     <Compile Include="Converters\DiffSegmentsConverter.cs" />
     <Compile Include="Converters\InverseBooleanConverter.cs" />
+    <Compile Include="Converters\SKColorToBrushConverter.cs" />
     <Compile Include="IndigoLogsReaderExplorer.cs" />
     <Compile Include="Models\ColumnSettings.cs" />
     <Compile Include="Models\DbTreeNode.cs" />
@@ -262,6 +264,7 @@
     <Compile Include="Services\Analysis\UniversalStateFailureAnalyzer.cs" />
     <Compile Include="Services\CustomLiveLogReader.cs" />
     <Compile Include="Services\GlobalGrepService.cs" />
+    <Compile Include="Services\TabTearOffManager.cs" />
     <Compile Include="Services\WindowManager.cs" />
     <Compile Include="Services\Charts\ChartDataService.cs" />
     <Compile Include="Services\Charts\ChartSyncService.cs" />
@@ -401,6 +404,9 @@
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Views\DetachedTabWindow.xaml.cs">
+      <DependentUpon>DetachedTabWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\VisualTimelineView.xaml.cs">
       <DependentUpon>VisualTimelineView.xaml</DependentUpon>
@@ -558,6 +564,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\ExportConfigurationWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\DetachedTabWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

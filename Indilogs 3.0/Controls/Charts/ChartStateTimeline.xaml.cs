@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -13,6 +14,7 @@ namespace IndiLogs_3._0.Controls.Charts
     public partial class ChartStateTimeline : UserControl
     {
         public event Action<int> OnTimelineClicked;
+        public event Action<int, int> OnStateClicked; // start, end indices for state time window
 
         private List<StateInterval> _states = new List<StateInterval>();
         private int _totalDataLength = 0;
@@ -71,7 +73,24 @@ namespace IndiLogs_3._0.Controls.Charts
             int clickedIndex = (int)(ratio * _totalDataLength);
             clickedIndex = Math.Max(0, Math.Min(clickedIndex, _totalDataLength - 1));
 
-            OnTimelineClicked?.Invoke(clickedIndex);
+            // Find the state at this index
+            var state = _states?.FirstOrDefault(s =>
+                clickedIndex >= s.StartIndex && clickedIndex <= s.EndIndex);
+
+            if (state.HasValue && state.Value.StateId >= 0)
+            {
+                // Zoom to show the state time window with padding
+                int stateLength = state.Value.EndIndex - state.Value.StartIndex;
+                int padding = Math.Max(10, stateLength / 10);
+                int startWithPadding = Math.Max(0, state.Value.StartIndex - padding);
+                int endWithPadding = Math.Min(_totalDataLength - 1, state.Value.EndIndex + padding);
+
+                OnStateClicked?.Invoke(startWithPadding, endWithPadding);
+            }
+            else
+            {
+                OnTimelineClicked?.Invoke(clickedIndex);
+            }
         }
 
         private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)

@@ -26,6 +26,7 @@ namespace IndiLogs_3._0.Controls.Charts
         private bool _isSyncing = false;
         private bool _showStates = true;
         private bool _isProgressiveMode = false;
+        private bool _isLightTheme = false;
 
         public bool IsProgressiveMode
         {
@@ -33,26 +34,34 @@ namespace IndiLogs_3._0.Controls.Charts
             set { _isProgressiveMode = value; SkiaCanvas.InvalidateVisual(); }
         }
 
-        // Dark theme colors
-        private static readonly SKColor BgColor = SKColor.Parse("#1B2838");
-        private static readonly SKColor GridColor = SKColor.Parse("#2D4A6F");
-        private static readonly SKColor TextColor = SKColors.White;
-        private static readonly SKColor TextSecondaryColor = SKColor.Parse("#B4B4B9");
-        private static readonly SKColor AccentColor = SKColor.Parse("#3B82F6");
+        public bool IsLightTheme
+        {
+            get => _isLightTheme;
+            set
+            {
+                _isLightTheme = value;
+                UpdateThemeColors();
+                SkiaCanvas.InvalidateVisual();
+            }
+        }
 
-        // Paints - Dark theme
-        private SKPaint _gridLinePaint = new SKPaint { Color = GridColor.WithAlpha(80), IsAntialias = false, StrokeWidth = 1 };
-        private SKPaint _axisLinePaint = new SKPaint { Color = GridColor, IsAntialias = false, StrokeWidth = 1 };
-        private SKPaint _textPaintLeft = new SKPaint { Color = TextColor, TextSize = 11, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Normal) };
-        private SKPaint _textPaintRight = new SKPaint { Color = AccentColor, TextSize = 11, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold) };
-        private SKPaint _stateTextPaint = new SKPaint { Color = SKColors.White, TextSize = 12, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold) };
-        private SKPaint _stateFillPaint = new SKPaint { Style = SKPaintStyle.Fill };
+        // Theme colors
+        private SKColor _bgColor;
+        private SKColor _gridColor;
+        private SKColor _textColor;
+        private SKColor _accentColor;
 
-        private SKPaint _targetLinePaint = new SKPaint { Color = AccentColor, StrokeWidth = 2, Style = SKPaintStyle.Stroke, IsAntialias = false };
-        private SKPaint _cursorLinePaint = new SKPaint { Color = SKColors.Red, StrokeWidth = 1.5f, Style = SKPaintStyle.Stroke, IsAntialias = false };
-
-        private SKPaint _measureFillPaint = new SKPaint { Color = AccentColor.WithAlpha(40), Style = SKPaintStyle.Fill };
-        private SKPaint _measureBorderPaint = new SKPaint { Color = AccentColor, Style = SKPaintStyle.Stroke, StrokeWidth = 1, PathEffect = SKPathEffect.CreateDash(new float[] { 5, 5 }, 0) };
+        // Paints
+        private SKPaint _gridLinePaint;
+        private SKPaint _axisLinePaint;
+        private SKPaint _textPaintLeft;
+        private SKPaint _textPaintRight;
+        private SKPaint _stateTextPaint;
+        private SKPaint _stateFillPaint;
+        private SKPaint _targetLinePaint;
+        private SKPaint _cursorLinePaint;
+        private SKPaint _measureFillPaint;
+        private SKPaint _measureBorderPaint;
 
         private List<SignalSeries> _seriesList = new List<SignalSeries>();
         private ObservableCollection<ReferenceLine> _referenceLines;
@@ -84,9 +93,53 @@ namespace IndiLogs_3._0.Controls.Charts
         private bool _showHoverTooltip = false;
         private Point _hoverPos;
 
+        // Store DPI scale for coordinate conversion
+        private double _dpiScaleX = 1.0;
+        private double _dpiScaleY = 1.0;
+
         public ChartGraphView()
         {
             InitializeComponent();
+            UpdateThemeColors();
+
+            Loaded += (s, e) =>
+            {
+                var source = PresentationSource.FromVisual(this);
+                if (source != null)
+                {
+                    _dpiScaleX = source.CompositionTarget.TransformToDevice.M11;
+                    _dpiScaleY = source.CompositionTarget.TransformToDevice.M22;
+                }
+            };
+        }
+
+        private void UpdateThemeColors()
+        {
+            if (_isLightTheme)
+            {
+                _bgColor = SKColor.Parse("#FFFFFF");
+                _gridColor = SKColor.Parse("#DDDDDD");
+                _textColor = SKColor.Parse("#333333");
+                _accentColor = SKColor.Parse("#3B82F6");
+            }
+            else
+            {
+                _bgColor = SKColor.Parse("#1B2838");
+                _gridColor = SKColor.Parse("#2D4A6F");
+                _textColor = SKColors.White;
+                _accentColor = SKColor.Parse("#3B82F6");
+            }
+
+            _gridLinePaint = new SKPaint { Color = _gridColor.WithAlpha(80), IsAntialias = false, StrokeWidth = 1 };
+            _axisLinePaint = new SKPaint { Color = _gridColor, IsAntialias = false, StrokeWidth = 1 };
+            _textPaintLeft = new SKPaint { Color = _textColor, TextSize = 11, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Normal) };
+            _textPaintRight = new SKPaint { Color = _accentColor, TextSize = 11, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold) };
+            _stateTextPaint = new SKPaint { Color = SKColors.White, TextSize = 12, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold) };
+            _stateFillPaint = new SKPaint { Style = SKPaintStyle.Fill };
+            _targetLinePaint = new SKPaint { Color = _accentColor, StrokeWidth = 2, Style = SKPaintStyle.Stroke, IsAntialias = false };
+            _cursorLinePaint = new SKPaint { Color = SKColors.Red, StrokeWidth = 1.5f, Style = SKPaintStyle.Stroke, IsAntialias = false };
+            _measureFillPaint = new SKPaint { Color = _accentColor.WithAlpha(40), Style = SKPaintStyle.Fill };
+            _measureBorderPaint = new SKPaint { Color = _accentColor, Style = SKPaintStyle.Stroke, StrokeWidth = 1, PathEffect = SKPathEffect.CreateDash(new float[] { 5, 5 }, 0) };
         }
 
         private float SnapToPixel(float coord) => (float)Math.Floor(coord) + 0.5f;
@@ -146,6 +199,7 @@ namespace IndiLogs_3._0.Controls.Charts
         protected override void OnMouseDown(MouseButtonEventArgs e)
         {
             base.OnMouseDown(e);
+            Focus(); // Enable keyboard events
             OnChartClicked?.Invoke();
         }
 
@@ -179,10 +233,17 @@ namespace IndiLogs_3._0.Controls.Charts
             }
         }
 
+        // Convert WPF coordinates to Skia coordinates (account for DPI)
+        private Point WpfToSkia(Point wpfPoint)
+        {
+            return new Point(wpfPoint.X * _dpiScaleX, wpfPoint.Y * _dpiScaleY);
+        }
+
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
         {
             base.OnMouseLeftButtonDown(e);
-            var pos = e.GetPosition(this);
+            var wpfPos = e.GetPosition(this);
+            var pos = WpfToSkia(wpfPos);
 
             // Ctrl+Click for 2-point measurement
             if (Keyboard.Modifiers == ModifierKeys.Control)
@@ -204,24 +265,24 @@ namespace IndiLogs_3._0.Controls.Charts
                 return;
             }
 
-            // Shift+Click for area measurement
+            // Shift+Click/Drag for area measurement
             if (Keyboard.Modifiers == ModifierKeys.Shift)
             {
                 _isMeasuring = true;
                 _measureStartIndex = PixelToIndex(pos.X);
                 _measureCurrentIndex = _measureStartIndex;
                 CaptureMouse();
+                SkiaCanvas.InvalidateVisual();
+                return;
             }
-            else
-            {
-                // Regular click - trigger time sync
-                int clickedIndex = PixelToIndex(pos.X);
-                OnTimeClicked?.Invoke(clickedIndex);
 
-                _isDragging = true;
-                _lastMousePos = pos;
-                CaptureMouse();
-            }
+            // Regular click - trigger time sync
+            int clickedIndex = PixelToIndex(pos.X);
+            OnTimeClicked?.Invoke(clickedIndex);
+
+            _isDragging = true;
+            _lastMousePos = pos;
+            CaptureMouse();
             SkiaCanvas.InvalidateVisual();
         }
 
@@ -233,6 +294,7 @@ namespace IndiLogs_3._0.Controls.Charts
             if (_isMeasuring && Math.Abs(_measureStartIndex - _measureCurrentIndex) < 5)
             {
                 _measureStartIndex = -1;
+                _measureCurrentIndex = -1;
             }
             _isMeasuring = false;
 
@@ -245,11 +307,15 @@ namespace IndiLogs_3._0.Controls.Charts
             base.OnMouseMove(e);
             if (_totalDataLength == 0) return;
 
-            var currentPos = e.GetPosition(this);
+            var wpfPos = e.GetPosition(this);
+            var currentPos = WpfToSkia(wpfPos);
+
+            double chartLeft = LEFT_MARGIN * _dpiScaleX;
+            double chartRight = (ActualWidth - RIGHT_MARGIN) * _dpiScaleX;
 
             _showHoverTooltip = Keyboard.Modifiers == ModifierKeys.Alt &&
-                               currentPos.X >= LEFT_MARGIN &&
-                               currentPos.X <= ActualWidth - RIGHT_MARGIN;
+                               currentPos.X >= chartLeft &&
+                               currentPos.X <= chartRight;
             _hoverPos = currentPos;
 
             if (_isProgressiveMode) return;
@@ -272,7 +338,7 @@ namespace IndiLogs_3._0.Controls.Charts
             else if (_isDragging)
             {
                 double deltaX = currentPos.X - _lastMousePos.X;
-                double chartWidth = ActualWidth - LEFT_MARGIN - RIGHT_MARGIN;
+                double chartWidth = (ActualWidth - LEFT_MARGIN - RIGHT_MARGIN) * _dpiScaleX;
                 int visiblePoints = _viewEndIndex - _viewStartIndex;
                 int shift = (int)((deltaX / chartWidth) * visiblePoints);
                 int newStart = _viewStartIndex - shift;
@@ -324,19 +390,30 @@ namespace IndiLogs_3._0.Controls.Charts
 
         private int PixelToIndex(double x)
         {
-            double chartWidth = ActualWidth - LEFT_MARGIN - RIGHT_MARGIN;
+            double chartLeft = LEFT_MARGIN * _dpiScaleX;
+            double chartWidth = (ActualWidth - LEFT_MARGIN - RIGHT_MARGIN) * _dpiScaleX;
             if (chartWidth <= 0 || _totalDataLength == 0) return 0;
-            double relX = x - LEFT_MARGIN;
+            double relX = x - chartLeft;
             int count = _viewEndIndex - _viewStartIndex;
             int offset = (int)((relX / chartWidth) * count);
             return Math.Max(0, Math.Min(_viewStartIndex + offset, _totalDataLength - 1));
         }
 
+        public double GetCurrentCursorValue()
+        {
+            if (_globalCursorIndex < 0 || _seriesList.Count == 0) return 0;
+            var firstVisible = _seriesList.FirstOrDefault(s => s.IsVisible && s.Data != null);
+            if (firstVisible == null || _globalCursorIndex >= firstVisible.Data.Length) return 0;
+            return firstVisible.Data[_globalCursorIndex];
+        }
+
+        public int GetCurrentCursorIndex() => _globalCursorIndex;
+
         private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
         {
             var canvas = e.Surface.Canvas;
             var info = e.Info;
-            canvas.Clear(BgColor);
+            canvas.Clear(_bgColor);
 
             if (_totalDataLength == 0) return;
 
@@ -383,8 +460,6 @@ namespace IndiLogs_3._0.Controls.Charts
             foreach (var s in _seriesList)
             {
                 if (s.Data == null || !s.IsVisible) continue;
-                double min, max;
-                bool has;
 
                 if (s.YAxisType == AxisType.Right)
                 {
@@ -543,7 +618,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
                 foreach (var s in _seriesList)
                 {
-                    if (!s.IsVisible) continue;
+                    if (!s.IsVisible || s.Data == null) continue;
                     paint.Color = s.Color;
                     path.Reset();
                     bool first = true;
@@ -665,6 +740,9 @@ namespace IndiLogs_3._0.Controls.Charts
                 float x1 = chartLeft + (float)((_ctrlPoint1 - start) / (double)count * chartW);
                 float y1 = (float)_ctrlPoint1Pos.Y;
 
+                // Clamp y1 to chart area
+                y1 = Math.Max(chartTop, Math.Min(chartBottom, y1));
+
                 using (var paint = new SKPaint { Color = SKColors.LimeGreen, StrokeWidth = 2, Style = SKPaintStyle.Stroke })
                 {
                     canvas.DrawLine(x1, chartTop, x1, chartBottom, paint);
@@ -676,6 +754,9 @@ namespace IndiLogs_3._0.Controls.Charts
                 {
                     float x2 = chartLeft + (float)((_ctrlPoint2 - start) / (double)count * chartW);
                     float y2 = (float)_ctrlPoint2Pos.Y;
+
+                    // Clamp y2 to chart area
+                    y2 = Math.Max(chartTop, Math.Min(chartBottom, y2));
 
                     using (var paint = new SKPaint { Color = SKColors.LimeGreen, StrokeWidth = 2, Style = SKPaintStyle.Stroke })
                     {
@@ -787,9 +868,12 @@ namespace IndiLogs_3._0.Controls.Charts
             if (x + boxW > c.LocalClipBounds.Width) x -= (boxW + 20);
             if (y + h > c.LocalClipBounds.Height) y = c.LocalClipBounds.Height - h - 10;
 
-            // Dark theme tooltip
-            using (var p = new SKPaint { Color = SKColor.Parse("#1E3A5F").WithAlpha(245), Style = SKPaintStyle.Fill })
-            using (var b = new SKPaint { Color = AccentColor, Style = SKPaintStyle.Stroke, StrokeWidth = 1.5f })
+            // Theme-aware tooltip
+            SKColor tooltipBg = _isLightTheme ? SKColor.Parse("#FFFFFF").WithAlpha(245) : SKColor.Parse("#1E3A5F").WithAlpha(245);
+            SKColor tooltipText = _isLightTheme ? SKColor.Parse("#333333") : SKColors.White;
+
+            using (var p = new SKPaint { Color = tooltipBg, Style = SKPaintStyle.Fill })
+            using (var b = new SKPaint { Color = _accentColor, Style = SKPaintStyle.Stroke, StrokeWidth = 1.5f })
             using (var shadow = new SKPaint { Color = SKColors.Black.WithAlpha(80), Style = SKPaintStyle.Fill })
             {
                 c.DrawRect(new SKRect(x + 2, y + 2, x + boxW + 2, y + h + 2), shadow);
@@ -798,7 +882,7 @@ namespace IndiLogs_3._0.Controls.Charts
             }
 
             float ty = y + 14;
-            using (var textPaint = new SKPaint { Color = TextColor, TextSize = 11, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Normal) })
+            using (var textPaint = new SKPaint { Color = tooltipText, TextSize = 11, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Normal) })
             {
                 foreach (var l in ls)
                 {

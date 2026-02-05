@@ -8,6 +8,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using Newtonsoft.Json;
+using IndiLogs_3._0.Interfaces;
 using IndiLogs_3._0.Models;
 
 namespace IndiLogs_3._0.Controls
@@ -219,7 +220,7 @@ namespace IndiLogs_3._0.Controls
 
         private void LogsDataGrid_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            var parent = Window.GetWindow(this) as MainWindow;
+            var parent = Window.GetWindow(this) as ITabHost;
             parent?.MainLogsGrid_PreviewKeyDown(sender, e);
         }
 
@@ -230,13 +231,13 @@ namespace IndiLogs_3._0.Controls
 
         private void LogsDataGrid_Loaded(object sender, RoutedEventArgs e)
         {
-            var parent = Window.GetWindow(this) as MainWindow;
+            var parent = Window.GetWindow(this) as ITabHost;
             parent?.DataGrid_Loaded(sender, e);
         }
 
         private void LogsDataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
         {
-            var parent = Window.GetWindow(this) as MainWindow;
+            var parent = Window.GetWindow(this) as ITabHost;
             parent?.DataGrid_LoadingRow(sender, e);
         }
 

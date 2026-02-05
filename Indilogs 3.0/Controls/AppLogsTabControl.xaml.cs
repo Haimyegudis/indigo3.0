@@ -8,6 +8,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using Newtonsoft.Json;
+using IndiLogs_3._0.Interfaces;
 using IndiLogs_3._0.Models;
 
 namespace IndiLogs_3._0.Controls
@@ -102,7 +103,7 @@ namespace IndiLogs_3._0.Controls
 
         private void AppLogsGrid_Sorting(object sender, DataGridSortingEventArgs e)
         {
-            var parent = Window.GetWindow(this) as MainWindow;
+            var parent = Window.GetWindow(this) as ITabHost;
             parent?.AppLogsGrid_Sorting(sender, e);
         }
 
@@ -113,13 +114,13 @@ namespace IndiLogs_3._0.Controls
 
         private void AppLogsGrid_Loaded(object sender, RoutedEventArgs e)
         {
-            var parent = Window.GetWindow(this) as MainWindow;
+            var parent = Window.GetWindow(this) as ITabHost;
             parent?.DataGrid_Loaded(sender, e);
         }
 
         private void AppLogsGrid_LoadingRow(object sender, DataGridRowEventArgs e)
         {
-            var parent = Window.GetWindow(this) as MainWindow;
+            var parent = Window.GetWindow(this) as ITabHost;
             parent?.DataGrid_LoadingRow(sender, e);
         }
 
