@@ -10,6 +10,8 @@
              Background="{DynamicResource BgDark}">
     <UserControl.Resources>
         <converters:SKColorToBrushConverter x:Key="SKColorToBrushConverter"/>
+        <converters:BoolToSelectionBrushConverter x:Key="BoolToSelectionBrushConverter"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
@@ -64,7 +66,7 @@
                       Background="{DynamicResource BorderColor}" Cursor="SizeWE"/>
 
         <!-- Charts ScrollViewer -->
-        <ScrollViewer Grid.Row="3" Grid.Column="2"
+        <ScrollViewer x:Name="ChartsScrollViewer" Grid.Row="3" Grid.Column="2"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
                       Background="{DynamicResource BgDark}">
@@ -77,13 +79,16 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Border Background="{DynamicResource BgPanel}"
-                                BorderBrush="{DynamicResource BorderColor}"
-                                BorderThickness="1" CornerRadius="6" Margin="5"
-                                Padding="0">
+                                BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToSelectionBrushConverter}}"
+                                BorderThickness="2" CornerRadius="6" Margin="5"
+                                Padding="0"
+                                MouseLeftButtonDown="ChartBorder_MouseLeftButtonDown"
+                                Tag="{Binding}"
+                                Visibility="{Binding IsNotDetached, Converter={StaticResource BoolToVisibilityConverter}}">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>  <!-- Header -->
-                                    <RowDefinition Height="*"/>     <!-- Chart -->
+                                    <RowDefinition Height="*"/>     <!-- Chart/Gantt/Thread -->
                                     <RowDefinition Height="Auto"/>  <!-- Resize gripper -->
                                 </Grid.RowDefinitions>
 
@@ -103,16 +108,29 @@
                                                        FontWeight="SemiBold" FontSize="12"
                                                        VerticalAlignment="Center" Margin="5,0"/>
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                                <Button Content="✕" Width="24" Height="24"
+                                                <Button Width="24" Height="24"
+                                                        Style="{DynamicResource ModernBtn}"
+                                                        Tag="{Binding}"
+                                                        Click="DetachChartButton_Click"
+                                                        ToolTip="Detach to floating window"
+                                                        FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                                        Content="&#xE8A7;"
+                                                        Foreground="{DynamicResource TextSecondary}"
+                                                        Margin="0,0,2,0"/>
+                                                <Button Width="24" Height="24"
                                                         Style="{DynamicResource ModernBtn}"
                                                         Tag="{Binding}"
                                                         Click="RemoveChartButton_Click"
-                                                        ToolTip="Remove this chart"/>
+                                                        ToolTip="Remove this chart"
+                                                        FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                                        Content="&#xE711;"
+                                                        Foreground="{DynamicResource TextSecondary}"/>
                                             </StackPanel>
                                         </Grid>
 
-                                        <!-- Legend Row with Signal Checkboxes -->
-                                        <ItemsControl Grid.Row="1" ItemsSource="{Binding Series}" Margin="0,3,0,0">
+                                        <!-- Legend Row with Signal Checkboxes (only for Signal view) -->
+                                        <ItemsControl Grid.Row="1" ItemsSource="{Binding Series}" Margin="0,3,0,0"
+                                                      Visibility="{Binding IsSignalView, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
                                                     <WrapPanel Orientation="Horizontal"/>
@@ -153,10 +171,23 @@
                                     </Grid>
                                 </Border>
 
-                                <!-- Chart View -->
+                                <!-- Signal Chart View (visible when ViewType = Signal) -->
                                 <charts:ChartGraphView x:Name="GraphView" Grid.Row="1"
                                                        Height="{Binding ChartHeight}"
-                                                       Tag="{Binding}"/>
+                                                       Tag="{Binding}"
+                                                       Visibility="{Binding IsSignalView, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                                <!-- Gantt View (visible when ViewType = Gantt) -->
+                                <charts:ChartGanttView x:Name="GanttView" Grid.Row="1"
+                                                       Height="{Binding ChartHeight}"
+                                                       Tag="{Binding}"
+                                                       Visibility="{Binding IsGanttView, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                                <!-- Thread View (visible when ViewType = Thread) -->
+                                <charts:ChartThreadView x:Name="ThreadView" Grid.Row="1"
+                                                        Height="{Binding ChartHeight}"
+                                                        Tag="{Binding}"
+                                                        Visibility="{Binding IsThreadView, Converter={StaticResource BoolToVisibilityConverter}}"/>
 
                                 <!-- Resize Gripper -->
                                 <Thumb Grid.Row="2" Height="8" Cursor="SizeNS"

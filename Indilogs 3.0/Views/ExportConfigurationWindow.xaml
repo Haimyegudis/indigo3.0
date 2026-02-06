@@ -196,24 +196,42 @@
                                         Padding="8,4" FontSize="11"/>
                             </StackPanel>
 
-                            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" MaxHeight="400">
-                                <ItemsControl ItemsSource="{Binding FilteredIOComponents}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <CheckBox IsChecked="{Binding IsSelected}">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="{Binding Category}"
-                                                               Foreground="{DynamicResource WarningColor}"
-                                                               FontWeight="SemiBold"
-                                                               Margin="0,0,5,0"/>
-                                                    <TextBlock Text=" | "/>
-                                                    <TextBlock Text="{Binding Name}"/>
-                                                </StackPanel>
-                                            </CheckBox>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
+                            <ListBox Grid.Row="2" MaxHeight="400"
+                                     ItemsSource="{Binding FilteredIOComponents}"
+                                     Background="Transparent" BorderThickness="0"
+                                     VirtualizingStackPanel.IsVirtualizing="True"
+                                     VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.CanContentScroll="True">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <VirtualizingStackPanel/>
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Category}"
+                                                           Foreground="{DynamicResource WarningColor}"
+                                                           FontWeight="SemiBold"
+                                                           Margin="0,0,5,0"/>
+                                                <TextBlock Text=" | "/>
+                                                <TextBlock Text="{Binding Name}"/>
+                                            </StackPanel>
+                                        </CheckBox>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Margin" Value="0"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                            </ListBox>
                         </Grid>
                     </GroupBox>
 
@@ -241,24 +259,42 @@
                                         Padding="8,4" FontSize="11"/>
                             </StackPanel>
 
-                            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" MaxHeight="400">
-                                <ItemsControl ItemsSource="{Binding FilteredAxisComponents}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <CheckBox IsChecked="{Binding IsSelected}">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="{Binding Category}"
-                                                               Foreground="{DynamicResource SuccessColor}"
-                                                               FontWeight="SemiBold"
-                                                               Margin="0,0,5,0"/>
-                                                    <TextBlock Text=" | "/>
-                                                    <TextBlock Text="{Binding Name}"/>
-                                                </StackPanel>
-                                            </CheckBox>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
+                            <ListBox Grid.Row="2" MaxHeight="400"
+                                     ItemsSource="{Binding FilteredAxisComponents}"
+                                     Background="Transparent" BorderThickness="0"
+                                     VirtualizingStackPanel.IsVirtualizing="True"
+                                     VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.CanContentScroll="True">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <VirtualizingStackPanel/>
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Category}"
+                                                           Foreground="{DynamicResource SuccessColor}"
+                                                           FontWeight="SemiBold"
+                                                           Margin="0,0,5,0"/>
+                                                <TextBlock Text=" | "/>
+                                                <TextBlock Text="{Binding Name}"/>
+                                            </StackPanel>
+                                        </CheckBox>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Margin" Value="0"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                            </ListBox>
                         </Grid>
                     </GroupBox>
 
@@ -286,24 +322,42 @@
                                         Padding="8,4" FontSize="11"/>
                             </StackPanel>
 
-                            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" MaxHeight="400">
-                                <ItemsControl ItemsSource="{Binding FilteredCHStepComponents}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <CheckBox IsChecked="{Binding IsSelected}">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="{Binding Category}"
-                                                               Foreground="{DynamicResource PrimaryColor}"
-                                                               FontWeight="SemiBold"
-                                                               Margin="0,0,5,0"/>
-                                                    <TextBlock Text=" | "/>
-                                                    <TextBlock Text="{Binding Name}"/>
-                                                </StackPanel>
-                                            </CheckBox>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
+                            <ListBox Grid.Row="2" MaxHeight="400"
+                                     ItemsSource="{Binding FilteredCHStepComponents}"
+                                     Background="Transparent" BorderThickness="0"
+                                     VirtualizingStackPanel.IsVirtualizing="True"
+                                     VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.CanContentScroll="True">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <VirtualizingStackPanel/>
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Category}"
+                                                           Foreground="{DynamicResource PrimaryColor}"
+                                                           FontWeight="SemiBold"
+                                                           Margin="0,0,5,0"/>
+                                                <TextBlock Text=" | "/>
+                                                <TextBlock Text="{Binding Name}"/>
+                                            </StackPanel>
+                                        </CheckBox>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Margin" Value="0"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                            </ListBox>
                         </Grid>
                     </GroupBox>
 
@@ -331,17 +385,35 @@
                                         Padding="8,4" FontSize="11"/>
                             </StackPanel>
 
-                            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" MaxHeight="400">
-                                <ItemsControl ItemsSource="{Binding FilteredThreadItems}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <CheckBox IsChecked="{Binding IsSelected}">
-                                                <TextBlock Text="{Binding Name}"/>
-                                            </CheckBox>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
+                            <ListBox Grid.Row="2" MaxHeight="400"
+                                     ItemsSource="{Binding FilteredThreadItems}"
+                                     Background="Transparent" BorderThickness="0"
+                                     VirtualizingStackPanel.IsVirtualizing="True"
+                                     VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.CanContentScroll="True">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <VirtualizingStackPanel/>
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}">
+                                            <TextBlock Text="{Binding Name}"/>
+                                        </CheckBox>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Margin" Value="0"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                            </ListBox>
                         </Grid>
                     </GroupBox>
                 </Grid>
@@ -357,9 +429,16 @@
                         Style="{StaticResource ModernBtn}"
                         Padding="25,10"
                         FontSize="14"/>
-                <Button Content="Open in Chart Viewer"
-                        Command="{Binding OpenInViewerCommand}"
+                <Button Content="Open in Charts Tab"
+                        Command="{Binding OpenInChartsTabCommand}"
                         Style="{StaticResource ModernBtn}"
+                        Background="#10B981"
+                        Padding="25,10"
+                        FontSize="14"
+                        ToolTip="Open directly in Charts tab (In-Memory, no file export)"/>
+                <Button Content="Open External Viewer"
+                        Command="{Binding OpenInViewerCommand}"
+                        Style="{StaticResource SecondaryBtn}"
                         Padding="25,10"
                         FontSize="14"
                         ToolTip="Export CSV and open in IndiChart viewer"/>

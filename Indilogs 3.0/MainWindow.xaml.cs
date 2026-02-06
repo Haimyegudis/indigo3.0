@@ -1,6 +1,7 @@
 ﻿using IndiLogs_3._0.Interfaces;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
+using IndiLogs_3._0.Services.Charts;
 using IndiLogs_3._0.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -56,6 +57,10 @@ namespace IndiLogs_3._0
             MainTabs.PreviewMouseLeftButtonDown += MainTabs_PreviewMouseLeftButtonDown;
             MainTabs.PreviewMouseMove += MainTabs_PreviewMouseMove;
             MainTabs.PreviewMouseLeftButtonUp += MainTabs_PreviewMouseLeftButtonUp;
+
+            // Subscribe to chart data transfer events
+            ChartDataTransferService.Instance.OnSwitchToChartsRequested += SwitchToChartsTab;
+            ChartDataTransferService.Instance.OnChartTimeSelected += OnChartTimeSelected;
 
             // Check arguments (Open with...)
             string[] args = Environment.GetCommandLineArgs();
@@ -1041,6 +1046,37 @@ namespace IndiLogs_3._0
             if (sender is Border border)
             {
                 border.Opacity = 0;
+            }
+        }
+
+        /// <summary>
+        /// Switches to the Charts tab (index 8)
+        /// </summary>
+        private void SwitchToChartsTab()
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                MainTabs.SelectedIndex = 8; // Charts tab
+            }));
+        }
+
+        /// <summary>
+        /// Handles chart time click to sync with logs
+        /// </summary>
+        private void OnChartTimeSelected(DateTime time)
+        {
+            if (DataContext is MainViewModel vm)
+            {
+                // Find the log entry closest to this time
+                var closestLog = vm.FilteredLogs?
+                    .OrderBy(l => Math.Abs((l.Date - time).TotalMilliseconds))
+                    .FirstOrDefault();
+
+                if (closestLog != null)
+                {
+                    // Scroll to the log and select it
+                    MapsToLogRow(closestLog);
+                }
             }
         }
     }

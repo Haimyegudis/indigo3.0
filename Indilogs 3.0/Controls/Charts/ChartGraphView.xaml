@@ -6,7 +6,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
              d:DesignHeight="200" d:DesignWidth="800"
-             Background="{DynamicResource BgPanel}">
+             Background="{DynamicResource BgPanel}"
+             PreviewMouseWheel="UserControl_PreviewMouseWheel">
     <Grid>
         <skia:SKElement Name="SkiaCanvas" PaintSurface="OnPaintSurface" />
     </Grid>

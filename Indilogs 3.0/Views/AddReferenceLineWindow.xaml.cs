@@ -28,6 +28,9 @@ namespace IndiLogs_3._0.Views
 
         private void LineType_Changed(object sender, RoutedEventArgs e)
         {
+            // Guard against calls during InitializeComponent before controls are ready
+            if (ValueLabel == null || ValueTextBox == null) return;
+
             if (HorizontalRadio.IsChecked == true)
             {
                 ValueLabel.Text = "Value:";

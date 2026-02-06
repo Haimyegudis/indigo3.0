@@ -788,6 +788,17 @@
                 <!-- APP Selected Log Details Panel - REMOVED (use double-click to open Log Details Window instead) -->
 
                 <Border Grid.Row="4" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" Padding="15,8">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <!-- Hide bottom panel when Charts tab is selected (index 8) -->
+                                <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="8">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
                     <Grid>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <Button Content="🔍 Edit Filters..." Command="{Binding OpenFilterWindowCommand}" CommandParameter="{Binding RelativeSource={RelativeSource Self}}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgCard}"/>
@@ -1044,7 +1055,19 @@
 
         </Grid>
 
-        <controls:StatusBarControl Grid.Row="2" DataContext="{Binding}"/>
+        <controls:StatusBarControl Grid.Row="2" DataContext="{Binding}">
+            <controls:StatusBarControl.Style>
+                <Style TargetType="controls:StatusBarControl">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <!-- Hide status bar when Charts tab is selected (index 8) -->
+                        <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="8">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </controls:StatusBarControl.Style>
+        </controls:StatusBarControl>
 
         <Grid Grid.RowSpan="3" Background="#CC000000" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}" Panel.ZIndex="999">
             <Border Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource PrimaryColor}" BorderThickness="0" CornerRadius="30" HorizontalAlignment="Center" VerticalAlignment="Center" Width="450" Height="300">

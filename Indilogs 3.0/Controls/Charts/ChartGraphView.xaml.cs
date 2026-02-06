@@ -10,6 +10,7 @@ using SkiaSharp.Views.WPF;
 using System.Text;
 using System.Collections.ObjectModel;
 using IndiLogs_3._0.Models.Charts;
+using IndiLogs_3._0.Services.Charts;
 
 namespace IndiLogs_3._0.Controls.Charts
 {
@@ -66,6 +67,29 @@ namespace IndiLogs_3._0.Controls.Charts
         private List<SignalSeries> _seriesList = new List<SignalSeries>();
         private ObservableCollection<ReferenceLine> _referenceLines;
         private List<StateInterval> _states;
+        private List<ThreadMessageData> _threadMessages = new List<ThreadMessageData>();
+        private List<EventMarkerData> _eventMarkers = new List<EventMarkerData>();
+        private List<EventMarker> _chartEventMarkers;
+
+        // Event marker paints and rendering
+        private SKPaint _eventDotPaint;
+        private SKPaint _eventDotBorderPaint;
+        private const float EVENT_DOT_RADIUS = 5f;
+        private int _hoveredEventIndex = -1;
+
+        // Event marker colors
+        private static readonly SKColor EventMarkerColor = SKColors.Red;
+
+        // Thread message marker colors (different color per thread)
+        private static readonly SKColor[] ThreadMarkerColors = new[]
+        {
+            SKColor.Parse("#FF6B6B"), // Red
+            SKColor.Parse("#4ECDC4"), // Teal
+            SKColor.Parse("#FFE66D"), // Yellow
+            SKColor.Parse("#95E1D3"), // Mint
+            SKColor.Parse("#F38181"), // Coral
+            SKColor.Parse("#AA96DA"), // Lavender
+        };
 
         private int _viewStartIndex = 0;
         private int _viewEndIndex = 0;
@@ -140,23 +164,59 @@ namespace IndiLogs_3._0.Controls.Charts
             _cursorLinePaint = new SKPaint { Color = SKColors.Red, StrokeWidth = 1.5f, Style = SKPaintStyle.Stroke, IsAntialias = false };
             _measureFillPaint = new SKPaint { Color = _accentColor.WithAlpha(40), Style = SKPaintStyle.Fill };
             _measureBorderPaint = new SKPaint { Color = _accentColor, Style = SKPaintStyle.Stroke, StrokeWidth = 1, PathEffect = SKPathEffect.CreateDash(new float[] { 5, 5 }, 0) };
+            _eventDotPaint = new SKPaint { Color = SKColors.Red, Style = SKPaintStyle.Fill, IsAntialias = true };
+            _eventDotBorderPaint = new SKPaint { Color = SKColors.DarkRed, Style = SKPaintStyle.Stroke, StrokeWidth = 1.5f, IsAntialias = true };
         }
 
         private float SnapToPixel(float coord) => (float)Math.Floor(coord) + 0.5f;
 
+        /// <summary>
+        /// Sets thread messages to display as vertical markers on the chart
+        /// </summary>
+        public void SetThreadMessages(List<ThreadMessageData> messages)
+        {
+            _threadMessages = messages ?? new List<ThreadMessageData>();
+            SkiaCanvas.InvalidateVisual();
+        }
+
         public void SetViewModel(ChartViewModel vm)
         {
             if (vm == null) return;
+
+            // Unsubscribe from previous series
+            foreach (var s in _seriesList)
+            {
+                s.PropertyChanged -= Series_PropertyChanged;
+            }
+
             _seriesList = vm.Series.ToList();
             _referenceLines = vm.ReferenceLines;
             _states = vm.States;
+            _chartEventMarkers = vm.EventMarkers;
             _totalDataLength = _seriesList.Any() ? _seriesList.Max(s => s.Data != null ? s.Data.Length : 0) : 0;
             if (_viewEndIndex == 0 && _totalDataLength > 0)
             {
                 _viewStartIndex = 0;
                 _viewEndIndex = _totalDataLength - 1;
             }
+
+            // Subscribe to property changes on each series (for IsVisible, etc.)
+            foreach (var s in _seriesList)
+            {
+                s.PropertyChanged += Series_PropertyChanged;
+            }
+
             SkiaCanvas.InvalidateVisual();
+        }
+
+        private void Series_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            // Redraw when series properties change (like IsVisible)
+            if (e.PropertyName == nameof(SignalSeries.IsVisible) ||
+                e.PropertyName == nameof(SignalSeries.YAxisType))
+            {
+                SkiaCanvas.InvalidateVisual();
+            }
         }
 
         public void SetShowStates(bool show) { _showStates = show; SkiaCanvas.InvalidateVisual(); }
@@ -203,22 +263,26 @@ namespace IndiLogs_3._0.Controls.Charts
             OnChartClicked?.Invoke();
         }
 
-        protected override void OnMouseWheel(MouseWheelEventArgs e)
+        private void UserControl_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
+            // Handle zoom with mouse wheel - this is PreviewMouseWheel so it fires before ScrollViewer
             if (_totalDataLength == 0) return;
             int totalPoints = _viewEndIndex - _viewStartIndex;
             if (totalPoints < 10) return;
 
-            double zoomFactor = e.Delta > 0 ? 0.85 : 1.15;
+            // Symmetric zoom factor - same amount of zoom in/out
+            // Use 1.25 for zoom out, 1/1.25 = 0.8 for zoom in
+            const double ZOOM_RATIO = 1.25;
+            double zoomFactor = e.Delta > 0 ? (1.0 / ZOOM_RATIO) : ZOOM_RATIO;
 
             double chartWidth = ActualWidth - LEFT_MARGIN - RIGHT_MARGIN;
             double mouseX = e.GetPosition(this).X - LEFT_MARGIN;
             double mouseRatio = Math.Max(0, Math.Min(mouseX / chartWidth, 1));
 
             int mouseIndex = _viewStartIndex + (int)(totalPoints * mouseRatio);
-            int newSpan = Math.Max(10, (int)(totalPoints * zoomFactor));
+            int newSpan = Math.Max(10, (int)Math.Round(totalPoints * zoomFactor));
 
-            int newStart = mouseIndex - (int)(newSpan * mouseRatio);
+            int newStart = mouseIndex - (int)Math.Round(newSpan * mouseRatio);
             int newEnd = newStart + newSpan;
 
             if (newStart < 0) { newStart = 0; newEnd = Math.Min(newSpan, _totalDataLength - 1); }
@@ -231,6 +295,8 @@ namespace IndiLogs_3._0.Controls.Charts
                 SkiaCanvas.InvalidateVisual();
                 if (!_isSyncing) OnViewRangeChanged?.Invoke(_viewStartIndex, _viewEndIndex);
             }
+
+            e.Handled = true; // Mark as handled so ScrollViewer doesn't scroll
         }
 
         // Convert WPF coordinates to Skia coordinates (account for DPI)
@@ -307,37 +373,54 @@ namespace IndiLogs_3._0.Controls.Charts
             base.OnMouseMove(e);
             if (_totalDataLength == 0) return;
 
-            var wpfPos = e.GetPosition(this);
-            var currentPos = WpfToSkia(wpfPos);
+            // During playback mode, don't move cursor with mouse at all
+            // Only allow measurement if actively measuring
+            if (_isProgressiveMode)
+            {
+                if (_isMeasuring)
+                {
+                    var wpfPos = e.GetPosition(this);
+                    var currentPos = WpfToSkia(wpfPos);
+                    int cursorIdx = PixelToIndex(currentPos.X);
+                    _measureCurrentIndex = cursorIdx;
+                    SkiaCanvas.InvalidateVisual();
+                }
+                return;
+            }
+
+            var pos = e.GetPosition(this);
+            var scaledPos = WpfToSkia(pos);
 
             double chartLeft = LEFT_MARGIN * _dpiScaleX;
             double chartRight = (ActualWidth - RIGHT_MARGIN) * _dpiScaleX;
 
             _showHoverTooltip = Keyboard.Modifiers == ModifierKeys.Alt &&
-                               currentPos.X >= chartLeft &&
-                               currentPos.X <= chartRight;
-            _hoverPos = currentPos;
+                               scaledPos.X >= chartLeft &&
+                               scaledPos.X <= chartRight;
+            _hoverPos = scaledPos;
 
-            if (_isProgressiveMode) return;
+            int cursorIndex = PixelToIndex(scaledPos.X);
 
-            int cursorIdx = PixelToIndex(currentPos.X);
-
-            if (!_isProgressiveMode && cursorIdx != _globalCursorIndex)
-            {
-                _globalCursorIndex = cursorIdx;
-                OnCursorMoved?.Invoke(cursorIdx);
-                UpdateLegendValues(cursorIdx);
-                SkiaCanvas.InvalidateVisual();
-            }
-
+            // Handle measurement
             if (_isMeasuring)
             {
-                _measureCurrentIndex = cursorIdx;
+                _measureCurrentIndex = cursorIndex;
+                SkiaCanvas.InvalidateVisual();
+                return;
+            }
+
+            // Update cursor position (only when not in playback mode)
+            if (cursorIndex != _globalCursorIndex)
+            {
+                _globalCursorIndex = cursorIndex;
+                OnCursorMoved?.Invoke(cursorIndex);
+                UpdateLegendValues(cursorIndex);
                 SkiaCanvas.InvalidateVisual();
             }
-            else if (_isDragging)
+
+            if (_isDragging)
             {
-                double deltaX = currentPos.X - _lastMousePos.X;
+                double deltaX = scaledPos.X - _lastMousePos.X;
                 double chartWidth = (ActualWidth - LEFT_MARGIN - RIGHT_MARGIN) * _dpiScaleX;
                 int visiblePoints = _viewEndIndex - _viewStartIndex;
                 int shift = (int)((deltaX / chartWidth) * visiblePoints);
@@ -351,13 +434,18 @@ namespace IndiLogs_3._0.Controls.Charts
                 {
                     _viewStartIndex = newStart;
                     _viewEndIndex = newEnd;
-                    _lastMousePos = currentPos;
+                    _lastMousePos = scaledPos;
                     SkiaCanvas.InvalidateVisual();
                     if (!_isSyncing) OnViewRangeChanged?.Invoke(_viewStartIndex, _viewEndIndex);
                 }
             }
             else if (_showHoverTooltip)
             {
+                SkiaCanvas.InvalidateVisual();
+            }
+            else if (_chartEventMarkers != null && _chartEventMarkers.Count > 0)
+            {
+                // Always repaint when events exist so hover detection works
                 SkiaCanvas.InvalidateVisual();
             }
         }
@@ -605,6 +693,53 @@ namespace IndiLogs_3._0.Controls.Charts
                 }
             }
 
+            // Thread Message Markers (vertical dashed lines with triangles at top)
+            if (_threadMessages != null && _threadMessages.Count > 0)
+            {
+                // Group messages by thread to assign consistent colors
+                var threadColorMap = new Dictionary<string, SKColor>(StringComparer.OrdinalIgnoreCase);
+                int colorIdx = 0;
+
+                foreach (var msg in _threadMessages)
+                {
+                    if (msg.TimeIndex < start || msg.TimeIndex > end) continue;
+
+                    // Get or assign color for this thread
+                    if (!threadColorMap.TryGetValue(msg.ThreadName, out SKColor markerColor))
+                    {
+                        markerColor = ThreadMarkerColors[colorIdx % ThreadMarkerColors.Length];
+                        threadColorMap[msg.ThreadName] = markerColor;
+                        colorIdx++;
+                    }
+
+                    float x = chartLeft + (float)((msg.TimeIndex - start) / (double)count * chartW);
+
+                    // Draw dashed vertical line
+                    using (var linePaint = new SKPaint
+                    {
+                        Color = markerColor,
+                        StrokeWidth = 1.5f,
+                        Style = SKPaintStyle.Stroke,
+                        PathEffect = SKPathEffect.CreateDash(new float[] { 4, 3 }, 0),
+                        IsAntialias = true
+                    })
+                    {
+                        canvas.DrawLine(x, chartTop, x, chartBottom, linePaint);
+                    }
+
+                    // Draw triangle marker at top
+                    using (var trianglePaint = new SKPaint { Color = markerColor, Style = SKPaintStyle.Fill, IsAntialias = true })
+                    {
+                        var trianglePath = new SKPath();
+                        trianglePath.MoveTo(x, chartTop);
+                        trianglePath.LineTo(x - 5, chartTop - 8);
+                        trianglePath.LineTo(x + 5, chartTop - 8);
+                        trianglePath.Close();
+                        canvas.DrawPath(trianglePath, trianglePaint);
+                    }
+                }
+            }
+
             // Signal Lines
             using (var paint = new SKPaint { Style = SKPaintStyle.Stroke, StrokeWidth = 1.5f, IsAntialias = true })
             using (var path = new SKPath())
@@ -643,6 +778,75 @@ namespace IndiLogs_3._0.Controls.Charts
                     if (!first) canvas.DrawPath(path, paint);
                 }
                 canvas.Restore();
+            }
+
+            // Event Markers (Red Dots on X-axis timeline)
+            _hoveredEventIndex = -1;
+            if (_chartEventMarkers != null && _chartEventMarkers.Count > 0)
+            {
+                float eventY = chartBottom - 8; // Position dots near the bottom of the chart area
+
+                foreach (var evt in _chartEventMarkers)
+                {
+                    if (evt.Index < start || evt.Index > end) continue;
+
+                    float ex = chartLeft + (float)((evt.Index - start) / (double)count * chartW);
+
+                    // Draw red dot
+                    canvas.DrawCircle(ex, eventY, EVENT_DOT_RADIUS, _eventDotPaint);
+                    canvas.DrawCircle(ex, eventY, EVENT_DOT_RADIUS, _eventDotBorderPaint);
+
+                    // Check if mouse is hovering near this event dot
+                    {
+                        float dx = (float)_hoverPos.X - ex;
+                        float dy = (float)_hoverPos.Y - eventY;
+                        float dist = (float)Math.Sqrt(dx * dx + dy * dy);
+
+                        if (dist < EVENT_DOT_RADIUS * 4)
+                        {
+                            _hoveredEventIndex = evt.Index;
+                        }
+                    }
+                }
+
+                // Draw tooltip for hovered event
+                if (_hoveredEventIndex >= 0)
+                {
+                    var hoveredEvent = _chartEventMarkers.FirstOrDefault(e => e.Index == _hoveredEventIndex);
+                    if (hoveredEvent != null)
+                    {
+                        float hx = chartLeft + (float)((hoveredEvent.Index - start) / (double)count * chartW);
+
+                        // Draw a larger highlight circle
+                        using (var highlightPaint = new SKPaint
+                        {
+                            Color = SKColors.Red.WithAlpha(60),
+                            Style = SKPaintStyle.Fill,
+                            IsAntialias = true
+                        })
+                        {
+                            canvas.DrawCircle(hx, eventY, EVENT_DOT_RADIUS + 3, highlightPaint);
+                        }
+
+                        // Build tooltip text
+                        var sb = new StringBuilder();
+                        sb.AppendLine("=== EVENT ===");
+                        if (!string.IsNullOrEmpty(hoveredEvent.Time))
+                            sb.AppendLine($"Time: {hoveredEvent.Time}");
+                        if (!string.IsNullOrEmpty(hoveredEvent.Name))
+                            sb.AppendLine($"Name: {hoveredEvent.Name}");
+                        if (!string.IsNullOrEmpty(hoveredEvent.Message))
+                            sb.AppendLine($"Message: {hoveredEvent.Message}");
+                        if (!string.IsNullOrEmpty(hoveredEvent.Severity))
+                            sb.AppendLine($"Severity: {hoveredEvent.Severity}");
+                        if (!string.IsNullOrEmpty(hoveredEvent.Description))
+                            sb.AppendLine($"Source: {hoveredEvent.Description}");
+
+                        float tooltipX = hx + 15;
+                        float tooltipY = eventY - 40;
+                        DrawTooltip(canvas, sb.ToString(), tooltipX, tooltipY);
+                    }
+                }
             }
 
             // Border

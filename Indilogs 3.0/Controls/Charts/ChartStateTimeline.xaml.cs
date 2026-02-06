@@ -112,14 +112,21 @@ namespace IndiLogs_3._0.Controls.Charts
                 float x1 = (float)(st.StartIndex / (double)_totalDataLength * w);
                 float x2 = (float)((st.EndIndex + 1) / (double)_totalDataLength * w);
 
-                var color = ChartStateConfig.GetSolidColor(st.StateId);
+                // Get color - use StateName to lookup ID if StateId is not set properly
+                int effectiveStateId = st.StateId;
+                if (!string.IsNullOrEmpty(st.StateName) && effectiveStateId <= 0)
+                {
+                    effectiveStateId = ChartStateConfig.GetId(st.StateName);
+                }
+                var color = ChartStateConfig.GetSolidColor(effectiveStateId);
                 using (var paint = new SKPaint { Color = color, Style = SKPaintStyle.Fill })
                 {
                     canvas.DrawRect(new SKRect(x1, padding, x2, h - padding), paint);
                 }
 
                 // Draw state name if there's enough space
-                string name = ChartStateConfig.GetName(st.StateId);
+                // Use StateName if available, otherwise fall back to StateId lookup
+                string name = !string.IsNullOrEmpty(st.StateName) ? st.StateName : ChartStateConfig.GetName(st.StateId);
                 float textWidth = _textPaint.MeasureText(name);
                 if (textWidth < (x2 - x1) - 4)
                 {

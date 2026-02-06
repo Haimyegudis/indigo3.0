@@ -1,5 +1,6 @@
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
+using IndiLogs_3._0.Services.Charts;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using System;
@@ -262,6 +263,7 @@ namespace IndiLogs_3._0.ViewModels
 
         public ICommand ExportCommand { get; }
         public ICommand OpenInViewerCommand { get; }
+        public ICommand OpenInChartsTabCommand { get; }
         public ICommand SavePresetCommand { get; }
         public ICommand LoadPresetCommand { get; }
         public ICommand SelectAllIOCommand { get; }
@@ -306,6 +308,7 @@ namespace IndiLogs_3._0.ViewModels
 
             ExportCommand = new RelayCommand(async _ => await ExecuteExport(false), _ => CanExport());
             OpenInViewerCommand = new RelayCommand(async _ => await ExecuteExport(true), _ => CanExport());
+            OpenInChartsTabCommand = new RelayCommand(_ => OpenInChartsTab(), _ => CanExport());
             SavePresetCommand = new RelayCommand(_ => SavePreset());
             LoadPresetCommand = new RelayCommand(_ => LoadPreset());
             SelectAllIOCommand = new RelayCommand(_ => SelectAll(IOComponents));
@@ -742,6 +745,61 @@ namespace IndiLogs_3._0.ViewModels
                 MessageBox.Show($"Failed to open viewer: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        /// <summary>
+        /// Opens data directly in the Charts tab without file export (In-Memory transfer)
+        /// </summary>
+        private void OpenInChartsTab()
+        {
+            try
+            {
+                var preset = new ExportPreset
+                {
+                    IncludeUnixTime = IncludeUnixTime,
+                    IncludeEvents = IncludeEvents,
+                    IncludeMachineState = IncludeMachineState,
+                    IncludeLogStats = IncludeLogStats,
+                    SelectedIOComponents = IOComponents.Where(x => x.IsSelected)
+                        .Select(x => $"{x.Category}|{x.Name}").ToList(),
+                    SelectedAxisComponents = AxisComponents.Where(x => x.IsSelected)
+                        .Select(x => $"{x.Category}|{x.Name}").ToList(),
+                    SelectedCHSteps = CHStepComponents.Where(x => x.IsSelected)
+                        .Select(x => $"{x.Category}|{x.Name}").ToList(),
+                    SelectedThreads = ThreadItems.Where(x => x.IsSelected)
+                        .Select(x => x.Name).ToList()
+                };
+
+                // Build data package In-Memory (no file I/O)
+                var transferService = ChartDataTransferService.Instance;
+                var dataPackage = transferService.BuildDataPackage(
+                    _sessionData.Logs,
+                    preset,
+                    _sessionData.FileName ?? "Session");
+
+                if (dataPackage.Signals.Count == 0 && dataPackage.States.Count == 0)
+                {
+                    MessageBox.Show("No data to display. Please select at least one signal or state.",
+                        "No Data", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // Transfer data and switch to Charts tab
+                transferService.TransferDataToCharts(dataPackage);
+                transferService.RequestSwitchToCharts();
+
+                // Close the export window
+                CloseWindow?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to open in Charts tab: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Action to close the window (set by the view)
+        /// </summary>
+        public Action CloseWindow { get; set; }
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged(string propertyName)

@@ -234,6 +234,12 @@
     <Compile Include="Controls\Charts\ChartStateTimeline.xaml.cs">
       <DependentUpon>ChartStateTimeline.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\Charts\ChartGanttView.xaml.cs">
+      <DependentUpon>ChartGanttView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\Charts\ChartThreadView.xaml.cs">
+      <DependentUpon>ChartThreadView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\Charts\ChartSignalList.xaml.cs">
       <DependentUpon>ChartSignalList.xaml</DependentUpon>
     </Compile>
@@ -250,6 +256,7 @@
     <Compile Include="Converters\DiffSegmentsConverter.cs" />
     <Compile Include="Converters\InverseBooleanConverter.cs" />
     <Compile Include="Converters\SKColorToBrushConverter.cs" />
+    <Compile Include="Converters\BoolToSelectionBrushConverter.cs" />
     <Compile Include="IndigoLogsReaderExplorer.cs" />
     <Compile Include="Models\ColumnSettings.cs" />
     <Compile Include="Models\DbTreeNode.cs" />
@@ -268,6 +275,7 @@
     <Compile Include="Services\WindowManager.cs" />
     <Compile Include="Services\Charts\ChartDataService.cs" />
     <Compile Include="Services\Charts\ChartSyncService.cs" />
+    <Compile Include="Services\Charts\ChartDataTransferService.cs" />
     <Compile Include="ViewModels\Components\CaseManagementViewModel.cs" />
     <Compile Include="ViewModels\Components\ConfigExplorerViewModel.cs" />
     <Compile Include="ViewModels\Components\FilterSearchViewModel.cs" />
@@ -289,6 +297,9 @@
     </Compile>
     <Compile Include="Views\ComparisonWindow.xaml.cs">
       <DependentUpon>ComparisonWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\AddReferenceLineWindow.xaml.cs">
+      <DependentUpon>AddReferenceLineWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="ViewModels\LogComparisonViewModel.cs" />
     <Compile Include="Views\BrowseTableWindow.xaml.cs">
@@ -451,6 +462,14 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Controls\Charts\ChartGanttView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\Charts\ChartThreadView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\Charts\ChartSignalList.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -592,6 +611,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\ComparisonWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\AddReferenceLineWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

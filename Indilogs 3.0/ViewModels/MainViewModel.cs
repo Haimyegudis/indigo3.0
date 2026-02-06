@@ -2,6 +2,7 @@
 using IndiLogs_3._0.Models.Analysis;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Analysis;
+using IndiLogs_3._0.Services.Charts;
 using IndiLogs_3._0.Views;
 using IndiLogs_3._0.ViewModels.Components;
 using Microsoft.Win32;
@@ -2244,9 +2245,16 @@ namespace IndiLogs_3._0.ViewModels
         /// </summary>
         public void OnLogEntrySelected(LogEntry entry)
         {
-            if (entry != null && ChartVM?.HasData == true)
+            if (entry != null)
             {
-                ChartVM.SyncToLogTime(entry.Date);
+                // Sync via ChartVM if available
+                if (ChartVM?.HasData == true)
+                {
+                    ChartVM.SyncToLogTime(entry.Date);
+                }
+
+                // Also notify the transfer service for In-Memory sync
+                ChartDataTransferService.Instance.NotifyLogTimeSelected(entry.Date);
             }
         }
 

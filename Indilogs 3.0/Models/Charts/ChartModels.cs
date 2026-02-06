@@ -4,11 +4,13 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using SkiaSharp;
 using System.Windows.Media;
+using IndiLogs_3._0.Services.Charts;
 
 namespace IndiLogs_3._0.Models.Charts
 {
     public enum AxisType { Left, Right }
     public enum ReferenceLineType { Vertical, Horizontal }
+    public enum ChartViewType { Signal, Gantt, Thread }
 
     /// <summary>
     /// Represents a reference line (horizontal or vertical) on a chart
@@ -137,9 +139,28 @@ namespace IndiLogs_3._0.Models.Charts
             set { _title = value; OnPropertyChanged(nameof(Title)); }
         }
 
+        private ChartViewType _viewType = ChartViewType.Signal;
+        public ChartViewType ViewType
+        {
+            get => _viewType;
+            set { _viewType = value; OnPropertyChanged(nameof(ViewType)); OnPropertyChanged(nameof(IsSignalView)); OnPropertyChanged(nameof(IsGanttView)); OnPropertyChanged(nameof(IsThreadView)); }
+        }
+
+        public bool IsSignalView => ViewType == ChartViewType.Signal;
+        public bool IsGanttView => ViewType == ChartViewType.Gantt;
+        public bool IsThreadView => ViewType == ChartViewType.Thread;
+
         public ObservableCollection<SignalSeries> Series { get; set; } = new ObservableCollection<SignalSeries>();
         public ObservableCollection<ReferenceLine> ReferenceLines { get; set; } = new ObservableCollection<ReferenceLine>();
         public List<StateInterval> States { get; set; }
+        public List<EventMarker> EventMarkers { get; set; }
+
+        // For GANTT view - state data to display
+        public List<StateData> GanttStates { get; set; }
+
+        // For THREAD view - messages to display
+        public List<ThreadMessageData> ThreadMessages { get; set; }
+        public string ThreadName { get; set; }
 
         private bool _isSelected;
         public bool IsSelected
@@ -147,6 +168,15 @@ namespace IndiLogs_3._0.Models.Charts
             get => _isSelected;
             set { _isSelected = value; OnPropertyChanged(nameof(IsSelected)); }
         }
+
+        private bool _isDetached;
+        public bool IsDetached
+        {
+            get => _isDetached;
+            set { _isDetached = value; OnPropertyChanged(nameof(IsDetached)); OnPropertyChanged(nameof(IsNotDetached)); }
+        }
+
+        public bool IsNotDetached => !_isDetached;
 
         private double _chartHeight = 180;
         public double ChartHeight
@@ -178,6 +208,7 @@ namespace IndiLogs_3._0.Models.Charts
         public int StartIndex;
         public int EndIndex;
         public int StateId;
+        public string StateName;
     }
 
     /// <summary>
@@ -211,6 +242,19 @@ namespace IndiLogs_3._0.Models.Charts
     }
 
     /// <summary>
+    /// Represents an event marker on a chart (red dot with tooltip)
+    /// </summary>
+    public class EventMarker
+    {
+        public int Index { get; set; }
+        public string Name { get; set; }
+        public string Message { get; set; }
+        public string Time { get; set; }
+        public string Severity { get; set; }
+        public string Description { get; set; }
+    }
+
+    /// <summary>
     /// Signal category for filtering in the signal list
     /// </summary>
     public class SignalCategory
@@ -225,7 +269,8 @@ namespace IndiLogs_3._0.Models.Charts
             new SignalCategory { Name = "IO / Sensors", Keywords = new[] { "io", "sensor", "input", "output", "digital" } },
             new SignalCategory { Name = "States / Logic", Keywords = new[] { "state", "status", "mode", "flag", "enable" } },
             new SignalCategory { Name = "Temperature", Keywords = new[] { "temp", "temperature", "heat" } },
-            new SignalCategory { Name = "Pressure", Keywords = new[] { "pressure", "vacuum", "bar" } }
+            new SignalCategory { Name = "Pressure", Keywords = new[] { "pressure", "vacuum", "bar" } },
+            new SignalCategory { Name = "Events", Keywords = new[] { "event" } }
         };
     }
 }

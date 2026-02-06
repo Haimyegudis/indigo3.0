@@ -1,0 +1,41 @@
+<UserControl x:Class="IndiLogs_3._0.Controls.Charts.ChartThreadView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:skia="clr-namespace:SkiaSharp.Views.WPF;assembly=SkiaSharp.Views.WPF"
+             Background="{DynamicResource BgDark}">
+    <Grid>
+        <skia:SKElement x:Name="SkiaCanvas" PaintSurface="OnPaintSurface"
+                        MouseMove="OnMouseMove" MouseLeave="OnMouseLeave"
+                        MouseLeftButtonDown="OnMouseLeftButtonDown"
+                        MouseLeftButtonUp="OnMouseLeftButtonUp"
+                        MouseWheel="OnMouseWheel"/>
+
+        <!-- Tooltip popup for message display -->
+        <Popup x:Name="MessageTooltip" AllowsTransparency="True" Placement="Mouse"
+               IsHitTestVisible="False" PopupAnimation="Fade">
+            <Border Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}"
+                    BorderThickness="1" CornerRadius="4" Padding="8,6" MaxWidth="400">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Thread name and time -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBlock x:Name="TooltipThread" FontWeight="Bold" FontSize="11"
+                                   Foreground="{DynamicResource PrimaryColor}" Margin="0,0,8,0"/>
+                        <TextBlock x:Name="TooltipTime" FontSize="10"
+                                   Foreground="{DynamicResource TextSecondary}"/>
+                    </StackPanel>
+
+                    <!-- Message content -->
+                    <TextBlock x:Name="TooltipMessage" Grid.Row="1" TextWrapping="Wrap"
+                               FontFamily="Consolas" FontSize="11"
+                               Foreground="{DynamicResource TextPrimary}" MaxWidth="380"/>
+                </Grid>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

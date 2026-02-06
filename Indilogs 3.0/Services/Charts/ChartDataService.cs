@@ -446,6 +446,59 @@ namespace IndiLogs_3._0.Services.Charts
             return -1;
         }
 
+        /// <summary>
+        /// Extract event markers from an Events_Message column.
+        /// Returns events with their row index and message text.
+        /// </summary>
+        public List<EventMarker> ExtractEvents(int eventsColIndex, int timeColIndex = 0)
+        {
+            var events = new List<EventMarker>();
+            int dataRows = TotalRows - DataStartRow;
+            if (dataRows <= 0) return events;
+
+            for (int i = 0; i < dataRows; i++)
+            {
+                string msg = GetStringAt(DataStartRow + i, eventsColIndex);
+                if (!string.IsNullOrWhiteSpace(msg))
+                {
+                    string timeStr = GetStringAt(DataStartRow + i, timeColIndex);
+                    events.Add(new EventMarker
+                    {
+                        Index = i,
+                        Message = msg,
+                        Time = timeStr
+                    });
+                }
+            }
+
+            return events;
+        }
+
+        /// <summary>
+        /// Find column index for Events_Message
+        /// </summary>
+        public int FindEventsColumnIndex()
+        {
+            for (int i = 0; i < ColumnNames.Count; i++)
+            {
+                string name = ColumnNames[i];
+                if (name.Equals("Events_Message", StringComparison.OrdinalIgnoreCase) ||
+                    name.IndexOf("Events_Message", StringComparison.OrdinalIgnoreCase) >= 0)
+                    return i;
+            }
+
+            // Also check raw column names
+            for (int i = 0; i < RawColumnNames.Count; i++)
+            {
+                string name = RawColumnNames[i];
+                if (name.Equals("Events_Message", StringComparison.OrdinalIgnoreCase) ||
+                    name.IndexOf("Events_Message", StringComparison.OrdinalIgnoreCase) >= 0)
+                    return i;
+            }
+
+            return -1;
+        }
+
         public void Dispose()
         {
             if (_accessor != null)

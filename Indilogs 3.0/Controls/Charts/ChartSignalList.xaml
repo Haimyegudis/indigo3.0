@@ -6,68 +6,162 @@
              mc:Ignorable="d"
              d:DesignHeight="400" d:DesignWidth="220"
              Background="{DynamicResource BgDark}">
+
+    <UserControl.Resources>
+        <!-- Category Radio Button Style -->
+        <Style x:Key="CategoryRadioButtonStyle" TargetType="RadioButton">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="border" Background="Transparent"
+                                CornerRadius="3" Padding="4,4" Margin="1"
+                                BorderThickness="1" BorderBrush="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="border" Property="Background"
+                                        Value="{DynamicResource PrimaryColor}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background"
+                                        Value="{DynamicResource BgCardHover}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </UserControl.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Category Filter -->
-        <ComboBox x:Name="CategoryCombo" Grid.Row="0" Margin="5"
-                  Background="{DynamicResource BgCard}" Foreground="{DynamicResource TextPrimary}"
-                  SelectionChanged="CategoryCombo_SelectionChanged">
-            <ComboBoxItem Content="All Signals" IsSelected="True"/>
-            <ComboBoxItem Content="Axis / Motion"/>
-            <ComboBoxItem Content="IO / Sensors"/>
-            <ComboBoxItem Content="States / Logic"/>
-            <ComboBoxItem Content="Temperature"/>
-            <ComboBoxItem Content="Pressure"/>
-        </ComboBox>
+        <!-- Category Filter Buttons -->
+        <Border Grid.Row="0" Background="{DynamicResource BgCard}" Margin="5,5,5,2" CornerRadius="4" Padding="3">
+            <UniformGrid Rows="1" Columns="6">
+                <RadioButton x:Name="AllBtn" Content="ALL" GroupName="Category"
+                             IsChecked="True" Checked="CategoryButton_Checked"
+                             Style="{StaticResource CategoryRadioButtonStyle}"/>
+                <RadioButton x:Name="AxisBtn" Content="AXIS" GroupName="Category"
+                             Checked="CategoryButton_Checked"
+                             Style="{StaticResource CategoryRadioButtonStyle}"/>
+                <RadioButton x:Name="IOBtn" Content="IO" GroupName="Category"
+                             Checked="CategoryButton_Checked"
+                             Style="{StaticResource CategoryRadioButtonStyle}"/>
+                <RadioButton x:Name="CHStepBtn" Content="CHSTEP" GroupName="Category"
+                             Checked="CategoryButton_Checked"
+                             Style="{StaticResource CategoryRadioButtonStyle}"/>
+                <RadioButton x:Name="ThreadBtn" Content="THREAD" GroupName="Category"
+                             Checked="CategoryButton_Checked"
+                             Style="{StaticResource CategoryRadioButtonStyle}"/>
+                <RadioButton x:Name="EventsBtn" Content="EVENTS" GroupName="Category"
+                             Checked="CategoryButton_Checked"
+                             Style="{StaticResource CategoryRadioButtonStyle}"/>
+            </UniformGrid>
+        </Border>
+
+        <!-- Item Count Display -->
+        <TextBlock x:Name="ItemCountText" Grid.Row="1" Margin="8,2,5,2"
+                   FontSize="10" Foreground="{DynamicResource TextSecondary}"
+                   Text="0 items"/>
 
         <!-- Search Box -->
-        <TextBox x:Name="SearchBox" Grid.Row="1" Margin="5,0,5,5"
-                 Background="{DynamicResource BgCard}" Foreground="{DynamicResource TextPrimary}"
-                 BorderBrush="{DynamicResource BorderColor}" Padding="5,3"
-                 TextChanged="SearchBox_TextChanged">
-            <TextBox.Style>
-                <Style TargetType="TextBox">
-                    <Style.Triggers>
-                        <Trigger Property="Text" Value="">
-                            <Setter Property="Background">
-                                <Setter.Value>
-                                    <VisualBrush Stretch="None" AlignmentX="Left">
-                                        <VisualBrush.Visual>
-                                            <TextBlock Text="Search signals..." Foreground="#666" Margin="5,0,0,0" FontStyle="Italic"/>
-                                        </VisualBrush.Visual>
-                                    </VisualBrush>
-                                </Setter.Value>
-                            </Setter>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </TextBox.Style>
-        </TextBox>
+        <Border Grid.Row="2" Margin="5,2,5,5" Background="{DynamicResource BgCard}"
+                CornerRadius="4" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-        <!-- Signal List -->
-        <ListBox x:Name="SignalListBox" Grid.Row="2" Margin="5,0,5,5"
+                <TextBlock Grid.Column="0" Text="&#xE721;" FontFamily="Segoe MDL2 Assets"
+                           FontSize="12" Foreground="{DynamicResource TextSecondary}"
+                           VerticalAlignment="Center" Margin="8,0,5,0"/>
+
+                <TextBox x:Name="SearchBox" Grid.Column="1"
+                         Background="Transparent" Foreground="{DynamicResource TextPrimary}"
+                         BorderThickness="0" Padding="5,6"
+                         TextChanged="SearchBox_TextChanged"
+                         VerticalContentAlignment="Center"/>
+
+                <Button x:Name="ClearSearchBtn" Grid.Column="2" Content="&#xE711;"
+                        FontFamily="Segoe MDL2 Assets" FontSize="10"
+                        Background="Transparent" BorderThickness="0"
+                        Foreground="{DynamicResource TextSecondary}"
+                        Visibility="Collapsed" Margin="0,0,5,0"
+                        Click="ClearSearchBtn_Click" Cursor="Hand"/>
+
+                <!-- Placeholder text -->
+                <TextBlock x:Name="SearchPlaceholder" Grid.Column="1"
+                           Text="Search signals..." IsHitTestVisible="False"
+                           Foreground="{DynamicResource TextSecondary}" FontStyle="Italic"
+                           VerticalAlignment="Center" Margin="5,0,0,0"/>
+            </Grid>
+        </Border>
+
+        <!-- Signal List with Virtualization -->
+        <ListBox x:Name="SignalListBox" Grid.Row="3" Margin="5,0,5,5"
                  Background="{DynamicResource BgDark}"
                  BorderBrush="{DynamicResource BorderColor}"
+                 BorderThickness="1"
                  Foreground="{DynamicResource TextPrimary}"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 VirtualizingStackPanel.IsVirtualizing="True"
+                 VirtualizingStackPanel.VirtualizationMode="Recycling"
+                 ScrollViewer.CanContentScroll="True"
                  MouseDoubleClick="SignalListBox_MouseDoubleClick">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel/>
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="11"
-                               Foreground="{DynamicResource TextPrimary}"
-                               TextTrimming="CharacterEllipsis" Margin="2"/>
+                    <Grid Margin="2,1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Type Icon -->
+                        <Border Grid.Column="0" Width="18" Height="18" CornerRadius="3"
+                                Margin="0,0,6,0" VerticalAlignment="Center"
+                                Background="{Binding TypeColor}">
+                            <TextBlock Text="{Binding TypeIcon}" FontSize="10" FontWeight="Bold"
+                                       Foreground="White" HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+
+                        <!-- Signal Name -->
+                        <TextBlock Grid.Column="1" Text="{Binding DisplayName}"
+                                   FontFamily="Consolas" FontSize="11"
+                                   Foreground="{DynamicResource TextPrimary}"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center"
+                                   ToolTip="{Binding FullName}"/>
+                    </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
                     <Setter Property="Background" Value="Transparent"/>
                     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-                    <Setter Property="Padding" Value="4,2"/>
+                    <Setter Property="Padding" Value="4,3"/>
+                    <Setter Property="Margin" Value="0,1"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                     <Style.Triggers>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
