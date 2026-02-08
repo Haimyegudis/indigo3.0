@@ -116,6 +116,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
         private bool _showHoverTooltip = false;
         private Point _hoverPos;
+        private StateInterval? _hoveredState = null;
 
         // Store DPI scale for coordinate conversion
         private double _dpiScaleX = 1.0;
@@ -211,9 +212,10 @@ namespace IndiLogs_3._0.Controls.Charts
 
         private void Series_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            // Redraw when series properties change (like IsVisible)
+            // Redraw when series properties change (like IsVisible, IsSmoothed)
             if (e.PropertyName == nameof(SignalSeries.IsVisible) ||
-                e.PropertyName == nameof(SignalSeries.YAxisType))
+                e.PropertyName == nameof(SignalSeries.YAxisType) ||
+                e.PropertyName == nameof(SignalSeries.IsSmoothed))
             {
                 SkiaCanvas.InvalidateVisual();
             }
@@ -244,9 +246,10 @@ namespace IndiLogs_3._0.Controls.Charts
             if (index < 0 || index >= _totalDataLength) return;
             foreach (var s in _seriesList)
             {
-                if (s.Data != null && index < s.Data.Length)
+                var dataToDraw = (s.IsSmoothed && s.SmoothedData != null) ? s.SmoothedData : s.Data;
+                if (dataToDraw != null && index < dataToDraw.Length)
                 {
-                    double val = s.Data[index];
+                    double val = dataToDraw[index];
                     s.CurrentValueDisplay = double.IsNaN(val) ? "NaN" : val.ToString("F2");
                 }
                 else
@@ -401,6 +404,20 @@ namespace IndiLogs_3._0.Controls.Charts
 
             int cursorIndex = PixelToIndex(scaledPos.X);
 
+            // Detect state hover for CHStep tooltip
+            _hoveredState = null;
+            if (_showStates && _states != null)
+            {
+                foreach (var st in _states)
+                {
+                    if (cursorIndex >= st.StartIndex && cursorIndex <= st.EndIndex)
+                    {
+                        _hoveredState = st;
+                        break;
+                    }
+                }
+            }
+
             // Handle measurement
             if (_isMeasuring)
             {
@@ -439,7 +456,7 @@ namespace IndiLogs_3._0.Controls.Charts
                     if (!_isSyncing) OnViewRangeChanged?.Invoke(_viewStartIndex, _viewEndIndex);
                 }
             }
-            else if (_showHoverTooltip)
+            else if (_showHoverTooltip || _hoveredState.HasValue)
             {
                 SkiaCanvas.InvalidateVisual();
             }
@@ -456,6 +473,17 @@ namespace IndiLogs_3._0.Controls.Charts
             if (e.Key == Key.Escape)
             {
                 ClearAllMeasurements();
+            }
+        }
+
+        protected override void OnMouseLeave(MouseEventArgs e)
+        {
+            base.OnMouseLeave(e);
+            if (_hoveredState.HasValue)
+            {
+                _hoveredState = null;
+                _showHoverTooltip = false;
+                SkiaCanvas.InvalidateVisual();
             }
         }
 
@@ -548,15 +576,16 @@ namespace IndiLogs_3._0.Controls.Charts
             foreach (var s in _seriesList)
             {
                 if (s.Data == null || !s.IsVisible) continue;
+                var dataToDraw = (s.IsSmoothed && s.SmoothedData != null) ? s.SmoothedData : s.Data;
 
                 if (s.YAxisType == AxisType.Right)
                 {
                     for (int i = start; i <= end; i += step)
                     {
-                        if (i < s.Data.Length && !double.IsNaN(s.Data[i]))
+                        if (i < dataToDraw.Length && !double.IsNaN(dataToDraw[i]))
                         {
-                            if (s.Data[i] < rMin) rMin = s.Data[i];
-                            if (s.Data[i] > rMax) rMax = s.Data[i];
+                            if (dataToDraw[i] < rMin) rMin = dataToDraw[i];
+                            if (dataToDraw[i] > rMax) rMax = dataToDraw[i];
                             hasRight = true;
                         }
                     }
@@ -565,10 +594,10 @@ namespace IndiLogs_3._0.Controls.Charts
                 {
                     for (int i = start; i <= end; i += step)
                     {
-                        if (i < s.Data.Length && !double.IsNaN(s.Data[i]))
+                        if (i < dataToDraw.Length && !double.IsNaN(dataToDraw[i]))
                         {
-                            if (s.Data[i] < lMin) lMin = s.Data[i];
-                            if (s.Data[i] > lMax) lMax = s.Data[i];
+                            if (dataToDraw[i] < lMin) lMin = dataToDraw[i];
+                            if (dataToDraw[i] > lMax) lMax = dataToDraw[i];
                             hasLeft = true;
                         }
                     }
@@ -754,6 +783,7 @@ namespace IndiLogs_3._0.Controls.Charts
                 foreach (var s in _seriesList)
                 {
                     if (!s.IsVisible || s.Data == null) continue;
+                    var dataToDraw = (s.IsSmoothed && s.SmoothedData != null) ? s.SmoothedData : s.Data;
                     paint.Color = s.Color;
                     path.Reset();
                     bool first = true;
@@ -764,8 +794,8 @@ namespace IndiLogs_3._0.Controls.Charts
 
                     for (int i = start; i <= drawLimit; i += drawStep)
                     {
-                        if (i >= s.Data.Length) break;
-                        double val = s.Data[i];
+                        if (i >= dataToDraw.Length) break;
+                        double val = dataToDraw[i];
                         if (double.IsNaN(val)) { first = true; continue; }
 
                         float x = chartLeft + (float)((i - start) / (double)count * chartW);
@@ -905,14 +935,15 @@ namespace IndiLogs_3._0.Controls.Charts
                         foreach (var s in _seriesList)
                         {
                             if (!s.IsVisible || s.Data == null) continue;
+                            var dataToDraw = (s.IsSmoothed && s.SmoothedData != null) ? s.SmoothedData : s.Data;
                             double sum = 0, mn = double.MaxValue, mx = double.MinValue;
                             int c = 0;
 
                             for (int i = mS; i <= mE; i++)
                             {
-                                if (i < s.Data.Length && !double.IsNaN(s.Data[i]))
+                                if (i < dataToDraw.Length && !double.IsNaN(dataToDraw[i]))
                                 {
-                                    double v = s.Data[i];
+                                    double v = dataToDraw[i];
                                     sum += v;
                                     if (v < mn) mn = v;
                                     if (v > mx) mx = v;
@@ -998,11 +1029,12 @@ namespace IndiLogs_3._0.Controls.Charts
                         foreach (var s in _seriesList)
                         {
                             if (!s.IsVisible || s.Data == null) continue;
+                            var dataToDraw = (s.IsSmoothed && s.SmoothedData != null) ? s.SmoothedData : s.Data;
 
-                            if (_ctrlPoint1 < s.Data.Length && _ctrlPoint2 < s.Data.Length)
+                            if (_ctrlPoint1 < dataToDraw.Length && _ctrlPoint2 < dataToDraw.Length)
                             {
-                                double v1 = s.Data[_ctrlPoint1];
-                                double v2 = s.Data[_ctrlPoint2];
+                                double v1 = dataToDraw[_ctrlPoint1];
+                                double v2 = dataToDraw[_ctrlPoint2];
 
                                 if (!double.IsNaN(v1) && !double.IsNaN(v2))
                                 {
@@ -1019,6 +1051,28 @@ namespace IndiLogs_3._0.Controls.Charts
                         DrawTooltip(canvas, sb.ToString(), tooltipX, tooltipY);
                     }
                 }
+            }
+
+            // State hover tooltip (shows rich CHStep data or basic state info)
+            if (_hoveredState.HasValue)
+            {
+                string stateTooltipText;
+                if (!string.IsNullOrEmpty(_hoveredState.Value.TooltipText))
+                {
+                    stateTooltipText = _hoveredState.Value.TooltipText;
+                }
+                else
+                {
+                    var hs = _hoveredState.Value;
+                    string stateName = ChartStateConfig.GetName(hs.StateId);
+                    stateTooltipText = $"State: {hs.StateId} ({stateName})";
+                    if (!string.IsNullOrEmpty(hs.StateName))
+                        stateTooltipText += $"\n{hs.StateName}";
+                }
+
+                float stateTooltipX = (float)_hoverPos.X + 15;
+                float stateTooltipY = (float)_hoverPos.Y - 20;
+                DrawTooltip(canvas, stateTooltipText, stateTooltipX, stateTooltipY);
             }
 
             // Hover Tooltip (Alt key)
@@ -1039,10 +1093,13 @@ namespace IndiLogs_3._0.Controls.Charts
 
                     foreach (var s in _seriesList)
                     {
-                        if (!s.IsVisible || s.Data == null || hoverIdx >= s.Data.Length) continue;
-                        double val = s.Data[hoverIdx];
+                        if (!s.IsVisible || s.Data == null) continue;
+                        var dataToDraw = (s.IsSmoothed && s.SmoothedData != null) ? s.SmoothedData : s.Data;
+                        if (hoverIdx >= dataToDraw.Length) continue;
+                        double val = dataToDraw[hoverIdx];
                         string valStr = double.IsNaN(val) ? "NaN" : val.ToString("F3");
-                        tooltipText.AppendLine($"{s.Name}: {valStr}");
+                        string suffix = s.IsSmoothed ? " [S]" : "";
+                        tooltipText.AppendLine($"{s.Name}{suffix}: {valStr}");
                     }
 
                     float tooltipX = (float)_hoverPos.X + 15;

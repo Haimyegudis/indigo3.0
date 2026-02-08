@@ -227,9 +227,22 @@ namespace IndiLogs_3._0.Services
                     if (double.IsNaN(windowHeight) || windowHeight <= 0)
                         windowHeight = window.ActualHeight > 0 ? window.ActualHeight : 600;
 
-                    // Calculate centered position on the SAME monitor as the reference window
-                    var left = workArea.Left + (workWidth - windowWidth) / 2;
-                    var top = workArea.Top + (workHeight - windowHeight) / 2;
+                    // Calculate centered position ON TOP of the reference window (main app)
+                    double left, top;
+                    if (refWindow != null && refWindow.IsLoaded && !double.IsNaN(refWindow.Left) && !double.IsNaN(refWindow.Top))
+                    {
+                        // Center on the reference window itself
+                        double refCenterX = refWindow.Left + (refWindow.ActualWidth > 0 ? refWindow.ActualWidth : refWindow.Width) / 2;
+                        double refCenterY = refWindow.Top + (refWindow.ActualHeight > 0 ? refWindow.ActualHeight : refWindow.Height) / 2;
+                        left = refCenterX - windowWidth / 2;
+                        top = refCenterY - windowHeight / 2;
+                    }
+                    else
+                    {
+                        // Fallback: center on monitor work area
+                        left = workArea.Left + (workWidth - windowWidth) / 2;
+                        top = workArea.Top + (workHeight - windowHeight) / 2;
+                    }
 
                     // Ensure window is within bounds of the target monitor
                     if (left < workArea.Left) left = workArea.Left;

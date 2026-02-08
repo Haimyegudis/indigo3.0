@@ -226,7 +226,9 @@
     <Compile Include="Controls\StatusBarControl.xaml.cs">
       <DependentUpon>StatusBarControl.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\TimelineCanvas.cs" />
+    <Compile Include="Controls\TimelineCanvas.xaml.cs">
+      <DependentUpon>TimelineCanvas.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\DiffHighlightTextBlock.cs" />
     <Compile Include="Controls\Charts\ChartGraphView.xaml.cs">
       <DependentUpon>ChartGraphView.xaml</DependentUpon>
@@ -249,6 +251,12 @@
     <Compile Include="Controls\Charts\ChartTabControl.xaml.cs">
       <DependentUpon>ChartTabControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\Cpr\CprChartView.xaml.cs">
+      <DependentUpon>CprChartView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\Cpr\CprAnalysisControl.xaml.cs">
+      <DependentUpon>CprAnalysisControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Interfaces\ITabHost.cs" />
     <Compile Include="Converters\AnnotationTextBrushConverter.cs" />
     <Compile Include="Converters\ArrayConverter.cs" />
@@ -257,6 +265,7 @@
     <Compile Include="Converters\InverseBooleanConverter.cs" />
     <Compile Include="Converters\SKColorToBrushConverter.cs" />
     <Compile Include="Converters\BoolToSelectionBrushConverter.cs" />
+    <Compile Include="Converters\EnumBoolConverter.cs" />
     <Compile Include="IndigoLogsReaderExplorer.cs" />
     <Compile Include="Models\ColumnSettings.cs" />
     <Compile Include="Models\DbTreeNode.cs" />
@@ -267,6 +276,7 @@
     <Compile Include="Models\GrepResult.cs" />
     <Compile Include="Models\Charts\ChartModels.cs" />
     <Compile Include="Models\Charts\ChartStateConfig.cs" />
+    <Compile Include="Models\Cpr\CprModels.cs" />
     <Compile Include="Services\Analysis\StateFailureAnalyzer.cs" />
     <Compile Include="Services\Analysis\UniversalStateFailureAnalyzer.cs" />
     <Compile Include="Services\CustomLiveLogReader.cs" />
@@ -276,6 +286,8 @@
     <Compile Include="Services\Charts\ChartDataService.cs" />
     <Compile Include="Services\Charts\ChartSyncService.cs" />
     <Compile Include="Services\Charts\ChartDataTransferService.cs" />
+    <Compile Include="Services\Cpr\CprDataService.cs" />
+    <Compile Include="Services\Cpr\CprAnalysisService.cs" />
     <Compile Include="ViewModels\Components\CaseManagementViewModel.cs" />
     <Compile Include="ViewModels\Components\ConfigExplorerViewModel.cs" />
     <Compile Include="ViewModels\Components\FilterSearchViewModel.cs" />
@@ -286,6 +298,7 @@
     <Compile Include="Services\ComparisonDebugLogger.cs" />
     <Compile Include="ViewModels\VisualTimelineViewModel.cs" />
     <Compile Include="ViewModels\ChartTabViewModel.cs" />
+    <Compile Include="ViewModels\CprAnalysisViewModel.cs" />
     <Compile Include="ViewModels\GlobalGrepViewModel.cs" />
     <Compile Include="Models\IndigoStripeEntry.cs" />
     <Compile Include="Services\StripeDataParserService.cs" />
@@ -300,6 +313,9 @@
     </Compile>
     <Compile Include="Views\AddReferenceLineWindow.xaml.cs">
       <DependentUpon>AddReferenceLineWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ManageReferenceLinesWindow.xaml.cs">
+      <DependentUpon>ManageReferenceLinesWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="ViewModels\LogComparisonViewModel.cs" />
     <Compile Include="Views\BrowseTableWindow.xaml.cs">
@@ -454,6 +470,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Controls\TimelineCanvas.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\Charts\ChartGraphView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -479,6 +499,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\Charts\ChartTabControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\Cpr\CprChartView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\Cpr\CprAnalysisControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -615,6 +643,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\AddReferenceLineWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ManageReferenceLinesWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

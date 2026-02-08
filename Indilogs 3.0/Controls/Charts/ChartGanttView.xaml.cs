@@ -46,19 +46,19 @@ namespace IndiLogs_3._0.Controls.Charts
         private SKColor _gridColor;
         private static readonly SKColor CursorColor = SKColors.Red;
 
-        // State colors for CHSTEP (different from machine state colors)
+        // State colors for CHSTEP (different from machine state colors) - richer professional palette
         private static readonly SKColor[] CHStepColors = new[]
         {
-            SKColor.Parse("#4ECDC4"), // Teal
-            SKColor.Parse("#FF6B6B"), // Red
-            SKColor.Parse("#95E1D3"), // Mint
-            SKColor.Parse("#FFE66D"), // Yellow
-            SKColor.Parse("#AA96DA"), // Lavender
-            SKColor.Parse("#F38181"), // Coral
-            SKColor.Parse("#6C5CE7"), // Purple
-            SKColor.Parse("#00B894"), // Green
-            SKColor.Parse("#FDCB6E"), // Gold
-            SKColor.Parse("#E17055"), // Orange
+            SKColor.Parse("#26A69A"), // Teal
+            SKColor.Parse("#EF5350"), // Red
+            SKColor.Parse("#66BB6A"), // Green
+            SKColor.Parse("#FFA726"), // Orange
+            SKColor.Parse("#AB47BC"), // Purple
+            SKColor.Parse("#42A5F5"), // Blue
+            SKColor.Parse("#EC407A"), // Pink
+            SKColor.Parse("#8D6E63"), // Brown
+            SKColor.Parse("#78909C"), // Blue Grey
+            SKColor.Parse("#D4E157"), // Lime
         };
 
         private SKPaint _borderPaint;
@@ -77,6 +77,10 @@ namespace IndiLogs_3._0.Controls.Charts
         private const float EVENT_DOT_RADIUS = 5f;
         private int _hoveredEventIndex = -1;
         private Point _hoverPos;
+
+        // CHSTEP hover support
+        private int _hoveredStateRow = -1;
+        private StateInterval? _hoveredStateInterval = null;
 
         public bool IsLightTheme
         {
@@ -248,8 +252,9 @@ namespace IndiLogs_3._0.Controls.Charts
                     }
                 }
             }
-            else if (_chartEventMarkers != null && _chartEventMarkers.Count > 0)
+            else
             {
+                // Invalidate for CHSTEP hover detection (and event markers)
                 SkiaCanvas.InvalidateVisual();
             }
         }
@@ -316,19 +321,31 @@ namespace IndiLogs_3._0.Controls.Charts
             if (count <= 1 || chartWidth <= 0) return;
 
             float rowIndex = 0;
+            _hoveredStateRow = -1;
+            _hoveredStateInterval = null;
+            float hoverX = (float)_hoverPos.X;
+            float hoverY = (float)_hoverPos.Y;
+
+            // Clip drawing to chart area for state bars
+            canvas.Save();
+            canvas.ClipRect(new SKRect(chartLeft, 0, chartRight, chartBottom));
 
             foreach (var stateData in _stateDataList)
             {
                 float rowTop = PADDING + (rowIndex * ROW_HEIGHT);
                 float rowBottom = Math.Min(rowTop + ROW_HEIGHT - PADDING, chartBottom);
+                float barTop = rowTop + 2;
+                float barBottom = rowBottom - 2;
+                float barHeight = barBottom - barTop;
 
-                // Draw row label (CH name) - truncate to fit LEFT_MARGIN
-                string label = stateData.Name;
-                if (label.Length > 7) label = label.Substring(0, 7) + "..";
-                canvas.DrawText(label, 5, rowTop + ROW_HEIGHT / 2 + 4, _textPaint);
-
-                // Draw horizontal grid line
-                canvas.DrawLine(chartLeft, rowBottom + PADDING / 2, chartRight, rowBottom + PADDING / 2, _gridPaint);
+                // Draw alternating row background for readability
+                if ((int)rowIndex % 2 == 1)
+                {
+                    using (var rowBgPaint = new SKPaint { Color = _gridColor.WithAlpha(30), Style = SKPaintStyle.Fill })
+                    {
+                        canvas.DrawRect(new SKRect(chartLeft, rowTop, chartRight, rowBottom), rowBgPaint);
+                    }
+                }
 
                 // Draw state intervals for this CH
                 if (stateData.Intervals != null)
@@ -339,30 +356,132 @@ namespace IndiLogs_3._0.Controls.Charts
 
                         float x1 = chartLeft + (float)((Math.Max(interval.StartIndex, start) - start) / (double)count * chartWidth);
                         float x2 = chartLeft + (float)((Math.Min(interval.EndIndex, end) - start + 1) / (double)count * chartWidth);
+                        if (x2 - x1 < 0.5f) x2 = x1 + 0.5f; // minimum width
 
                         // Get color based on state ID
-                        SKColor color = CHStepColors[Math.Abs(interval.StateId) % CHStepColors.Length];
+                        SKColor baseColor = CHStepColors[Math.Abs(interval.StateId) % CHStepColors.Length];
 
-                        using (var fillPaint = new SKPaint { Color = color, Style = SKPaintStyle.Fill })
+                        // Hover detection for this bar
+                        bool isHovered = hoverX >= x1 && hoverX <= x2 && hoverY >= barTop && hoverY <= barBottom;
+                        if (isHovered)
                         {
-                            canvas.DrawRect(new SKRect(x1, rowTop, x2, rowBottom), fillPaint);
+                            _hoveredStateRow = (int)rowIndex;
+                            _hoveredStateInterval = interval;
+                        }
+
+                        var barRect = new SKRect(x1, barTop, x2, barBottom);
+                        var barRoundRect = new SKRoundRect(barRect, 3, 3);
+
+                        // Main fill with subtle top-to-bottom gradient
+                        SKColor topColor = isHovered ? baseColor : LightenColor(baseColor, 0.15f);
+                        SKColor bottomColor = isHovered ? DarkenColor(baseColor, 0.1f) : DarkenColor(baseColor, 0.2f);
+
+                        using (var gradientPaint = new SKPaint { Style = SKPaintStyle.Fill, IsAntialias = true })
+                        {
+                            gradientPaint.Shader = SKShader.CreateLinearGradient(
+                                new SKPoint(0, barTop), new SKPoint(0, barBottom),
+                                new[] { topColor, bottomColor }, null, SKShaderTileMode.Clamp);
+                            canvas.DrawRoundRect(barRoundRect, gradientPaint);
+                        }
+
+                        // Subtle inner highlight (top edge glow)
+                        if (barHeight > 8)
+                        {
+                            using (var glowPaint = new SKPaint { Color = SKColors.White.WithAlpha(40), Style = SKPaintStyle.Fill, IsAntialias = true })
+                            {
+                                canvas.DrawRoundRect(new SKRoundRect(new SKRect(x1 + 1, barTop + 1, x2 - 1, barTop + barHeight * 0.4f), 2, 2), glowPaint);
+                            }
+                        }
+
+                        // Border: thin dark edge for definition
+                        using (var edgePaint = new SKPaint { Color = DarkenColor(baseColor, 0.35f), Style = SKPaintStyle.Stroke, StrokeWidth = 0.8f, IsAntialias = true })
+                        {
+                            canvas.DrawRoundRect(barRoundRect, edgePaint);
+                        }
+
+                        // Hovered bar: bright white border highlight
+                        if (isHovered)
+                        {
+                            using (var highlightBorder = new SKPaint { Color = SKColors.White.WithAlpha(200), Style = SKPaintStyle.Stroke, StrokeWidth = 2, IsAntialias = true })
+                            {
+                                canvas.DrawRoundRect(barRoundRect, highlightBorder);
+                            }
                         }
 
                         // Draw state label if there's room
+                        float barW = x2 - x1;
                         string stateLabel = interval.StateId.ToString();
-                        float textWidth = _textPaint.MeasureText(stateLabel);
-                        if (textWidth < (x2 - x1) - 4)
+                        using (var labelPaint = new SKPaint { TextSize = 9, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold) })
                         {
-                            using (var tp = new SKPaint { Color = SKColors.Black, TextSize = 9, IsAntialias = true })
+                            float textWidth = labelPaint.MeasureText(stateLabel);
+                            if (textWidth < barW - 6 && barHeight > 10)
                             {
-                                float textX = x1 + ((x2 - x1) - textWidth) / 2;
-                                canvas.DrawText(stateLabel, textX, rowTop + ROW_HEIGHT / 2 + 3, tp);
+                                // Contrast text: white on dark colors, dark on light colors
+                                float brightness = (baseColor.Red * 0.299f + baseColor.Green * 0.587f + baseColor.Blue * 0.114f) / 255f;
+                                labelPaint.Color = brightness > 0.55f ? SKColor.Parse("#333333") : SKColors.White;
+                                float textX = x1 + (barW - textWidth) / 2;
+                                float textY = barTop + barHeight / 2 + 3.5f;
+                                canvas.DrawText(stateLabel, textX, textY, labelPaint);
                             }
                         }
                     }
                 }
 
                 rowIndex++;
+            }
+
+            canvas.Restore(); // Remove chart clip
+
+            // Draw row labels (outside clip so they don't get cut)
+            rowIndex = 0;
+            using (var labelPaint = new SKPaint { Color = _textColor, TextSize = 10, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Segoe UI") })
+            {
+                foreach (var stateData in _stateDataList)
+                {
+                    float rowTop = PADDING + (rowIndex * ROW_HEIGHT);
+                    float rowBottom = Math.Min(rowTop + ROW_HEIGHT - PADDING, chartBottom);
+
+                    string label = stateData.Name;
+                    if (label.Length > 7) label = label.Substring(0, 7) + "..";
+                    canvas.DrawText(label, 5, rowTop + ROW_HEIGHT / 2 + 4, labelPaint);
+
+                    // Draw subtle horizontal grid line
+                    canvas.DrawLine(chartLeft, rowBottom + PADDING / 2, chartRight, rowBottom + PADDING / 2, _gridPaint);
+
+                    rowIndex++;
+                }
+            }
+
+            // Draw CHSTEP hover tooltip
+            if (_hoveredStateInterval.HasValue && _hoveredStateRow >= 0 && _hoveredStateRow < _stateDataList.Count)
+            {
+                var hoveredData = _stateDataList[_hoveredStateRow];
+                var hInterval = _hoveredStateInterval.Value;
+
+                var tooltipSb = new StringBuilder();
+
+                if (!string.IsNullOrEmpty(hInterval.TooltipText))
+                {
+                    tooltipSb.AppendLine(hInterval.TooltipText);
+                }
+                else
+                {
+                    tooltipSb.AppendLine($"CH: {hoveredData.Name}");
+                    tooltipSb.AppendLine($"State: {hInterval.StateId}");
+                    if (!string.IsNullOrEmpty(hInterval.StateName))
+                        tooltipSb.AppendLine($"Step: {hInterval.StateName}");
+                    if (!string.IsNullOrEmpty(hoveredData.Category))
+                        tooltipSb.AppendLine($"Parent: {hoveredData.Category}");
+                }
+
+                string startTime = GetXAxisLabel?.Invoke(hInterval.StartIndex);
+                string endTime = GetXAxisLabel?.Invoke(hInterval.EndIndex);
+                if (!string.IsNullOrEmpty(startTime))
+                    tooltipSb.AppendLine($"From: {startTime}");
+                if (!string.IsNullOrEmpty(endTime))
+                    tooltipSb.AppendLine($"To: {endTime}");
+
+                DrawCHStepTooltip(canvas, tooltipSb.ToString(), hoverX + 15, hoverY - 20, w, h);
             }
 
             // Event Markers (Red Dots at bottom of Gantt area)
@@ -422,10 +541,14 @@ namespace IndiLogs_3._0.Controls.Charts
             // Draw X-axis with time labels
             DrawXAxis(canvas, chartLeft, chartRight, chartBottom, h, start, end, count);
 
-            // Draw cursor line
+            // Draw cursor line with subtle glow
             if (_cursorIndex >= start && _cursorIndex <= end)
             {
                 float cursorX = chartLeft + (float)((_cursorIndex - start) / (double)count * chartWidth);
+                using (var glowPaint = new SKPaint { Color = CursorColor.WithAlpha(40), StrokeWidth = 6, Style = SKPaintStyle.Stroke, IsAntialias = true })
+                {
+                    canvas.DrawLine(cursorX, 0, cursorX, chartBottom, glowPaint);
+                }
                 canvas.DrawLine(cursorX, 0, cursorX, chartBottom, _cursorPaint);
             }
 
@@ -433,28 +556,99 @@ namespace IndiLogs_3._0.Controls.Charts
             canvas.DrawRect(new SKRect(chartLeft, 0, chartRight, chartBottom), _borderPaint);
         }
 
+        // Helper: lighten a color
+        private static SKColor LightenColor(SKColor c, float amount)
+        {
+            int r = Math.Min(255, (int)(c.Red + (255 - c.Red) * amount));
+            int g = Math.Min(255, (int)(c.Green + (255 - c.Green) * amount));
+            int b = Math.Min(255, (int)(c.Blue + (255 - c.Blue) * amount));
+            return new SKColor((byte)r, (byte)g, (byte)b, c.Alpha);
+        }
+
+        // Helper: darken a color
+        private static SKColor DarkenColor(SKColor c, float amount)
+        {
+            int r = Math.Max(0, (int)(c.Red * (1 - amount)));
+            int g = Math.Max(0, (int)(c.Green * (1 - amount)));
+            int b = Math.Max(0, (int)(c.Blue * (1 - amount)));
+            return new SKColor((byte)r, (byte)g, (byte)b, c.Alpha);
+        }
+
         private void DrawEventTooltip(SKCanvas canvas, string text, float x, float y)
         {
             var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-            using (var bgPaint = new SKPaint { Color = SKColor.Parse("#DD1B2838"), Style = SKPaintStyle.Fill })
-            using (var borderPaint = new SKPaint { Color = SKColors.Red, Style = SKPaintStyle.Stroke, StrokeWidth = 1 })
-            using (var textPaint = new SKPaint { Color = SKColors.White, TextSize = 11, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Consolas") })
+            using (var shadowPaint = new SKPaint { Color = SKColor.Parse("#60000000"), Style = SKPaintStyle.Fill, IsAntialias = true })
+            using (var bgPaint = new SKPaint { Color = _isLightTheme ? SKColor.Parse("#F0FFFFFF") : SKColor.Parse("#F01B2838"), Style = SKPaintStyle.Fill, IsAntialias = true })
+            using (var borderPaint = new SKPaint { Color = SKColors.Red, Style = SKPaintStyle.Stroke, StrokeWidth = 1.5f, IsAntialias = true })
+            using (var textPaint = new SKPaint { Color = _isLightTheme ? SKColor.Parse("#333333") : SKColors.White, TextSize = 11, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Consolas") })
             {
                 float maxWidth = 0;
                 foreach (var line in lines)
                     maxWidth = Math.Max(maxWidth, textPaint.MeasureText(line));
 
-                float tooltipW = maxWidth + 12;
-                float tooltipH = lines.Length * 15 + 8;
+                float tooltipW = maxWidth + 16;
+                float tooltipH = lines.Length * 16 + 12;
 
-                canvas.DrawRoundRect(new SKRoundRect(new SKRect(x, y, x + tooltipW, y + tooltipH), 4), bgPaint);
-                canvas.DrawRoundRect(new SKRoundRect(new SKRect(x, y, x + tooltipW, y + tooltipH), 4), borderPaint);
+                // Shadow
+                canvas.DrawRoundRect(new SKRoundRect(new SKRect(x + 2, y + 2, x + tooltipW + 2, y + tooltipH + 2), 6), shadowPaint);
+                canvas.DrawRoundRect(new SKRoundRect(new SKRect(x, y, x + tooltipW, y + tooltipH), 6), bgPaint);
+                canvas.DrawRoundRect(new SKRoundRect(new SKRect(x, y, x + tooltipW, y + tooltipH), 6), borderPaint);
 
-                float ty = y + 14;
+                float ty = y + 16;
                 foreach (var line in lines)
                 {
-                    canvas.DrawText(line, x + 6, ty, textPaint);
-                    ty += 15;
+                    canvas.DrawText(line, x + 8, ty, textPaint);
+                    ty += 16;
+                }
+            }
+        }
+
+        private void DrawCHStepTooltip(SKCanvas canvas, string text, float x, float y, float canvasWidth, float canvasHeight)
+        {
+            var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            using (var shadowPaint = new SKPaint { Color = SKColor.Parse("#60000000"), Style = SKPaintStyle.Fill, IsAntialias = true })
+            using (var bgPaint = new SKPaint { Color = _isLightTheme ? SKColor.Parse("#F0FFFFFF") : SKColor.Parse("#F01B2838"), Style = SKPaintStyle.Fill, IsAntialias = true })
+            using (var accentPaint = new SKPaint { Style = SKPaintStyle.Fill, IsAntialias = true })
+            using (var borderPaint = new SKPaint { Color = _isLightTheme ? SKColor.Parse("#CCCCCC") : SKColor.Parse("#4A6FA5"), Style = SKPaintStyle.Stroke, StrokeWidth = 1f, IsAntialias = true })
+            using (var textPaint = new SKPaint { Color = _isLightTheme ? SKColor.Parse("#333333") : SKColors.White, TextSize = 11, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Consolas") })
+            {
+                float maxWidth = 0;
+                foreach (var line in lines)
+                    maxWidth = Math.Max(maxWidth, textPaint.MeasureText(line));
+
+                float tooltipW = maxWidth + 20;
+                float tooltipH = lines.Length * 16 + 14;
+                float accentW = 4;
+
+                // Clamp tooltip position to stay within canvas bounds
+                if (x + tooltipW > canvasWidth - 5)
+                    x = x - tooltipW - 30;
+                if (y + tooltipH > canvasHeight - 5)
+                    y = canvasHeight - tooltipH - 5;
+                if (y < 5) y = 5;
+
+                var rect = new SKRect(x, y, x + tooltipW, y + tooltipH);
+
+                // Shadow
+                canvas.DrawRoundRect(new SKRoundRect(new SKRect(x + 2, y + 2, x + tooltipW + 2, y + tooltipH + 2), 6), shadowPaint);
+                // Background
+                canvas.DrawRoundRect(new SKRoundRect(rect, 6), bgPaint);
+                // Left accent bar (color of hovered state)
+                if (_hoveredStateInterval.HasValue)
+                {
+                    SKColor barColor = CHStepColors[Math.Abs(_hoveredStateInterval.Value.StateId) % CHStepColors.Length];
+                    accentPaint.Color = barColor;
+                    canvas.DrawRoundRect(new SKRoundRect(new SKRect(x, y, x + accentW, y + tooltipH), 6, 0), accentPaint);
+                    canvas.DrawRect(new SKRect(x + 3, y, x + accentW, y + tooltipH), accentPaint); // fill the rounded corner gap
+                }
+                // Border
+                canvas.DrawRoundRect(new SKRoundRect(rect, 6), borderPaint);
+
+                float ty = y + 16;
+                foreach (var line in lines)
+                {
+                    canvas.DrawText(line, x + 10, ty, textPaint);
+                    ty += 16;
                 }
             }
         }

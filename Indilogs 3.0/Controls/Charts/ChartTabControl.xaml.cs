@@ -91,10 +91,11 @@ namespace IndiLogs_3._0.Controls.Charts
             Toolbar.OnAddReferenceLineRequested += OpenAddReferenceLineDialog;
             Toolbar.OnTogglePanelRequested += ToggleSignalPanel;
             Toolbar.OnLayoutChanged += SetLayoutMode;
+            Toolbar.OnSmoothChanged += SetSmoothingEnabled;
+            Toolbar.OnSmoothWindowChanged += SetSmoothingWindowSize;
 
             // Wire up signal list events
             SignalList.OnItemDoubleClicked += OnSignalItemDoubleClicked;
-            SignalList.OnSignalDoubleClicked += AddSignalToChart; // Legacy for simple signal names
 
             // Wire up timeline events
             StateTimeline.OnTimelineClicked += OnTimelineClick;
@@ -108,21 +109,38 @@ namespace IndiLogs_3._0.Controls.Charts
             ChartDataTransferService.Instance.OnDataReady += OnInMemoryDataReady;
             ChartDataTransferService.Instance.OnLogTimeSelected += OnLogTimeSelected;
 
-            // Detect theme on load
+            // Detect theme on load and when tab becomes visible
             Loaded += ChartTabControl_Loaded;
+            IsVisibleChanged += ChartTabControl_IsVisibleChanged;
         }
 
         private void ChartTabControl_Loaded(object sender, RoutedEventArgs e)
         {
-            // Detect if app is in light theme by checking app settings
+            SyncThemeFromSettings();
+        }
+
+        private void ChartTabControl_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            // Re-sync theme every time the Charts tab becomes visible
+            if (e.NewValue is bool isVisible && isVisible)
+            {
+                SyncThemeFromSettings();
+            }
+        }
+
+        private void SyncThemeFromSettings()
+        {
             try
             {
-                _isLightTheme = !Properties.Settings.Default.IsDarkMode;
-                ApplyThemeToCharts();
+                bool isLight = !Properties.Settings.Default.IsDarkMode;
+                if (isLight != _isLightTheme)
+                {
+                    _isLightTheme = isLight;
+                    ApplyThemeToCharts();
+                }
             }
             catch
             {
-                // Default to dark theme
                 _isLightTheme = false;
             }
         }
@@ -321,84 +339,274 @@ namespace IndiLogs_3._0.Controls.Charts
         {
             try
             {
+                // Clear in-memory data flag - we're loading from CSV now
+                _inMemoryDataLoaded = false;
+                _currentDataPackage = null;
+
                 _dataService.Load(filePath);
 
-                // Build signal list - include Events if the column exists
-                var signals = new List<string>(_dataService.ColumnNames);
-                int eventsCol = _dataService.FindEventsColumnIndex();
-                if (eventsCol >= 0)
-                {
-                    var csvEvents = _dataService.ExtractEvents(eventsCol, 0);
-                    // Convert to EventMarkerData for unified handling
-                    _eventMarkers = csvEvents.Select(e => new EventMarkerData
-                    {
-                        TimeIndex = e.Index,
-                        Name = e.Message,
-                        TimeStamp = DateTime.MinValue // Will use time string instead
-                    }).ToList();
-
-                    if (!signals.Contains("[Events]"))
-                        signals.Add("[Events]");
-                }
-                else
-                {
-                    _eventMarkers = new List<EventMarkerData>();
-                }
-
-                // Update UI
-                SignalList.SetSignals(signals);
                 _totalDataLength = _dataService.TotalRows - _dataService.DataStartRow;
 
                 // Load time data for sync
                 _timeData = _dataService.GetTimeColumnData(0);
                 _syncService.BuildTimeMapping(_timeData);
 
-                // Detect state column and extract states
-                int stateCol = _dataService.FindColumnIndex("state");
-                if (stateCol < 0) stateCol = _dataService.FindColumnIndex("machine_state");
-                if (stateCol >= 0)
-                {
-                    _globalStates = _dataService.ExtractStates(stateCol);
-                }
+                // ===== Categorize all columns from the CSV =====
+                // The CSV exported by our app uses these column name patterns:
+                //   Axis:    "Subsys-Motor-Param [ThreadName]"  where Param is SetP/ActP/SetV/ActV/Trq/LagErr
+                //   IO:      "Subsys-Component - Symbol-Value [IOs-I]" or [IOs-Q]
+                //   CHStep:  "Parent§CHName§SubsysID-Data-Param" or column name contains "CHStep"
+                //   Thread:  "ThreadName_Message"
+                //   Events:  "Events_Message"
+                //   State:   "Machine_State"
+                var signalColumns = new List<SignalData>();
+                var threadMessageColumns = new Dictionary<string, int>(); // ThreadName -> column index
+                int eventsColIndex = -1;
+                int stateColIndex = -1;
 
-                // Detect CHSTEP columns (columns named CHStep_*, CHSTEP_*, etc.)
-                _chStepStates = new List<StateData>();
                 for (int col = 0; col < _dataService.ColumnNames.Count; col++)
                 {
                     string colName = _dataService.ColumnNames[col];
-                    if (colName.IndexOf("CHStep", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        colName.IndexOf("CHSTEP", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        // Skip if this is the same as the main state column
-                        if (col == stateCol) continue;
+                    string lower = colName.ToLower().TrimStart('\uFEFF'); // Strip BOM from first column
 
-                        var intervals = _dataService.ExtractStates(col);
+                    // Skip Time and Unix_Time columns
+                    if (lower == "time" || lower == "unix_time")
+                        continue;
+
+                    // Machine State column
+                    if (lower == "machine_state" || lower == "state")
+                    {
+                        stateColIndex = col;
+                        continue;
+                    }
+
+                    // Events_Message column
+                    if (lower == "events_message" || lower.Contains("events_message"))
+                    {
+                        eventsColIndex = col;
+                        continue;
+                    }
+
+                    // Thread message columns: end with _Message (e.g., "Manager_Message", "IOs_Message")
+                    // But NOT "Events_Message" (already handled above)
+                    if (lower.EndsWith("_message") && !lower.Contains("events"))
+                    {
+                        string threadName = colName.Substring(0, colName.Length - "_Message".Length);
+                        threadMessageColumns[threadName] = col;
+                        continue;
+                    }
+
+                    // Determine signal category from column name
+                    string category = "All";
+                    if (lower.Contains("§") || lower.StartsWith("chstep"))
+                    {
+                        // CHStep columns are handled separately below
+                        continue;
+                    }
+                    else if (lower.Contains("[ios-") || lower.Contains("[io_mon"))
+                    {
+                        category = "IO";
+                    }
+                    else if (lower.Contains("-setp") || lower.Contains("-actp") || lower.Contains("-setv") ||
+                             lower.Contains("-actv") || lower.Contains("-trq") || lower.Contains("-lagerr"))
+                    {
+                        category = "Axis";
+                    }
+                    else if (lower.Contains("-value") || lower.Contains("-mottemp") || lower.Contains("-drvtemp"))
+                    {
+                        // IO signal with Value/MotTemp/DrvTemp param suffix
+                        category = "IO";
+                    }
+
+                    signalColumns.Add(new SignalData
+                    {
+                        Name = colName,
+                        Category = category
+                    });
+                }
+
+                // Extract events
+                if (eventsColIndex >= 0)
+                {
+                    var csvEvents = _dataService.ExtractEvents(eventsColIndex, 0);
+                    _eventMarkers = csvEvents.Select(e => new EventMarkerData
+                    {
+                        TimeIndex = e.Index,
+                        Name = e.Message,
+                        TimeStamp = DateTime.MinValue
+                    }).ToList();
+                }
+                else
+                {
+                    _eventMarkers = new List<EventMarkerData>();
+                }
+
+                // Extract machine states
+                _globalStates.Clear();
+                if (stateColIndex < 0) stateColIndex = _dataService.FindColumnIndex("state");
+                if (stateColIndex < 0) stateColIndex = _dataService.FindColumnIndex("machine_state");
+                if (stateColIndex >= 0)
+                {
+                    _globalStates = _dataService.ExtractStates(stateColIndex);
+                }
+
+                // Detect and extract CHSTEP columns
+                // CSV format: Parent§CHName§SubsysID-Data-Param [thread]
+                // Group by Parent§CHName§SubsysID prefix, use the -Data-State column for intervals
+                _chStepStates = new List<StateData>();
+                var chStepGroups = new Dictionary<string, Dictionary<string, int>>(); // prefix -> {param -> colIndex}
+
+                for (int col = 0; col < _dataService.ColumnNames.Count; col++)
+                {
+                    string colName = _dataService.ColumnNames[col];
+                    if (!colName.Contains("§")) continue;
+                    if (col == stateColIndex) continue;
+
+                    // Parse: "Parent§CHName§SubsysID-Data-Param [thread]"
+                    // Remove thread part: " [thread]"
+                    string nameWithoutThread = colName;
+                    int bracketIdx = colName.IndexOf(" [");
+                    if (bracketIdx > 0)
+                        nameWithoutThread = colName.Substring(0, bracketIdx);
+
+                    // Find last '-' to split prefix and param
+                    int lastDash = nameWithoutThread.LastIndexOf('-');
+                    if (lastDash <= 0) continue;
+
+                    string prefix = nameWithoutThread.Substring(0, lastDash);  // "Parent§CHName§SubsysID-Data"
+                    string param = nameWithoutThread.Substring(lastDash + 1);   // "State", "StepMessage", etc.
+
+                    if (!chStepGroups.ContainsKey(prefix))
+                        chStepGroups[prefix] = new Dictionary<string, int>();
+
+                    chStepGroups[prefix][param] = col;
+                }
+
+                foreach (var kvp in chStepGroups)
+                {
+                    string prefix = kvp.Key;    // "Parent§CHName§SubsysID-Data"
+                    var paramCols = kvp.Value;
+
+                    // Extract CH name from prefix
+                    // prefix format: "Parent§CHName§SubsysID-Data"
+                    // Strip trailing "-Data" if present
+                    string chPrefix = prefix;
+                    if (chPrefix.EndsWith("-Data", StringComparison.OrdinalIgnoreCase))
+                        chPrefix = chPrefix.Substring(0, chPrefix.Length - 5);
+
+                    string chName = chPrefix;
+                    string parentName = "";
+                    if (chPrefix.Contains("§"))
+                    {
+                        var parts = chPrefix.Split('§');
+                        parentName = parts[0];
+                        if (parts.Length >= 2) chName = parts[1];
+                    }
+
+                    // Use the "State" column for numeric state intervals
+                    if (paramCols.TryGetValue("State", out int stateCol))
+                    {
+                        var intervals = _dataService.ExtractStates(stateCol);
                         if (intervals.Count > 0)
                         {
+                            // Try to enrich StateName and build rich tooltip from CHStep columns
+                            paramCols.TryGetValue("StepMessage", out int msgCol);
+                            paramCols.TryGetValue("Parent", out int parentCol);
+                            paramCols.TryGetValue("SubsysID", out int subsysCol);
+                            paramCols.TryGetValue("PrevStepNo", out int prevStepCol);
+                            paramCols.TryGetValue("DiffTime", out int diffTimeCol);
+                            paramCols.TryGetValue("SubStepNo", out int subStepCol);
+                            paramCols.TryGetValue("CHObjType", out int objTypeCol);
+
+                            for (int i = 0; i < intervals.Count; i++)
+                            {
+                                var interval = intervals[i];
+                                int dataRow = _dataService.DataStartRow + interval.StartIndex;
+
+                                string stepMsg = msgCol > 0 ? _dataService.GetStringAt(dataRow, msgCol) : null;
+                                if (!string.IsNullOrWhiteSpace(stepMsg))
+                                    interval.StateName = stepMsg;
+
+                                // Build rich tooltip text
+                                var sb = new System.Text.StringBuilder();
+                                sb.AppendLine($"CHStep: {chName}");
+                                if (!string.IsNullOrEmpty(stepMsg))
+                                    sb.AppendLine($"Step: {stepMsg}");
+                                sb.AppendLine($"State: {interval.StateId}");
+                                if (!string.IsNullOrEmpty(parentName))
+                                    sb.AppendLine($"Parent: {parentName}");
+
+                                string subsysVal = subsysCol > 0 ? _dataService.GetStringAt(dataRow, subsysCol) : null;
+                                if (!string.IsNullOrWhiteSpace(subsysVal))
+                                    sb.AppendLine($"SubsysID: {subsysVal}");
+
+                                string prevStep = prevStepCol > 0 ? _dataService.GetStringAt(dataRow, prevStepCol) : null;
+                                if (!string.IsNullOrWhiteSpace(prevStep))
+                                    sb.AppendLine($"PrevStepNo: {prevStep}");
+
+                                string diffTime = diffTimeCol > 0 ? _dataService.GetStringAt(dataRow, diffTimeCol) : null;
+                                if (!string.IsNullOrWhiteSpace(diffTime))
+                                    sb.AppendLine($"DiffTime: {diffTime}");
+
+                                string subStep = subStepCol > 0 ? _dataService.GetStringAt(dataRow, subStepCol) : null;
+                                if (!string.IsNullOrWhiteSpace(subStep))
+                                    sb.AppendLine($"SubStepNo: {subStep}");
+
+                                string objType = objTypeCol > 0 ? _dataService.GetStringAt(dataRow, objTypeCol) : null;
+                                if (!string.IsNullOrWhiteSpace(objType))
+                                    sb.AppendLine($"CHObjType: {objType}");
+
+                                interval.TooltipText = sb.ToString().TrimEnd();
+                                intervals[i] = interval;
+                            }
+
                             _chStepStates.Add(new StateData
                             {
-                                Name = colName,
+                                Name = chName,
+                                Category = parentName,
                                 Intervals = intervals
                             });
                         }
                     }
                 }
 
-                // If CHSTEP columns were found, update signal list with them
-                if (_chStepStates.Count > 0)
+                // Extract thread messages from CSV
+                var threadMessages = new List<ThreadMessageData>();
+                foreach (var kvp in threadMessageColumns)
                 {
-                    // Re-populate signal list using SetDataPackage-like approach
-                    // by adding CHSTEP items
-                    var dataPackage = new ChartDataPackage
+                    string threadName = kvp.Key;
+                    int col = kvp.Value;
+
+                    for (int row = 0; row < _totalDataLength; row++)
                     {
-                        Signals = signals.Where(s => s != "[Events]").Select(s => new SignalData { Name = s, Category = "All" }).ToList(),
-                        States = _chStepStates,
-                        ThreadMessages = new List<ThreadMessageData>(),
-                        Events = _eventMarkers ?? new List<EventMarkerData>(),
-                        TimeStamps = new List<DateTime>()
-                    };
-                    SignalList.SetDataPackage(dataPackage);
+                        string msg = _dataService.GetStringAt(_dataService.DataStartRow + row, col);
+                        if (!string.IsNullOrWhiteSpace(msg))
+                        {
+                            threadMessages.Add(new ThreadMessageData
+                            {
+                                TimeIndex = row,
+                                ThreadName = threadName,
+                                Message = msg,
+                                TimeStamp = DateTime.MinValue
+                            });
+                        }
+                    }
                 }
+
+                // Build a full data package for the signal list (always use SetDataPackage
+                // so that ALL category buttons work: Axis, IO, CHStep, Thread, Events)
+                var dataPackage = new ChartDataPackage
+                {
+                    Signals = signalColumns,
+                    States = _chStepStates,
+                    ThreadMessages = threadMessages,
+                    Events = _eventMarkers,
+                    TimeStamps = new List<DateTime>()
+                };
+                SignalList.SetDataPackage(dataPackage);
+
+                // Store thread messages for later use
+                _threadMessages = threadMessages;
 
                 // Reset view
                 _viewStartIndex = 0;
@@ -684,41 +892,7 @@ namespace IndiLogs_3._0.Controls.Charts
         /// </summary>
         private void RefreshAllChartViews()
         {
-            foreach (var chart in _charts)
-            {
-                switch (chart.ViewType)
-                {
-                    case ChartViewType.Signal:
-                        var graphView = FindGraphViewForChart(chart);
-                        if (graphView != null)
-                        {
-                            graphView.SetViewModel(chart);
-                            graphView.SyncViewRange(_viewStartIndex, _viewEndIndex);
-                            graphView.SyncCursor(_cursorIndex);
-                        }
-                        break;
-                    case ChartViewType.Gantt:
-                        var ganttView = FindGanttViewForChart(chart);
-                        if (ganttView != null)
-                        {
-                            ganttView.SetStates(chart.GanttStates, _totalDataLength);
-                            if (chart.EventMarkers != null)
-                                ganttView.SetEventMarkers(chart.EventMarkers);
-                            ganttView.SyncViewRange(_viewStartIndex, _viewEndIndex);
-                            ganttView.SyncCursor(_cursorIndex);
-                        }
-                        break;
-                    case ChartViewType.Thread:
-                        var threadView = FindThreadViewForChart(chart);
-                        if (threadView != null)
-                        {
-                            WireUpThreadView(chart);
-                            if (chart.EventMarkers != null)
-                                threadView.SetEventMarkers(chart.EventMarkers);
-                        }
-                        break;
-                }
-            }
+            RefreshChartViews();
         }
 
         /// <summary>
@@ -813,13 +987,22 @@ namespace IndiLogs_3._0.Controls.Charts
 
             System.Diagnostics.Debug.WriteLine($"[AddSignalToChart] Adding signal: {signalName}");
 
-            // Add to the last chart, or create one if none exist
+            // Add to the selected chart, or the last Signal chart, or create one if none exist
             if (_charts.Count == 0)
             {
                 AddNewChart();
             }
 
-            var chart = _charts.Last();
+            var chart = _selectedChart;
+            if (chart == null || chart.ViewType != ChartViewType.Signal)
+            {
+                chart = _charts.LastOrDefault(c => c.ViewType == ChartViewType.Signal);
+            }
+            if (chart == null)
+            {
+                AddNewChart();
+                chart = _charts.Last();
+            }
 
             // Check if already added
             if (chart.Series.Any(s => s.Name == signalName))
@@ -843,12 +1026,11 @@ namespace IndiLogs_3._0.Controls.Charts
                 else
                 {
                     System.Diagnostics.Debug.WriteLine($"[AddSignalToChart] Signal NOT found in package: {signalName}");
-                    // List all available signal names for debugging
-                    System.Diagnostics.Debug.WriteLine($"[AddSignalToChart] Available signals: {string.Join(", ", _currentDataPackage.Signals.Select(s => s.Name).Take(20))}...");
                 }
             }
-            // Fall back to CSV data
-            else if (_dataService?.IsLoaded == true)
+
+            // Fall back to CSV data if not found in memory
+            if (data == null && _dataService?.IsLoaded == true)
             {
                 System.Diagnostics.Debug.WriteLine($"[AddSignalToChart] Searching in CSV data");
                 int colIndex = _dataService.ColumnNames.IndexOf(signalName);
@@ -862,7 +1044,8 @@ namespace IndiLogs_3._0.Controls.Charts
                     System.Diagnostics.Debug.WriteLine($"[AddSignalToChart] Signal NOT found in CSV: {signalName}");
                 }
             }
-            else
+
+            if (data == null && !(_dataService?.IsLoaded == true) && !_inMemoryDataLoaded)
             {
                 System.Diagnostics.Debug.WriteLine($"[AddSignalToChart] No data source available");
             }
@@ -931,6 +1114,36 @@ namespace IndiLogs_3._0.Controls.Charts
             foreach (var chart in _charts)
             {
                 chart.States = show ? _globalStates : null;
+            }
+            RefreshChartViews();
+        }
+
+        private int _smoothWindowSize = 10;
+
+        private void SetSmoothingEnabled(bool enabled)
+        {
+            foreach (var chart in _charts)
+            {
+                foreach (var series in chart.Series)
+                {
+                    if (enabled && series.SmoothedData == null)
+                        series.CalculateSmoothing(_smoothWindowSize);
+                    series.IsSmoothed = enabled;
+                }
+            }
+        }
+
+        private void SetSmoothingWindowSize(int windowSize)
+        {
+            _smoothWindowSize = windowSize;
+            foreach (var chart in _charts)
+            {
+                foreach (var series in chart.Series)
+                {
+                    series.SmoothedData = null; // force recalculation
+                    series.CalculateSmoothing(windowSize);
+                    // IsSmoothed is already true (slider only fires when checked)
+                }
             }
             RefreshChartViews();
         }
@@ -1054,12 +1267,42 @@ namespace IndiLogs_3._0.Controls.Charts
         {
             foreach (var chart in _charts)
             {
-                var graphView = FindGraphViewForChart(chart);
-                if (graphView != null)
+                switch (chart.ViewType)
                 {
-                    graphView.SetViewModel(chart);
-                    graphView.SyncViewRange(_viewStartIndex, _viewEndIndex);
-                    graphView.SyncCursor(_cursorIndex);
+                    case ChartViewType.Signal:
+                        var graphView = FindGraphViewForChart(chart);
+                        if (graphView != null)
+                        {
+                            graphView.SetViewModel(chart);
+                            graphView.SyncViewRange(_viewStartIndex, _viewEndIndex);
+                            graphView.SyncCursor(_cursorIndex);
+                        }
+                        else
+                        {
+                            // Chart not yet wired up - schedule wiring
+                            var c = chart;
+                            Dispatcher.BeginInvoke(new Action(() => WireUpChartView(c)), DispatcherPriority.Loaded);
+                        }
+                        break;
+                    case ChartViewType.Gantt:
+                        var ganttView = FindGanttViewForChart(chart);
+                        if (ganttView != null)
+                        {
+                            ganttView.SetStates(chart.GanttStates, _totalDataLength);
+                            if (chart.EventMarkers != null)
+                                ganttView.SetEventMarkers(chart.EventMarkers);
+                            ganttView.SyncViewRange(_viewStartIndex, _viewEndIndex);
+                            ganttView.SyncCursor(_cursorIndex);
+                        }
+                        break;
+                    case ChartViewType.Thread:
+                        var threadView = FindThreadViewForChart(chart);
+                        if (threadView != null)
+                        {
+                            threadView.SyncViewRange(_viewStartIndex, _viewEndIndex);
+                            threadView.SyncCursor(_cursorIndex);
+                        }
+                        break;
                 }
             }
         }
@@ -1217,7 +1460,13 @@ namespace IndiLogs_3._0.Controls.Charts
         {
             if (_charts.Count == 0 || !HasData) return;
 
-            var chart = _charts.Last();
+            // Use the selected chart, or find the last Signal chart, or fall back to last chart
+            var chart = _selectedChart;
+            if (chart == null || chart.ViewType != ChartViewType.Signal)
+            {
+                chart = _charts.LastOrDefault(c => c.ViewType == ChartViewType.Signal);
+            }
+            if (chart == null) chart = _charts.Last();
 
             // Get current cursor value and index from the graph view
             double currentValue = 0;
@@ -1239,23 +1488,13 @@ namespace IndiLogs_3._0.Controls.Charts
                 }
             }
 
-            var dialog = new AddReferenceLineWindow(currentValue, currentIndex);
-            dialog.Owner = Window.GetWindow(this);
+            // Open the management window (allows add, view, edit, delete)
+            var manageWindow = new Views.ManageReferenceLinesWindow(chart.ReferenceLines, currentValue, currentIndex);
+            manageWindow.Owner = Window.GetWindow(this);
+            manageWindow.ShowDialog();
 
-            if (dialog.ShowDialog() == true && dialog.ResultLine != null)
-            {
-                _referenceLineCounter++;
-                var line = dialog.ResultLine;
-                if (string.IsNullOrWhiteSpace(line.Name))
-                {
-                    line.Name = line.Type == ReferenceLineType.Horizontal
-                        ? $"H{_referenceLineCounter}"
-                        : $"V{_referenceLineCounter}";
-                }
-
-                chart.ReferenceLines.Add(line);
-                RefreshChartViews();
-            }
+            // Refresh chart views after closing
+            RefreshChartViews();
         }
 
         #endregion
@@ -1333,6 +1572,26 @@ namespace IndiLogs_3._0.Controls.Charts
             {
                 series.YAxisType = series.YAxisType == AxisType.Left ? AxisType.Right : AxisType.Left;
                 RefreshChartViews();
+            }
+        }
+
+        private void LegendItem_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ClickCount != 2) return;
+
+            if (sender is FrameworkElement element && element.Tag is SignalSeries series)
+            {
+                // Find which chart contains this series
+                foreach (var chart in _charts)
+                {
+                    if (chart.Series.Contains(series))
+                    {
+                        chart.Series.Remove(series);
+                        RefreshChartViews();
+                        e.Handled = true;
+                        return;
+                    }
+                }
             }
         }
 

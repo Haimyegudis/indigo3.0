@@ -186,7 +186,11 @@ namespace IndiLogs_3._0.Services.Charts
             foreach (var log in logs)
             {
                 if (string.IsNullOrEmpty(log.Message)) continue;
-                if (!log.Message.StartsWith("IO_Mon:", StringComparison.OrdinalIgnoreCase)) continue;
+
+                // Handle both IO_Mon: (current) and IO: (optimized) patterns
+                bool isIoMon = log.Message.StartsWith("IO_Mon:", StringComparison.OrdinalIgnoreCase);
+                bool isIoOpt = !isIoMon && log.Message.StartsWith("IO:", StringComparison.OrdinalIgnoreCase);
+                if (!isIoMon && !isIoOpt) continue;
 
                 try
                 {
@@ -199,7 +203,10 @@ namespace IndiLogs_3._0.Services.Charts
 
                     string subsystem = parts[0].Trim();
 
-                    for (int i = 1; i < parts.Length; i++)
+                    // For optimized IO: pattern, only parts[1] has data (parts[2] may be eIoStatus)
+                    int dataEnd = isIoOpt ? Math.Min(2, parts.Length) : parts.Length;
+
+                    for (int i = 1; i < dataEnd; i++)
                     {
                         int eqIndex = parts[i].IndexOf('=');
                         if (eqIndex <= 0) continue;
@@ -207,8 +214,10 @@ namespace IndiLogs_3._0.Services.Charts
                         string symbolName = parts[i].Substring(0, eqIndex).Trim();
                         string valueStr = parts[i].Substring(eqIndex + 1).Trim();
 
-                        // Get the component name for selection check (same logic as ExportConfigurationViewModel)
-                        // This handles _MotTemp and _DrvTemp suffixes which are stripped in the UI
+                        // Skip "New Status" lines (IO_Mon status change log)
+                        if (valueStr.StartsWith("New Status", StringComparison.OrdinalIgnoreCase)) continue;
+
+                        // Get the component name for selection check
                         string componentName;
                         string paramName;
                         if (symbolName.EndsWith("_MotTemp", StringComparison.OrdinalIgnoreCase))
@@ -227,37 +236,32 @@ namespace IndiLogs_3._0.Services.Charts
                             paramName = "Value";
                         }
 
-                        // Check if this component is selected (using componentName for selection lookup)
+                        // Check if this component is selected
                         string selectionKey = $"{subsystem}|{componentName}";
                         if (!selectedSet.Contains(selectionKey)) continue;
 
-                        // Parse value - handle both numeric and string values
-                        string cleanValue = valueStr.Split(' ')[0]; // Remove any suffix after space
+                        // Parse value
+                        string cleanValue = valueStr.Split(' ')[0];
                         if (!double.TryParse(cleanValue, out double value)) continue;
 
-                        // Use full signal key (subsystem|symbolName) to keep each signal separate
                         string signalKey = $"{subsystem}|{symbolName}";
 
-                        // Get or create signal
                         if (!signals.TryGetValue(signalKey, out var signal))
                         {
-                            // Create display name matching CSV format: Subsystem-ComponentName-Param
                             string displayName = $"{subsystem}-{componentName}-{paramName}";
 
                             signal = new SignalData
                             {
                                 Name = displayName,
-                                Category = "IO", // Mark as IO signal
+                                Category = "IO",
                                 SignalType = SignalType.Analog,
                                 Data = new double[dataLength]
                             };
-                            // Initialize with NaN
                             for (int j = 0; j < dataLength; j++)
                                 signal.Data[j] = double.NaN;
                             signals[signalKey] = signal;
                         }
 
-                        // Set value at time index
                         if (timeIndexLookup.TryGetValue(log.Date, out int idx))
                         {
                             signal.Data[idx] = value;
@@ -288,7 +292,11 @@ namespace IndiLogs_3._0.Services.Charts
             foreach (var log in logs)
             {
                 if (string.IsNullOrEmpty(log.Message)) continue;
-                if (!log.Message.StartsWith("AxisMon:", StringComparison.OrdinalIgnoreCase)) continue;
+
+                // Handle both AxisMon: (current) and AxM: (optimized) patterns
+                bool isAxisMon = log.Message.StartsWith("AxisMon:", StringComparison.OrdinalIgnoreCase);
+                bool isAxM = !isAxisMon && log.Message.StartsWith("AxM:", StringComparison.OrdinalIgnoreCase);
+                if (!isAxisMon && !isAxM) continue;
 
                 try
                 {
@@ -305,14 +313,35 @@ namespace IndiLogs_3._0.Services.Charts
 
                     if (!selectedSet.Contains(key)) continue;
 
-                    // Parse position value (usually 3rd part)
                     for (int i = 2; i < parts.Length; i++)
                     {
-                        int eqIndex = parts[i].IndexOf('=');
-                        if (eqIndex <= 0) continue;
+                        string rawPart = parts[i].Trim();
+                        int eqIndex = rawPart.IndexOf('=');
 
-                        string paramName = parts[i].Substring(0, eqIndex).Trim();
-                        string valueStr = parts[i].Substring(eqIndex + 1).Trim();
+                        string paramName;
+                        string valueStr;
+
+                        if (eqIndex > 0)
+                        {
+                            paramName = rawPart.Substring(0, eqIndex).Trim();
+                            valueStr = rawPart.Substring(eqIndex + 1).Trim();
+
+                            // Normalize optimized names: LagE -> LagErr, Trg -> Trigger
+                            if (paramName.Equals("LagE", StringComparison.OrdinalIgnoreCase))
+                                paramName = "LagErr";
+                            else if (paramName.Equals("Trg", StringComparison.OrdinalIgnoreCase))
+                                paramName = "Trigger";
+                        }
+                        else if (isAxM && i == parts.Length - 1)
+                        {
+                            // Last part without '=' in AxM is the trigger value
+                            paramName = "Trigger";
+                            valueStr = rawPart;
+                        }
+                        else
+                        {
+                            continue;
+                        }
 
                         if (!double.TryParse(valueStr, out double value)) continue;
 
@@ -323,7 +352,7 @@ namespace IndiLogs_3._0.Services.Charts
                             signal = new SignalData
                             {
                                 Name = $"{motor}_{paramName}",
-                                Category = "Axis", // Mark as Axis signal
+                                Category = "Axis",
                                 SignalType = SignalType.Analog,
                                 Data = new double[dataLength]
                             };
@@ -405,11 +434,63 @@ namespace IndiLogs_3._0.Services.Charts
 
                     if (timeIndexLookup.TryGetValue(log.Date, out int idx))
                     {
+                        // Extract StepMessage and full bracket data for rich tooltip
+                        string stepMessage = "";
+                        string subsysID = "", prevStepNo = "", diffTime = "", subStepNo = "", chObjType = "";
+
+                        try
+                        {
+                            // Extract StepMessage (between first and second comma)
+                            int secondComma = log.Message.IndexOf(',', firstComma + 1);
+                            if (secondComma > firstComma + 1)
+                                stepMessage = log.Message.Substring(firstComma + 1, secondComma - firstComma - 1).Trim();
+
+                            // Extract bracket content <Parent, SubsysID, PrevStepNo, DiffTime, SubStepNo, CHObjType>
+                            int closeBracket = log.Message.IndexOf('>', openBracket);
+                            if (closeBracket > openBracket)
+                            {
+                                string bracketContent = log.Message.Substring(openBracket + 1, closeBracket - openBracket - 1);
+                                string[] parts = bracketContent.Split(',');
+                                if (parts.Length >= 6)
+                                {
+                                    subsysID = parts[1].Trim();
+                                    prevStepNo = parts[2].Trim();
+                                    diffTime = parts[3].Trim();
+                                    subStepNo = parts[4].Trim();
+                                    chObjType = parts[5].Trim();
+                                }
+                            }
+                        }
+                        catch { }
+
+                        // Build rich tooltip
+                        var sb = new System.Text.StringBuilder();
+                        sb.AppendLine($"CHStep: {chName}");
+                        if (!string.IsNullOrEmpty(stepMessage))
+                            sb.AppendLine($"Step: {stepMessage}");
+                        sb.AppendLine($"State: {stateNum}");
+                        sb.AppendLine($"Parent: {chParentName}");
+                        if (!string.IsNullOrEmpty(subsysID))
+                            sb.AppendLine($"SubsysID: {subsysID}");
+                        if (!string.IsNullOrEmpty(prevStepNo))
+                            sb.AppendLine($"PrevStepNo: {prevStepNo}");
+                        if (!string.IsNullOrEmpty(diffTime))
+                            sb.AppendLine($"DiffTime: {diffTime}");
+                        if (!string.IsNullOrEmpty(subStepNo))
+                            sb.AppendLine($"SubStepNo: {subStepNo}");
+                        if (!string.IsNullOrEmpty(chObjType))
+                        {
+                            string objTypeText = chObjType == "0" ? "action" : (chObjType == "1" ? "component" : chObjType);
+                            sb.AppendLine($"CHObjType: {objTypeText}");
+                        }
+
                         stateData.Intervals.Add(new StateInterval
                         {
                             StartIndex = idx,
                             EndIndex = idx,
-                            StateId = stateNum
+                            StateId = stateNum,
+                            StateName = stepMessage,
+                            TooltipText = sb.ToString().TrimEnd()
                         });
                     }
                 }
@@ -652,10 +733,18 @@ namespace IndiLogs_3._0.Services.Charts
                 if (intervals[i].StateId == current.StateId &&
                     intervals[i].StartIndex <= current.EndIndex + 1)
                 {
+                    // Merge consecutive same-state intervals
                     current.EndIndex = Math.Max(current.EndIndex, intervals[i].EndIndex);
+                    // Preserve tooltip from whichever interval has it
+                    if (string.IsNullOrEmpty(current.TooltipText) && !string.IsNullOrEmpty(intervals[i].TooltipText))
+                    {
+                        current.TooltipText = intervals[i].TooltipText;
+                        current.StateName = intervals[i].StateName;
+                    }
                 }
                 else
                 {
+                    // Different state - fill gap and start new interval
                     current.EndIndex = intervals[i].StartIndex - 1;
                     merged.Add(current);
                     current = intervals[i];

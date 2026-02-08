@@ -372,7 +372,7 @@ namespace IndiLogs_3._0.ViewModels
                         return;
                     }
 
-                    // IO Components - optimized with faster checks
+                    // IO Components - current IO_Mon pattern
                     if (msg.Length > 7 && (msg[0] == 'I' || msg[0] == 'i') &&
                         msg.StartsWith("IO_Mon:", StringComparison.OrdinalIgnoreCase))
                     {
@@ -410,9 +410,66 @@ namespace IndiLogs_3._0.ViewModels
                         }
                         catch { }
                     }
-                    // Axis Components - optimized
+                    // IO Components - optimized IO: pattern (20.01.2026)
+                    else if (msg.Length > 3 && (msg[0] == 'I' || msg[0] == 'i') &&
+                             msg.StartsWith("IO:", StringComparison.OrdinalIgnoreCase) &&
+                             !msg.StartsWith("IO_Mon:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            int colonIndex = msg.IndexOf(':');
+                            if (colonIndex < 0) return;
+
+                            string content = msg.Substring(colonIndex + 1);
+                            var parts = content.Split(',');
+
+                            if (parts.Length >= 2)
+                            {
+                                string subsystem = parts[0].Trim();
+                                string pair = parts[1].Trim();
+                                int eqIndex = pair.IndexOf('=');
+                                if (eqIndex > 0)
+                                {
+                                    string fullSymbolName = pair.Substring(0, eqIndex).Trim();
+                                    string componentName;
+
+                                    if (fullSymbolName.EndsWith("_MotTemp", StringComparison.OrdinalIgnoreCase))
+                                        componentName = fullSymbolName.Substring(0, fullSymbolName.Length - 8);
+                                    else if (fullSymbolName.EndsWith("_DrvTemp", StringComparison.OrdinalIgnoreCase))
+                                        componentName = fullSymbolName.Substring(0, fullSymbolName.Length - 8);
+                                    else
+                                        componentName = fullSymbolName;
+
+                                    ioComponents.TryAdd($"{subsystem}|{componentName}", 0);
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+                    // Axis Components - current AxisMon pattern
                     else if (msg.Length > 8 && (msg[0] == 'A' || msg[0] == 'a') &&
                              msg.StartsWith("AxisMon:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            int colonIndex = msg.IndexOf(':');
+                            if (colonIndex < 0) return;
+
+                            string content = msg.Substring(colonIndex + 1);
+                            var parts = content.Split(',');
+
+                            if (parts.Length >= 3)
+                            {
+                                string subsystem = parts[0].Trim();
+                                string motor = parts[1].Trim();
+                                axisComponents.TryAdd($"{subsystem}|{motor}", 0);
+                            }
+                        }
+                        catch { }
+                    }
+                    // Axis Components - optimized AxM: pattern (20.01.2026)
+                    else if (msg.Length > 4 && (msg[0] == 'A' || msg[0] == 'a') &&
+                             msg.StartsWith("AxM:", StringComparison.OrdinalIgnoreCase))
                     {
                         try
                         {

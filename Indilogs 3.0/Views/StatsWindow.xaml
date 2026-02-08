@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:skia="clr-namespace:SkiaSharp.Views.WPF;assembly=SkiaSharp.Views.WPF"
         mc:Ignorable="d"
         Title="Log Statistics Dashboard"
         Height="700" Width="1000"
@@ -263,7 +264,7 @@
                                     </Grid.RowDefinitions>
 
                                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
-                                        <TextBlock Text="ERRORS BY LOGGER" FontWeight="Bold" Foreground="{DynamicResource DangerColor}" FontSize="14"/>
+                                        <TextBlock Text="ERRORS BY METHOD" FontWeight="Bold" Foreground="{DynamicResource DangerColor}" FontSize="14"/>
                                         <TextBlock x:Name="AppLoggerErrorCountText" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="10,2,0,0"/>
                                     </StackPanel>
 
@@ -299,7 +300,7 @@
                                 </Grid>
                             </Border>
 
-                            <!-- Errors by Thread -->
+                            <!-- Errors by Logger -->
                             <Border Grid.Column="2" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="15">
                                 <Grid>
                                     <Grid.RowDefinitions>
@@ -308,7 +309,7 @@
                                     </Grid.RowDefinitions>
 
                                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
-                                        <TextBlock Text="ERRORS BY THREAD" FontWeight="Bold" Foreground="{DynamicResource DangerColor}" FontSize="14"/>
+                                        <TextBlock Text="ERRORS BY LOGGER" FontWeight="Bold" Foreground="{DynamicResource DangerColor}" FontSize="14"/>
                                         <TextBlock x:Name="AppThreadErrorCountText" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="10,2,0,0"/>
                                     </StackPanel>
 
@@ -345,7 +346,7 @@
                             </Border>
                         </Grid>
 
-                        <!-- Row 2: Thread Load + Logger Load Distribution -->
+                        <!-- Row 2: Logger Load + Method Load Distribution -->
                         <Grid Grid.Row="2" Margin="0,0,0,20">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -353,7 +354,7 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
-                            <!-- Thread Load Distribution -->
+                            <!-- Logger Load Distribution -->
                             <Border Grid.Column="0" Background="{DynamicResource BgCard}" CornerRadius="8" Padding="15">
                                 <Grid>
                                     <Grid.RowDefinitions>
@@ -362,7 +363,7 @@
                                     </Grid.RowDefinitions>
 
                                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
-                                        <TextBlock Text="THREAD LOAD DISTRIBUTION" FontWeight="Bold" Foreground="{DynamicResource PrimaryColor}" FontSize="14"/>
+                                        <TextBlock Text="LOGGER LOAD DISTRIBUTION" FontWeight="Bold" Foreground="{DynamicResource PrimaryColor}" FontSize="14"/>
                                         <TextBlock x:Name="AppThreadCountText" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="10,2,0,0"/>
                                     </StackPanel>
 
@@ -407,7 +408,7 @@
                                     </Grid.RowDefinitions>
 
                                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
-                                        <TextBlock Text="LOGGER LOAD DISTRIBUTION" FontWeight="Bold" Foreground="{DynamicResource SecondaryColor}" FontSize="14"/>
+                                        <TextBlock Text="METHOD LOAD DISTRIBUTION" FontWeight="Bold" Foreground="{DynamicResource PrimaryColor}" FontSize="14"/>
                                         <TextBlock x:Name="AppLoggerCountText" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="10,2,0,0"/>
                                     </StackPanel>
 
@@ -427,7 +428,7 @@
                                                                ToolTip="{Binding FullName}"/>
 
                                                     <Border Grid.Column="1" Height="16" Margin="10,0" CornerRadius="3" Background="{DynamicResource BgPanel}">
-                                                        <Border Background="{DynamicResource SecondaryColor}"
+                                                        <Border Background="{DynamicResource PrimaryColor}"
                                                                 Width="{Binding BarWidth}"
                                                                 HorizontalAlignment="Left"
                                                                 CornerRadius="3"/>
@@ -540,8 +541,10 @@
                                         <TextBlock x:Name="LoggerChartCountText" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="10,2,0,0"/>
                                     </StackPanel>
 
-                                    <Border Grid.Row="1" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="4">
-                                        <Grid x:Name="LoggerBarChartHost" Background="{DynamicResource BgPanel}"/>
+                                    <Border Grid.Row="1" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
+                                        <skia:SKElement x:Name="BarChartCanvas" PaintSurface="BarChartCanvas_PaintSurface"
+                                                        MouseMove="BarChartCanvas_MouseMove" MouseLeftButtonDown="BarChartCanvas_MouseLeftButtonDown"
+                                                        MouseLeave="BarChartCanvas_MouseLeave"/>
                                     </Border>
                                 </Grid>
                             </Border>
@@ -559,8 +562,10 @@
                                         <TextBlock x:Name="StateChartCountText" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="10,2,0,0"/>
                                     </StackPanel>
 
-                                    <Border Grid.Row="1" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="4">
-                                        <Grid x:Name="StatePieChartHost" Background="{DynamicResource BgPanel}"/>
+                                    <Border Grid.Row="1" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
+                                        <skia:SKElement x:Name="PieChartCanvas" PaintSurface="PieChartCanvas_PaintSurface"
+                                                        MouseMove="PieChartCanvas_MouseMove" MouseLeftButtonDown="PieChartCanvas_MouseLeftButtonDown"
+                                                        MouseLeave="PieChartCanvas_MouseLeave"/>
                                     </Border>
                                 </Grid>
                             </Border>
@@ -579,8 +584,10 @@
                                     <TextBlock x:Name="TimelineChartInfo" Text="" Foreground="{DynamicResource TextSecondary}" FontSize="12" Margin="10,2,0,0"/>
                                 </StackPanel>
 
-                                <Border Grid.Row="1" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="4">
-                                    <Grid x:Name="ErrorTimelineChartHost" Background="{DynamicResource BgPanel}"/>
+                                <Border Grid.Row="1" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
+                                    <skia:SKElement x:Name="TimelineChartCanvas" PaintSurface="TimelineChartCanvas_PaintSurface"
+                                                    MouseMove="TimelineChartCanvas_MouseMove" MouseLeftButtonDown="TimelineChartCanvas_MouseLeftButtonDown"
+                                                    MouseLeave="TimelineChartCanvas_MouseLeave"/>
                                 </Border>
                             </Grid>
                         </Border>

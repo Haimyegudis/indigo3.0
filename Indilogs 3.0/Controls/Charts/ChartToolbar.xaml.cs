@@ -19,6 +19,8 @@ namespace IndiLogs_3._0.Controls.Charts
         public event Action OnAddReferenceLineRequested;
         public event Action<bool> OnTogglePanelRequested;
         public event Action<bool> OnLayoutChanged; // true = grid, false = stack
+        public event Action<bool> OnSmoothChanged;
+        public event Action<int> OnSmoothWindowChanged;
 
         private bool _isPlaying = false;
         private bool _isPanelVisible = true;
@@ -112,6 +114,22 @@ namespace IndiLogs_3._0.Controls.Charts
             _isPanelVisible = !_isPanelVisible;
             TogglePanelButton.Content = _isPanelVisible ? "◀" : "▶";
             OnTogglePanelRequested?.Invoke(_isPanelVisible);
+        }
+
+        private void SmoothCheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            OnSmoothChanged?.Invoke(SmoothCheckBox.IsChecked == true);
+        }
+
+        private void SmoothWindowSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            int windowSize = (int)SmoothWindowSlider.Value;
+            // Ensure odd window for symmetric smoothing
+            if (windowSize % 2 == 0) windowSize++;
+            if (SmoothWindowLabel != null)
+                SmoothWindowLabel.Text = windowSize.ToString();
+            if (SmoothCheckBox.IsChecked == true)
+                OnSmoothWindowChanged?.Invoke(windowSize);
         }
     }
 }

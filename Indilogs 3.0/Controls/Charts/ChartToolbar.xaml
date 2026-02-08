@@ -128,6 +128,21 @@
                       Margin="4,0" FontSize="11" Checked="ShowStatesCheckBox_Changed" Unchecked="ShowStatesCheckBox_Changed"
                       ToolTip="Show state backgrounds"/>
 
+            <CheckBox x:Name="SmoothCheckBox" Content="Smooth" IsChecked="False"
+                      Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center"
+                      Margin="4,0" FontSize="11" Checked="SmoothCheckBox_Changed" Unchecked="SmoothCheckBox_Changed"
+                      ToolTip="Noise reduction (Moving Average smoothing)"/>
+
+            <Slider x:Name="SmoothWindowSlider" Width="80" Minimum="3" Maximum="51"
+                    Value="10" IsSnapToTickEnabled="True" TickFrequency="2"
+                    VerticalAlignment="Center" Margin="2,0"
+                    ValueChanged="SmoothWindowSlider_ValueChanged"
+                    IsEnabled="{Binding IsChecked, ElementName=SmoothCheckBox}"
+                    ToolTip="Smoothing window size"/>
+            <TextBlock x:Name="SmoothWindowLabel" Text="10" FontSize="10"
+                       Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center"
+                       Margin="2,0" MinWidth="16"/>
+
             <Button x:Name="ZoomFitButton" Content="Fit" Click="ZoomFitButton_Click"
                     Style="{StaticResource CompactToolbarBtn}" ToolTip="Fit all data in view"/>
 

@@ -25,12 +25,20 @@ namespace IndiLogs_3._0.Models
             set { _isSelected = value; OnPropertyChanged(); }
         }
 
-        // --- חדש: לסימון ויזואלי של לוגר מוסתר ---
+        // --- סימון ויזואלי של לוגר מוסתר ---
         private bool _isHidden;
         public bool IsHidden
         {
             get => _isHidden;
             set { _isHidden = value; OnPropertyChanged(); }
+        }
+
+        // --- סימון ויזואלי של לוגר פעיל (מודגש בירוק) ---
+        private bool _isActive;
+        public bool IsActive
+        {
+            get => _isActive;
+            set { _isActive = value; OnPropertyChanged(); }
         }
 
         public string DisplayText => $"{Name} ({Count})";

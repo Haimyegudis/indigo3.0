@@ -584,20 +584,32 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 if (_treeShowOnlyLogger != null)
                 {
-                    query = query.Where(l => l.Logger == _treeShowOnlyLogger);
+                    // Show only this specific logger (prefix match to include children)
+                    string showLogger = _treeShowOnlyLogger;
+                    query = query.Where(l => l.Logger != null &&
+                        (l.Logger.Equals(showLogger, StringComparison.OrdinalIgnoreCase) ||
+                         l.Logger.StartsWith(showLogger + ".", StringComparison.OrdinalIgnoreCase)));
                 }
                 else if (_treeShowOnlyPrefix != null)
                 {
-                    query = query.Where(l => l.Logger != null && (l.Logger == _treeShowOnlyPrefix || l.Logger.StartsWith(_treeShowOnlyPrefix + ".")));
+                    string showPrefix = _treeShowOnlyPrefix;
+                    query = query.Where(l => l.Logger != null &&
+                        (l.Logger.Equals(showPrefix, StringComparison.OrdinalIgnoreCase) ||
+                         l.Logger.StartsWith(showPrefix + ".", StringComparison.OrdinalIgnoreCase)));
                 }
                 else if (_treeHiddenLoggers.Count > 0 || _treeHiddenPrefixes.Count > 0)
                 {
+                    // Copy to local variables for thread safety with PLINQ
+                    var hiddenLoggers = new HashSet<string>(_treeHiddenLoggers, StringComparer.OrdinalIgnoreCase);
+                    var hiddenPrefixes = _treeHiddenPrefixes.ToList();
                     query = query.Where(l =>
                     {
                         if (l.Logger == null) return true;
-                        if (_treeHiddenLoggers.Contains(l.Logger)) return false;
-                        foreach (var prefix in _treeHiddenPrefixes)
-                            if (l.Logger == prefix || l.Logger.StartsWith(prefix + ".")) return false;
+                        if (hiddenLoggers.Contains(l.Logger)) return false;
+                        foreach (var prefix in hiddenPrefixes)
+                            if (l.Logger.Equals(prefix, StringComparison.OrdinalIgnoreCase) ||
+                                l.Logger.StartsWith(prefix + ".", StringComparison.OrdinalIgnoreCase))
+                                return false;
                         return true;
                     });
                 }
@@ -726,6 +738,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             _treeHiddenPrefixes.Clear();
             _treeShowOnlyLogger = null;
             _treeShowOnlyPrefix = null;
+
+            // Reset visual state on all tree nodes
+            ResetTreeVisualState();
         }
 
         public void ToggleFilterView(bool show)
@@ -1336,142 +1351,231 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         private void ExecuteTreeShowThis(object obj)
         {
-            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
-            System.Diagnostics.Debug.WriteLine($"[TREE] ExecuteTreeShowThis CALLED");
-            System.Diagnostics.Debug.WriteLine($"[TREE] Parameter: {obj?.GetType().Name ?? "NULL"}");
-
             if (obj is LoggerNode node)
             {
-                System.Diagnostics.Debug.WriteLine($"[TREE] Logger: {node.FullPath}");
-                System.Diagnostics.Debug.WriteLine($"[TREE] Before: IsHidden={node.IsHidden}");
-                System.Diagnostics.Debug.WriteLine($"[TREE] Before: HiddenLoggers count={_treeHiddenLoggers.Count}");
-
+                // Clear any "show only" filters
                 _treeShowOnlyLogger = null;
                 _treeShowOnlyPrefix = null;
-                bool wasRemoved = _treeHiddenLoggers.Remove(node.FullPath);
+
+                // Remove this exact logger from hidden sets
+                _treeHiddenLoggers.Remove(node.FullPath);
+
+                // Also remove from prefix-hidden if this node was hidden via "Hide With Children"
+                _treeHiddenPrefixes.Remove(node.FullPath);
+
+                // Remove any parent prefix that covers this node
+                var prefixesToRemove = _treeHiddenPrefixes
+                    .Where(p => node.FullPath == p || node.FullPath.StartsWith(p + "."))
+                    .ToList();
+                foreach (var p in prefixesToRemove)
+                    _treeHiddenPrefixes.Remove(p);
+
+                // Update visual state
                 node.IsHidden = false;
+                node.IsActive = false;
+                SetChildrenVisualState(node, false, false);
 
-                System.Diagnostics.Debug.WriteLine($"[TREE] Removed from hidden: {wasRemoved}");
-                System.Diagnostics.Debug.WriteLine($"[TREE] After: IsHidden={node.IsHidden}");
-                System.Diagnostics.Debug.WriteLine($"[TREE] After: HiddenLoggers count={_treeHiddenLoggers.Count}");
-                System.Diagnostics.Debug.WriteLine($"[TREE] Setting IsAppFilterActive=true");
-
-                IsAppFilterActive = true;
-
-                System.Diagnostics.Debug.WriteLine($"[TREE] Calling ToggleFilterView(true)");
-                ToggleFilterView(true);
-
-                System.Diagnostics.Debug.WriteLine($"[TREE] Result: AppDevLogsFiltered count={_appDevLogsFiltered?.Count ?? 0}");
+                // If no more filters active, turn off filter
+                bool hasAnyTreeFilter = _treeHiddenLoggers.Count > 0 || _treeHiddenPrefixes.Count > 0;
+                IsAppFilterActive = hasAnyTreeFilter || HasAnyColumnFilter();
+                if (!IsAppFilterActive)
+                    ResetAllVisualStates(); // clear all icons when no filters
+                ToggleFilterView(IsAppFilterActive);
             }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"[TREE] ❌ NOT LoggerNode!");
-            }
-            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
         }
 
         private void ExecuteTreeHideThis(object obj)
         {
-            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
-            System.Diagnostics.Debug.WriteLine($"[TREE] ExecuteTreeHideThis CALLED");
-            System.Diagnostics.Debug.WriteLine($"[TREE] Parameter: {obj?.GetType().Name ?? "NULL"}");
-
             if (obj is LoggerNode node)
             {
-                System.Diagnostics.Debug.WriteLine($"[TREE] Logger: {node.FullPath}");
-                System.Diagnostics.Debug.WriteLine($"[TREE] Before: IsHidden={node.IsHidden}");
-                System.Diagnostics.Debug.WriteLine($"[TREE] Before: HiddenLoggers count={_treeHiddenLoggers.Count}");
-
+                // Clear any "show only" filters and reset active states
+                if (_treeShowOnlyPrefix != null || _treeShowOnlyLogger != null)
+                {
+                    ResetAllVisualStates();
+                }
                 _treeShowOnlyLogger = null;
                 _treeShowOnlyPrefix = null;
-                _treeHiddenLoggers.Add(node.FullPath);
-                node.IsHidden = true;
 
-                System.Diagnostics.Debug.WriteLine($"[TREE] After: IsHidden={node.IsHidden}");
-                System.Diagnostics.Debug.WriteLine($"[TREE] After: HiddenLoggers count={_treeHiddenLoggers.Count}");
-                System.Diagnostics.Debug.WriteLine($"[TREE] Hidden loggers: {string.Join(", ", _treeHiddenLoggers)}");
-                System.Diagnostics.Debug.WriteLine($"[TREE] Setting IsAppFilterActive=true");
+                // Hide this node and all its children using prefix match
+                if (node.Children != null && node.Children.Count > 0)
+                {
+                    // Parent node: use prefix-based hiding (hides node and all children)
+                    _treeHiddenPrefixes.Add(node.FullPath);
+                }
+                else
+                {
+                    // Leaf node: use exact match hiding
+                    _treeHiddenLoggers.Add(node.FullPath);
+                }
+
+                // Update visual state - mark hidden with X
+                node.IsHidden = true;
+                node.IsActive = false;
+                SetChildrenVisualState(node, true, false);
 
                 IsAppFilterActive = true;
-
-                System.Diagnostics.Debug.WriteLine($"[TREE] Calling ToggleFilterView(true)");
                 ToggleFilterView(true);
-
-                System.Diagnostics.Debug.WriteLine($"[TREE] Result: AppDevLogsFiltered count={_appDevLogsFiltered?.Count ?? 0}");
             }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"[TREE] ❌ NOT LoggerNode!");
-            }
-            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
         }
 
         private void ExecuteTreeShowOnlyThis(object obj)
         {
-            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
-            System.Diagnostics.Debug.WriteLine($"[TREE] ExecuteTreeShowOnlyThis CALLED");
-
             if (obj is LoggerNode node)
             {
-                System.Diagnostics.Debug.WriteLine($"[TREE] Logger: {node.FullPath}");
                 ResetTreeFilters();
-                _treeShowOnlyLogger = node.FullPath;
-                System.Diagnostics.Debug.WriteLine($"[TREE] ShowOnlyLogger set to: {_treeShowOnlyLogger}");
+
+                // "Show Only This" uses prefix matching so it includes children
+                _treeShowOnlyPrefix = node.FullPath;
+
+                // Visual: mark ALL loggers as hidden, then mark only the selected one (+ children) as active
+                MarkAllNodesShowOnly(node.FullPath);
+
                 IsAppFilterActive = true;
                 ToggleFilterView(true);
-                System.Diagnostics.Debug.WriteLine($"[TREE] Result: AppDevLogsFiltered count={_appDevLogsFiltered?.Count ?? 0}");
             }
-            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
         }
 
         private void ExecuteTreeShowWithChildren(object obj)
         {
-            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
-            System.Diagnostics.Debug.WriteLine($"[TREE] ExecuteTreeShowWithChildren CALLED");
-
             if (obj is LoggerNode node)
             {
-                System.Diagnostics.Debug.WriteLine($"[TREE] Logger: {node.FullPath}");
                 ResetTreeFilters();
+
                 _treeShowOnlyPrefix = node.FullPath;
-                System.Diagnostics.Debug.WriteLine($"[TREE] ShowOnlyPrefix set to: {_treeShowOnlyPrefix}");
+
+                // Visual: mark ALL loggers as hidden, then mark only the selected one (+ children) as active
+                MarkAllNodesShowOnly(node.FullPath);
+
                 IsAppFilterActive = true;
                 ToggleFilterView(true);
-                System.Diagnostics.Debug.WriteLine($"[TREE] Result: AppDevLogsFiltered count={_appDevLogsFiltered?.Count ?? 0}");
             }
-            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
         }
 
         private void ExecuteTreeHideWithChildren(object obj)
         {
-            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
-            System.Diagnostics.Debug.WriteLine($"[TREE] ExecuteTreeHideWithChildren CALLED");
-
             if (obj is LoggerNode node)
             {
-                System.Diagnostics.Debug.WriteLine($"[TREE] Logger: {node.FullPath}");
+                // Clear any "show only" filters and reset active states
+                if (_treeShowOnlyPrefix != null || _treeShowOnlyLogger != null)
+                {
+                    ResetAllVisualStates();
+                }
                 _treeShowOnlyLogger = null;
                 _treeShowOnlyPrefix = null;
                 _treeHiddenPrefixes.Add(node.FullPath);
+
+                // Update visual state for node and all children - mark with X
                 node.IsHidden = true;
-                System.Diagnostics.Debug.WriteLine($"[TREE] Added to HiddenPrefixes: {node.FullPath}");
-                System.Diagnostics.Debug.WriteLine($"[TREE] HiddenPrefixes count: {_treeHiddenPrefixes.Count}");
+                node.IsActive = false;
+                SetChildrenVisualState(node, true, false);
+
                 IsAppFilterActive = true;
                 ToggleFilterView(true);
-                System.Diagnostics.Debug.WriteLine($"[TREE] Result: AppDevLogsFiltered count={_appDevLogsFiltered?.Count ?? 0}");
             }
-            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
         }
 
         private void ExecuteTreeShowAll(object obj)
         {
-            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
-            System.Diagnostics.Debug.WriteLine($"[TREE] ExecuteTreeShowAll CALLED");
             ResetTreeFilters();
-            IsAppFilterActive = false;
-            ToggleFilterView(false);
-            System.Diagnostics.Debug.WriteLine($"[TREE] Result: AppDevLogsFiltered count={_appDevLogsFiltered?.Count ?? 0}");
-            System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════");
+            ResetAllVisualStates();
+
+            // Check if any non-tree filters are active
+            IsAppFilterActive = HasAnyColumnFilter();
+            ToggleFilterView(IsAppFilterActive);
+        }
+
+        /// <summary>
+        /// Recursively set IsHidden and IsActive on all children of a node
+        /// </summary>
+        private void SetChildrenVisualState(LoggerNode node, bool isHidden, bool isActive)
+        {
+            if (node.Children == null) return;
+            foreach (var child in node.Children)
+            {
+                child.IsHidden = isHidden;
+                child.IsActive = isActive;
+                SetChildrenVisualState(child, isHidden, isActive);
+            }
+        }
+
+        /// <summary>
+        /// Mark all nodes as hidden, then mark the matching node (by prefix) and its children as active.
+        /// This gives clear visual feedback for "Show Only This" / "Show With Children".
+        /// </summary>
+        private void MarkAllNodesShowOnly(string activePrefix)
+        {
+            foreach (var rootNode in LoggerTreeRoot)
+            {
+                MarkNodeShowOnly(rootNode, activePrefix);
+            }
+        }
+
+        private void MarkNodeShowOnly(LoggerNode node, string activePrefix)
+        {
+            bool isMatch = node.FullPath != null &&
+                (node.FullPath.Equals(activePrefix, System.StringComparison.OrdinalIgnoreCase) ||
+                 node.FullPath.StartsWith(activePrefix + ".", System.StringComparison.OrdinalIgnoreCase));
+
+            // Also check if this node is a parent/ancestor of the active prefix
+            bool isAncestor = activePrefix.StartsWith(node.FullPath + ".", System.StringComparison.OrdinalIgnoreCase);
+
+            if (isMatch)
+            {
+                // This node matches - mark it and all children as active (green)
+                node.IsHidden = false;
+                node.IsActive = true;
+                SetChildrenVisualState(node, false, true);
+            }
+            else if (isAncestor)
+            {
+                // This is a parent of the target - keep normal (not hidden, not active)
+                node.IsHidden = false;
+                node.IsActive = false;
+                // Recurse into children to find the matching one
+                if (node.Children != null)
+                {
+                    foreach (var child in node.Children)
+                        MarkNodeShowOnly(child, activePrefix);
+                }
+            }
+            else
+            {
+                // Not related - mark as hidden (greyed out with X)
+                node.IsHidden = true;
+                node.IsActive = false;
+                SetChildrenVisualState(node, true, false);
+            }
+        }
+
+        /// <summary>
+        /// Reset all visual states (IsHidden + IsActive) on all tree nodes
+        /// </summary>
+        private void ResetAllVisualStates()
+        {
+            foreach (var rootNode in LoggerTreeRoot)
+            {
+                rootNode.IsHidden = false;
+                rootNode.IsActive = false;
+                SetChildrenVisualState(rootNode, false, false);
+            }
+        }
+
+        /// <summary>
+        /// Reset visual IsHidden state on all tree nodes (backward compat)
+        /// </summary>
+        private void ResetTreeVisualState()
+        {
+            ResetAllVisualStates();
+        }
+
+        /// <summary>
+        /// Check if any column-based (non-tree) filters are active
+        /// </summary>
+        private bool HasAnyColumnFilter()
+        {
+            return _activeLoggerFilters.Any() || _activeThreadFilters.Any() || _activeMethodFilters.Any() ||
+                   (_appFilterRoot != null && _appFilterRoot.Children.Count > 0) ||
+                   _isAppTimeFocusActive;
         }
 
         private void OpenTimeRangeFilter(object obj)

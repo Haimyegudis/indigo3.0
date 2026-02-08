@@ -123,6 +123,58 @@ namespace IndiLogs_3._0.Models.Charts
             set { _currentValueDisplay = value; OnPropertyChanged(nameof(CurrentValueDisplay)); }
         }
 
+        private bool _isSmoothed = false;
+        public bool IsSmoothed
+        {
+            get => _isSmoothed;
+            set
+            {
+                _isSmoothed = value;
+                if (_isSmoothed && SmoothedData == null)
+                    CalculateSmoothing();
+                OnPropertyChanged(nameof(IsSmoothed));
+            }
+        }
+
+        public double[] SmoothedData { get; set; }
+
+        /// <summary>
+        /// Calculate Moving Average smoothing for noise reduction
+        /// </summary>
+        public void CalculateSmoothing(int windowSize = 10)
+        {
+            if (Data == null || Data.Length == 0) return;
+
+            SmoothedData = new double[Data.Length];
+            int halfWindow = windowSize / 2;
+
+            for (int i = 0; i < Data.Length; i++)
+            {
+                if (double.IsNaN(Data[i]))
+                {
+                    SmoothedData[i] = double.NaN;
+                    continue;
+                }
+
+                double sum = 0;
+                int count = 0;
+
+                int start = Math.Max(0, i - halfWindow);
+                int end = Math.Min(Data.Length - 1, i + halfWindow);
+
+                for (int j = start; j <= end; j++)
+                {
+                    if (!double.IsNaN(Data[j]))
+                    {
+                        sum += Data[j];
+                        count++;
+                    }
+                }
+
+                SmoothedData[i] = count > 0 ? sum / count : double.NaN;
+            }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
@@ -209,6 +261,7 @@ namespace IndiLogs_3._0.Models.Charts
         public int EndIndex;
         public int StateId;
         public string StateName;
+        public string TooltipText;
     }
 
     /// <summary>

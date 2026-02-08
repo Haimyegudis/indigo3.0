@@ -12,6 +12,8 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
         <converters:AnnotationTextBrushConverter x:Key="AnnotationTextBrushConverter"/>
+        <converters:EnumBoolConverter x:Key="EnumBoolConverter"/>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
 
 
         <SolidColorBrush x:Key="BgDark" Color="#0D1B2A"/>

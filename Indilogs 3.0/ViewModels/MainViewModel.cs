@@ -37,6 +37,7 @@ namespace IndiLogs_3._0.ViewModels
         public ConfigExplorerViewModel ConfigVM { get; private set; }
         public VisualTimelineViewModel VisualTimelineVM { get; set; } = new VisualTimelineViewModel();
         public ChartTabViewModel ChartVM { get; private set; }
+        public CprAnalysisViewModel CprVM { get; private set; }
 
         private bool _isVisualMode;
         public bool IsVisualMode
@@ -360,12 +361,14 @@ namespace IndiLogs_3._0.ViewModels
                     OnPropertyChanged(nameof(IsFilterOutActive));
                     OnPropertyChanged(nameof(IsPLCTabSelected));
                     OnPropertyChanged(nameof(IsAppTabSelected));
+                    OnPropertyChanged(nameof(IsExportVisible));
                 }
             }
         }
 
         public bool IsPLCTabSelected => _selectedTabIndex == 0 || _selectedTabIndex == 1;
         public bool IsAppTabSelected => _selectedTabIndex == 2;
+        public bool IsExportVisible => _selectedTabIndex == 0 || _selectedTabIndex == 1 || _selectedTabIndex == 8;
 
 
         private int _leftTabIndex;
@@ -792,6 +795,7 @@ namespace IndiLogs_3._0.ViewModels
             LiveVM = new LiveMonitoringViewModel(this, SessionVM, FilterVM, CaseVM, _logService, _coloringService);
             ConfigVM = new ConfigExplorerViewModel(this, SessionVM);
             ChartVM = new ChartTabViewModel(this);
+            CprVM = new CprAnalysisViewModel();
 
             // Set dependencies
             SessionVM.SetDependencies(FilterVM, CaseVM, ConfigVM, LiveVM);
@@ -1520,7 +1524,7 @@ namespace IndiLogs_3._0.ViewModels
             }
 
             // יצירת החלון עם שני הפרמטרים וקולבק לפילטור
-            var statsWindow = new Views.StatsWindow(plcLogs, appLogs, ApplyChartDrillDownFilter);
+            var statsWindow = new Views.StatsWindow(plcLogs, appLogs, ApplyChartDrillDownFilter, NavigateToLogFromStats);
             statsWindow.Title = "Log Statistics Dashboard";
             WindowManager.OpenWindow(statsWindow);
         }
@@ -1564,6 +1568,24 @@ namespace IndiLogs_3._0.ViewModels
             {
                 MessageBox.Show($"Error applying filter: {ex.Message}", "Filter Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void NavigateToLogFromStats(LogEntry log)
+        {
+            if (log == null) return;
+            try
+            {
+                // Determine which tab to switch to based on log type
+                bool isAppLog = !string.IsNullOrEmpty(log.Logger) && !log.Logger.Contains("E1.PLC");
+                SelectedTabIndex = isAppLog ? 2 : 0;
+
+                SelectedLog = log;
+                ScrollToLog(log);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[NAVIGATE FROM STATS] Error: {ex.Message}");
             }
         }
 
@@ -1656,6 +1678,7 @@ namespace IndiLogs_3._0.ViewModels
         private void ResetVisualHiddenState(LoggerNode node)
         {
             node.IsHidden = false;
+            node.IsActive = false;
             foreach (var child in node.Children) ResetVisualHiddenState(child);
         }
         private void ViewLogDetails(object parameter)

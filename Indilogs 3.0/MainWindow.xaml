@@ -8,6 +8,7 @@
         xmlns:charts="clr-namespace:IndiLogs_3._0.Controls.Charts"
         xmlns:views="clr-namespace:IndiLogs_3._0.Views"
         xmlns:converters="clr-namespace:IndiLogs_3._0.Converters"
+        xmlns:cpr="clr-namespace:IndiLogs_3._0.Controls.Cpr"
         mc:Ignorable="d"
         Title="{Binding WindowTitle}"
         Height="700" Width="1100"
@@ -160,7 +161,7 @@
                                                 <TextBlock Text="🔄 States"/>
                                             </Viewbox>
                                         </Button>
-                                        <Button Command="{Binding ExportParsedDataCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsPLCTabSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Button Command="{Binding ExportParsedDataCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsExportVisible, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
                                                 <TextBlock Text="📊 Export CSV"/>
                                             </Viewbox>
@@ -256,31 +257,89 @@
                                     <Style TargetType="TreeViewItem">
                                         <Setter Property="IsExpanded" Value="False"/>
                                         <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                        <Setter Property="Opacity" Value="1"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsHidden}" Value="True">
-                                                <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
-                                                <Setter Property="FontStyle" Value="Italic"/>
+                                                <Setter Property="Opacity" Value="0.65"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </TreeView.ItemContainerStyle>
                                 <TreeView.ItemTemplate>
                                     <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                                        <Grid Margin="0,2">
+                                        <Grid Margin="0,2" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=TreeView}}">
                                             <Grid.ContextMenu>
                                                 <ContextMenu>
-                                                    <MenuItem Header="Show This" Command="{Binding DataContext.TreeShowThisCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
-                                                    <MenuItem Header="Hide This" Command="{Binding DataContext.TreeHideThisCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
-                                                    <MenuItem Header="Show Only This" Command="{Binding DataContext.TreeShowOnlyThisCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
-                                                    <MenuItem Header="Show With Children" Command="{Binding DataContext.TreeShowWithChildrenCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
-                                                    <MenuItem Header="Hide With Children" Command="{Binding DataContext.TreeHideWithChildrenCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                                    <MenuItem Header="Show This" Command="{Binding PlacementTarget.Tag.TreeShowThisCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                    <MenuItem Header="Hide This" Command="{Binding PlacementTarget.Tag.TreeHideThisCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                    <MenuItem Header="Show Only This" Command="{Binding PlacementTarget.Tag.TreeShowOnlyThisCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                    <MenuItem Header="Show With Children" Command="{Binding PlacementTarget.Tag.TreeShowWithChildrenCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                    <MenuItem Header="Hide With Children" Command="{Binding PlacementTarget.Tag.TreeHideWithChildrenCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                     <Separator/>
-                                                    <MenuItem Header="Show All" Command="{Binding DataContext.TreeShowAllCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                    <MenuItem Header="Show All" Command="{Binding PlacementTarget.Tag.TreeShowAllCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                 </ContextMenu>
                                             </Grid.ContextMenu>
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Name}" ToolTip="{Binding FullPath}" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding Count, StringFormat=' ({0})'}" Foreground="{DynamicResource TextSecondary}" Margin="5,0,0,0" VerticalAlignment="Center"/>
+                                                <!-- Status icon: green checkmark for active, red X for hidden -->
+                                                <TextBlock Text="&#x2715;" Foreground="{DynamicResource DangerColor}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,4,0">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsHidden}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Text="&#x2713;" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,4,0">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{DynamicResource SuccessColor}"/>
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <!-- Logger name: green when active, dimmed when hidden -->
+                                                <TextBlock ToolTip="{Binding FullPath}" VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="{Binding Name}"/>
+                                                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsHidden}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource SuccessColor}"/>
+                                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <!-- Count -->
+                                                <TextBlock Text="{Binding Count, StringFormat=' ({0})'}" Margin="5,0,0,0" VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsHidden}" Value="True">
+                                                                    <Setter Property="Foreground" Value="#88808080"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource SuccessColor}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
                                             </StackPanel>
                                         </Grid>
                                     </HierarchicalDataTemplate>
@@ -325,7 +384,7 @@
                                                 <TextBlock Text="🔄 States"/>
                                             </Viewbox>
                                         </Button>
-                                        <Button Command="{Binding ExportParsedDataCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsPLCTabSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Button Command="{Binding ExportParsedDataCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsExportVisible, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
                                                 <TextBlock Text="📊 Export CSV"/>
                                             </Viewbox>
@@ -770,6 +829,32 @@
                         </TabItem.HeaderTemplate>
                         <charts:ChartTabControl x:Name="ChartTab"/>
                     </TabItem>
+
+                    <TabItem Header="CPR">
+                        <TabItem.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="CPR" VerticalAlignment="Center"/>
+                                    <Button Content="&#x29C9;" FontSize="10" Margin="6,0,0,0" Padding="2,0" VerticalAlignment="Center" Cursor="Hand"
+                                            ToolTip="Detach to separate window" Click="DetachTab_Click"
+                                            Background="Transparent" BorderThickness="0"
+                                            Foreground="{DynamicResource TextSecondary}" Opacity="0.5">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Opacity" Value="1"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </TabItem.HeaderTemplate>
+                        <cpr:CprAnalysisControl x:Name="CprTab" DataContext="{Binding CprVM}"/>
+                    </TabItem>
                 </TabControl>
 
                 <GridSplitter Grid.Row="2" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Center" Background="#444" ShowsPreview="True">
@@ -794,6 +879,10 @@
                             <Style.Triggers>
                                 <!-- Hide bottom panel when Charts tab is selected (index 8) -->
                                 <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="8">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <!-- Hide bottom panel when CPR tab is selected (index 9) -->
+                                <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="9">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>
                             </Style.Triggers>

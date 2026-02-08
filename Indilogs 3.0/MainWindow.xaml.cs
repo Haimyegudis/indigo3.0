@@ -211,7 +211,12 @@ namespace IndiLogs_3._0
             {
                 // Stop if we've gone past the tab header into content
                 if (source is TabControl) return null;
-                source = VisualTreeHelper.GetParent(source);
+
+                // Use VisualTreeHelper for Visual/Visual3D, LogicalTreeHelper for ContentElements (e.g. Run)
+                if (source is System.Windows.Media.Visual || source is System.Windows.Media.Media3D.Visual3D)
+                    source = VisualTreeHelper.GetParent(source);
+                else
+                    source = LogicalTreeHelper.GetParent(source);
             }
 
             if (source is TabItem tabItem && MainTabs.Items.Contains(tabItem))
@@ -321,6 +326,17 @@ namespace IndiLogs_3._0
                         RightSplitterColumn.Width = new GridLength(0);
                     }
                     System.Diagnostics.Debug.WriteLine($"[PANEL SYNC] Right panel visibility changed to {vm.IsRightPanelVisible}, Column width = {RightPanelColumn.Width}");
+                }
+            }
+            else if (e.PropertyName == nameof(MainViewModel.IsDarkMode))
+            {
+                if (sender is MainViewModel vm)
+                {
+                    // Update Charts SkiaSharp theme
+                    ChartTab?.SetLightTheme(!vm.IsDarkMode);
+
+                    // Update CPR Charts SkiaSharp theme
+                    CprTab?.UpdateChartTheme();
                 }
             }
         }
@@ -493,6 +509,9 @@ namespace IndiLogs_3._0
         /// NOTE: WPF DataGrid with VirtualizingStackPanel uses ITEM-BASED scrolling (VerticalOffset = item index),
         /// not pixel-based scrolling. So we save/restore in terms of item indices.
         /// </summary>
+        private int _scrollPreserveRetryCount = 0;
+        private const int MAX_SCROLL_PRESERVE_RETRIES = 3;
+
         private void ScrollToLogPreservingPosition(LogEntry log, bool preservePosition)
         {
             if (log == null) return;
@@ -502,7 +521,7 @@ namespace IndiLogs_3._0
             {
                 try
                 {
-                    System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] Looking for log in grids...");
+                    System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] Looking for log in grids... (retry={_scrollPreserveRetryCount})");
 
                     DataGrid targetGrid = FindGridForLog(log);
                     string gridName = targetGrid?.Name ?? "";
@@ -510,15 +529,52 @@ namespace IndiLogs_3._0
                     if (targetGrid == null)
                     {
                         System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] Log not found in any grid. PlcLogsTab Items.Count={PlcLogsTab?.LogsGrid?.InnerDataGrid?.Items?.Count ?? -1}");
+
+                        // Retry: grid items may not be populated yet after filter clear
+                        if (_scrollPreserveRetryCount < MAX_SCROLL_PRESERVE_RETRIES)
+                        {
+                            _scrollPreserveRetryCount++;
+                            System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] Scheduling retry #{_scrollPreserveRetryCount}...");
+                            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(() =>
+                            {
+                                ScrollToLogPreservingPosition(log, preservePosition);
+                            }));
+                        }
+                        else
+                        {
+                            _scrollPreserveRetryCount = 0;
+                        }
                         return;
                     }
+
+                    // Force layout update to ensure virtualized items are materialized
+                    targetGrid.UpdateLayout();
 
                     int newLogIndex = targetGrid.Items.IndexOf(log);
                     if (newLogIndex < 0)
                     {
-                        System.Diagnostics.Debug.WriteLine("[SCROLL PRESERVE] Log index not found");
+                        System.Diagnostics.Debug.WriteLine("[SCROLL PRESERVE] Log index not found after UpdateLayout");
+
+                        // Retry: items may not be fully loaded yet
+                        if (_scrollPreserveRetryCount < MAX_SCROLL_PRESERVE_RETRIES)
+                        {
+                            _scrollPreserveRetryCount++;
+                            System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] Scheduling retry #{_scrollPreserveRetryCount}...");
+                            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(() =>
+                            {
+                                ScrollToLogPreservingPosition(log, preservePosition);
+                            }));
+                        }
+                        else
+                        {
+                            _scrollPreserveRetryCount = 0;
+                            MapsToLogRow(log); // Final fallback
+                        }
                         return;
                     }
+
+                    // Success - reset retry counter
+                    _scrollPreserveRetryCount = 0;
 
                     // Get or find the ScrollViewer
                     ScrollViewer scrollViewer = null;
@@ -575,11 +631,12 @@ namespace IndiLogs_3._0
                     _savedLogOffsetInViewport = -1;
                     _savedScrollOffset = -1;
 
-                    System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] ✅ Scrolled to offset {targetOffset} (log at row {_savedLogOffsetInViewport} from top of viewport)");
+                    System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] Scrolled to offset {targetOffset} (log at row {_savedLogOffsetInViewport} from top of viewport)");
                 }
                 catch (Exception ex)
                 {
                     _isProgrammaticScroll = false;
+                    _scrollPreserveRetryCount = 0;
                     System.Diagnostics.Debug.WriteLine($"[SCROLL PRESERVE] Error: {ex.Message}");
                     MapsToLogRow(log); // Fallback to normal scrolling
                 }

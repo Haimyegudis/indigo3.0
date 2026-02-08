@@ -207,7 +207,8 @@ namespace IndiLogs_3._0.Controls.Charts
         }
 
         /// <summary>
-        /// Creates signal item from name only (legacy for CSV mode)
+        /// Creates signal item from name only (legacy for CSV mode).
+        /// Recognizes exported CSV header patterns to assign proper categories.
         /// </summary>
         private SignalListItem CreateSignalItem(string signalName)
         {
@@ -219,17 +220,47 @@ namespace IndiLogs_3._0.Controls.Charts
 
             string lower = signalName.ToLower();
 
-            // Determine category based on signal name patterns
-            if (lower.Contains("axis") || lower.Contains("motor") || lower.Contains("position") ||
-                lower.Contains("velocity") || lower.Contains("encoder") || lower.Contains("servo"))
+            // Check for exported CSV patterns first (from CsvExportService):
+            //   Axis:  "Subsys-Motor-Param [Thread]" with Param = SetP/ActP/SetV/ActV/Trq/LagErr
+            //   IO:    "Subsys-Comp-Value [IOs-I]" or [IOs-Q]
+            //   CHStep: column name contains § separator
+            //   Thread: ends with _Message (but not Events_Message)
+
+            if (lower.Contains("§") || lower.StartsWith("chstep"))
+            {
+                item.Category = SignalItemCategory.CHStep;
+                item.TypeIcon = "G";
+                item.TypeColor = CHStepColor;
+            }
+            else if (lower.Contains("[ios-") || lower.Contains("[io_mon"))
+            {
+                item.Category = SignalItemCategory.IO;
+                item.TypeIcon = "I";
+                item.TypeColor = IOColor;
+            }
+            else if (lower.Contains("-setp") || lower.Contains("-actp") || lower.Contains("-setv") ||
+                     lower.Contains("-actv") || lower.Contains("-trq") || lower.Contains("-lagerr"))
+            {
+                item.Category = SignalItemCategory.Axis;
+                item.TypeIcon = "A";
+                item.TypeColor = AxisColor;
+            }
+            else if (lower.Contains("-value") || lower.Contains("-mottemp") || lower.Contains("-drvtemp"))
+            {
+                item.Category = SignalItemCategory.IO;
+                item.TypeIcon = "I";
+                item.TypeColor = IOColor;
+            }
+            else if (lower.Contains("axis") || lower.Contains("motor") || lower.Contains("position") ||
+                     lower.Contains("velocity") || lower.Contains("encoder") || lower.Contains("servo"))
             {
                 item.Category = SignalItemCategory.Axis;
                 item.TypeIcon = "A";
                 item.TypeColor = AxisColor;
             }
             else if (lower.Contains("io_") || lower.Contains("sensor") || lower.Contains("switch") ||
-                     lower.Contains("valve") || lower.Contains("relay") || lower.Contains("input") ||
-                     lower.Contains("output") || lower.StartsWith("di_") || lower.StartsWith("do_") ||
+                     lower.Contains("valve") || lower.Contains("relay") ||
+                     lower.StartsWith("di_") || lower.StartsWith("do_") ||
                      lower.StartsWith("ai_") || lower.StartsWith("ao_"))
             {
                 item.Category = SignalItemCategory.IO;

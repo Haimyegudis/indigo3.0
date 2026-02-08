@@ -108,23 +108,31 @@
                                                        FontWeight="SemiBold" FontSize="12"
                                                        VerticalAlignment="Center" Margin="5,0"/>
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                                <Button Width="24" Height="24"
+                                                <Button Height="20" Padding="4,1"
                                                         Style="{DynamicResource ModernBtn}"
                                                         Tag="{Binding}"
                                                         Click="DetachChartButton_Click"
                                                         ToolTip="Detach to floating window"
-                                                        FontFamily="Segoe MDL2 Assets" FontSize="12"
-                                                        Content="&#xE8A7;"
                                                         Foreground="{DynamicResource TextSecondary}"
-                                                        Margin="0,0,2,0"/>
-                                                <Button Width="24" Height="24"
+                                                        Margin="0,0,2,0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                                                   VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                        <TextBlock Text="Detach" FontSize="10" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Height="20" Padding="4,1"
                                                         Style="{DynamicResource ModernBtn}"
                                                         Tag="{Binding}"
                                                         Click="RemoveChartButton_Click"
                                                         ToolTip="Remove this chart"
-                                                        FontFamily="Segoe MDL2 Assets" FontSize="12"
-                                                        Content="&#xE711;"
-                                                        Foreground="{DynamicResource TextSecondary}"/>
+                                                        Foreground="{DynamicResource TextSecondary}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                                                   VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                        <TextBlock Text="Close" FontSize="10" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
                                             </StackPanel>
                                         </Grid>
 
@@ -139,7 +147,11 @@
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
                                                     <Border Background="{DynamicResource BgPanel}"
-                                                            CornerRadius="3" Margin="2" Padding="4,2">
+                                                            CornerRadius="3" Margin="2" Padding="4,2"
+                                                            Tag="{Binding}"
+                                                            MouseLeftButtonDown="LegendItem_MouseDoubleClick"
+                                                            Cursor="Hand"
+                                                            ToolTip="Double-click to remove signal">
                                                         <StackPanel Orientation="Horizontal">
                                                             <CheckBox IsChecked="{Binding IsVisible, Mode=TwoWay}"
                                                                       VerticalAlignment="Center" Margin="0,0,4,0"/>

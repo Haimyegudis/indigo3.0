@@ -13,8 +13,29 @@ namespace IndiLogs_3._0.Services
 {
     public class CsvExportService
     {
-        private readonly string[] _axisParams = new[] { "SetP", "ActP", "SetV", "ActV", "Trq", "LagErr" };
-        private readonly string[] _chStepParams = new[] { "StepMessage", "SubStepNo", "CHObjType", "PrevStepNo", "DiffTime", "State" };
+        private readonly string[] _axisParams = new[] { "SetP", "ActP", "SetV", "ActV", "Trq", "LagErr", "Trigger" };
+        private readonly string[] _chStepParams = new[] { "StepMessage", "SubStepNo", "CHObjType", "PrevStepNo", "DiffTime", "State", "Parent", "SubsysID" };
+        private readonly string[] _ioStatusParams = new[] { "Value", "eIoStatus" };
+        private readonly string[] _motTempParams = new[] { "MotTemp", "eIoStatus" };
+        private readonly string[] _drvTempParams = new[] { "DrvTemp", "eIoStatus" };
+
+        // eIoStatus enum string mapping
+        private static string DecodeIoStatus(string statusStr)
+        {
+            if (string.IsNullOrEmpty(statusStr)) return "Op"; // default Operational
+            switch (statusStr.Trim())
+            {
+                case "Inv": return "InvalidHW";
+                case "NM": return "NotMonitored";
+                case "NA": return "NotActive";
+                case "Op": return "Operational";
+                case "OpL": return "OperationalLow";
+                case "OpH": return "OperationalHigh";
+                case "PnL": return "PanicLow";
+                case "PnH": return "PanicHigh";
+                default: return statusStr.Trim();
+            }
+        }
 
         // Progress reporting
         public interface IProgress
@@ -386,6 +407,7 @@ namespace IndiLogs_3._0.Services
                 string threadName = log.ThreadName ?? "Unknown";
 
                 // Early filtering - skip lines that are definitely not relevant
+                // A=AxisMon/AxM, I=IO_Mon/IO, C=CHStep, L=LogStat
                 char firstChar = msg.Length > 0 ? msg[0] : ' ';
                 bool maybeRelevant = firstChar == 'A' || firstChar == 'I' || firstChar == 'C' ||
                                     firstChar == 'L' || firstChar == 'a' || firstChar == 'i' ||
@@ -401,7 +423,8 @@ namespace IndiLogs_3._0.Services
                     }
                 }
 
-                // A: AxisMon - OPTIMIZED
+                // A: AxisMon - Current pattern
+                // AxisMon: SubsysID,MotorID,SetP=val,ActP=val,...,LagErr=val,Trg=trigger
                 if (msg.StartsWith("AxisMon:", StringComparison.OrdinalIgnoreCase))
                 {
                     try
@@ -429,14 +452,84 @@ namespace IndiLogs_3._0.Services
 
                                 for (int i = 2; i < parts.Length; i++)
                                 {
-                                    ParseAndAddValue(parts[i], subsys, motor, time, dataMatrix, _axisParams);
+                                    string rawPart = parts[i].Trim();
+                                    // Handle Trg=trigger -> store as Trigger
+                                    if (rawPart.StartsWith("Trg=", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        string trigVal = rawPart.Substring(4).Trim();
+                                        if (!dataMatrix.ContainsKey(time))
+                                            dataMatrix[time] = new Dictionary<string, string>();
+                                        dataMatrix[time][$"{subsys}|{motor}|Trigger"] = trigVal;
+                                    }
+                                    else
+                                    {
+                                        ParseAndAddValue(rawPart, subsys, motor, time, dataMatrix, _axisParams);
+                                    }
                                 }
                             }
                         }
                     }
                     catch { }
                 }
-                // B: IO_Mon - OPTIMIZED
+                // A2: AxM - Optimized AxisMon pattern (20.01.2026)
+                // AxM: SubsysID,MotorID,SetP=val,ActP=val,...,LagE=val,trigger
+                else if (msg.StartsWith("AxM:", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        int colonIndex = msg.IndexOf(':');
+                        string content = msg.Substring(colonIndex + 1).Trim();
+                        var parts = content.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+
+                        if (parts.Length >= 3)
+                        {
+                            string rawSub = parts[0].Trim();
+                            string motor = parts[1].Trim();
+                            string componentKey = $"{rawSub}|{motor}";
+
+                            if (selectedAxis == null || selectedAxis.Contains(componentKey))
+                            {
+                                // Store under same schema as AxisMon for unified view
+                                string subsys = $"AxisMon: {rawSub}";
+                                AddToSchema(schema, subsys, motor, _axisParams);
+
+                                foreach (var param in _axisParams)
+                                {
+                                    string key = $"{subsys}|{motor}|{param}";
+                                    threadNameMap[key] = threadName;
+                                }
+
+                                if (!dataMatrix.ContainsKey(time))
+                                    dataMatrix[time] = new Dictionary<string, string>();
+
+                                for (int i = 2; i < parts.Length; i++)
+                                {
+                                    string rawPart = parts[i].Trim();
+
+                                    // Handle LagE=val -> store as LagErr
+                                    if (rawPart.StartsWith("LagE=", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        string lagVal = rawPart.Substring(5).Trim();
+                                        dataMatrix[time][$"{subsys}|{motor}|LagErr"] = lagVal;
+                                    }
+                                    else if (rawPart.Contains("="))
+                                    {
+                                        ParseAndAddValue(rawPart, subsys, motor, time, dataMatrix, _axisParams);
+                                    }
+                                    else
+                                    {
+                                        // Last part without = is the trigger value
+                                        dataMatrix[time][$"{subsys}|{motor}|Trigger"] = rawPart;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+                // B: IO_Mon - Current pattern
+                // IO_Mon: SubsytemID, SimbolName=value
+                // IO_Mon: SubsytemID, SimbolName= New Status eIoStatus  (status change log)
                 else if (msg.StartsWith("IO_Mon:", StringComparison.OrdinalIgnoreCase))
                 {
                     try
@@ -459,6 +552,32 @@ namespace IndiLogs_3._0.Services
                                 {
                                     string fullSymbolName = rawPair.Substring(0, eqIndex).Trim();
                                     string valueStr = rawPair.Substring(eqIndex + 1).Trim();
+
+                                    // Check if this is a "New Status" log line
+                                    // Pattern: IO_Mon: SubsysID, SimbolName= New Status eIoStatus
+                                    if (valueStr.StartsWith("New Status", StringComparison.OrdinalIgnoreCase) ||
+                                        valueStr.StartsWith(" New Status", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        // Extract status from "New Status <statusStr>"
+                                        string statusPart = valueStr.Replace("New Status", "").Trim();
+                                        string ioStatus = DecodeIoStatus(statusPart);
+
+                                        string componentKey = $"{rawSub}|{fullSymbolName}";
+                                        if (selectedIO == null || selectedIO.Contains(componentKey))
+                                        {
+                                            AddToSchema(schema, subsys, fullSymbolName, new[] { "eIoStatus" });
+
+                                            string statusKey = $"{subsys}|{fullSymbolName}|eIoStatus";
+                                            threadNameMap[statusKey] = threadName;
+
+                                            if (!dataMatrix.ContainsKey(time))
+                                                dataMatrix[time] = new Dictionary<string, string>();
+
+                                            dataMatrix[time][statusKey] = ioStatus;
+                                        }
+                                        continue;
+                                    }
+
                                     string cleanValue = valueStr.Split(' ')[0];
 
                                     string componentName;
@@ -480,9 +599,9 @@ namespace IndiLogs_3._0.Services
                                         paramName = "Value";
                                     }
 
-                                    string componentKey = $"{rawSub}|{componentName}";
+                                    string componentKey2 = $"{rawSub}|{componentName}";
 
-                                    if (selectedIO == null || selectedIO.Contains(componentKey))
+                                    if (selectedIO == null || selectedIO.Contains(componentKey2))
                                     {
                                         AddToSchema(schema, subsys, componentName, new[] { paramName });
 
@@ -500,22 +619,114 @@ namespace IndiLogs_3._0.Services
                     }
                     catch { }
                 }
-                // C: Machine State - OPTIMIZED (no Regex)
-                // Only capture CHStep where PlcMngr is the CHName (not Parent!)
-                else if ((preset == null || preset.IncludeMachineState) &&
-                         msg.StartsWith("CHStep:", StringComparison.OrdinalIgnoreCase))
+                // B2: IO - Optimized IO_Mon pattern (20.01.2026)
+                // IO: SubsytemID,SimbolName=value           (if eIoStatus = Operational)
+                // IO: SubsytemID,SimbolName=value,eIoStatus (if eIoStatus != Operational)
+                // Also handles MotTemp and DrvTemp suffixes
+                else if (msg.StartsWith("IO:", StringComparison.OrdinalIgnoreCase) &&
+                         !msg.StartsWith("IO_Mon:", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (TryParsePlcMngrState(msg, out string stateName))
+                    try
+                    {
+                        int colonIndex = msg.IndexOf(':');
+                        string content = msg.Substring(colonIndex + 1).Trim();
+                        var parts = content.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+
+                        if (parts.Length >= 2)
+                        {
+                            string rawSub = parts[0].Trim();
+                            // Store under same schema as IO_Mon for unified view
+                            string subsys = $"IO_Mon: {rawSub}";
+
+                            // parts[1] contains SimbolName=value
+                            string rawPair = parts[1].Trim();
+                            int eqIndex = rawPair.IndexOf('=');
+
+                            if (eqIndex > 0)
+                            {
+                                string fullSymbolName = rawPair.Substring(0, eqIndex).Trim();
+                                string valueStr = rawPair.Substring(eqIndex + 1).Trim();
+                                string cleanValue = valueStr.Split(' ')[0];
+
+                                // Check for eIoStatus in parts[2]
+                                string ioStatus = null;
+                                if (parts.Length >= 3)
+                                {
+                                    string statusPart = parts[2].Trim();
+                                    // If it doesn't contain '=', it's the eIoStatus
+                                    if (!statusPart.Contains("="))
+                                    {
+                                        ioStatus = DecodeIoStatus(statusPart);
+                                    }
+                                }
+
+                                string componentName;
+                                string paramName;
+
+                                if (fullSymbolName.EndsWith("_MotTemp", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    componentName = fullSymbolName.Substring(0, fullSymbolName.Length - 8).Trim();
+                                    paramName = "MotTemp";
+                                }
+                                else if (fullSymbolName.EndsWith("_DrvTemp", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    componentName = fullSymbolName.Substring(0, fullSymbolName.Length - 8).Trim();
+                                    paramName = "DrvTemp";
+                                }
+                                else
+                                {
+                                    componentName = fullSymbolName;
+                                    paramName = "Value";
+                                }
+
+                                string componentKey = $"{rawSub}|{componentName}";
+
+                                if (selectedIO == null || selectedIO.Contains(componentKey))
+                                {
+                                    // Add eIoStatus to schema if present
+                                    if (ioStatus != null)
+                                    {
+                                        AddToSchema(schema, subsys, componentName, new[] { paramName, "eIoStatus" });
+                                    }
+                                    else
+                                    {
+                                        AddToSchema(schema, subsys, componentName, new[] { paramName });
+                                    }
+
+                                    string key = $"{subsys}|{componentName}|{paramName}";
+                                    threadNameMap[key] = threadName;
+
+                                    if (!dataMatrix.ContainsKey(time))
+                                        dataMatrix[time] = new Dictionary<string, string>();
+
+                                    dataMatrix[time][key] = cleanValue;
+
+                                    if (ioStatus != null)
+                                    {
+                                        string statusKey = $"{subsys}|{componentName}|eIoStatus";
+                                        threadNameMap[statusKey] = threadName;
+                                        dataMatrix[time][statusKey] = ioStatus;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+                // C+D: CHStep messages - handles both Machine State (PlcMngr) and regular CHStep
+                else if (msg.StartsWith("CHStep:", StringComparison.OrdinalIgnoreCase))
+                {
+                    // C: Machine State - extract from PlcMngr CHStep
+                    if ((preset == null || preset.IncludeMachineState) &&
+                        TryParsePlcMngrState(msg, out string stateName))
                     {
                         if (!string.IsNullOrEmpty(stateName))
                         {
                             machineStates[time] = stateName;
                         }
                     }
-                }
-                // D: CHStep - OPTIMIZED (no Regex)
-                else if (msg.StartsWith("CHStep:", StringComparison.OrdinalIgnoreCase))
-                {
+
+                    // D: Regular CHStep export (always try, even for PlcMngr if selected)
                     if (TryParseCHStep(msg, out string chName, out string stepMessage, out string stateId,
                         out string chParentName, out string subsysID, out string prevStepNo, out string diffTime,
                         out string subStepNo, out string chObjType))
@@ -547,6 +758,8 @@ namespace IndiLogs_3._0.Services
                             dataMatrix[time][$"{subsys}|{component}|PrevStepNo"] = prevStepNo;
                             dataMatrix[time][$"{subsys}|{component}|DiffTime"] = diffTime;
                             dataMatrix[time][$"{subsys}|{component}|State"] = stateId;
+                            dataMatrix[time][$"{subsys}|{component}|Parent"] = chParentName;
+                            dataMatrix[time][$"{subsys}|{component}|SubsysID"] = subsysID;
 
                             foreach (var param in _chStepParams)
                             {
@@ -666,9 +879,9 @@ namespace IndiLogs_3._0.Services
                             string fullKey = $"{subEntry.Key}|{compName}|{param}";
                             string thread = threadNameMap.ContainsKey(fullKey) ? threadNameMap[fullKey] : "";
 
-                            // Use - as separator between components (Parent-Child-Subsystem)
-                            // Keep _ within each component name
-                            string hierarchicalHeader = $"{subsysClean.Replace("§", "-")}-{compName}-{param}";
+                            // Use - as separator between components
+                            // Keep § for CHStep columns so import can detect them
+                            string hierarchicalHeader = $"{subsysClean}-{compName}-{param}";
 
                             if (!string.IsNullOrEmpty(thread))
                                 hierarchicalHeader += $" [{thread}]";

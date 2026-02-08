@@ -1,0 +1,432 @@
+<UserControl x:Class="IndiLogs_3._0.Controls.Cpr.CprAnalysisControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             xmlns:cpr="clr-namespace:IndiLogs_3._0.Controls.Cpr"
+             xmlns:models="clr-namespace:IndiLogs_3._0.Models.Cpr"
+             Background="{DynamicResource BgDark}">
+
+    <UserControl.Resources>
+        <!-- Small label style -->
+        <Style x:Key="CprLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,2"/>
+        </Style>
+
+        <!-- Dark ComboBox style -->
+        <Style x:Key="CprCombo" TargetType="ComboBox">
+            <Setter Property="Background" Value="{DynamicResource BgCard}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Margin" Value="0,1"/>
+        </Style>
+
+        <!-- Small TextBox style -->
+        <Style x:Key="CprTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource BgCard}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="3,2"/>
+            <Setter Property="Margin" Value="0,1"/>
+        </Style>
+
+        <!-- CheckBox style -->
+        <Style x:Key="CprCheck" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,2"/>
+        </Style>
+
+        <!-- RadioButton style -->
+        <Style x:Key="CprRadio" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,1"/>
+        </Style>
+
+        <!-- Section Header -->
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,6,0,3"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- TOP BAR -->
+        <Border Grid.Row="0" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="8,5">
+            <DockPanel>
+                <Button Content="Choose File" DockPanel.Dock="Left" Click="ChooseFile_Click"
+                        Background="{DynamicResource WarningColor}" Foreground="White" FontSize="11"
+                        Padding="12,4" Margin="0,0,8,0" Cursor="Hand"/>
+                <Button Content="Compare" DockPanel.Dock="Left" Click="CompareFile_Click"
+                        Background="{DynamicResource PrimaryColor}" Foreground="White" FontSize="11"
+                        Padding="12,4" Margin="0,0,4,0" Cursor="Hand"/>
+                <Button x:Name="RemoveCompareBtn" Content="✕" DockPanel.Dock="Left" Click="RemoveCompare_Click"
+                        Background="#DC2626" Foreground="White" FontSize="11" FontWeight="Bold"
+                        Padding="6,3" Margin="0,0,8,0" Cursor="Hand" Visibility="Collapsed"
+                        ToolTip="Remove comparison file"/>
+                <Button Content="Export Plot" DockPanel.Dock="Right" Click="ExportPlot_Click"
+                        Background="{DynamicResource WarningColor}" Foreground="White" FontSize="11"
+                        Padding="12,4" Margin="8,0,0,0" Cursor="Hand"/>
+                <Button DockPanel.Dock="Right" Click="DetachChart_Click"
+                        Background="Transparent" Foreground="{DynamicResource TextPrimary}" FontSize="11"
+                        Padding="8,4" Margin="4,0,0,0" Cursor="Hand" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
+                        ToolTip="Detach chart to floating window">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="10" Margin="0,0,4,0"/>
+                        <TextBlock Text="Detach" FontSize="10"/>
+                    </StackPanel>
+                </Button>
+                <Button x:Name="DetachCompareBtn" DockPanel.Dock="Right" Click="DetachCompareChart_Click"
+                        Background="Transparent" Foreground="{DynamicResource TextPrimary}" FontSize="11"
+                        Padding="8,4" Margin="4,0,0,0" Cursor="Hand" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
+                        ToolTip="Detach compare chart to floating window" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="10" Margin="0,0,4,0"/>
+                        <TextBlock Text="Detach 2" FontSize="10"/>
+                    </StackPanel>
+                </Button>
+                <TextBlock VerticalAlignment="Center" FontSize="11" Margin="4,0">
+                    <Run Text="Raw Data File: " Foreground="{DynamicResource TextSecondary}"/>
+                    <Run Text="{Binding FilePath, Mode=OneWay}" Foreground="{DynamicResource TextPrimary}"/>
+                </TextBlock>
+            </DockPanel>
+        </Border>
+
+        <!-- MAIN CONTENT: Left Panel | Chart | Right Panel -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="210"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="200"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT PANEL: Graph type + Filters -->
+            <Border Grid.Column="0" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,1,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="8,4">
+                    <StackPanel>
+                        <!-- Graph Type -->
+                        <TextBlock Text="Graph Type" Style="{StaticResource SectionHeader}"/>
+                        <RadioButton Content="Colors" GroupName="GraphType" Style="{StaticResource CprRadio}"
+                                     IsChecked="{Binding SelectedGraphType, Converter={StaticResource EnumBoolConverter}, ConverterParameter={x:Static models:CprGraphType.Colors}}"/>
+                        <RadioButton Content="Columns" GroupName="GraphType" Style="{StaticResource CprRadio}"
+                                     IsChecked="{Binding SelectedGraphType, Converter={StaticResource EnumBoolConverter}, ConverterParameter={x:Static models:CprGraphType.Columns}}"/>
+                        <RadioButton Content="Blanket Cycles" GroupName="GraphType" Style="{StaticResource CprRadio}"
+                                     IsChecked="{Binding SelectedGraphType, Converter={StaticResource EnumBoolConverter}, ConverterParameter={x:Static models:CprGraphType.BlanketCycles}}"/>
+                        <RadioButton Content="X Scaling" GroupName="GraphType" Style="{StaticResource CprRadio}"
+                                     IsChecked="{Binding SelectedGraphType, Converter={StaticResource EnumBoolConverter}, ConverterParameter={x:Static models:CprGraphType.XScaling}}"/>
+                        <RadioButton Content="DFT" GroupName="GraphType" Style="{StaticResource CprRadio}"
+                                     IsChecked="{Binding SelectedGraphType, Converter={StaticResource EnumBoolConverter}, ConverterParameter={x:Static models:CprGraphType.DFT}}"/>
+                        <RadioButton Content="Histogram" GroupName="GraphType" Style="{StaticResource CprRadio}"
+                                     IsChecked="{Binding SelectedGraphType, Converter={StaticResource EnumBoolConverter}, ConverterParameter={x:Static models:CprGraphType.Histogram}}"/>
+                        <RadioButton Content="Revolutions" GroupName="GraphType" Style="{StaticResource CprRadio}"
+                                     IsChecked="{Binding SelectedGraphType, Converter={StaticResource EnumBoolConverter}, ConverterParameter={x:Static models:CprGraphType.Revolutions}}"/>
+                        <RadioButton Content="Missing Data" GroupName="GraphType" Style="{StaticResource CprRadio}"
+                                     IsChecked="{Binding SelectedGraphType, Converter={StaticResource EnumBoolConverter}, ConverterParameter={x:Static models:CprGraphType.MissingData}}"/>
+                        <RadioButton Content="Skew" GroupName="GraphType" Style="{StaticResource CprRadio}"
+                                     IsChecked="{Binding SelectedGraphType, Converter={StaticResource EnumBoolConverter}, ConverterParameter={x:Static models:CprGraphType.Skew}}"/>
+                        <RadioButton Content="Skew Along Bracket" GroupName="GraphType" Style="{StaticResource CprRadio}"
+                                     IsChecked="{Binding SelectedGraphType, Converter={StaticResource EnumBoolConverter}, ConverterParameter={x:Static models:CprGraphType.SkewAlongBracket}}"/>
+
+                        <Separator Background="{DynamicResource BorderColor}" Margin="0,6"/>
+
+                        <!-- Filters -->
+                        <TextBlock Text="Filters" Style="{StaticResource SectionHeader}"/>
+
+                        <TextBlock Text="Revolution" Style="{StaticResource CprLabel}"/>
+                        <ComboBox Style="{StaticResource CprCombo}" ItemsSource="{Binding Revolutions}" SelectedItem="{Binding SelectedRevolution}"/>
+
+                        <TextBlock Text="Iteration" Style="{StaticResource CprLabel}"/>
+                        <ComboBox Style="{StaticResource CprCombo}" ItemsSource="{Binding Iterations}" SelectedItem="{Binding SelectedIteration}"/>
+
+                        <TextBlock Text="Cycle Range" Style="{StaticResource CprLabel}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <ComboBox Grid.Column="0" Style="{StaticResource CprCombo}" ItemsSource="{Binding Cycles}" SelectedItem="{Binding SelectedCycleFrom}"/>
+                            <TextBlock Grid.Column="1" Text=" to " Style="{StaticResource CprLabel}" Margin="3,0"/>
+                            <ComboBox Grid.Column="2" Style="{StaticResource CprCombo}" ItemsSource="{Binding Cycles}" SelectedItem="{Binding SelectedCycleTo}"/>
+                        </Grid>
+
+                        <TextBlock Text="Column Range" Style="{StaticResource CprLabel}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <ComboBox Grid.Column="0" Style="{StaticResource CprCombo}" ItemsSource="{Binding Columns}" SelectedItem="{Binding SelectedColumnFrom}"/>
+                            <TextBlock Grid.Column="1" Text=" to " Style="{StaticResource CprLabel}" Margin="3,0"/>
+                            <ComboBox Grid.Column="2" Style="{StaticResource CprCombo}" ItemsSource="{Binding Columns}" SelectedItem="{Binding SelectedColumnTo}"/>
+                        </Grid>
+
+                        <Separator Background="{DynamicResource BorderColor}" Margin="0,6"/>
+
+                        <!-- Options -->
+                        <TextBlock Text="Options" Style="{StaticResource SectionHeader}"/>
+
+                        <CheckBox Content="Remove DC" Style="{StaticResource CprCheck}" IsChecked="{Binding RemoveDC}"/>
+                        <CheckBox Content="Auto Y Axis" Style="{StaticResource CprCheck}" IsChecked="{Binding AutoYAxis}"/>
+
+                        <!-- Manual Y range (shown when Auto Y unchecked) -->
+                        <StackPanel Visibility="{Binding IsManualYVisible, Converter={StaticResource BoolToVisConverter}}">
+                            <Grid Margin="0,2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="From:" Style="{StaticResource CprLabel}" Margin="0,0,4,0"/>
+                                <TextBox Grid.Column="1" Style="{StaticResource CprTextBox}" Text="{Binding YAxisFrom, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Grid.Column="2" Text=" To:" Style="{StaticResource CprLabel}" Margin="4,0"/>
+                                <TextBox Grid.Column="3" Style="{StaticResource CprTextBox}" Text="{Binding YAxisTo, UpdateSourceTrigger=PropertyChanged}"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <CheckBox Content="Shared Y Axis (Skew)" Style="{StaticResource CprCheck}" IsChecked="{Binding SharedYAxis}"/>
+
+                        <TextBlock Text="Smoothing" Style="{StaticResource CprLabel}"/>
+                        <ComboBox Style="{StaticResource CprCombo}" ItemsSource="{Binding SmoothingOptions}" SelectedItem="{Binding SelectedSmoothing}"/>
+
+                        <!-- Axis selection -->
+                        <StackPanel Orientation="Horizontal" Margin="0,4">
+                            <RadioButton Content="Y CPR" Style="{StaticResource CprRadio}" GroupName="Axis" IsChecked="{Binding IsYAxis}" Margin="0,0,12,0"/>
+                            <RadioButton Content="X CPR" Style="{StaticResource CprRadio}" GroupName="Axis" IsChecked="{Binding IsXAxis}"/>
+                        </StackPanel>
+
+                        <TextBlock Text="Bow Degree" Style="{StaticResource CprLabel}"/>
+                        <ComboBox Style="{StaticResource CprCombo}" ItemsSource="{Binding BowDegreeOptions}" SelectedItem="{Binding SelectedBowDegree}"/>
+
+                        <!-- Blanket Cycles input -->
+                        <StackPanel Visibility="{Binding IsBlanketCyclesVisible, Converter={StaticResource BoolToVisConverter}}">
+                            <TextBlock Text="Blanket Cycles (space-sep)" Style="{StaticResource CprLabel}"/>
+                            <TextBox Style="{StaticResource CprTextBox}" Text="{Binding BlanketCyclesText, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+
+                        <!-- Histogram Stations input -->
+                        <StackPanel Visibility="{Binding IsHistoStationsVisible, Converter={StaticResource BoolToVisConverter}}">
+                            <TextBlock Text="Histo Stations (space-sep)" Style="{StaticResource CprLabel}"/>
+                            <TextBox Style="{StaticResource CprTextBox}" Text="{Binding HistoStationsText, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- CENTER: Chart(s) stacked top/bottom -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition x:Name="CompareChartRow" Height="0"/>
+                </Grid.RowDefinitions>
+
+                <cpr:CprChartView Grid.Row="0" x:Name="ChartView"/>
+
+                <Border Grid.Row="1" x:Name="CompareChartBorder" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" Visibility="Collapsed">
+                    <cpr:CprChartView x:Name="CompareChartView"/>
+                </Border>
+            </Grid>
+
+            <!-- RIGHT PANEL: Machine/CalibTime + Station Pairs -->
+            <Border Grid.Column="2" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1,0,0,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="8,4">
+                    <StackPanel>
+                        <TextBlock Text="Data Selection" Style="{StaticResource SectionHeader}"/>
+
+                        <TextBlock Text="Press Number (SN)" Style="{StaticResource CprLabel}"/>
+                        <ComboBox Style="{StaticResource CprCombo}" ItemsSource="{Binding MachineNumbers}" SelectedItem="{Binding SelectedMachine}"/>
+
+                        <TextBlock Text="Calibration Time" Style="{StaticResource CprLabel}"/>
+                        <ComboBox Style="{StaticResource CprCombo}" ItemsSource="{Binding CalibrationTimes}" SelectedItem="{Binding SelectedCalibTime}"/>
+
+                        <Separator Background="{DynamicResource BorderColor}" Margin="0,6"/>
+
+                        <!-- Station Pairs -->
+                        <TextBlock Text="Station Pairs" Style="{StaticResource SectionHeader}"/>
+                        <TextBlock Text="Test / Ref" Style="{StaticResource CprLabel}" FontSize="10"/>
+
+                        <!-- 6 station pair rows -->
+                        <ItemsControl x:Name="StationPairsControl">
+                            <!-- Populated in code-behind -->
+                        </ItemsControl>
+
+                        <Separator Background="{DynamicResource BorderColor}" Margin="0,6"/>
+
+                        <!-- Set Ref Station -->
+                        <TextBlock Text="Set All Ref Stations" Style="{StaticResource CprLabel}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ComboBox x:Name="RefStationCombo" Grid.Column="0" Style="{StaticResource CprCombo}"
+                                     SelectionChanged="RefStationCombo_SelectionChanged">
+                                <sys:Int32>0</sys:Int32>
+                                <sys:Int32>1</sys:Int32>
+                                <sys:Int32>2</sys:Int32>
+                                <sys:Int32>3</sys:Int32>
+                                <sys:Int32>4</sys:Int32>
+                                <sys:Int32>5</sys:Int32>
+                                <sys:Int32>6</sys:Int32>
+                            </ComboBox>
+                            <Button Grid.Column="1" Content="Set" Click="SetRefStation_Click"
+                                    Background="{DynamicResource PrimaryColor}" Foreground="White"
+                                    FontSize="11" Padding="10,3" Margin="4,0,0,0" Cursor="Hand"/>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <!-- BOTTOM: Stats Tables (File 1 left, File 2 right when comparing) -->
+        <Border Grid.Row="2" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0">
+            <Grid Margin="8,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition x:Name="CompareStatsCol" Width="0"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- FILE 1 Stats -->
+                <Grid Grid.Column="0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock x:Name="File1StatsLabel" Grid.Row="0" Text="File 1" Style="{StaticResource SectionHeader}" Visibility="Collapsed"/>
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- File 1 Stats Table -->
+                        <DataGrid Grid.Column="0" ItemsSource="{Binding StatsData}" AutoGenerateColumns="False"
+                                  IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                  Background="Transparent" Foreground="{DynamicResource TextPrimary}"
+                                  BorderThickness="0" FontSize="11" MaxHeight="160"
+                                  RowBackground="Transparent" AlternatingRowBackground="Transparent"
+                                  HorizontalGridLinesBrush="{DynamicResource BorderColor}">
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="{DynamicResource BgCard}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                    <Setter Property="Padding" Value="6,3"/>
+                                    <Setter Property="FontSize" Value="10"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Station" Binding="{Binding Station}" Width="80"/>
+                                <DataGridTextColumn Header="95th%" Binding="{Binding Perc95}" Width="60"/>
+                                <DataGridTextColumn Header="99th%" Binding="{Binding Perc99}" Width="60"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <!-- File 1 Offset/Skew Table -->
+                        <DataGrid Grid.Column="2" ItemsSource="{Binding OffsetSkewData}" AutoGenerateColumns="False"
+                                  IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                  Background="Transparent" Foreground="{DynamicResource TextPrimary}"
+                                  BorderThickness="0" FontSize="11" MaxHeight="160"
+                                  RowBackground="Transparent" AlternatingRowBackground="Transparent"
+                                  HorizontalGridLinesBrush="{DynamicResource BorderColor}">
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="{DynamicResource BgCard}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                    <Setter Property="Padding" Value="6,3"/>
+                                    <Setter Property="FontSize" Value="10"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Station" Binding="{Binding Station}" Width="60"/>
+                                <DataGridTextColumn Header="Y Offset" Binding="{Binding YOffset}" Width="70"/>
+                                <DataGridTextColumn Header="X Offset" Binding="{Binding XOffset}" Width="70"/>
+                                <DataGridTextColumn Header="Skew" Binding="{Binding Skew}" Width="70"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Grid>
+
+                <!-- FILE 2 Stats (visible only when comparing) -->
+                <Border Grid.Column="1" x:Name="CompareStatsBorder" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1,0,0,0" Visibility="Collapsed" Margin="8,0,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="File 2" Style="{StaticResource SectionHeader}"/>
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- File 2 Stats Table -->
+                            <DataGrid Grid.Column="0" x:Name="CompareStatsGrid" AutoGenerateColumns="False"
+                                      IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                      Background="Transparent" Foreground="{DynamicResource TextPrimary}"
+                                      BorderThickness="0" FontSize="11" MaxHeight="160"
+                                      RowBackground="Transparent" AlternatingRowBackground="Transparent"
+                                      HorizontalGridLinesBrush="{DynamicResource BorderColor}">
+                                <DataGrid.ColumnHeaderStyle>
+                                    <Style TargetType="DataGridColumnHeader">
+                                        <Setter Property="Background" Value="{DynamicResource BgCard}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                        <Setter Property="Padding" Value="6,3"/>
+                                        <Setter Property="FontSize" Value="10"/>
+                                    </Style>
+                                </DataGrid.ColumnHeaderStyle>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Station" Binding="{Binding Station}" Width="80"/>
+                                    <DataGridTextColumn Header="95th%" Binding="{Binding Perc95}" Width="60"/>
+                                    <DataGridTextColumn Header="99th%" Binding="{Binding Perc99}" Width="60"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <!-- File 2 Offset/Skew Table -->
+                            <DataGrid Grid.Column="2" x:Name="CompareOffsetSkewGrid" AutoGenerateColumns="False"
+                                      IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                      Background="Transparent" Foreground="{DynamicResource TextPrimary}"
+                                      BorderThickness="0" FontSize="11" MaxHeight="160"
+                                      RowBackground="Transparent" AlternatingRowBackground="Transparent"
+                                      HorizontalGridLinesBrush="{DynamicResource BorderColor}">
+                                <DataGrid.ColumnHeaderStyle>
+                                    <Style TargetType="DataGridColumnHeader">
+                                        <Setter Property="Background" Value="{DynamicResource BgCard}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                        <Setter Property="Padding" Value="6,3"/>
+                                        <Setter Property="FontSize" Value="10"/>
+                                    </Style>
+                                </DataGrid.ColumnHeaderStyle>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Station" Binding="{Binding Station}" Width="60"/>
+                                    <DataGridTextColumn Header="Y Offset" Binding="{Binding YOffset}" Width="70"/>
+                                    <DataGridTextColumn Header="X Offset" Binding="{Binding XOffset}" Width="70"/>
+                                    <DataGridTextColumn Header="Skew" Binding="{Binding Skew}" Width="70"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
