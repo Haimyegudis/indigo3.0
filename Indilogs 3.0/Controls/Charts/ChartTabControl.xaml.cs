@@ -64,6 +64,9 @@ namespace IndiLogs_3._0.Controls.Charts
         {
             InitializeComponent();
 
+            // Read theme from settings immediately so charts created before Loaded event use correct theme
+            try { _isLightTheme = !Properties.Settings.Default.IsDarkMode; } catch { }
+
             _dataService = new ChartDataService();
             _syncService = new ChartSyncService();
 
@@ -231,75 +234,106 @@ namespace IndiLogs_3._0.Controls.Charts
         {
             if (dataPackage == null) return;
 
-            try
+            // Show loading overlay immediately
+            LoadingOverlay.Visibility = Visibility.Visible;
+            LoadingText.Text = "Loading chart data...";
+            LoadingDetail.Text = $"Processing {dataPackage.Signals?.Count ?? 0} signals";
+
+            // Defer heavy work so the overlay renders first
+            Dispatcher.BeginInvoke(new Action(() =>
             {
-                _currentDataPackage = dataPackage;
-                _inMemoryDataLoaded = true;
-
-                // Use SetDataPackage for full support of CHSTEP and Thread items
-                SignalList.SetDataPackage(dataPackage);
-
-                // Set total data length
-                _totalDataLength = dataPackage.TimeStamps.Count;
-                if (_totalDataLength == 0 && dataPackage.Signals.Any())
+                try
                 {
-                    _totalDataLength = dataPackage.Signals.Max(s => s.Data?.Length ?? 0);
-                }
+                    _currentDataPackage = dataPackage;
+                    _inMemoryDataLoaded = true;
 
-                // Build time mapping for sync
-                if (dataPackage.TimeStamps.Any())
+                    // Use SetDataPackage for full support of CHSTEP and Thread items
+                    SignalList.SetDataPackage(dataPackage);
+
+                    // Set total data length
+                    _totalDataLength = dataPackage.TimeStamps.Count;
+                    if (_totalDataLength == 0 && dataPackage.Signals.Any())
+                    {
+                        _totalDataLength = dataPackage.Signals.Max(s => s.Data?.Length ?? 0);
+                    }
+
+                    LoadingDetail.Text = $"Formatting {_totalDataLength:N0} timestamps...";
+
+                    // Build time mapping for sync - parallel timestamp formatting for large datasets
+                    if (dataPackage.TimeStamps.Any())
+                    {
+                        var stamps = dataPackage.TimeStamps;
+                        var timeArr = new string[stamps.Count];
+                        if (stamps.Count > 5000)
+                        {
+                            System.Threading.Tasks.Parallel.For(0, stamps.Count,
+                                new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                                i => { timeArr[i] = stamps[i].ToString("yyyy-MM-dd HH:mm:ss.fff"); });
+                        }
+                        else
+                        {
+                            for (int i = 0; i < stamps.Count; i++)
+                                timeArr[i] = stamps[i].ToString("yyyy-MM-dd HH:mm:ss.fff");
+                        }
+                        _timeData = timeArr;
+                        _syncService.BuildTimeMapping(_timeData);
+                    }
+
+                    // Extract global states from state data (MachineState for timeline)
+                    _globalStates.Clear();
+                    var machineState = dataPackage.States.FirstOrDefault(s =>
+                        s.Name.Equals("MachineState", StringComparison.OrdinalIgnoreCase) ||
+                        s.Name.Equals("PlcMngr", StringComparison.OrdinalIgnoreCase));
+
+                    if (machineState != null)
+                    {
+                        _globalStates.AddRange(machineState.Intervals);
+                    }
+
+                    // Reset view
+                    _viewStartIndex = 0;
+                    _viewEndIndex = _totalDataLength - 1;
+
+                    // Update timeline with machine states only
+                    StateTimeline.SetStates(_globalStates, _totalDataLength);
+
+                    // Store thread messages (NOT displayed automatically - user selects from list)
+                    _threadMessages = dataPackage.ThreadMessages ?? new List<ThreadMessageData>();
+
+                    // Store CHSTEP states (NOT displayed automatically - user selects from list)
+                    _chStepStates = dataPackage.States
+                        .Where(s => !s.Name.Equals("MachineState", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+
+                    // Store event markers for display on charts
+                    _eventMarkers = dataPackage.Events ?? new List<EventMarkerData>();
+
+                    // Update empty state message
+                    EmptyStateMessage.Visibility = Visibility.Collapsed;
+
+                    // Clear existing charts - user will add signals manually
+                    _charts.Clear();
+
+                    // Ensure theme is current before creating charts
+                    SyncThemeFromSettings();
+
+                    // Add an empty chart ready for user to add signals
+                    AddNewChart();
+
+                    // Update slider
+                    NavSlider.Maximum = _totalDataLength > 0 ? _totalDataLength - 1 : 100;
+
+                    RefreshChartViews();
+                }
+                catch (Exception ex)
                 {
-                    _timeData = dataPackage.TimeStamps.Select(t => t.ToString("yyyy-MM-dd HH:mm:ss.fff")).ToArray();
-                    _syncService.BuildTimeMapping(_timeData);
+                    MessageBox.Show($"Error loading In-Memory data: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
-
-                // Extract global states from state data (MachineState for timeline)
-                _globalStates.Clear();
-                var machineState = dataPackage.States.FirstOrDefault(s =>
-                    s.Name.Equals("MachineState", StringComparison.OrdinalIgnoreCase) ||
-                    s.Name.Equals("PlcMngr", StringComparison.OrdinalIgnoreCase));
-
-                if (machineState != null)
+                finally
                 {
-                    _globalStates.AddRange(machineState.Intervals);
+                    LoadingOverlay.Visibility = Visibility.Collapsed;
                 }
-
-                // Reset view
-                _viewStartIndex = 0;
-                _viewEndIndex = _totalDataLength - 1;
-
-                // Update timeline with machine states only
-                StateTimeline.SetStates(_globalStates, _totalDataLength);
-
-                // Store thread messages (NOT displayed automatically - user selects from list)
-                _threadMessages = dataPackage.ThreadMessages ?? new List<ThreadMessageData>();
-
-                // Store CHSTEP states (NOT displayed automatically - user selects from list)
-                _chStepStates = dataPackage.States
-                    .Where(s => !s.Name.Equals("MachineState", StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-
-                // Store event markers for display on charts
-                _eventMarkers = dataPackage.Events ?? new List<EventMarkerData>();
-
-                // Update empty state message
-                EmptyStateMessage.Visibility = Visibility.Collapsed;
-
-                // Clear existing charts - user will add signals manually
-                _charts.Clear();
-
-                // Add an empty chart ready for user to add signals
-                AddNewChart();
-
-                // Update slider
-                NavSlider.Maximum = _totalDataLength > 0 ? _totalDataLength - 1 : 100;
-
-                RefreshChartViews();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error loading In-Memory data: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            }), DispatcherPriority.Background);
         }
 
         /// <summary>
@@ -618,6 +652,9 @@ namespace IndiLogs_3._0.Controls.Charts
                 // Update empty state message
                 EmptyStateMessage.Visibility = Visibility.Collapsed;
 
+                // Ensure theme is current before creating charts
+                SyncThemeFromSettings();
+
                 // Auto-add first chart if none exist
                 if (_charts.Count == 0)
                 {
@@ -728,9 +765,9 @@ namespace IndiLogs_3._0.Controls.Charts
 
             if (existingGanttChart != null)
             {
-                // Check if this specific CHSTEP already exists in the merged view
+                // Check if this specific CHSTEP already exists in the merged view (compare both Name and Category/Parent)
                 if (existingGanttChart.GanttStates != null &&
-                    existingGanttChart.GanttStates.Any(s => s.Name == item.StateData.Name))
+                    existingGanttChart.GanttStates.Any(s => s.Name == item.StateData.Name && s.Category == item.StateData.Category))
                     return;
 
                 // Merge new CHSTEP into existing chart
@@ -739,8 +776,9 @@ namespace IndiLogs_3._0.Controls.Charts
 
                 existingGanttChart.GanttStates.Add(item.StateData);
 
-                // Update title to show all CHSTEP names
-                var chStepNames = existingGanttChart.GanttStates.Select(s => s.Name).ToList();
+                // Update title to show all CHSTEP names (with parent prefix)
+                var chStepNames = existingGanttChart.GanttStates
+                    .Select(s => !string.IsNullOrEmpty(s.Category) ? $"{s.Category}>{s.Name}" : s.Name).ToList();
                 existingGanttChart.Title = $"GANTT: {string.Join(", ", chStepNames)}";
 
                 // Update chart height based on number of CHSTEPs
@@ -757,7 +795,7 @@ namespace IndiLogs_3._0.Controls.Charts
                 // Create a new Gantt chart view model
                 var chart = new ChartViewModel
                 {
-                    Title = $"GANTT: {item.StateData.Name}",
+                    Title = $"GANTT: {(!string.IsNullOrEmpty(item.StateData.Category) ? $"{item.StateData.Category}>{item.StateData.Name}" : item.StateData.Name)}",
                     ViewType = ChartViewType.Gantt,
                     GanttStates = new List<StateData> { item.StateData },
                     ChartHeight = 120
@@ -883,8 +921,35 @@ namespace IndiLogs_3._0.Controls.Charts
 
             chart.EventMarkers = markers;
 
-            // Refresh all views (Signal, Gantt, and Thread)
-            RefreshAllChartViews();
+            // Refresh only the target chart (not all charts)
+            switch (chart.ViewType)
+            {
+                case ChartViewType.Signal:
+                    var graphView = FindGraphViewForChart(chart);
+                    if (graphView != null)
+                    {
+                        graphView.SetViewModel(chart);
+                        graphView.SyncViewRange(_viewStartIndex, _viewEndIndex);
+                        graphView.SyncCursor(_cursorIndex);
+                    }
+                    break;
+                case ChartViewType.Gantt:
+                    var ganttView = FindGanttViewForChart(chart);
+                    if (ganttView != null)
+                    {
+                        ganttView.SetEventMarkers(markers);
+                        ganttView.SyncViewRange(_viewStartIndex, _viewEndIndex);
+                    }
+                    break;
+                case ChartViewType.Thread:
+                    var threadView = FindThreadViewForChart(chart);
+                    if (threadView != null)
+                    {
+                        threadView.SetEventMarkers(markers);
+                        threadView.SyncViewRange(_viewStartIndex, _viewEndIndex);
+                    }
+                    break;
+            }
         }
 
         /// <summary>

@@ -308,7 +308,7 @@ namespace IndiLogs_3._0.ViewModels
 
             ExportCommand = new RelayCommand(async _ => await ExecuteExport(false), _ => CanExport());
             OpenInViewerCommand = new RelayCommand(async _ => await ExecuteExport(true), _ => CanExport());
-            OpenInChartsTabCommand = new RelayCommand(_ => OpenInChartsTab(), _ => CanExport());
+            OpenInChartsTabCommand = new RelayCommand(async _ => await OpenInChartsTabAsync(), _ => CanExport());
             SavePresetCommand = new RelayCommand(_ => SavePreset());
             LoadPresetCommand = new RelayCommand(_ => LoadPreset());
             SelectAllIOCommand = new RelayCommand(_ => SelectAll(IOComponents));
@@ -777,19 +777,28 @@ namespace IndiLogs_3._0.ViewModels
 
             try
             {
-                // Look for IndiChart.UI.exe in the same directory as the current application
-                string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
-                string indiChartPath = Path.Combine(appDirectory, "IndiChart.UI.exe");
-
-                if (!File.Exists(indiChartPath))
+                // Look for Flow CSV Viewer in common installation paths
+                string flowViewerPath = null;
+                string[] searchPaths = new[]
                 {
-                    // Try looking in IndiChartSuite subdirectory
-                    indiChartPath = Path.Combine(appDirectory, "IndiChartSuite", "IndiChart.UI.exe");
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Flow CSV Viewer", "Flow CSV Viewer.exe"),
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Flow CSV Viewer", "Flow CSV Viewer.exe"),
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Flow CSV Viewer", "Flow CSV Viewer.exe"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Flow CSV Viewer.exe"),
+                };
+
+                foreach (var path in searchPaths)
+                {
+                    if (File.Exists(path))
+                    {
+                        flowViewerPath = path;
+                        break;
+                    }
                 }
 
-                if (File.Exists(indiChartPath))
+                if (flowViewerPath != null)
                 {
-                    System.Diagnostics.Process.Start(indiChartPath, $"\"{LastExportedFilePath}\"");
+                    System.Diagnostics.Process.Start(flowViewerPath, $"\"{LastExportedFilePath}\"");
                 }
                 else
                 {
@@ -806,7 +815,7 @@ namespace IndiLogs_3._0.ViewModels
         /// <summary>
         /// Opens data directly in the Charts tab without file export (In-Memory transfer)
         /// </summary>
-        private void OpenInChartsTab()
+        private async Task OpenInChartsTabAsync()
         {
             try
             {
@@ -826,12 +835,23 @@ namespace IndiLogs_3._0.ViewModels
                         .Select(x => x.Name).ToList()
                 };
 
-                // Build data package In-Memory (no file I/O)
+                // Show loading overlay while building data package
+                IsLoading = true;
+                LoadingMessage = "Building chart data...";
+
                 var transferService = ChartDataTransferService.Instance;
-                var dataPackage = transferService.BuildDataPackage(
-                    _sessionData.Logs,
-                    preset,
-                    _sessionData.FileName ?? "Session");
+                ChartDataPackage dataPackage = null;
+
+                // Run heavy data building on background thread
+                await Task.Run(() =>
+                {
+                    dataPackage = transferService.BuildDataPackage(
+                        _sessionData.Logs,
+                        preset,
+                        _sessionData.FileName ?? "Session");
+                });
+
+                IsLoading = false;
 
                 if (dataPackage.Signals.Count == 0 && dataPackage.States.Count == 0)
                 {
@@ -849,6 +869,7 @@ namespace IndiLogs_3._0.ViewModels
             }
             catch (Exception ex)
             {
+                IsLoading = false;
                 MessageBox.Show($"Failed to open in Charts tab: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }

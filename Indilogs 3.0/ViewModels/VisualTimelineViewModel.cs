@@ -73,7 +73,8 @@ namespace IndiLogs_3._0.ViewModels
         {
             Clear();
 
-            var sortedLogs = logs.OrderBy(l => l.Date).ToList();
+            // לוגים כבר ממוינים מ-LoadSessionAsync, לא צריך למיין שוב
+            var sortedLogs = logs is IList<LogEntry> list ? list : logs.ToList();
             // אם אין לוגים, עדיין נרצה לראות איוונטים אם יש
 
             // 1. טיפול בלוגים וסטייטים

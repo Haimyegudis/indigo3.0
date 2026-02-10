@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -88,7 +89,6 @@ namespace IndiLogs_3._0.Views
         {
             System.Diagnostics.Debug.WriteLine("[STATS] Starting calculation...");
 
-            // ????? ????? ?????
             int totalLogs = _plcLogs.Count + _appLogs.Count;
             if (totalLogs == 0)
             {
@@ -96,47 +96,46 @@ namespace IndiLogs_3._0.Views
                 return;
             }
 
-            // ????? ???? ????? ????
-            var allDates = _plcLogs.Concat(_appLogs).Select(l => l.Date).OrderBy(d => d).ToList();
-            if (allDates.Any())
+            // Fast summary - avoid sorting all dates, just get min/max directly
+            DateTime minDate = DateTime.MaxValue, maxDate = DateTime.MinValue;
+            for (int i = 0; i < _plcLogs.Count; i++)
             {
-                var timeSpan = allDates.Last() - allDates.First();
+                if (_plcLogs[i].Date < minDate) minDate = _plcLogs[i].Date;
+                if (_plcLogs[i].Date > maxDate) maxDate = _plcLogs[i].Date;
+            }
+            for (int i = 0; i < _appLogs.Count; i++)
+            {
+                if (_appLogs[i].Date < minDate) minDate = _appLogs[i].Date;
+                if (_appLogs[i].Date > maxDate) maxDate = _appLogs[i].Date;
+            }
+            if (minDate < DateTime.MaxValue)
+            {
+                var timeSpan = maxDate - minDate;
                 SummaryText.Text = $"Analyzed {totalLogs:N0} logs spanning {timeSpan.TotalMinutes:F1} minutes";
             }
 
-            // ??????? ??? ??? ?????
             CalculatePlcStatistics();
             CalculateAppStatistics();
             CalculateAdvancedAnalytics();
         }
 
-        // ==========================================
-        //  PLC LOGS ANALYSIS
-        // ==========================================
         private void CalculatePlcStatistics()
         {
-            if (!_plcLogs.Any())
-            {
-                PlcSummaryText.Text = "No PLC logs available.";
-                return;
-            }
+            if (_plcLogs.Count == 0) { PlcSummaryText.Text = "No PLC logs available."; return; }
 
             PlcSummaryText.Text = $"PLC Logs: {_plcLogs.Count:N0} entries";
 
-            // 1. PLC Errors
             var errors = GetErrorLogs(_plcLogs);
             _plcErrorStats = CalculateErrorHistogram(errors, 10);
             PlcErrorHistogram.ItemsSource = _plcErrorStats;
-            PlcErrorCountText.Text = errors.Any() ? $"(Total: {errors.Count:N0})" : "(No errors)";
+            PlcErrorCountText.Text = errors.Count > 0 ? $"(Total: {errors.Count:N0})" : "(No errors)";
 
-            // 2. PLC Thread Load
             _plcThreadStats = CalculateLoadDistribution(_plcLogs, l => l.ThreadName, 10);
             PlcThreadHistogram.ItemsSource = _plcThreadStats;
-            PlcThreadCountText.Text = _plcThreadStats.Any() ? "(Top 10)" : "";
+            PlcThreadCountText.Text = _plcThreadStats.Count > 0 ? "(Top 10)" : "";
 
-            // 3. PLC Gaps
             _plcGaps = FindGaps(_plcLogs);
-            if (_plcGaps.Any())
+            if (_plcGaps.Count > 0)
             {
                 PlcGapSummaryText.Text = $"Found {_plcGaps.Count} gap(s) >= 2s. Total: {FormatDuration(TimeSpan.FromSeconds(_plcGaps.Sum(g => g.Duration.TotalSeconds)))}";
                 PlcGapDataGrid.ItemsSource = _plcGaps;
@@ -151,44 +150,31 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        // ==========================================
-        //  APP LOGS ANALYSIS
-        // ==========================================
         private void CalculateAppStatistics()
         {
-            if (!_appLogs.Any())
-            {
-                AppSummaryText.Text = "No APP logs available.";
-                return;
-            }
+            if (_appLogs.Count == 0) { AppSummaryText.Text = "No APP logs available."; return; }
 
             AppSummaryText.Text = $"APP Logs: {_appLogs.Count:N0} entries";
-
             var errors = GetErrorLogs(_appLogs);
 
-            // 1. APP Errors by Method
             _appLoggerErrorStats = CalculateErrorHistogram(errors, 10, l => l.Method ?? "Unknown");
             AppLoggerErrorHistogram.ItemsSource = _appLoggerErrorStats;
-            AppLoggerErrorCountText.Text = errors.Any() ? $"(Total: {errors.Count:N0})" : "(No errors)";
+            AppLoggerErrorCountText.Text = errors.Count > 0 ? $"(Total: {errors.Count:N0})" : "(No errors)";
 
-            // 2. APP Errors by Logger
             _appThreadErrorStats = CalculateErrorHistogram(errors, 10, l => GetShortLoggerName(l.Logger));
             AppThreadErrorHistogram.ItemsSource = _appThreadErrorStats;
-            AppThreadErrorCountText.Text = errors.Any() ? $"(Top 10 loggers)" : "";
+            AppThreadErrorCountText.Text = errors.Count > 0 ? $"(Top 10 loggers)" : "";
 
-            // 3. APP Logger Load (General)
             _appThreadStats = CalculateLoadDistribution(_appLogs, l => GetShortLoggerName(l.Logger), 10, l => l.Logger);
             AppThreadHistogram.ItemsSource = _appThreadStats;
             AppThreadCountText.Text = "(Top 10)";
 
-            // 4. APP Method Load (General)
             _appLoggerStats = CalculateLoadDistribution(_appLogs, l => l.Method ?? "Unknown", 15);
             AppLoggerHistogram.ItemsSource = _appLoggerStats;
             AppLoggerCountText.Text = "(Top 15)";
 
-            // 5. APP Gaps
             _appGaps = FindGaps(_appLogs);
-            if (_appGaps.Any())
+            if (_appGaps.Count > 0)
             {
                 AppGapSummaryText.Text = $"Found {_appGaps.Count} gap(s) >= 2s. Total: {FormatDuration(TimeSpan.FromSeconds(_appGaps.Sum(g => g.Duration.TotalSeconds)))}";
                 AppGapDataGrid.ItemsSource = _appGaps;
@@ -207,68 +193,99 @@ namespace IndiLogs_3._0.Views
         //  HELPERS
         // ==========================================
 
+        private static readonly HashSet<string> _errorLevels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Error", "Fatal" };
+
         private List<LogEntry> GetErrorLogs(List<LogEntry> source)
         {
-            return source.Where(l =>
-                string.Equals(l.Level, "Error", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(l.Level, "ERROR", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(l.Level, "Fatal", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(l.Level, "FATAL", StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            var result = new List<LogEntry>();
+            for (int i = 0; i < source.Count; i++)
+            {
+                if (source[i].Level != null && _errorLevels.Contains(source[i].Level))
+                    result.Add(source[i]);
+            }
+            return result;
         }
 
         // Generic Error Histogram Calculator (By Message or Custom Key)
         private List<ErrorStat> CalculateErrorHistogram(List<LogEntry> errors, int take, Func<LogEntry, string> keySelector = null)
         {
-            if (!errors.Any()) return new List<ErrorStat>();
+            if (errors.Count == 0) return new List<ErrorStat>();
 
-            // Default key is the Message
             keySelector = keySelector ?? (l => TruncateMessage(l.Message, 100));
 
-            var grouped = errors
-                .GroupBy(keySelector)
-                .Select(g => new { Key = g.Key, Count = g.Count() })
-                .OrderByDescending(g => g.Count)
-                .Take(take)
-                .ToList();
-
-            int maxCount = grouped.Max(g => g.Count);
-
-            return grouped.Select(g => new ErrorStat
+            // Use Dictionary for O(1) grouping instead of LINQ GroupBy
+            var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < errors.Count; i++)
             {
-                Name = g.Key,    // For Logger/Thread names
-                Message = g.Key, // For error messages
-                Count = g.Count,
-                DisplayText = $"{g.Count:N0}",
-                BarWidth = maxCount > 0 ? (double)g.Count / maxCount * (keySelector == null ? 300 : 200) : 0
-            }).ToList();
+                string key = keySelector(errors[i]);
+                if (counts.TryGetValue(key, out int c))
+                    counts[key] = c + 1;
+                else
+                    counts[key] = 1;
+            }
+
+            // Get top N using partial sort
+            var topItems = counts.OrderByDescending(kvp => kvp.Value).Take(take).ToList();
+            if (topItems.Count == 0) return new List<ErrorStat>();
+
+            int maxCount = topItems[0].Value;
+            double barScale = keySelector == null ? 300.0 : 200.0;
+
+            var result = new List<ErrorStat>(topItems.Count);
+            foreach (var kvp in topItems)
+            {
+                result.Add(new ErrorStat
+                {
+                    Name = kvp.Key,
+                    Message = kvp.Key,
+                    Count = kvp.Value,
+                    DisplayText = kvp.Value.ToString("N0"),
+                    BarWidth = maxCount > 0 ? (double)kvp.Value / maxCount * barScale : 0
+                });
+            }
+            return result;
         }
 
         // Generic Load Distribution Calculator
         private List<LoadStat> CalculateLoadDistribution(List<LogEntry> logs, Func<LogEntry, string> keySelector, int take, Func<LogEntry, string> fullNameSelector = null)
         {
-            var grouped = logs
-                .Where(l => !string.IsNullOrEmpty(keySelector(l)))
-                .GroupBy(keySelector)
-                .Select(g => new { Name = g.Key, Count = g.Count(), FullName = fullNameSelector != null ? fullNameSelector(g.First()) : g.Key })
-                .OrderByDescending(g => g.Count)
-                .Take(take)
-                .ToList();
+            // Use Dictionary for O(1) grouping
+            var counts = new Dictionary<string, int>();
+            var firstLog = new Dictionary<string, LogEntry>(); // for fullName lookup
+            for (int i = 0; i < logs.Count; i++)
+            {
+                string key = keySelector(logs[i]);
+                if (string.IsNullOrEmpty(key)) continue;
+                if (counts.TryGetValue(key, out int c))
+                    counts[key] = c + 1;
+                else
+                {
+                    counts[key] = 1;
+                    firstLog[key] = logs[i];
+                }
+            }
 
-            if (!grouped.Any()) return new List<LoadStat>();
+            if (counts.Count == 0) return new List<LoadStat>();
 
-            int maxCount = grouped.Max(g => g.Count);
+            var topItems = counts.OrderByDescending(kvp => kvp.Value).Take(take).ToList();
+            int maxCount = topItems[0].Value;
             int total = logs.Count;
 
-            return grouped.Select(g => new LoadStat
+            var result = new List<LoadStat>(topItems.Count);
+            foreach (var kvp in topItems)
             {
-                Name = g.Name,
-                FullName = g.FullName,
-                Count = g.Count,
-                Percentage = (double)g.Count / total * 100,
-                DisplayText = $"{g.Count:N0} ({(double)g.Count / total * 100:F1}%)",
-                BarWidth = maxCount > 0 ? (double)g.Count / maxCount * 200 : 0
-            }).ToList();
+                double pct = (double)kvp.Value / total * 100;
+                result.Add(new LoadStat
+                {
+                    Name = kvp.Key,
+                    FullName = fullNameSelector != null ? fullNameSelector(firstLog[kvp.Key]) : kvp.Key,
+                    Count = kvp.Value,
+                    Percentage = pct,
+                    DisplayText = $"{kvp.Value:N0} ({pct:F1}%)",
+                    BarWidth = maxCount > 0 ? (double)kvp.Value / maxCount * 200 : 0
+                });
+            }
+            return result;
         }
 
         private List<GapInfo> FindGaps(List<LogEntry> logs)
@@ -276,23 +293,23 @@ namespace IndiLogs_3._0.Views
             var gaps = new List<GapInfo>();
             if (logs == null || logs.Count < 2) return gaps;
 
-            var ordered = logs.OrderBy(l => l.Date).ToList();
+            // Logs are already sorted by Date from the loading phase - no need to sort again
             const double threshold = 2.0;
 
-            for (int i = 1; i < ordered.Count; i++)
+            for (int i = 1; i < logs.Count; i++)
             {
-                var diff = ordered[i].Date - ordered[i - 1].Date;
+                var diff = logs[i].Date - logs[i - 1].Date;
                 if (diff.TotalSeconds >= threshold)
                 {
                     gaps.Add(new GapInfo
                     {
                         Index = gaps.Count + 1,
-                        StartTime = ordered[i - 1].Date,
-                        EndTime = ordered[i].Date,
+                        StartTime = logs[i - 1].Date,
+                        EndTime = logs[i].Date,
                         Duration = diff,
                         DurationText = FormatDuration(diff),
-                        LastMessageBeforeGap = TruncateMessage(ordered[i - 1].Message, 100),
-                        LastLogBeforeGap = ordered[i - 1]
+                        LastMessageBeforeGap = TruncateMessage(logs[i - 1].Message, 100),
+                        LastLogBeforeGap = logs[i - 1]
                     });
                 }
             }
@@ -569,18 +586,35 @@ namespace IndiLogs_3._0.Views
             var stateEntries = CalculateStateEntries(plcLogs);
             if (!stateEntries.Any()) { StateChartCountText.Text = "(No state transitions found)"; return; }
 
-            // Map errors to states + keep log references
+            // Map errors to states using binary search on sorted state entries O(n log m)
             var errorsByState = new Dictionary<string, List<LogEntry>>();
             foreach (var error in plcErrors)
             {
-                var state = stateEntries
-                    .Where(s => s.StartTime <= error.Date && (s.EndTime == null || error.Date <= s.EndTime.Value))
-                    .FirstOrDefault();
-                if (state != null && !string.IsNullOrWhiteSpace(state.StateName))
+                // Binary search: find the state interval containing this error's date
+                int lo = 0, hi = stateEntries.Count - 1;
+                StateEntry foundState = null;
+                while (lo <= hi)
                 {
-                    if (!errorsByState.ContainsKey(state.StateName))
-                        errorsByState[state.StateName] = new List<LogEntry>();
-                    errorsByState[state.StateName].Add(error);
+                    int mid = (lo + hi) / 2;
+                    var s = stateEntries[mid];
+                    if (error.Date < s.StartTime)
+                        hi = mid - 1;
+                    else if (s.EndTime.HasValue && error.Date > s.EndTime.Value)
+                        lo = mid + 1;
+                    else
+                    {
+                        foundState = s;
+                        break;
+                    }
+                }
+                if (foundState != null && !string.IsNullOrWhiteSpace(foundState.StateName))
+                {
+                    if (!errorsByState.TryGetValue(foundState.StateName, out var list))
+                    {
+                        list = new List<LogEntry>();
+                        errorsByState[foundState.StateName] = list;
+                    }
+                    list.Add(error);
                 }
             }
 
@@ -1004,20 +1038,25 @@ namespace IndiLogs_3._0.Views
         private List<StateEntry> CalculateStateEntries(List<LogEntry> plcLogs)
         {
             var statesList = new List<StateEntry>();
-            var sortedLogs = plcLogs.OrderBy(l => l.Date).ToList();
+            // Logs are already sorted by Date from the loading phase - no need to sort again
 
-            // Find PlcMngr transitions - use "Manager" thread (as in StateFailureAnalyzer)
-            var transitionLogs = sortedLogs
-                .Where(l => l.ThreadName != null &&
-                           l.ThreadName.Equals("Manager", StringComparison.OrdinalIgnoreCase) &&
-                           l.Message != null &&
-                           l.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) &&
-                           l.Message.Contains("->"))
-                .ToList();
+            // Find PlcMngr transitions without LINQ
+            var transitionLogs = new List<LogEntry>();
+            for (int i = 0; i < plcLogs.Count; i++)
+            {
+                var l = plcLogs[i];
+                if (l.ThreadName != null && l.Message != null &&
+                    l.ThreadName.Equals("Manager", StringComparison.OrdinalIgnoreCase) &&
+                    l.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) &&
+                    l.Message.Contains("->"))
+                {
+                    transitionLogs.Add(l);
+                }
+            }
 
             if (transitionLogs.Count == 0) return statesList;
 
-            DateTime logEndLimit = sortedLogs.Last().Date;
+            DateTime logEndLimit = plcLogs[plcLogs.Count - 1].Date;
 
             for (int i = 0; i < transitionLogs.Count; i++)
             {

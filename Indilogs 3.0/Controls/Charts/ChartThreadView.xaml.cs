@@ -33,6 +33,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
         // Drag/Pan support
         private bool _isDragging = false;
+        private bool _isSyncing = false;
         private Point _lastMousePos;
 
         // For X-axis labels
@@ -185,9 +186,12 @@ namespace IndiLogs_3._0.Controls.Charts
 
         public void SyncViewRange(int start, int end)
         {
+            if (_totalDataLength == 0 || _isSyncing) return;
+            _isSyncing = true;
             _viewStartIndex = start;
             _viewEndIndex = end;
             SkiaCanvas.InvalidateVisual();
+            _isSyncing = false;
         }
 
         public void SyncCursor(int index)
@@ -474,7 +478,7 @@ namespace IndiLogs_3._0.Controls.Charts
                         _viewStartIndex = newStart;
                         _viewEndIndex = newEnd;
                         _lastMousePos = pos;
-                        OnViewRangeChanged?.Invoke(_viewStartIndex, _viewEndIndex);
+                        if (!_isSyncing) OnViewRangeChanged?.Invoke(_viewStartIndex, _viewEndIndex);
                         SkiaCanvas.InvalidateVisual();
                     }
                 }
@@ -522,10 +526,30 @@ namespace IndiLogs_3._0.Controls.Charts
                 }
             }
 
-            // Always repaint when events exist for event dot hover detection
+            // Only repaint for events if hovered event index changed
             if (_chartEventMarkers != null && _chartEventMarkers.Count > 0)
             {
-                SkiaCanvas.InvalidateVisual();
+                int oldEvtIdx = _hoveredEventDotIndex;
+                // Quick scan: find which event the mouse is near
+                int newEvtIdx = -1;
+                float w2 = (float)SkiaCanvas.ActualWidth;
+                float cw = w2 - LEFT_MARGIN - RIGHT_MARGIN;
+                if (cw > 0 && _totalDataLength > 0)
+                {
+                    int cnt = _viewEndIndex - _viewStartIndex + 1;
+                    float h2 = (float)SkiaCanvas.ActualHeight;
+                    float evtY = h2 - 10;
+                    foreach (var evt in _chartEventMarkers)
+                    {
+                        if (evt.Index < _viewStartIndex || evt.Index > _viewEndIndex) continue;
+                        float ex = LEFT_MARGIN + (float)((evt.Index - _viewStartIndex) / (double)cnt * cw);
+                        float dx = mouseX - ex;
+                        float dy = mouseY - evtY;
+                        if (Math.Sqrt(dx * dx + dy * dy) < 20) { newEvtIdx = evt.Index; break; }
+                    }
+                }
+                if (newEvtIdx != oldEvtIdx)
+                    SkiaCanvas.InvalidateVisual();
             }
         }
 
@@ -614,7 +638,7 @@ namespace IndiLogs_3._0.Controls.Charts
             _viewStartIndex = newStart;
             _viewEndIndex = newEnd;
 
-            OnViewRangeChanged?.Invoke(_viewStartIndex, _viewEndIndex);
+            if (!_isSyncing) OnViewRangeChanged?.Invoke(_viewStartIndex, _viewEndIndex);
             SkiaCanvas.InvalidateVisual();
 
             e.Handled = true;

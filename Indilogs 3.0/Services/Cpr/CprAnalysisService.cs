@@ -61,7 +61,7 @@ namespace IndiLogs_3._0.Services.Cpr
                 AutoYAxis = filter.AutoYAxis,
                 YAxisFrom = filter.YAxisFrom,
                 YAxisTo = filter.YAxisTo,
-                VerticalRefLines = ColorsReferenceLines
+                VerticalRefLines = null
             };
 
             string axis = filter.Axis;

@@ -288,6 +288,15 @@ namespace IndiLogs_3._0.ViewModels
             try
             {
                 _dataService.LoadCsv(path);
+
+                if (!_dataService.IsLoaded)
+                {
+                    System.Windows.MessageBox.Show(
+                        $"No CPR data found in file:\n{path}\n\nThe file may use an unsupported format or may not contain recognized CPR columns.",
+                        "No Data", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
                 FilePath = path;
                 PopulateAndAutoApply();
             }
@@ -363,7 +372,10 @@ namespace IndiLogs_3._0.ViewModels
                         result = _analysisService.ComputeHistogram(_dataService.ApplyFilters(filter), filter, stations);
                         break;
                     case CprGraphType.Revolutions:
-                        var allData = _dataService.ApplyBaseFilters(filter);
+                        // Don't filter by revolution — the graph needs all revolution types
+                        var revFilter = BuildFilterState();
+                        revFilter.Revolution = null;
+                        var allData = _dataService.ApplyBaseFilters(revFilter);
                         result = _analysisService.ComputeRevolutions(allData, filter, pairs[0]);
                         break;
                     case CprGraphType.MissingData:

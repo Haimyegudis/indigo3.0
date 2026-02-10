@@ -54,8 +54,11 @@ namespace IndiLogs_3._0.Services.Cpr
             var lines = File.ReadAllLines(filePath);
             if (lines.Length < 2) return;
 
+            // Auto-detect delimiter: try comma, semicolon, tab
+            char delimiter = DetectDelimiter(lines[0]);
+
             // Parse header — normalize column names
-            var rawHeaders = lines[0].Split(',');
+            var rawHeaders = lines[0].Split(delimiter);
             var headers = new string[rawHeaders.Length];
             for (int i = 0; i < rawHeaders.Length; i++)
             {
@@ -68,9 +71,11 @@ namespace IndiLogs_3._0.Services.Cpr
             for (int i = 0; i < headers.Length; i++)
                 colMap[headers[i]] = i;
 
+            System.Diagnostics.Debug.WriteLine($"[CPR CSV] File: {filePath}, Lines: {lines.Length}, Delimiter: '{delimiter}', Headers: {headers.Length}, Recognized columns: {colMap.Count}");
+
             for (int row = 1; row < lines.Length; row++)
             {
-                var parts = lines[row].Split(',');
+                var parts = lines[row].Split(delimiter);
                 if (parts.Length < headers.Length) continue;
 
                 var rec = new CprRecord();
@@ -105,6 +110,30 @@ namespace IndiLogs_3._0.Services.Cpr
 
                 _allRecords.Add(rec);
             }
+
+            System.Diagnostics.Debug.WriteLine($"[CPR CSV] Loaded {_allRecords.Count} records from {lines.Length - 1} data lines");
+        }
+
+        /// <summary>
+        /// Auto-detect CSV delimiter by checking which common delimiter produces the most columns in the header line.
+        /// </summary>
+        private char DetectDelimiter(string headerLine)
+        {
+            char[] candidates = { ',', ';', '\t' };
+            char best = ',';
+            int bestCount = 0;
+
+            foreach (var c in candidates)
+            {
+                int count = headerLine.Split(c).Length;
+                if (count > bestCount)
+                {
+                    bestCount = count;
+                    best = c;
+                }
+            }
+
+            return best;
         }
 
         private string FormatCalibrationTime(string raw)

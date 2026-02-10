@@ -372,7 +372,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             _loggerTreeRoot = new ObservableCollection<LoggerNode>();
 
             _searchDebounceTimer = new DispatcherTimer();
-            _searchDebounceTimer.Interval = TimeSpan.FromMilliseconds(500);
+            _searchDebounceTimer.Interval = TimeSpan.FromMilliseconds(250);
             _searchDebounceTimer.Tick += OnSearchTimerTick;
 
             ToggleSearchCommand = new RelayCommand(o =>
@@ -565,10 +565,11 @@ namespace IndiLogs_3._0.ViewModels.Components
             if (hasThreadFilter)
                 query = query.Where(l => _activeThreadFilters.Contains(l.ThreadName));
 
-            // 2. Logger Filter (only if checkbox checked)
+            // 2. Logger Filter (only if checkbox checked) - use HashSet for O(1) lookup
             if (hasLoggerFilter)
             {
-                query = query.Where(l => _activeLoggerFilters.Any(filter => string.Equals(l.Logger, filter, StringComparison.OrdinalIgnoreCase)));
+                var loggerSet = new HashSet<string>(_activeLoggerFilters, StringComparer.OrdinalIgnoreCase);
+                query = query.Where(l => l.Logger != null && loggerSet.Contains(l.Logger));
             }
 
             // 3. Method Filter (only if checkbox checked)
@@ -1677,10 +1678,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             // Check if there's an advanced filter to apply
             bool hasAdvancedFilter = isActive && _mainFilterRoot != null && _mainFilterRoot.Children != null && _mainFilterRoot.Children.Count > 0;
 
-            System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] isActive={isActive}, hasSearchText={hasSearchText}, hasThreadFilter={hasThreadFilter}, hasAdvancedFilter={hasAdvancedFilter}");
-            System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Stored thread filters: {string.Join(", ", _activeThreadFilters)}");
-            System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] _mainFilterRoot is null: {_mainFilterRoot == null}, Children count: {_mainFilterRoot?.Children?.Count ?? -1}");
-
             // 1. קביעת מקור הנתונים
             if (isActive || hasSearchText)
             {
@@ -1689,33 +1686,23 @@ namespace IndiLogs_3._0.ViewModels.Components
                 if (isActive && _isTimeFocusActive && _lastFilteredCache != null)
                 {
                     currentLogs = _lastFilteredCache;
-                    System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Using _lastFilteredCache (TimeFocus), count={currentLogs.Count()}");
                 }
                 else
                 {
                     currentLogs = _sessionVM?.AllLogsCache ?? new List<LogEntry>();
-                    System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Using AllLogsCache, count={currentLogs.Count()}");
                 }
 
                 // Apply advanced filter from FilterWindow (only if checkbox is checked)
                 if (hasAdvancedFilter)
                 {
-                    var beforeAdvanced = currentLogs.Count();
                     currentLogs = currentLogs.Where(l => EvaluateFilterNode(l, _mainFilterRoot));
-                    System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Advanced filter applied: before={beforeAdvanced}, after={currentLogs.Count()}");
                 }
 
-                // סינון לפי Threads (only if checkbox is checked)
+                // Thread filter (only if checkbox is checked) - use HashSet for O(1) lookup
                 if (hasThreadFilter)
                 {
-                    var beforeCount = currentLogs.Count();
-                    currentLogs = currentLogs.Where(l => _activeThreadFilters.Contains(l.ThreadName));
-                    var afterCount = currentLogs.Count();
-                    System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Thread filter: before={beforeCount}, after={afterCount}");
-
-                    // Debug: show sample thread names from source
-                    var sampleThreads = (_sessionVM?.AllLogsCache ?? new List<LogEntry>()).Take(5).Select(l => l.ThreadName).ToList();
-                    System.Diagnostics.Debug.WriteLine($"[APPLY MAIN FILTER] Sample ThreadNames in logs: {string.Join(", ", sampleThreads)}");
+                    var threadSet = new HashSet<string>(_activeThreadFilters, StringComparer.OrdinalIgnoreCase);
+                    currentLogs = currentLogs.Where(l => l.ThreadName != null && threadSet.Contains(l.ThreadName));
                 }
 
                 // סינון לפי טקסט חיפוש (always apply search, regardless of checkbox)
@@ -1749,22 +1736,25 @@ namespace IndiLogs_3._0.ViewModels.Components
                 currentLogs = currentLogs.Where(l => l.Date >= GlobalTimeRangeStart.Value && l.Date <= GlobalTimeRangeEnd.Value);
             }
 
-            // 3. סינון שלילי (Filter Out)
-            if (_isMainFilterOutActive && _negativeFilters.Any())
+            // 3. סינון שלילי (Filter Out) - pre-split for faster iteration
+            if (_isMainFilterOutActive && _negativeFilters.Count > 0)
             {
+                var threadFiltersOut = new List<string>();
+                var messageFiltersOut = new List<string>();
+                foreach (var f in _negativeFilters)
+                {
+                    if (f.StartsWith("THREAD:"))
+                        threadFiltersOut.Add(f.Substring(7));
+                    else
+                        messageFiltersOut.Add(f);
+                }
+
                 currentLogs = currentLogs.Where(l =>
                 {
-                    foreach (var f in _negativeFilters)
-                    {
-                        if (f.StartsWith("THREAD:"))
-                        {
-                            if (l.ThreadName != null && l.ThreadName.IndexOf(f.Substring(7), StringComparison.OrdinalIgnoreCase) >= 0) return false;
-                        }
-                        else
-                        {
-                            if (l.Message != null && l.Message.IndexOf(f, StringComparison.OrdinalIgnoreCase) >= 0) return false;
-                        }
-                    }
+                    for (int i = 0; i < threadFiltersOut.Count; i++)
+                        if (l.ThreadName != null && l.ThreadName.IndexOf(threadFiltersOut[i], StringComparison.OrdinalIgnoreCase) >= 0) return false;
+                    for (int i = 0; i < messageFiltersOut.Count; i++)
+                        if (l.Message != null && l.Message.IndexOf(messageFiltersOut[i], StringComparison.OrdinalIgnoreCase) >= 0) return false;
                     return true;
                 });
             }

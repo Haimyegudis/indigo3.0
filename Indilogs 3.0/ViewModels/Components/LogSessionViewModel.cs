@@ -2,6 +2,7 @@
 using IndiLogs_3._0.Services;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -278,6 +279,9 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             try
             {
+                var perfTotal = Stopwatch.StartNew();
+                var perfPhase = Stopwatch.StartNew();
+
                 var progress = new Progress<(double Percent, string Message)>(update =>
                 {
                     CurrentProgress = update.Percent;
@@ -285,44 +289,49 @@ namespace IndiLogs_3._0.ViewModels.Components
                 });
 
                 var newSession = await _logService.LoadSessionAsync(filePaths, progress);
+                Debug.WriteLine($"[PERF] ProcessFiles > LoadSessionAsync: {perfPhase.ElapsedMilliseconds}ms");
 
                 newSession.FileName = Path.GetFileName(filePaths[0]);
                 if (filePaths.Length > 1) newSession.FileName += $" (+{filePaths.Length - 1})";
                 newSession.FilePath = filePaths[0];
 
-                // Parse APP logs to extract Pattern, Data, Exception fields (ASYNC for performance)
+                // Run APP log parsing and color application in parallel for maximum speed
+                perfPhase.Restart();
+                StatusMessage = "Processing logs...";
+                var postTasks = new List<Task>();
+
+                // Parse APP logs (extracts Pattern, Data, Exception fields)
                 if (newSession.AppDevLogs != null && newSession.AppDevLogs.Count > 0)
                 {
-                    StatusMessage = "Parsing APP logs...";
-                    System.Diagnostics.Debug.WriteLine($"[LOG PARSER] Parsing {newSession.AppDevLogs.Count} APP logs...");
-                    await Services.LogParserService.ParseLogEntriesAsync(newSession.AppDevLogs);
-                    System.Diagnostics.Debug.WriteLine($"[LOG PARSER] Parsing complete");
+                    Debug.WriteLine($"[LOG PARSER] Parsing {newSession.AppDevLogs.Count} APP logs...");
+                    postTasks.Add(Services.LogParserService.ParseLogEntriesAsync(newSession.AppDevLogs));
                 }
 
-                StatusMessage = "Applying Colors...";
-                System.Diagnostics.Debug.WriteLine($"[COLORING] Applying default colors to {newSession.Logs.Count} main logs and {newSession.AppDevLogs?.Count ?? 0} app logs...");
-                await _coloringService.ApplyDefaultColorsAsync(newSession.Logs, false);
+                // Apply colors to main logs
+                Debug.WriteLine($"[COLORING] Applying colors to {newSession.Logs.Count} main + {newSession.AppDevLogs?.Count ?? 0} app logs...");
+                postTasks.Add(_coloringService.ApplyDefaultColorsAsync(newSession.Logs, false));
                 if (newSession.AppDevLogs != null && newSession.AppDevLogs.Any())
-                    await _coloringService.ApplyDefaultColorsAsync(newSession.AppDevLogs, true);
-                System.Diagnostics.Debug.WriteLine($"[COLORING] Color application complete");
+                    postTasks.Add(_coloringService.ApplyDefaultColorsAsync(newSession.AppDevLogs, true));
+
+                await Task.WhenAll(postTasks);
+                Debug.WriteLine($"[PERF] ProcessFiles > Post-processing (parse+color): {perfPhase.ElapsedMilliseconds}ms");
 
                 LoadedSessions.Add(newSession);
                 SelectedSession = newSession;
 
                 // Update SessionVM with ALL loaded data
+                // Share reference instead of copying to avoid doubling memory usage
                 Logs = newSession.Logs;
-                AllLogsCache = newSession.Logs.ToList();
-                AllAppLogsCache = newSession.AppDevLogs?.ToList() ?? new List<LogEntry>();
-                // Note: Parsing already done in LogFileService when logs were loaded
+                AllLogsCache = newSession.Logs;
+                AllAppLogsCache = newSession.AppDevLogs ?? new List<LogEntry>();
 
-                // Update Events and cache
+                // Update Events and cache (already sorted by LogFileService)
                 Events.Clear();
-                if (newSession.Events != null)
+                if (newSession.Events != null && newSession.Events.Count > 0)
                 {
-                    // Sort events by time before storing
-                    var sortedEvents = newSession.Events.OrderBy(e => e.Time).ToList();
-                    AllEvents = sortedEvents; // Cache all events
-                    foreach (var evt in sortedEvents)
+                    AllEvents = newSession.Events; // Already sorted, share reference
+                    // Batch-add to ObservableCollection to minimize CollectionChanged events
+                    foreach (var evt in newSession.Events)
                         Events.Add(evt);
                 }
                 else
@@ -354,22 +363,26 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                 // Update FilterVM - apply initial filters (this is the FIRST and MAIN filter application)
                 // Subsequent filter calls happen only when user changes filter settings
-                System.Diagnostics.Debug.WriteLine($"[FILTERING] Initial filter application starting...");
+                perfPhase.Restart();
+                Debug.WriteLine($"[FILTERING] Initial filter application starting...");
                 _filterVM.ApplyMainLogsFilter();
                 _filterVM.ApplyAppLogsFilter();
-                System.Diagnostics.Debug.WriteLine($"[FILTERING] Initial filter application complete");
+                Debug.WriteLine($"[PERF] ProcessFiles > Initial filtering: {perfPhase.ElapsedMilliseconds}ms");
 
-                // Scroll to the last log (bottom) after loading
-                if (_parent.Logs != null && _parent.Logs.Any())
-                {
-                    var lastLog = _parent.Logs.LastOrDefault();
-                    if (lastLog != null)
+                // Scroll all tabs to last row after loading
+                // Use ApplicationIdle priority to ensure DataGrid virtualization is fully rendered
+                // Use ScrollTabToBottom (not ScrollToLog) to directly target each grid,
+                // because FindGridForLog always matches PLC first for shared log objects
+                Application.Current?.Dispatcher?.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.ApplicationIdle,
+                    new Action(() =>
                     {
-                        _parent.SelectedLog = lastLog;
-                        _parent.ScrollToLog(lastLog);
-                        System.Diagnostics.Debug.WriteLine($"[SCROLL] Scrolled to last log after initial load");
-                    }
-                }
+                        _parent.ScrollTabToBottom("PLC");
+                        _parent.ScrollTabToBottom("FILTERED");
+                        _parent.ScrollTabToBottom("APP");
+                    }));
+
+                Debug.WriteLine($"[PERF] === ProcessFiles TOTAL: {perfTotal.ElapsedMilliseconds}ms ===");
 
                 CurrentProgress = 100;
                 StatusMessage = "Logs Loaded. Running Analysis in Background...";

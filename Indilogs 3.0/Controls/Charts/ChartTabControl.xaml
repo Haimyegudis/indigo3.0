@@ -230,5 +230,20 @@
                    HorizontalAlignment="Center" VerticalAlignment="Center"
                    FontSize="14" TextWrapping="Wrap" Margin="40"
                    Visibility="Visible"/>
+
+        <!-- Loading Overlay -->
+        <Border x:Name="LoadingOverlay" Grid.Row="0" Grid.RowSpan="4" Grid.ColumnSpan="3"
+                Background="#CC1B2838" Visibility="Collapsed" Panel.ZIndex="100">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ProgressBar x:Name="LoadingProgress" Width="300" Height="6" IsIndeterminate="True"
+                             Foreground="#3B82F6" Background="#2D4A6F" BorderThickness="0"/>
+                <TextBlock x:Name="LoadingText" Text="Loading chart data..."
+                           Foreground="White" FontSize="14" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" Margin="0,12,0,0"/>
+                <TextBlock x:Name="LoadingDetail" Text="Building signals and timestamps"
+                           Foreground="#8899AA" FontSize="11"
+                           HorizontalAlignment="Center" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </UserControl>

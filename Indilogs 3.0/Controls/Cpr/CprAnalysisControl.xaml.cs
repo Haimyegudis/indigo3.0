@@ -31,11 +31,24 @@ namespace IndiLogs_3._0.Controls.Cpr
         {
             InitializeComponent();
             Loaded += OnLoaded;
+            DataContextChanged += (s, e) => EnsureVmWired();
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            _vm = DataContext as CprAnalysisViewModel;
+            EnsureVmWired();
+            UpdateChartTheme();
+        }
+
+        /// <summary>
+        /// Ensure the ViewModel is resolved and events are wired.
+        /// Called from OnLoaded and also from click handlers as a fallback.
+        /// </summary>
+        private void EnsureVmWired()
+        {
+            if (_vm == null)
+                _vm = DataContext as CprAnalysisViewModel;
+
             if (_vm == null) return;
 
             if (!_isWired)
@@ -50,14 +63,14 @@ namespace IndiLogs_3._0.Controls.Cpr
                 ChartView.ZoomChanged += OnMainChartZoomChanged;
                 CompareChartView.ZoomChanged += OnCompareChartZoomChanged;
             }
-
-            UpdateChartTheme();
         }
 
         #region File Handling
 
         private void ChooseFile_Click(object sender, RoutedEventArgs e)
         {
+            EnsureVmWired();
+
             var dlg = new OpenFileDialog
             {
                 Title = "Open CPR Data File",
@@ -65,14 +78,25 @@ namespace IndiLogs_3._0.Controls.Cpr
                 FilterIndex = 1
             };
 
-            if (dlg.ShowDialog() == true && _vm != null)
+            if (dlg.ShowDialog() == true)
             {
-                _vm.LoadFileDirect(dlg.FileName);
+                if (_vm != null)
+                {
+                    _vm.LoadFileDirect(dlg.FileName);
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("[CPR] ERROR: ViewModel is null, cannot load file");
+                    System.Windows.MessageBox.Show("Internal error: CPR ViewModel not initialized. Please switch to another tab and back, then try again.",
+                        "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                }
             }
         }
 
         private void CompareFile_Click(object sender, RoutedEventArgs e)
         {
+            EnsureVmWired();
+
             var dlg = new OpenFileDialog
             {
                 Title = "Open CPR Compare File",
@@ -80,7 +104,7 @@ namespace IndiLogs_3._0.Controls.Cpr
                 FilterIndex = 1
             };
 
-            if (dlg.ShowDialog() == true && _vm != null)
+            if (dlg.ShowDialog() == true)
             {
                 _compareVm = new CprAnalysisViewModel();
                 _compareVm.GraphResultUpdated += OnCompareGraphResultUpdated;

@@ -839,47 +839,116 @@ namespace IndiLogs_3._0.Controls.Cpr
             double dataX = xMin + (mx - chartLeft) / chartW * xRange;
             double dataY = yMin + (chartBottom - my) / chartH * yRange;
 
-            // Find nearest point
-            string nearestName = null;
-            double nearestDist = double.MaxValue;
-            double nearestX = 0, nearestY = 0;
+            // --- Draw crosshair lines ---
+            using (var crosshairPaint = new SKPaint
+            {
+                Color = _textColor.WithAlpha(80),
+                IsAntialias = false,
+                StrokeWidth = 1,
+                PathEffect = SKPathEffect.CreateDash(new float[] { 4, 4 }, 0)
+            })
+            {
+                canvas.DrawLine(mx, chartTop, mx, chartBottom, crosshairPaint);   // vertical
+                canvas.DrawLine(chartLeft, my, chartRight, my, crosshairPaint);   // horizontal
+            }
+
+            // --- Draw Y value label on the left Y-axis ---
+            using (var axisPaint = new SKPaint { Color = _textColor, TextSize = 9, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Segoe UI") })
+            using (var axisBg = new SKPaint { Color = _bgColor.WithAlpha(220), Style = SKPaintStyle.Fill })
+            {
+                string yLabel = FormatTickLabel(dataY);
+                float tw = axisPaint.MeasureText(yLabel);
+                var yRect = new SKRect(chartLeft - tw - 7, my - 7, chartLeft - 1, my + 7);
+                canvas.DrawRect(yRect, axisBg);
+                canvas.DrawText(yLabel, chartLeft - tw - 4, my + 3, axisPaint);
+
+                // X value label on the bottom X-axis
+                string xLabel = FormatTickLabel(dataX);
+                float xw = axisPaint.MeasureText(xLabel);
+                var xRect = new SKRect(mx - xw / 2 - 3, chartBottom + 1, mx + xw / 2 + 3, chartBottom + 15);
+                canvas.DrawRect(xRect, axisBg);
+                canvas.DrawText(xLabel, mx - xw / 2, chartBottom + 12, axisPaint);
+            }
+
+            // --- Build tooltip with per-series Y values at cursor X ---
+            var tooltipLines = new List<(string text, SKColor color)>();
 
             foreach (var s in series)
             {
-                if (s.XValues == null || s.YValues == null) continue;
-                for (int i = 0; i < s.XValues.Length; i++)
+                if (s.XValues == null || s.YValues == null || s.XValues.Length == 0) continue;
+
+                // Find nearest X index to cursor dataX using binary search
+                int bestIdx = -1;
+                double bestDist = double.MaxValue;
+                int lo = 0, hi = s.XValues.Length - 1;
+                while (lo <= hi)
                 {
-                    if (double.IsNaN(s.YValues[i])) continue;
-                    double dx = (s.XValues[i] - dataX) / xRange;
-                    double dy = (s.YValues[i] - dataY) / yRange;
-                    double dist = dx * dx + dy * dy;
-                    if (dist < nearestDist)
-                    {
-                        nearestDist = dist;
-                        nearestName = s.Name;
-                        nearestX = s.XValues[i];
-                        nearestY = s.YValues[i];
-                    }
+                    int mid = (lo + hi) / 2;
+                    double d = Math.Abs(s.XValues[mid] - dataX);
+                    if (d < bestDist) { bestDist = d; bestIdx = mid; }
+                    if (s.XValues[mid] < dataX) lo = mid + 1;
+                    else hi = mid - 1;
+                }
+
+                if (bestIdx >= 0 && !double.IsNaN(s.YValues[bestIdx]))
+                {
+                    string yVal = FormatTickLabel(s.YValues[bestIdx]);
+                    tooltipLines.Add(($"{s.Name}: {yVal}", s.Color));
                 }
             }
 
-            if (nearestName == null) return;
+            if (tooltipLines.Count == 0) return;
 
-            string text = $"{nearestName}: ({nearestX:F2}, {nearestY:F2})";
-
-            using (var bgPaint = new SKPaint { Color = _bgColor.WithAlpha(220), Style = SKPaintStyle.Fill })
+            // --- Draw tooltip box ---
+            using (var bgPaint = new SKPaint { Color = _bgColor.WithAlpha(230), Style = SKPaintStyle.Fill })
             using (var borderPaint = new SKPaint { Color = _gridColor, Style = SKPaintStyle.Stroke, StrokeWidth = 1 })
             using (var textPaint = new SKPaint { Color = _textColor, TextSize = 10, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Segoe UI") })
+            using (var colorPaint = new SKPaint { IsAntialias = false, StrokeWidth = 2 })
             {
-                float tw = textPaint.MeasureText(text);
-                float tipX = mx + 10;
-                float tipY = my - 20;
-                if (tipX + tw + 10 > chartRight) tipX = mx - tw - 20;
+                // Header line
+                string header = $"X: {FormatTickLabel(dataX)}";
+                float lineHeight = 14;
+                float maxW = textPaint.MeasureText(header);
+                foreach (var line in tooltipLines)
+                {
+                    float lw = textPaint.MeasureText(line.text);
+                    if (lw + 18 > maxW) maxW = lw + 18; // 18 = color swatch + gap
+                }
 
-                var rect = new SKRect(tipX, tipY - 12, tipX + tw + 8, tipY + 6);
-                canvas.DrawRoundRect(rect, 3, 3, bgPaint);
-                canvas.DrawRoundRect(rect, 3, 3, borderPaint);
-                canvas.DrawText(text, tipX + 4, tipY + 1, textPaint);
+                float boxW = maxW + 12;
+                float boxH = lineHeight * (tooltipLines.Count + 1) + 10; // +1 for header
+
+                float tipX = mx + 14;
+                float tipY = my - boxH / 2;
+                // Keep within chart bounds
+                if (tipX + boxW > chartRight) tipX = mx - boxW - 14;
+                if (tipY < chartTop) tipY = chartTop;
+                if (tipY + boxH > chartBottom) tipY = chartBottom - boxH;
+
+                var rect = new SKRect(tipX, tipY, tipX + boxW, tipY + boxH);
+                canvas.DrawRoundRect(rect, 4, 4, bgPaint);
+                canvas.DrawRoundRect(rect, 4, 4, borderPaint);
+
+                // Draw header
+                float textX = tipX + 6;
+                float textY = tipY + lineHeight;
+                canvas.DrawText(header, textX, textY, textPaint);
+
+                // Separator line
+                textY += 3;
+                using (var sepPaint = new SKPaint { Color = _gridColor.WithAlpha(100), StrokeWidth = 1 })
+                    canvas.DrawLine(tipX + 4, textY, tipX + boxW - 4, textY, sepPaint);
+
+                // Draw series values
+                foreach (var line in tooltipLines)
+                {
+                    textY += lineHeight;
+                    // Color swatch
+                    colorPaint.Color = line.color;
+                    canvas.DrawLine(textX, textY - 4, textX + 10, textY - 4, colorPaint);
+                    // Text
+                    canvas.DrawText(line.text, textX + 14, textY, textPaint);
+                }
             }
         }
 

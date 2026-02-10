@@ -51,36 +51,45 @@ namespace IndiLogs_3._0.Controls
                 return;
             }
 
-            if (string.IsNullOrEmpty(highlight))
+            if (string.IsNullOrEmpty(highlight) || highlight.Length < 2)
             {
                 Inlines.Add(new Run(text));
                 return;
             }
 
-            try
-            {
-                string escapedHighlight = Regex.Escape(highlight);
-                string pattern = $"({escapedHighlight})";
-                string[] segments = Regex.Split(text, pattern, RegexOptions.IgnoreCase);
+            // Use fast string.IndexOf instead of Regex.Split for performance
+            int pos = 0;
+            int highlightLen = highlight.Length;
 
-                foreach (string segment in segments)
+            while (pos < text.Length)
+            {
+                int matchIdx = text.IndexOf(highlight, pos, StringComparison.OrdinalIgnoreCase);
+                if (matchIdx < 0)
                 {
-                    Run run = new Run(segment);
-
-                    if (string.Equals(segment, highlight, StringComparison.OrdinalIgnoreCase))
-                    {
-                        run.Background = Brushes.Yellow;
-                        run.Foreground = Brushes.Black;
-                        run.FontWeight = FontWeights.Bold;
-                    }
-
-                    Inlines.Add(run);
+                    // No more matches - add remaining text
+                    if (pos < text.Length)
+                        Inlines.Add(new Run(text.Substring(pos)));
+                    break;
                 }
+
+                // Add text before match
+                if (matchIdx > pos)
+                    Inlines.Add(new Run(text.Substring(pos, matchIdx - pos)));
+
+                // Add highlighted match
+                Inlines.Add(new Run(text.Substring(matchIdx, highlightLen))
+                {
+                    Background = Brushes.Yellow,
+                    Foreground = Brushes.Black,
+                    FontWeight = FontWeights.Bold
+                });
+
+                pos = matchIdx + highlightLen;
             }
-            catch
-            {
+
+            // If nothing was added (empty text), add empty run
+            if (Inlines.Count == 0)
                 Inlines.Add(new Run(text));
-            }
         }
     }
 }

@@ -34,7 +34,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
         // Row height for each CH
         private const float ROW_HEIGHT = 24f;
-        private const float LEFT_MARGIN = 60f;   // Match ChartGraphView for alignment
+        private const float LEFT_MARGIN = 100f;  // Wider to show Parent>Name labels
         private const float RIGHT_MARGIN = 55f;  // Match ChartGraphView for alignment
         private const float PADDING = 2f;
         private const float X_AXIS_HEIGHT = 20f;
@@ -68,6 +68,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
         // Drag/Pan support
         private bool _isDragging = false;
+        private bool _isSyncing = false;
         private Point _lastMousePos;
 
         // Event marker support
@@ -81,6 +82,9 @@ namespace IndiLogs_3._0.Controls.Charts
         // CHSTEP hover support
         private int _hoveredStateRow = -1;
         private StateInterval? _hoveredStateInterval = null;
+
+        // Label hover support (show full name on hover over left margin)
+        private int _hoveredLabelRow = -1;
 
         public bool IsLightTheme
         {
@@ -159,9 +163,12 @@ namespace IndiLogs_3._0.Controls.Charts
 
         public void SyncViewRange(int start, int end)
         {
+            if (_totalDataLength == 0 || _isSyncing) return;
+            _isSyncing = true;
             _viewStartIndex = start;
             _viewEndIndex = end;
             SkiaCanvas.InvalidateVisual();
+            _isSyncing = false;
         }
 
         public void SyncCursor(int index)
@@ -247,16 +254,92 @@ namespace IndiLogs_3._0.Controls.Charts
                         _viewStartIndex = newStart;
                         _viewEndIndex = newEnd;
                         _lastMousePos = pos;
-                        OnViewRangeChanged?.Invoke(_viewStartIndex, _viewEndIndex);
+                        if (!_isSyncing) OnViewRangeChanged?.Invoke(_viewStartIndex, _viewEndIndex);
                         SkiaCanvas.InvalidateVisual();
                     }
                 }
             }
             else
             {
-                // Invalidate for CHSTEP hover detection (and event markers)
-                SkiaCanvas.InvalidateVisual();
+                // Pre-compute hover state (lightweight, no rendering)
+                int oldRow = _hoveredStateRow;
+                var oldInterval = _hoveredStateInterval;
+                int oldLabelRow = _hoveredLabelRow;
+                bool needsRepaint = false;
+
+                float w2 = (float)SkiaCanvas.ActualWidth;
+                float chartWidth2 = w2 - LEFT_MARGIN - RIGHT_MARGIN;
+
+                // Check label hover (left margin area)
+                int newLabelRow = -1;
+                if (pos.X < LEFT_MARGIN && pos.X >= 0 && _stateDataList.Count > 0)
+                {
+                    int rowIdx = Math.Max(0, (int)((pos.Y - PADDING) / ROW_HEIGHT));
+                    if (rowIdx >= 0 && rowIdx < _stateDataList.Count)
+                        newLabelRow = rowIdx;
+                }
+                if (newLabelRow != oldLabelRow)
+                {
+                    _hoveredLabelRow = newLabelRow;
+                    needsRepaint = true;
+                }
+
+                if (chartWidth2 > 0 && _totalDataLength > 0 && pos.X >= LEFT_MARGIN)
+                {
+                    int cnt = _viewEndIndex - _viewStartIndex + 1;
+                    double ratio = (pos.X - LEFT_MARGIN) / chartWidth2;
+                    int hoverIndex = _viewStartIndex + (int)(ratio * cnt);
+                    float rowH = ROW_HEIGHT;
+                    int rowIdx = Math.Max(0, (int)((pos.Y - PADDING) / rowH));
+
+                    int newRow = -1;
+                    StateInterval? newInterval = null;
+
+                    if (rowIdx >= 0 && rowIdx < _stateDataList.Count)
+                    {
+                        var intervals = _stateDataList[rowIdx].Intervals;
+                        // Binary search for the interval containing hoverIndex
+                        int lo = 0, hi = intervals.Count - 1;
+                        while (lo <= hi)
+                        {
+                            int mid = (lo + hi) / 2;
+                            if (hoverIndex < intervals[mid].StartIndex)
+                                hi = mid - 1;
+                            else if (hoverIndex > intervals[mid].EndIndex)
+                                lo = mid + 1;
+                            else
+                            {
+                                newRow = rowIdx;
+                                newInterval = intervals[mid];
+                                break;
+                            }
+                        }
+                    }
+
+                    if (newRow != oldRow || !StateIntervalEquals(newInterval, oldInterval))
+                    {
+                        _hoveredStateRow = newRow;
+                        _hoveredStateInterval = newInterval;
+                        needsRepaint = true;
+                    }
+                }
+                else if (oldRow >= 0 || oldInterval.HasValue)
+                {
+                    _hoveredStateRow = -1;
+                    _hoveredStateInterval = null;
+                    needsRepaint = true;
+                }
+
+                if (needsRepaint)
+                    SkiaCanvas.InvalidateVisual();
             }
+        }
+
+        private static bool StateIntervalEquals(StateInterval? a, StateInterval? b)
+        {
+            if (!a.HasValue && !b.HasValue) return true;
+            if (!a.HasValue || !b.HasValue) return false;
+            return a.Value.StartIndex == b.Value.StartIndex && a.Value.EndIndex == b.Value.EndIndex;
         }
 
         protected override void OnMouseWheel(System.Windows.Input.MouseWheelEventArgs e)
@@ -294,7 +377,7 @@ namespace IndiLogs_3._0.Controls.Charts
             _viewStartIndex = newStart;
             _viewEndIndex = newEnd;
 
-            OnViewRangeChanged?.Invoke(_viewStartIndex, _viewEndIndex);
+            if (!_isSyncing) OnViewRangeChanged?.Invoke(_viewStartIndex, _viewEndIndex);
             SkiaCanvas.InvalidateVisual();
 
             e.Handled = true;
@@ -321,8 +404,7 @@ namespace IndiLogs_3._0.Controls.Charts
             if (count <= 1 || chartWidth <= 0) return;
 
             float rowIndex = 0;
-            _hoveredStateRow = -1;
-            _hoveredStateInterval = null;
+            // Hover state is pre-computed in OnMouseMove - no need to reset here
             float hoverX = (float)_hoverPos.X;
             float hoverY = (float)_hoverPos.Y;
 
@@ -361,13 +443,10 @@ namespace IndiLogs_3._0.Controls.Charts
                         // Get color based on state ID
                         SKColor baseColor = CHStepColors[Math.Abs(interval.StateId) % CHStepColors.Length];
 
-                        // Hover detection for this bar
-                        bool isHovered = hoverX >= x1 && hoverX <= x2 && hoverY >= barTop && hoverY <= barBottom;
-                        if (isHovered)
-                        {
-                            _hoveredStateRow = (int)rowIndex;
-                            _hoveredStateInterval = interval;
-                        }
+                        // Use pre-computed hover state from OnMouseMove
+                        bool isHovered = _hoveredStateRow == (int)rowIndex &&
+                                         _hoveredStateInterval.HasValue &&
+                                         _hoveredStateInterval.Value.StartIndex == interval.StartIndex;
 
                         var barRect = new SKRect(x1, barTop, x2, barBottom);
                         var barRoundRect = new SKRoundRect(barRect, 3, 3);
@@ -441,14 +520,56 @@ namespace IndiLogs_3._0.Controls.Charts
                     float rowTop = PADDING + (rowIndex * ROW_HEIGHT);
                     float rowBottom = Math.Min(rowTop + ROW_HEIGHT - PADDING, chartBottom);
 
-                    string label = stateData.Name;
-                    if (label.Length > 7) label = label.Substring(0, 7) + "..";
+                    bool isLabelHovered = _hoveredLabelRow == (int)rowIndex;
+
+                    string label = !string.IsNullOrEmpty(stateData.Category)
+                        ? $"{stateData.Category}>{stateData.Name}" : stateData.Name;
+                    if (label.Length > 14) label = label.Substring(0, 14) + "..";
+
+                    // Highlight label on hover
+                    if (isLabelHovered)
+                    {
+                        labelPaint.Color = SKColor.Parse("#42A5F5");
+                        labelPaint.Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold);
+                    }
+                    else
+                    {
+                        labelPaint.Color = _textColor;
+                        labelPaint.Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Normal);
+                    }
+
                     canvas.DrawText(label, 5, rowTop + ROW_HEIGHT / 2 + 4, labelPaint);
 
                     // Draw subtle horizontal grid line
                     canvas.DrawLine(chartLeft, rowBottom + PADDING / 2, chartRight, rowBottom + PADDING / 2, _gridPaint);
 
                     rowIndex++;
+                }
+            }
+
+            // Draw full name tooltip when hovering over left label area
+            if (_hoveredLabelRow >= 0 && _hoveredLabelRow < _stateDataList.Count)
+            {
+                var hoveredData = _stateDataList[_hoveredLabelRow];
+                string fullName = hoveredData.Name;
+                if (!string.IsNullOrEmpty(hoveredData.Category))
+                    fullName = $"{hoveredData.Category} > {hoveredData.Name}";
+
+                using (var ttBg = new SKPaint { Color = _isLightTheme ? SKColor.Parse("#F0FFFFFF") : SKColor.Parse("#F01B2838"), Style = SKPaintStyle.Fill, IsAntialias = true })
+                using (var ttBorder = new SKPaint { Color = SKColor.Parse("#42A5F5"), Style = SKPaintStyle.Stroke, StrokeWidth = 1f, IsAntialias = true })
+                using (var ttText = new SKPaint { Color = _isLightTheme ? SKColor.Parse("#333333") : SKColors.White, TextSize = 11, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold) })
+                {
+                    float textW = ttText.MeasureText(fullName);
+                    float ttW = textW + 16;
+                    float ttH = 22;
+                    float ttX = (float)_hoverPos.X + 10;
+                    float ttY = (float)_hoverPos.Y - ttH - 5;
+                    if (ttY < 2) ttY = (float)_hoverPos.Y + 15;
+                    if (ttX + ttW > w) ttX = w - ttW - 5;
+
+                    canvas.DrawRoundRect(new SKRoundRect(new SKRect(ttX, ttY, ttX + ttW, ttY + ttH), 4), ttBg);
+                    canvas.DrawRoundRect(new SKRoundRect(new SKRect(ttX, ttY, ttX + ttW, ttY + ttH), 4), ttBorder);
+                    canvas.DrawText(fullName, ttX + 8, ttY + 15, ttText);
                 }
             }
 

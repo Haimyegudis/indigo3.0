@@ -404,15 +404,21 @@ namespace IndiLogs_3._0.Controls.Charts
 
             int cursorIndex = PixelToIndex(scaledPos.X);
 
-            // Detect state hover for CHStep tooltip
+            // Detect state hover for CHStep tooltip (binary search for performance)
             _hoveredState = null;
-            if (_showStates && _states != null)
+            if (_showStates && _states != null && _states.Count > 0)
             {
-                foreach (var st in _states)
+                int lo = 0, hi = _states.Count - 1;
+                while (lo <= hi)
                 {
-                    if (cursorIndex >= st.StartIndex && cursorIndex <= st.EndIndex)
+                    int mid = (lo + hi) / 2;
+                    if (cursorIndex < _states[mid].StartIndex)
+                        hi = mid - 1;
+                    else if (cursorIndex > _states[mid].EndIndex)
+                        lo = mid + 1;
+                    else
                     {
-                        _hoveredState = st;
+                        _hoveredState = _states[mid];
                         break;
                     }
                 }
@@ -462,8 +468,13 @@ namespace IndiLogs_3._0.Controls.Charts
             }
             else if (_chartEventMarkers != null && _chartEventMarkers.Count > 0)
             {
-                // Always repaint when events exist so hover detection works
-                SkiaCanvas.InvalidateVisual();
+                // Only repaint if hovered event index changed (not every mouse move)
+                int oldHovered = _hoveredEventIndex;
+                int newHovered = FindHoveredEventIndex(cursorIndex);
+                if (newHovered != oldHovered)
+                {
+                    SkiaCanvas.InvalidateVisual();
+                }
             }
         }
 
@@ -502,6 +513,34 @@ namespace IndiLogs_3._0.Controls.Charts
             _measureCurrentIndex = -1;
             _isMeasuring = false;
             SkiaCanvas.InvalidateVisual();
+        }
+
+        /// <summary>
+        /// Lightweight hover detection for event markers without triggering a full repaint.
+        /// Returns the Index of the hovered event, or -1 if none.
+        /// </summary>
+        private int FindHoveredEventIndex(int cursorIndex)
+        {
+            if (_chartEventMarkers == null || _chartEventMarkers.Count == 0) return -1;
+            int start = _viewStartIndex;
+            int end = _viewEndIndex;
+            int count = end - start;
+            if (count <= 0) return -1;
+            double chartLeft = LEFT_MARGIN * _dpiScaleX;
+            double chartW = (ActualWidth - LEFT_MARGIN - RIGHT_MARGIN) * _dpiScaleX;
+            double chartBottom = (ActualHeight - BOTTOM_MARGIN) * _dpiScaleY;
+            float eventY = (float)chartBottom - 8;
+
+            foreach (var evt in _chartEventMarkers)
+            {
+                if (evt.Index < start || evt.Index > end) continue;
+                float ex = (float)(chartLeft + (evt.Index - start) / (double)count * chartW);
+                float dx = (float)_hoverPos.X - ex;
+                float dy = (float)_hoverPos.Y - eventY;
+                float dist = (float)Math.Sqrt(dx * dx + dy * dy);
+                if (dist < EVENT_DOT_RADIUS * 4) return evt.Index;
+            }
+            return -1;
         }
 
         private int PixelToIndex(double x)
@@ -792,17 +831,55 @@ namespace IndiLogs_3._0.Controls.Charts
                     double currentRange = (s.YAxisType == AxisType.Right) ? rRange : lRange;
                     int drawStep = Math.Max(1, count / (int)chartW);
 
-                    for (int i = start; i <= drawLimit; i += drawStep)
+                    if (drawStep > 2)
                     {
-                        if (i >= dataToDraw.Length) break;
-                        double val = dataToDraw[i];
-                        if (double.IsNaN(val)) { first = true; continue; }
+                        // Min/Max decimation: for each pixel bucket, find min and max to preserve spikes
+                        for (int bucket = start; bucket <= drawLimit; bucket += drawStep)
+                        {
+                            double minVal = double.MaxValue, maxVal = double.MinValue;
+                            int minIdx = bucket, maxIdx = bucket;
+                            int bucketEnd = Math.Min(bucket + drawStep, drawLimit + 1);
+                            for (int j = bucket; j < bucketEnd && j < dataToDraw.Length; j++)
+                            {
+                                double v = dataToDraw[j];
+                                if (double.IsNaN(v)) continue;
+                                if (v < minVal) { minVal = v; minIdx = j; }
+                                if (v > maxVal) { maxVal = v; maxIdx = j; }
+                            }
+                            if (minVal == double.MaxValue) { first = true; continue; }
 
-                        float x = chartLeft + (float)((i - start) / (double)count * chartW);
-                        float y = chartBottom - (float)((val - currentMin) / currentRange * chartH);
+                            float x = chartLeft + (float)((bucket - start) / (double)count * chartW);
+                            float yMin = chartBottom - (float)((minVal - currentMin) / currentRange * chartH);
+                            float yMax = chartBottom - (float)((maxVal - currentMin) / currentRange * chartH);
 
-                        if (first) { path.MoveTo(x, y); first = false; }
-                        else path.LineTo(x, y);
+                            // Draw min first, then max (or vice versa) to preserve waveform shape
+                            if (minIdx <= maxIdx)
+                            {
+                                if (first) { path.MoveTo(x, yMin); first = false; } else path.LineTo(x, yMin);
+                                if (yMin != yMax) path.LineTo(x, yMax);
+                            }
+                            else
+                            {
+                                if (first) { path.MoveTo(x, yMax); first = false; } else path.LineTo(x, yMax);
+                                if (yMin != yMax) path.LineTo(x, yMin);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Zoomed in: draw every point
+                        for (int i = start; i <= drawLimit; i += drawStep)
+                        {
+                            if (i >= dataToDraw.Length) break;
+                            double val = dataToDraw[i];
+                            if (double.IsNaN(val)) { first = true; continue; }
+
+                            float x = chartLeft + (float)((i - start) / (double)count * chartW);
+                            float y = chartBottom - (float)((val - currentMin) / currentRange * chartH);
+
+                            if (first) { path.MoveTo(x, y); first = false; }
+                            else path.LineTo(x, y);
+                        }
                     }
 
                     if (!first) canvas.DrawPath(path, paint);

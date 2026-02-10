@@ -43,6 +43,7 @@
         <KeyBinding Key="Subtract" Modifiers="Ctrl" Command="{Binding ZoomOutCommand}" />
         <KeyBinding Key="F" Modifiers="Ctrl" Command="{Binding ToggleSearchCommand}" />
         <KeyBinding Key="Esc" Command="{Binding CloseSearchCommand}" />
+        <KeyBinding Key="F1" Command="{Binding OpenHelpCommand}" />
     </Window.InputBindings>
 
     <Grid>
@@ -853,7 +854,7 @@
                                 </StackPanel>
                             </DataTemplate>
                         </TabItem.HeaderTemplate>
-                        <cpr:CprAnalysisControl x:Name="CprTab" DataContext="{Binding CprVM}"/>
+                        <cpr:CprAnalysisControl x:Name="CprTab" DataContext="{Binding CprVM}" Loaded="CprTab_Loaded"/>
                     </TabItem>
                 </TabControl>
 

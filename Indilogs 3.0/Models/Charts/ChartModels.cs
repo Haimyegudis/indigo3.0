@@ -120,7 +120,14 @@ namespace IndiLogs_3._0.Models.Charts
         public string CurrentValueDisplay
         {
             get => _currentValueDisplay;
-            set { _currentValueDisplay = value; OnPropertyChanged(nameof(CurrentValueDisplay)); }
+            set
+            {
+                if (_currentValueDisplay != value)
+                {
+                    _currentValueDisplay = value;
+                    OnPropertyChanged(nameof(CurrentValueDisplay));
+                }
+            }
         }
 
         private bool _isSmoothed = false;

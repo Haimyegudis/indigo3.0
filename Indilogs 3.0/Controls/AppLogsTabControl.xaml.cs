@@ -36,6 +36,17 @@ namespace IndiLogs_3._0.Controls
                 AttachColumnHeaderContextMenu();
                 LoadColumnSettings();
             };
+
+            // Connect heatmap scroll event
+            HeatmapControl.RequestScrollToLog += OnHeatmapRequestScrollToLog;
+        }
+
+        private void OnHeatmapRequestScrollToLog(LogEntry log)
+        {
+            if (log == null) return;
+            AppLogsGrid.SelectedItem = log;
+            AppLogsGrid.ScrollIntoView(log);
+            AppLogsGrid.Focus();
         }
 
         // Handle annotation expansion manually

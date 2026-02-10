@@ -77,6 +77,12 @@
                         <Button Command="{Binding ToggleAllAnnotationsCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" ToolTip="Show/Hide All Annotations" Width="28" Height="22" Padding="0">
                             <TextBlock Text="💬" FontSize="11" Foreground="{DynamicResource TextSecondary}"/>
                         </Button>
+
+                        <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="2,3"/>
+
+                        <Button Command="{Binding ToggleSearchCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" ToolTip="Search (Ctrl+F)" Width="28" Height="22" Padding="0">
+                            <TextBlock Text="🔍" FontSize="11" Foreground="{DynamicResource TextSecondary}"/>
+                        </Button>
                     </StackPanel>
                 </Border>
             </StackPanel>
@@ -113,6 +119,12 @@
                 </Button>
                 <Button Command="{Binding OpenOutlookCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" ToolTip="Send Email" Width="28" Height="28" Padding="0">
                     <Image Source="/Resources/outlook.ico" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality"/>
+                </Button>
+
+                <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="4,6"/>
+
+                <Button Command="{Binding OpenHelpCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" ToolTip="Help (F1)" Width="28" Height="28" Padding="0" BorderThickness="0">
+                    <TextBlock Text="❓" FontSize="14" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource TextSecondary}"/>
                 </Button>
             </StackPanel>
         </Grid>

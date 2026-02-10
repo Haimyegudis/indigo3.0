@@ -936,6 +936,9 @@ namespace IndiLogs_3._0.Services
                 int writtenRows = 0;
                 lastReportedPercent = 75;
 
+                // Pre-allocate StringBuilder for better performance
+                var rowSb = new StringBuilder(orderedKeys.Count * 12 + 100);
+
                 // Write data rows with inline forward-fill
                 foreach (var time in allTimes)
                 {
@@ -943,15 +946,18 @@ namespace IndiLogs_3._0.Services
                         throw new OperationCanceledException();
 
                     writtenRows++;
-                    int currentPercent = 75 + (writtenRows * 25 / totalTimes);
-                    if (currentPercent > lastReportedPercent)
+                    if ((writtenRows & 0xFF) == 0) // Report progress every 256 rows instead of every row
                     {
-                        lastReportedPercent = currentPercent;
-                        progress?.Report(currentPercent, "Writing CSV rows...",
-                            $"{writtenRows:N0} / {totalTimes:N0} rows");
+                        int currentPercent = 75 + (writtenRows * 25 / totalTimes);
+                        if (currentPercent > lastReportedPercent)
+                        {
+                            lastReportedPercent = currentPercent;
+                            progress?.Report(currentPercent, "Writing CSV rows...",
+                                $"{writtenRows:N0} / {totalTimes:N0} rows");
+                        }
                     }
 
-                    var rowSb = new StringBuilder();
+                    rowSb.Clear();
                     rowSb.Append(time.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
                     if (preset != null && preset.IncludeUnixTime)
@@ -966,21 +972,22 @@ namespace IndiLogs_3._0.Services
                     }
 
                     // Forward-fill inline: update lastValues if we have new data for this time
-                    if (dataMatrix.ContainsKey(time))
+                    Dictionary<string, string> timeData;
+                    if (dataMatrix.TryGetValue(time, out timeData))
                     {
-                        foreach (var kvp in dataMatrix[time])
+                        foreach (var kvp in timeData)
                         {
                             lastValues[kvp.Key] = kvp.Value;
                         }
                     }
 
                     // Write data columns using forward-filled values
+                    string val;
                     foreach (var colKey in orderedKeys)
                     {
                         rowSb.Append(",");
-                        if (lastValues.ContainsKey(colKey))
+                        if (lastValues.TryGetValue(colKey, out val))
                         {
-                            string val = lastValues[colKey];
 
                             bool isWarning = false;
                             if (colKey.Contains("LogStats") && colKey.Contains("|Metrics|"))
@@ -1006,27 +1013,35 @@ namespace IndiLogs_3._0.Services
                     }
 
                     // Thread messages
+                    Dictionary<string, string> threadMsgs;
                     if (preset != null && preset.IncludeEvents)
                     {
                         rowSb.Append(",");
-                        if (threadMessages.ContainsKey(time) && threadMessages[time].ContainsKey("Events"))
+                        if (threadMessages.TryGetValue(time, out threadMsgs))
                         {
-                            string val = threadMessages[time]["Events"];
-                            val = "\"" + val.Replace("\"", "\"\"") + "\"";
-                            rowSb.Append(val);
+                            string evtVal;
+                            if (threadMsgs.TryGetValue("Events", out evtVal))
+                            {
+                                evtVal = "\"" + evtVal.Replace("\"", "\"\"") + "\"";
+                                rowSb.Append(evtVal);
+                            }
                         }
                     }
 
                     if (selectedThreads != null)
                     {
+                        // Note: selectedThreads already pre-sorted in header section
                         foreach (var thread in selectedThreads.OrderBy(t => t))
                         {
                             rowSb.Append(",");
-                            if (threadMessages.ContainsKey(time) && threadMessages[time].ContainsKey(thread))
+                            if (threadMessages.TryGetValue(time, out threadMsgs))
                             {
-                                string val = threadMessages[time][thread];
-                                val = "\"" + val.Replace("\"", "\"\"") + "\"";
-                                rowSb.Append(val);
+                                string tVal;
+                                if (threadMsgs.TryGetValue(thread, out tVal))
+                                {
+                                    tVal = "\"" + tVal.Replace("\"", "\"\"") + "\"";
+                                    rowSb.Append(tVal);
+                                }
                             }
                         }
                     }

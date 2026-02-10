@@ -11,8 +11,8 @@
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </UserControl.Resources>
     <Grid>
-        <DataGrid x:Name="AppLogsGrid" ItemsSource="{Binding AppDevLogsFiltered}" SelectedItem="{Binding SelectedLog}" Sorting="AppLogsGrid_Sorting" FontSize="{Binding GridFontSize}" FontFamily="{DynamicResource ContentFontFamily}" FontWeight="{DynamicResource ContentFontWeight}" AutoGenerateColumns="False" IsReadOnly="True"
-                  SelectionMode="Extended" SelectionUnit="FullRow" 
+        <DataGrid x:Name="AppLogsGrid" Margin="0,0,12,0" ItemsSource="{Binding AppDevLogsFiltered}" SelectedItem="{Binding SelectedLog}" Sorting="AppLogsGrid_Sorting" FontSize="{Binding GridFontSize}" FontFamily="{DynamicResource ContentFontFamily}" FontWeight="{DynamicResource ContentFontWeight}" AutoGenerateColumns="False" IsReadOnly="True"
+                  SelectionMode="Extended" SelectionUnit="FullRow"
                   HorizontalScrollBarVisibility="Auto" RequestBringIntoView="AppLogsGrid_RequestBringIntoView" Loaded="AppLogsGrid_Loaded" LoadingRow="AppLogsGrid_LoadingRow"
                   GridLinesVisibility="Vertical" VerticalGridLinesBrush="{DynamicResource BorderColor}" SelectionChanged="AppLogsGrid_SelectionChanged" ColumnReordered="AppLogsGrid_ColumnReordered">
 
@@ -352,5 +352,13 @@
                 </Style>
             </DataGrid.RowStyle>
         </DataGrid>
+
+        <!-- Log Heatmap Scrollbar - positioned on the right edge -->
+        <controls:LogHeatmapControl x:Name="HeatmapControl"
+                                    Width="10"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Stretch"
+                                    Margin="0,22,0,18"
+                                    ItemsSource="{Binding AppDevLogsFiltered}"/>
     </Grid>
 </UserControl>

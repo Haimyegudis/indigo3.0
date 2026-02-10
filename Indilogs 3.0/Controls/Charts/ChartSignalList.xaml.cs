@@ -121,10 +121,15 @@ namespace IndiLogs_3._0.Controls.Charts
                 if (state.Name.Equals("MachineState", StringComparison.OrdinalIgnoreCase))
                     continue;
 
+                string displayName = !string.IsNullOrEmpty(state.Category)
+                    ? $"{state.Category} > {state.Name}" : state.Name;
+                string fullName = !string.IsNullOrEmpty(state.Category)
+                    ? $"{state.Category}|{state.Name}" : state.Name;
+
                 _allItems.Add(new SignalListItem
                 {
-                    FullName = state.Name,
-                    DisplayName = state.Name,
+                    FullName = fullName,
+                    DisplayName = displayName,
                     TypeIcon = "G",
                     TypeColor = CHStepColor,
                     Category = SignalItemCategory.CHStep,

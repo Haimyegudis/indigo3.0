@@ -36,6 +36,9 @@ namespace IndiLogs_3._0
         private const double DEFAULT_PANEL_WIDTH = 200;
         private int _previousTabIndex = 0;
 
+        // Deferred scroll-to-bottom for tabs not yet rendered (WPF TabControl content virtualization)
+        private System.Collections.Generic.HashSet<string> _pendingScrollToBottom = new System.Collections.Generic.HashSet<string>();
+
         // Drag-to-detach support
         private Point _tabDragStartPoint;
         private bool _isTabDragging;
@@ -249,6 +252,7 @@ namespace IndiLogs_3._0
                 vm.RequestScrollToLog += MapsToLogRow;
                 vm.RequestScrollToLogPreservePosition += ScrollToLogPreservingPosition;
                 vm.RequestSaveScrollPosition += SaveScrollPositionForLog;
+                vm.RequestScrollToBottom += ScrollGridToBottom;
                 vm.PropertyChanged += ViewModel_PropertyChanged;
 
                 // Initialize column widths based on current ViewModel state
@@ -498,6 +502,64 @@ namespace IndiLogs_3._0
             {
                 _isProgrammaticScroll = false;
                 System.Diagnostics.Debug.WriteLine($"[SCROLL TO LOG] Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Scrolls a specific tab's grid to its last row. Used on initial load to ensure
+        /// all tabs (PLC, FILTERED, APP) show the bottom of the log.
+        /// Unlike MapsToLogRow/FindGridForLog, this directly targets the correct grid
+        /// without searching (which would always match PLC first for shared log objects).
+        /// </summary>
+        private void ScrollGridToBottom(string tabName)
+        {
+            try
+            {
+                DataGrid grid = null;
+                switch (tabName)
+                {
+                    case "PLC":
+                        grid = PlcLogsTab?.LogsGrid?.InnerDataGrid;
+                        break;
+                    case "FILTERED":
+                        grid = PlcFilteredTab?.LogsGrid?.InnerDataGrid;
+                        break;
+                    case "APP":
+                        grid = AppLogsTab?.InnerDataGrid;
+                        break;
+                }
+
+                if (grid == null || grid.Items.Count == 0)
+                {
+                    // Tab not rendered yet (WPF TabControl only renders the active tab).
+                    // Store flag so we scroll when the user switches to this tab.
+                    _pendingScrollToBottom.Add(tabName);
+                    System.Diagnostics.Debug.WriteLine($"[SCROLL BOTTOM] {tabName}: deferred (tab not yet rendered)");
+                    return;
+                }
+
+                // Use ScrollViewer.ScrollToEnd() directly — this is more reliable than
+                // ScrollIntoView which can fail on freshly-rendered tabs due to
+                // RequestBringIntoView handlers that suppress the scroll event.
+                grid.UpdateLayout();
+                var scrollViewer = FindVisualChild<ScrollViewer>(grid);
+                if (scrollViewer != null)
+                {
+                    scrollViewer.ScrollToEnd();
+                    grid.SelectedItem = grid.Items[grid.Items.Count - 1];
+                    _pendingScrollToBottom.Remove(tabName);
+                    System.Diagnostics.Debug.WriteLine($"[SCROLL BOTTOM] {tabName}: scrolled to end (items={grid.Items.Count})");
+                }
+                else
+                {
+                    // ScrollViewer not materialized yet — defer until tab is fully rendered
+                    _pendingScrollToBottom.Add(tabName);
+                    System.Diagnostics.Debug.WriteLine($"[SCROLL BOTTOM] {tabName}: deferred (no ScrollViewer yet)");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SCROLL BOTTOM] {tabName} error: {ex.Message}");
             }
         }
 
@@ -1000,6 +1062,23 @@ namespace IndiLogs_3._0
                 {
                     SyncPanelColumnsWithViewModel(vm);
                 }
+
+                // Execute deferred scroll-to-bottom for tabs that weren't rendered on initial load
+                // MainTabs indices: 0=PLC, 1=FILTERED, 2=APP
+                string tabName = null;
+                switch (newTabIndex)
+                {
+                    case 0: tabName = "PLC"; break;
+                    case 1: tabName = "FILTERED"; break;
+                    case 2: tabName = "APP"; break;
+                }
+                if (tabName != null && _pendingScrollToBottom.Contains(tabName))
+                {
+                    // Defer to ApplicationIdle to allow the tab content to fully render first
+                    Dispatcher.BeginInvoke(
+                        System.Windows.Threading.DispatcherPriority.ApplicationIdle,
+                        new Action(() => ScrollGridToBottom(tabName)));
+                }
             }
         }
         private void GraphsView_Loaded(object sender, RoutedEventArgs e) { }
@@ -1135,6 +1214,11 @@ namespace IndiLogs_3._0
                     MapsToLogRow(closestLog);
                 }
             }
+        }
+
+        private void CprTab_Loaded(object sender, RoutedEventArgs e)
+        {
+
         }
     }
 }

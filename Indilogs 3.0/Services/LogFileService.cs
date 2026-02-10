@@ -71,6 +71,9 @@ namespace IndiLogs_3._0.Services
         {
             return await Task.Run(() =>
             {
+                var perfTotal = Stopwatch.StartNew();
+                var perfPhase = new Stopwatch();
+
                 // יצירת Pool אחד לכל הסשן
                 var stringPool = new StringPool();
 
@@ -81,12 +84,35 @@ namespace IndiLogs_3._0.Services
 
                 if (filePaths == null || filePaths.Length == 0) return session;
 
+                // Expand folder paths to individual files
+                var expandedPaths = new List<string>();
+                foreach (var p in filePaths)
+                {
+                    if (Directory.Exists(p))
+                    {
+                        // Enumerate all relevant files in folder (recursive)
+                        expandedPaths.AddRange(Directory.EnumerateFiles(p, "*.*", SearchOption.AllDirectories));
+                    }
+                    else
+                    {
+                        expandedPaths.Add(p);
+                    }
+                }
+                filePaths = expandedPaths.ToArray();
+
                 var logsBag = new ConcurrentBag<LogEntry>();
                 var transitionsBag = new ConcurrentBag<LogEntry>();
                 var failuresBag = new ConcurrentBag<LogEntry>();
                 var appDevLogsBag = new ConcurrentBag<LogEntry>();
                 var eventsBag = new ConcurrentBag<EventEntry>();
                 var screenshotsBag = new ConcurrentBag<BitmapImage>();
+
+                // Merged result lists (populated from parallel processing, avoids per-item ConcurrentBag overhead)
+                var mergedLogs = new List<LogEntry>();
+                var mergedTrans = new List<LogEntry>();
+                var mergedFails = new List<LogEntry>();
+                var mergedApps = new List<LogEntry>();
+                var mergedEvts = new List<EventEntry>();
 
                 long totalBytesAllFiles = 0;
                 foreach (var p in filePaths)
@@ -95,6 +121,7 @@ namespace IndiLogs_3._0.Services
                 long processedBytesGlobal = 0;
                 string detectedSwVersion = "Unknown";
                 string detectedPlcVersion = "Unknown";
+                var nonZipFiles = new List<ZipEntryData>();
 
                 try
                 {
@@ -109,14 +136,18 @@ namespace IndiLogs_3._0.Services
 
                         if (extension == ".zip")
                         {
-                            using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            perfPhase.Restart();
+                            using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 262144))
                             using (var archive = new ZipArchive(fs, ZipArchiveMode.Read))
                             {
                                 var filesToProcess = new List<ZipEntryData>();
+                                int totalEntriesScanned = 0;
+                                int entriesSkipped = 0;
 
                                 foreach (var entry in archive.Entries)
                                 {
-                                    if (entry.Length == 0) continue;
+                                    totalEntriesScanned++;
+                                    if (entry.Length == 0) { entriesSkipped++; continue; }
 
                                     string lowerName = entry.FullName.ToLower();
 
@@ -263,36 +294,43 @@ namespace IndiLogs_3._0.Services
                                     }
                                 }
 
+                                Debug.WriteLine($"[PERF] Zip entry enumeration: {perfPhase.ElapsedMilliseconds}ms ({totalEntriesScanned} entries scanned, {entriesSkipped} skipped, {filesToProcess.Count} to process)");
+                                perfPhase.Restart();
+
                                 int totalFiles = filesToProcess.Count;
                                 int processedCount = 0;
                                 object progressLock = new object();
 
                                 // עיבוד מקבילי - StringPool כעת Thread-Safe עם ConcurrentDictionary
-                                // שימוש ב-Parallel.ForEach לאופטימיזציה מקסימלית
+                                // שימוש ב-Parallel.ForEach עם thread-local lists לביצועים מקסימליים
+                                var localLogLists = new ConcurrentBag<List<LogEntry>>();
+                                var localTransLists = new ConcurrentBag<List<LogEntry>>();
+                                var localFailLists = new ConcurrentBag<List<LogEntry>>();
+                                var localAppLists = new ConcurrentBag<List<LogEntry>>();
+                                var localEvtLists = new ConcurrentBag<List<EventEntry>>();
+
                                 Parallel.ForEach(filesToProcess, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, item =>
                                 {
                                     try
                                     {
-                                        // עובד עם ה-Stream שכבר נטען
                                         using (item.Stream)
                                         {
                                             if (item.Type == FileType.MainLog)
                                             {
-                                                // מעבירים את ה-Pool
                                                 var result = ParseLogStream(item.Stream, stringPool);
-                                                foreach (var l in result.AllLogs) logsBag.Add(l);
-                                                foreach (var t in result.Transitions) transitionsBag.Add(t);
-                                                foreach (var f in result.Failures) failuresBag.Add(f);
+                                                localLogLists.Add(result.AllLogs);
+                                                if (result.Transitions.Count > 0) localTransLists.Add(result.Transitions);
+                                                if (result.Failures.Count > 0) localFailLists.Add(result.Failures);
                                             }
                                             else if (item.Type == FileType.AppDevLog)
                                             {
                                                 var logs = ParseAppDevLogStream(item.Stream, stringPool);
-                                                foreach (var l in logs) appDevLogsBag.Add(l);
+                                                if (logs.Count > 0) localAppLists.Add(logs);
                                             }
                                             else if (item.Type == FileType.EventsCsv)
                                             {
                                                 var evts = ParseEventsCsv(item.Stream);
-                                                foreach (var e in evts) eventsBag.Add(e);
+                                                if (evts.Count > 0) localEvtLists.Add(evts);
                                             }
                                         }
                                     }
@@ -315,43 +353,210 @@ namespace IndiLogs_3._0.Services
                                         }
                                     }
                                 });
+
+                                Debug.WriteLine($"[PERF] Parallel file parsing: {perfPhase.ElapsedMilliseconds}ms ({totalFiles} files)");
+                                perfPhase.Restart();
+
+                                // Merge thread-local lists into outer-scope merged lists
+                                progress?.Report((85, "Merging results..."));
+                                int totalLogCount = 0;
+                                foreach (var l in localLogLists) totalLogCount += l.Count;
+                                mergedLogs.Capacity = Math.Max(mergedLogs.Capacity, mergedLogs.Count + totalLogCount);
+                                foreach (var l in localLogLists) mergedLogs.AddRange(l);
+
+                                foreach (var l in localTransLists) mergedTrans.AddRange(l);
+                                foreach (var l in localFailLists) mergedFails.AddRange(l);
+
+                                int totalAppCount = 0;
+                                foreach (var l in localAppLists) totalAppCount += l.Count;
+                                mergedApps.Capacity = Math.Max(mergedApps.Capacity, mergedApps.Count + totalAppCount);
+                                foreach (var l in localAppLists) mergedApps.AddRange(l);
+
+                                foreach (var l in localEvtLists) mergedEvts.AddRange(l);
+
+                                Debug.WriteLine($"[PERF] Merge phase: {perfPhase.ElapsedMilliseconds}ms (logs={mergedLogs.Count}, apps={mergedApps.Count}, events={mergedEvts.Count})");
                             }
                         }
                         else
                         {
-                            // קובץ בודד
-                            using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
-                            using (var ms = new MemoryStream())
-                            {
-                                fs.CopyTo(ms);
-                                ms.Position = 0;
+                            // Collect non-ZIP files for batch parallel processing below
+                            string lowerName = Path.GetFileName(filePath).ToLower();
+                            string lowerPath = filePath.ToLower();
 
-                                if (filePath.IndexOf("APPDEV", StringComparison.OrdinalIgnoreCase) >= 0)
-                                {
-                                    var logs = ParseAppDevLogStream(ms, stringPool);
-                                    foreach (var l in logs) appDevLogsBag.Add(l);
-                                }
-                                else
-                                {
-                                    var result = ParseLogStream(ms, stringPool);
-                                    foreach (var l in result.AllLogs) logsBag.Add(l);
-                                    foreach (var t in result.Transitions) transitionsBag.Add(t);
-                                    foreach (var f in result.Failures) failuresBag.Add(f);
-                                }
+                            if (lowerName.Contains("enginegroupa.file") ||
+                                lowerName.Contains("enginegroupb.file") ||
+                                lowerName.EndsWith(".file.log", StringComparison.OrdinalIgnoreCase) ||
+                                (lowerName.Contains("no-sn") && lowerName.Contains("file")))
+                            {
+                                nonZipFiles.Add(new ZipEntryData { Name = filePath, Type = FileType.MainLog });
                             }
+                            else if ((lowerName.Contains("appdev") || lowerName.Contains("press.host.app")) &&
+                                     (lowerPath.Contains("indigologs") || lowerPath.Contains("logger files")))
+                            {
+                                nonZipFiles.Add(new ZipEntryData { Name = filePath, Type = FileType.AppDevLog });
+                            }
+                            else if (lowerName.StartsWith("event-history__from") && lowerName.EndsWith(".csv"))
+                            {
+                                nonZipFiles.Add(new ZipEntryData { Name = filePath, Type = FileType.EventsCsv });
+                            }
+                            else if (lowerName.EndsWith(".db"))
+                            {
+                                try
+                                {
+                                    byte[] dbBytes = File.ReadAllBytes(filePath);
+                                    string fileNameOnly = Path.GetFileName(filePath);
+                                    if (!session.DatabaseFiles.ContainsKey(fileNameOnly))
+                                        session.DatabaseFiles.Add(fileNameOnly, dbBytes);
+                                }
+                                catch { }
+                            }
+                            else if (lowerName.Equals("readme.txt"))
+                            {
+                                try
+                                {
+                                    session.PressConfiguration = File.ReadAllText(filePath);
+                                    var (sw, plc) = ParseReadmeVersions(session.PressConfiguration);
+                                    if (sw != "Unknown") detectedSwVersion = sw;
+                                    if (plc != "Unknown" && detectedPlcVersion == "Unknown") detectedPlcVersion = plc;
+                                }
+                                catch { }
+                            }
+                            else if (lowerName.EndsWith("_setupinfo.json"))
+                            {
+                                try
+                                {
+                                    session.SetupInfo = File.ReadAllText(filePath);
+                                    string plcVer = ExtractPlcVersionFromSetupInfo(session.SetupInfo);
+                                    if (!string.IsNullOrEmpty(plcVer)) detectedPlcVersion = plcVer;
+                                }
+                                catch { }
+                            }
+                            else if (lowerName.EndsWith(".png") || lowerName.EndsWith(".jpg"))
+                            {
+                                try
+                                {
+                                    var bmp = new BitmapImage();
+                                    bmp.BeginInit();
+                                    bmp.CacheOption = BitmapCacheOption.OnLoad;
+                                    bmp.UriSource = new Uri(filePath);
+                                    bmp.EndInit();
+                                    bmp.Freeze();
+                                    screenshotsBag.Add(bmp);
+                                }
+                                catch { }
+                            }
+                            // Skip other file types (nginx logs, iVision logs, etc.)
                         }
                         processedBytesGlobal += currentFileSize;
                     }
 
+                    // Process collected non-ZIP files in parallel
+                    if (nonZipFiles.Count > 0)
+                    {
+                        int nzProcessed = 0;
+                        int nzTotal = nonZipFiles.Count;
+                        object nzLock = new object();
+
+                        var nzLocalLogs = new ConcurrentBag<List<LogEntry>>();
+                        var nzLocalTrans = new ConcurrentBag<List<LogEntry>>();
+                        var nzLocalFails = new ConcurrentBag<List<LogEntry>>();
+                        var nzLocalApps = new ConcurrentBag<List<LogEntry>>();
+                        var nzLocalEvts = new ConcurrentBag<List<EventEntry>>();
+
+                        Parallel.ForEach(nonZipFiles, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, item =>
+                        {
+                            try
+                            {
+                                using (var fs = new FileStream(item.Name, FileMode.Open, FileAccess.Read, FileShare.Read, 262144))
+                                {
+                                    if (item.Type == FileType.MainLog)
+                                    {
+                                        var result = ParseLogStream(fs, stringPool);
+                                        nzLocalLogs.Add(result.AllLogs);
+                                        if (result.Transitions.Count > 0) nzLocalTrans.Add(result.Transitions);
+                                        if (result.Failures.Count > 0) nzLocalFails.Add(result.Failures);
+                                    }
+                                    else if (item.Type == FileType.AppDevLog)
+                                    {
+                                        var logs = ParseAppDevLogStream(fs, stringPool);
+                                        if (logs.Count > 0) nzLocalApps.Add(logs);
+                                    }
+                                    else if (item.Type == FileType.EventsCsv)
+                                    {
+                                        var evts = ParseEventsCsv(fs);
+                                        if (evts.Count > 0) nzLocalEvts.Add(evts);
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine($"Error processing file {item.Name}: {ex.Message}");
+                            }
+                            finally
+                            {
+                                lock (nzLock)
+                                {
+                                    nzProcessed++;
+                                    if (nzProcessed % 5 == 0)
+                                        progress?.Report((85.0 + (15.0 * nzProcessed / nzTotal), $"Parsing files: {nzProcessed}/{nzTotal}"));
+                                }
+                            }
+                        });
+
+                        // Merge non-ZIP results
+                        foreach (var l in nzLocalLogs) mergedLogs.AddRange(l);
+                        foreach (var l in nzLocalTrans) mergedTrans.AddRange(l);
+                        foreach (var l in nzLocalFails) mergedFails.AddRange(l);
+                        foreach (var l in nzLocalApps) mergedApps.AddRange(l);
+                        foreach (var l in nzLocalEvts) mergedEvts.AddRange(l);
+                    }
+
                     session.VersionsInfo = $"SW: {detectedSwVersion} | PLC: {detectedPlcVersion}";
 
+                    // Merge any remaining ConcurrentBag entries (from non-ZIP single file paths)
+                    // mergedLogs etc. are only populated from ZIP path; bags from single file path
+                    if (!logsBag.IsEmpty) { foreach (var l in logsBag) mergedLogs.Add(l); }
+                    if (!appDevLogsBag.IsEmpty) { foreach (var l in appDevLogsBag) mergedApps.Add(l); }
+                    if (!transitionsBag.IsEmpty) { foreach (var l in transitionsBag) mergedTrans.Add(l); }
+                    if (!failuresBag.IsEmpty) { foreach (var l in failuresBag) mergedFails.Add(l); }
+                    if (!eventsBag.IsEmpty) { foreach (var l in eventsBag) mergedEvts.Add(l); }
+
                     // המרה ל-List סופי - מיון מהישן לחדש (חדשים למטה)
-                    session.Logs = logsBag.OrderBy(x => x.Date).ToList();
-                    session.StateTransitions = transitionsBag.OrderBy(x => x.Date).ToList();
-                    session.CriticalFailureEvents = failuresBag.OrderBy(x => x.Date).ToList();
-                    session.AppDevLogs = appDevLogsBag.OrderBy(x => x.Date).ToList();
-                    session.Events = eventsBag.OrderBy(x => x.Time).ToList();
+                    progress?.Report((90, $"Sorting {mergedLogs.Count:N0} logs..."));
+                    perfPhase.Restart();
+
+                    // Sort the 2 biggest lists in parallel using cached Comparison delegates
+                    Comparison<LogEntry> dateComparer = (a, b) => a.Date.CompareTo(b.Date);
+                    Comparison<EventEntry> eventComparer = (a, b) => a.Time.CompareTo(b.Time);
+
+                    var sortTask1 = Task.Run(() =>
+                    {
+                        mergedLogs.Sort(dateComparer);
+                        return mergedLogs;
+                    });
+                    var sortTask2 = Task.Run(() =>
+                    {
+                        mergedApps.Sort(dateComparer);
+                        return mergedApps;
+                    });
+
+                    // Sort small lists on current thread while big ones sort in parallel
+                    mergedTrans.Sort(dateComparer);
+                    mergedFails.Sort(dateComparer);
+                    mergedEvts.Sort(eventComparer);
+
+                    session.Logs = sortTask1.Result;
+                    session.AppDevLogs = sortTask2.Result;
+                    session.StateTransitions = mergedTrans;
+                    session.CriticalFailureEvents = mergedFails;
+                    session.Events = mergedEvts;
                     session.Screenshots = screenshotsBag.ToList();
+
+                    Debug.WriteLine($"[PERF] Sort phase: {perfPhase.ElapsedMilliseconds}ms");
+                    Debug.WriteLine($"[PERF] === LoadSessionAsync TOTAL: {perfTotal.ElapsedMilliseconds}ms ===");
+                    Debug.WriteLine($"[PERF]   PLC logs: {session.Logs.Count:N0}, APP logs: {session.AppDevLogs?.Count ?? 0:N0}, Events: {session.Events?.Count ?? 0:N0}, Screenshots: {session.Screenshots?.Count ?? 0:N0}");
+                    Debug.WriteLine($"[PERF]   Transitions: {session.StateTransitions?.Count ?? 0:N0}, Failures: {session.CriticalFailureEvents?.Count ?? 0:N0}");
+                    Debug.WriteLine($"[PERF]   Total file size: {totalBytesAllFiles / 1024.0 / 1024.0:F1} MB");
 
                     progress?.Report((100, "Done"));
                 }
@@ -446,14 +651,11 @@ namespace IndiLogs_3._0.Services
 
                         var entry = new LogEntry
                         {
-                            // שימוש ב-Intern
                             Level = pool.Intern(logReader.Current.Level?.ToString() ?? "Info"),
                             Date = logReader.Current.Time,
-                            Message = pool.Intern(logReader.Current.Message ?? ""),
+                            Message = logReader.Current.Message ?? "",
                             ThreadName = pool.Intern(logReader.Current.ThreadName ?? ""),
                             Logger = pool.Intern(logReader.Current.LoggerName ?? ""),
-
-                            // אופטימיזציה: null אם ריק
                             ProcessName = string.IsNullOrEmpty(processName) ? null : pool.Intern(processName)
                         };
 
@@ -474,7 +676,9 @@ namespace IndiLogs_3._0.Services
             // אם לא הועבר Pool (למשל בקריאות ישנות), צור אחד מקומי
             pool = pool ?? new StringPool();
 
-            var allLogs = new List<LogEntry>();
+            // Pre-allocate based on estimated entries (~200 bytes per log entry in binary format)
+            int estimatedEntries = stream.CanSeek ? (int)Math.Min(stream.Length / 200, 500000) : 10000;
+            var allLogs = new List<LogEntry>(estimatedEntries);
             var transitions = new List<LogEntry>();
             var failures = new List<LogEntry>();
 
@@ -489,28 +693,31 @@ namespace IndiLogs_3._0.Services
                     {
                         string processName = reader.Current["ProcessName"]?.ToString();
 
+                        string message = reader.Current.Message ?? "";
+                        string threadName = pool.Intern(reader.Current.ThreadName ?? "");
+
                         var entry = new LogEntry
                         {
-                            // --- אופטימיזציה: שימוש ב-StringPool ---
+                            // Only intern repetitive fields (Level, ThreadName, Logger, ProcessName)
+                            // Message is unique per log - interning wastes ConcurrentDictionary overhead
                             Level = pool.Intern(reader.Current.Level?.ToString() ?? "Info"),
                             Date = reader.Current.Time,
-                            Message = pool.Intern(reader.Current.Message ?? ""),
-                            ThreadName = pool.Intern(reader.Current.ThreadName ?? ""),
+                            Message = message,
+                            ThreadName = threadName,
                             Logger = pool.Intern(reader.Current.LoggerName ?? ""),
                             ProcessName = string.IsNullOrEmpty(processName) ? null : pool.Intern(processName)
                         };
 
                         allLogs.Add(entry);
 
-                        // לוגיקה לזיהוי מעברים - נשארת זהה
-                        if (entry.ThreadName == "Manager" &&
-                            entry.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) &&
-                            entry.Message.Contains("->"))
+                        if (threadName == "Manager" &&
+                            message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) &&
+                            message.Contains("->"))
                         {
                             transitions.Add(entry);
                         }
-                        else if (entry.ThreadName == "Events" &&
-                                 entry.Message.Contains("PLC_FAILURE_STATE_CHANGE"))
+                        else if (threadName == "Events" &&
+                                 message.Contains("PLC_FAILURE_STATE_CHANGE"))
                         {
                             failures.Add(entry);
                         }
@@ -615,16 +822,16 @@ namespace IndiLogs_3._0.Services
             return new LogEntry
             {
                 Date = date,
-                // --- אופטימיזציה: שימוש ב-StringPool ---
+                // Only intern repetitive fields, not unique content (Message, Data, Exception)
                 ThreadName = pool.Intern(match.Groups["Thread"].Value),
                 Level = pool.Intern(match.Groups["Level"].Value.ToUpper()),
                 Logger = pool.Intern(match.Groups["Logger"].Value.Trim()),
-                Message = pool.Intern(message),
+                Message = message,
                 ProcessName = pool.Intern("APP"),
                 Method = pool.Intern(location),
-                Pattern = string.IsNullOrEmpty(pattern) ? null : pool.Intern(pattern),
-                Data = string.IsNullOrEmpty(data) ? null : pool.Intern(data),
-                Exception = string.IsNullOrEmpty(exception) ? null : pool.Intern(exception)
+                Pattern = string.IsNullOrEmpty(pattern) ? null : pattern,
+                Data = string.IsNullOrEmpty(data) ? null : data,
+                Exception = string.IsNullOrEmpty(exception) ? null : exception
             };
         }
 
@@ -646,10 +853,11 @@ namespace IndiLogs_3._0.Services
 
         private MemoryStream CopyToMemory(ZipArchiveEntry entry)
         {
-            var ms = new MemoryStream();
+            // Pre-allocate with known size to avoid resizing, use 128KB buffer for speed
+            var ms = new MemoryStream((int)Math.Min(entry.Length, int.MaxValue));
             using (var stream = entry.Open())
             {
-                stream.CopyTo(ms);
+                stream.CopyTo(ms, 131072);
             }
             ms.Position = 0;
             return ms;

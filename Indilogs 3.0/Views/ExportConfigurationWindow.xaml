@@ -441,7 +441,7 @@
                         Style="{StaticResource SecondaryBtn}"
                         Padding="25,10"
                         FontSize="14"
-                        ToolTip="Export CSV and open in IndiChart viewer"/>
+                        ToolTip="Export CSV and open in Flow CSV Viewer"/>
                 <Button Content="Cancel"
                         IsCancel="True"
                         Style="{StaticResource SecondaryBtn}"

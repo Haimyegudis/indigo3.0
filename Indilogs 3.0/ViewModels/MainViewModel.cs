@@ -311,6 +311,7 @@ namespace IndiLogs_3._0.ViewModels
         public event Action<LogEntry> RequestScrollToLog;
         public event Action<LogEntry, bool> RequestScrollToLogPreservePosition;
         public event Action<LogEntry> RequestSaveScrollPosition;
+        public event Action<string> RequestScrollToBottom;
 
         /// <summary>
         /// Public method to trigger scroll to log event from child ViewModels
@@ -334,6 +335,14 @@ namespace IndiLogs_3._0.ViewModels
         public void SaveScrollPosition(LogEntry log)
         {
             RequestSaveScrollPosition?.Invoke(log);
+        }
+
+        /// <summary>
+        /// Scrolls a specific tab grid to its last row. Tab names: "PLC", "FILTERED", "APP"
+        /// </summary>
+        public void ScrollTabToBottom(string tabName)
+        {
+            RequestScrollToBottom?.Invoke(tabName);
         }
 
         // --- SELECTED TAB INDEX ---
@@ -362,6 +371,17 @@ namespace IndiLogs_3._0.ViewModels
                     OnPropertyChanged(nameof(IsPLCTabSelected));
                     OnPropertyChanged(nameof(IsAppTabSelected));
                     OnPropertyChanged(nameof(IsExportVisible));
+
+                    // Apply pending sync scroll when user switches to the target tab
+                    if (_pendingSyncLog != null && _selectedTabIndex == _pendingSyncTabIndex)
+                    {
+                        var logToScroll = _pendingSyncLog;
+                        _pendingSyncLog = null;
+                        _pendingSyncTabIndex = -1;
+                        Application.Current?.Dispatcher?.BeginInvoke(
+                            System.Windows.Threading.DispatcherPriority.Loaded,
+                            new Action(() => RequestScrollToLog?.Invoke(logToScroll)));
+                    }
                 }
             }
         }
@@ -709,6 +729,9 @@ namespace IndiLogs_3._0.ViewModels
 
         private bool _isSyncScrolling = false;
         private int _timeSyncOffsetSeconds = 0;
+        // Pending sync: stores the log to scroll to when user switches to target tab
+        private LogEntry _pendingSyncLog;
+        private int _pendingSyncTabIndex = -1;
 
         public int TimeSyncOffsetSeconds
         {
@@ -746,6 +769,7 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand ZoomOutCommand { get; }
         public ICommand ViewLogDetailsCommand { get; }
         public ICommand OpenSettingsCommand { get; }
+        public ICommand OpenHelpCommand { get; }
         public ICommand ToggleBoldCommand { get; }
         public ICommand OpenFontsWindowCommand { get; }
         public ICommand OpenMarkedLogsWindowCommand { get; }
@@ -919,6 +943,7 @@ namespace IndiLogs_3._0.ViewModels
             ToggleThemeCommand = new RelayCommand(o => IsDarkMode = !IsDarkMode);
             ToggleBoldCommand = new RelayCommand(o => IsBold = !IsBold);
             OpenSettingsCommand = new RelayCommand(OpenSettingsWindow);
+            OpenHelpCommand = new RelayCommand(o => WindowManager.OpenWindow(new Views.HelpWindow()));
             OpenFontsWindowCommand = new RelayCommand(OpenFontsWindow);
             OpenSnakeGameCommand = new RelayCommand(OpenSnakeGame);
 
@@ -1370,7 +1395,10 @@ namespace IndiLogs_3._0.ViewModels
                 System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 9: Resetting visual mode...");
                 if (VisualTimelineVM != null)
                     VisualTimelineVM.Clear();
-                IsVisualMode = false;
+                // Force property change notification so UI updates immediately,
+                // even if IsVisualMode was already false
+                _isVisualMode = false;
+                OnPropertyChanged(nameof(IsVisualMode));
 
                 // Step 10: Reset tabs
                 System.Diagnostics.Debug.WriteLine("[MAIN VM CLEAR] Step 10: Resetting tabs...");
@@ -2189,32 +2217,32 @@ namespace IndiLogs_3._0.ViewModels
                 DateTime adjustedTime = targetTime.AddSeconds(TimeSyncOffsetSeconds);
                 IList<LogEntry> targetCollection = null;
                 string targetGrid = null;
+                int targetTabIndex = -1;
 
                 if (sourceGrid == "PLC" || sourceGrid == "PLCFiltered")
                 {
+                    // PLC → APP sync
                     if (AppDevLogsFiltered != null && AppDevLogsFiltered.Count > 0)
                     {
                         targetCollection = AppDevLogsFiltered;
                         targetGrid = "APP";
+                        targetTabIndex = 2;
                     }
                 }
                 else if (sourceGrid == "APP")
                 {
-                    if (FilteredLogs != null && FilteredLogs.Count > 0 && SelectedTabIndex == 1)
+                    // APP → PLC sync: use AllLogsCache (always IList<LogEntry>)
+                    if (AllLogsCache != null && AllLogsCache.Count > 0)
                     {
-                        targetCollection = FilteredLogs;
-                        targetGrid = "PLCFiltered";
-                    }
-                    else if (Logs != null && (Logs as IList<LogEntry>)?.Count > 0)
-                    {
-                        targetCollection = Logs as IList<LogEntry>;
+                        targetCollection = AllLogsCache;
                         targetGrid = "PLC";
+                        targetTabIndex = 0;
                     }
                 }
 
                 if (targetCollection == null || targetCollection.Count == 0) return;
 
-                int nearestIndex = LinearSearchNearest(targetCollection, adjustedTime);
+                int nearestIndex = BinarySearchNearest(targetCollection, adjustedTime);
 
                 if (nearestIndex >= 0)
                 {
@@ -2223,10 +2251,13 @@ namespace IndiLogs_3._0.ViewModels
 
                     if (timeDiff.TotalSeconds <= 60)
                     {
-                        RequestScrollToLog?.Invoke(nearestLog);
+                        // Store pending sync - will scroll when user switches to target tab
+                        _pendingSyncLog = nearestLog;
+                        _pendingSyncTabIndex = targetTabIndex;
+
                         Application.Current?.Dispatcher?.Invoke(() =>
                         {
-                            StatusMessage = $"🔗 Synced {sourceGrid} ↔ {targetGrid} (±{timeDiff.TotalSeconds:F1}s)";
+                            StatusMessage = $"🔗 Synced to {targetGrid} @ {nearestLog.Date:HH:mm:ss.fff} (±{timeDiff.TotalSeconds:F1}s) - switch tab to see";
                         });
                     }
                     else

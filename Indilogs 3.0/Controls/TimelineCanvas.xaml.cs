@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using SkiaSharp;
 using SkiaSharp.Views.Desktop;
@@ -19,11 +21,11 @@ namespace IndiLogs_3._0.Controls
 
         public static readonly DependencyProperty StatesProperty = DependencyProperty.Register(
             "States", typeof(IEnumerable<TimelineState>), typeof(TimelineCanvas),
-            new FrameworkPropertyMetadata(null, OnVisualPropertyChanged));
+            new FrameworkPropertyMetadata(null, OnStatesOrMarkersChanged));
 
         public static readonly DependencyProperty MarkersProperty = DependencyProperty.Register(
             "Markers", typeof(IEnumerable<TimelineMarker>), typeof(TimelineCanvas),
-            new FrameworkPropertyMetadata(null, OnVisualPropertyChanged));
+            new FrameworkPropertyMetadata(null, OnStatesOrMarkersChanged));
 
         public static readonly DependencyProperty ViewScaleProperty = DependencyProperty.Register(
             "ViewScale", typeof(double), typeof(TimelineCanvas),
@@ -37,6 +39,49 @@ namespace IndiLogs_3._0.Controls
         public IEnumerable<TimelineMarker> Markers { get => (IEnumerable<TimelineMarker>)GetValue(MarkersProperty); set => SetValue(MarkersProperty, value); }
         public double ViewScale { get => (double)GetValue(ViewScaleProperty); set => SetValue(ViewScaleProperty, value); }
         public double ViewOffset { get => (double)GetValue(ViewOffsetProperty); set => SetValue(ViewOffsetProperty, value); }
+
+        private static void OnStatesOrMarkersChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is TimelineCanvas tc)
+            {
+                // Unsubscribe from old collection
+                if (e.OldValue is INotifyCollectionChanged oldCollection)
+                    oldCollection.CollectionChanged -= tc.OnCollectionChanged;
+
+                // Subscribe to new collection for live updates (ObservableCollection)
+                if (e.NewValue is INotifyCollectionChanged newCollection)
+                    newCollection.CollectionChanged += tc.OnCollectionChanged;
+
+                tc.CacheTimeRange();
+                tc.SkiaCanvas?.InvalidateVisual();
+            }
+        }
+
+        private void OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            // On Reset (Clear()), immediately redraw — don't debounce
+            if (e.Action == NotifyCollectionChangedAction.Reset)
+            {
+                _collectionUpdateTimer?.Stop();
+                CacheTimeRange();
+                SkiaCanvas?.InvalidateVisual();
+                return;
+            }
+
+            // For bulk adds, use a timer to batch updates (debounce 50ms)
+            if (_collectionUpdateTimer == null)
+            {
+                _collectionUpdateTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+                _collectionUpdateTimer.Tick += (s, args) =>
+                {
+                    _collectionUpdateTimer.Stop();
+                    CacheTimeRange();
+                    SkiaCanvas?.InvalidateVisual();
+                };
+            }
+            _collectionUpdateTimer.Stop();
+            _collectionUpdateTimer.Start();
+        }
 
         private static void OnVisualPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -68,7 +113,20 @@ namespace IndiLogs_3._0.Controls
         private object _currentHoverObject;
         private bool _showTooltip;
 
-        // Layout constants
+        // Collection change debounce timer
+        private DispatcherTimer _collectionUpdateTimer;
+
+        // Cached time range (avoid recomputing Min/Max every frame)
+        private DateTime _cachedMinTime;
+        private DateTime _cachedMaxTime;
+        private double _cachedTotalSeconds;
+        private List<TimelineState> _cachedStates;
+        private List<TimelineMarker> _cachedMarkers;
+
+        // DPI scale factor
+        private float _dpiScale = 1f;
+
+        // Layout constants (in DPI-independent units, will be scaled)
         private const float TIMELINE_Y = 50f;
         private const float BAR_HEIGHT = 40f;
         private const float MARKER_AREA = 20f;
@@ -81,14 +139,23 @@ namespace IndiLogs_3._0.Controls
         private SKColor _textColor;
         private SKColor _gridColor;
 
+        // Reusable paints (avoid allocations per frame)
+        private SKPaint _gradientPaint;
+        private SKPaint _glowPaint;
+        private SKPaint _edgePaint;
+        private SKPaint _highlightBorderPaint;
+        private SKPaint _labelPaint;
+        private SKPaint _axisPaint;
+        private SKPaint _axisTextPaint;
+
         // Material Design color palette for PLC states
-        private static readonly SKColor StateColorReady = SKColor.Parse("#26A69A");     // Teal
-        private static readonly SKColor StateColorError = SKColor.Parse("#EF5350");     // Red
-        private static readonly SKColor StateColorInit = SKColor.Parse("#FFA726");      // Orange/Gold
-        private static readonly SKColor StateColorPrint = SKColor.Parse("#42A5F5");     // Blue
-        private static readonly SKColor StateColorDynamic = SKColor.Parse("#66BB6A");   // Green
-        private static readonly SKColor StateColorStandby = SKColor.Parse("#AB47BC");   // Purple
-        private static readonly SKColor StateColorDefault = SKColor.Parse("#5C6BC0");   // Indigo
+        private static readonly SKColor StateColorReady = SKColor.Parse("#26A69A");
+        private static readonly SKColor StateColorError = SKColor.Parse("#EF5350");
+        private static readonly SKColor StateColorInit = SKColor.Parse("#FFA726");
+        private static readonly SKColor StateColorPrint = SKColor.Parse("#42A5F5");
+        private static readonly SKColor StateColorDynamic = SKColor.Parse("#66BB6A");
+        private static readonly SKColor StateColorStandby = SKColor.Parse("#AB47BC");
+        private static readonly SKColor StateColorDefault = SKColor.Parse("#5C6BC0");
 
         #endregion
 
@@ -99,6 +166,7 @@ namespace IndiLogs_3._0.Controls
             InitializeComponent();
             ClipToBounds = true;
             UpdateThemeColors();
+            InitializePaints();
 
             SkiaCanvas.MouseDown += OnMouseDown;
             SkiaCanvas.MouseMove += OnMouseMove;
@@ -109,6 +177,55 @@ namespace IndiLogs_3._0.Controls
             _hoverTimer = new DispatcherTimer();
             _hoverTimer.Interval = TimeSpan.FromSeconds(1.5);
             _hoverTimer.Tick += OnHoverTimerTick;
+
+            this.Loaded += (s, e) => UpdateDpiScale();
+        }
+
+        private void UpdateDpiScale()
+        {
+            var source = PresentationSource.FromVisual(this);
+            if (source?.CompositionTarget != null)
+                _dpiScale = (float)source.CompositionTarget.TransformToDevice.M11;
+            else
+                _dpiScale = 1f;
+        }
+
+        private void InitializePaints()
+        {
+            _gradientPaint = new SKPaint { Style = SKPaintStyle.Fill, IsAntialias = true };
+            _glowPaint = new SKPaint { Color = SKColors.White.WithAlpha(40), Style = SKPaintStyle.Fill, IsAntialias = true };
+            _edgePaint = new SKPaint { Style = SKPaintStyle.Stroke, StrokeWidth = 0.8f, IsAntialias = true };
+            _highlightBorderPaint = new SKPaint { Color = SKColors.White.WithAlpha(200), Style = SKPaintStyle.Stroke, StrokeWidth = 2, IsAntialias = true };
+            _labelPaint = new SKPaint { TextSize = 12, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold) };
+            _axisPaint = new SKPaint { StrokeWidth = 1, Style = SKPaintStyle.Stroke };
+            _axisTextPaint = new SKPaint { TextSize = 11, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Segoe UI") };
+        }
+
+        #endregion
+
+        #region Cache
+
+        private void CacheTimeRange()
+        {
+            _cachedStates = States?.ToList();
+            _cachedMarkers = Markers?.ToList();
+
+            if (_cachedStates != null && _cachedStates.Count > 0)
+            {
+                _cachedMinTime = _cachedStates[0].StartTime;
+                _cachedMaxTime = _cachedStates[0].EndTime;
+                for (int i = 1; i < _cachedStates.Count; i++)
+                {
+                    if (_cachedStates[i].StartTime < _cachedMinTime) _cachedMinTime = _cachedStates[i].StartTime;
+                    if (_cachedStates[i].EndTime > _cachedMaxTime) _cachedMaxTime = _cachedStates[i].EndTime;
+                }
+                _cachedTotalSeconds = (_cachedMaxTime - _cachedMinTime).TotalSeconds;
+                if (_cachedTotalSeconds <= 0) _cachedTotalSeconds = 1;
+            }
+            else
+            {
+                _cachedTotalSeconds = 0;
+            }
         }
 
         #endregion
@@ -207,15 +324,17 @@ namespace IndiLogs_3._0.Controls
             var info = e.Info;
             canvas.Clear(_bgColor);
 
-            float w = info.Width;
-            float h = info.Height;
+            if (_cachedStates == null || _cachedStates.Count == 0 || _cachedTotalSeconds <= 0) return;
 
-            if (States == null || !States.Any()) return;
+            // Use WPF ActualWidth/Height for coordinate calculations (matches mouse coords)
+            float w = (float)SkiaCanvas.ActualWidth;
+            float h = (float)SkiaCanvas.ActualHeight;
+            if (w <= 0 || h <= 0) return;
 
-            DateTime minTime = States.Min(s => s.StartTime);
-            DateTime maxTime = States.Max(s => s.EndTime);
-            double totalSeconds = (maxTime - minTime).TotalSeconds;
-            if (totalSeconds <= 0) totalSeconds = 1;
+            // Scale canvas to match WPF coordinates
+            float scaleX = info.Width / w;
+            float scaleY = info.Height / h;
+            canvas.Scale(scaleX, scaleY);
 
             float chartBottom = h - TIME_AXIS_HEIGHT;
 
@@ -225,13 +344,13 @@ namespace IndiLogs_3._0.Controls
             float hoverY = (float)_currentMousePos.Y;
 
             // ─── Draw state bars ───
-            foreach (var state in States)
+            for (int i = 0; i < _cachedStates.Count; i++)
             {
-                double startX = TimeToX((state.StartTime - minTime).TotalSeconds, w, totalSeconds);
-                double endX = TimeToX((state.EndTime - minTime).TotalSeconds, w, totalSeconds);
-                float barW = (float)Math.Max(2, endX - startX);
-                float x1 = (float)startX;
-                float x2 = x1 + barW;
+                var state = _cachedStates[i];
+                float x1 = (float)TimeToX((state.StartTime - _cachedMinTime).TotalSeconds, w, _cachedTotalSeconds);
+                float x2 = (float)TimeToX((state.EndTime - _cachedMinTime).TotalSeconds, w, _cachedTotalSeconds);
+                float barW = Math.Max(2, x2 - x1);
+                x2 = x1 + barW;
 
                 if (x2 < 0 || x1 > w) continue;
 
@@ -242,8 +361,7 @@ namespace IndiLogs_3._0.Controls
                 bool isHovered = hoverX >= x1 && hoverX <= x2 && hoverY >= TIMELINE_Y && hoverY <= TIMELINE_Y + BAR_HEIGHT;
                 if (isHovered) hoveredObj = state;
 
-                // Override color for critical failure
-                if (isCriticalFailure) baseColor = SKColor.Parse("#B71C1C"); // Dark Red
+                if (isCriticalFailure) baseColor = SKColor.Parse("#B71C1C");
 
                 var barRect = new SKRect(x1, TIMELINE_Y, x2, TIMELINE_Y + BAR_HEIGHT);
                 var barRoundRect = new SKRoundRect(barRect, 3, 3);
@@ -252,51 +370,34 @@ namespace IndiLogs_3._0.Controls
                 SKColor topColor = isHovered ? baseColor : LightenColor(baseColor, 0.15f);
                 SKColor bottomColor = isHovered ? DarkenColor(baseColor, 0.1f) : DarkenColor(baseColor, 0.2f);
 
-                using (var gradientPaint = new SKPaint { Style = SKPaintStyle.Fill, IsAntialias = true })
-                {
-                    gradientPaint.Shader = SKShader.CreateLinearGradient(
-                        new SKPoint(0, TIMELINE_Y), new SKPoint(0, TIMELINE_Y + BAR_HEIGHT),
-                        new[] { topColor, bottomColor }, null, SKShaderTileMode.Clamp);
-                    canvas.DrawRoundRect(barRoundRect, gradientPaint);
-                }
+                _gradientPaint.Shader?.Dispose();
+                _gradientPaint.Shader = SKShader.CreateLinearGradient(
+                    new SKPoint(0, TIMELINE_Y), new SKPoint(0, TIMELINE_Y + BAR_HEIGHT),
+                    new[] { topColor, bottomColor }, null, SKShaderTileMode.Clamp);
+                canvas.DrawRoundRect(barRoundRect, _gradientPaint);
 
                 // Inner highlight glow (top 40% of bar)
-                if (BAR_HEIGHT > 8)
-                {
-                    using (var glowPaint = new SKPaint { Color = SKColors.White.WithAlpha(40), Style = SKPaintStyle.Fill, IsAntialias = true })
-                    {
-                        canvas.DrawRoundRect(new SKRoundRect(new SKRect(x1 + 1, TIMELINE_Y + 1, x2 - 1, TIMELINE_Y + BAR_HEIGHT * 0.4f), 2, 2), glowPaint);
-                    }
-                }
+                canvas.DrawRoundRect(new SKRoundRect(new SKRect(x1 + 1, TIMELINE_Y + 1, x2 - 1, TIMELINE_Y + BAR_HEIGHT * 0.4f), 2, 2), _glowPaint);
 
                 // Thin dark border
-                using (var edgePaint = new SKPaint { Color = DarkenColor(baseColor, 0.35f), Style = SKPaintStyle.Stroke, StrokeWidth = 0.8f, IsAntialias = true })
-                {
-                    canvas.DrawRoundRect(barRoundRect, edgePaint);
-                }
+                _edgePaint.Color = DarkenColor(baseColor, 0.35f);
+                canvas.DrawRoundRect(barRoundRect, _edgePaint);
 
-                // Hovered bar: bright white border highlight
+                // Hovered bar highlight
                 if (isHovered)
-                {
-                    using (var highlightBorder = new SKPaint { Color = SKColors.White.WithAlpha(200), Style = SKPaintStyle.Stroke, StrokeWidth = 2, IsAntialias = true })
-                    {
-                        canvas.DrawRoundRect(barRoundRect, highlightBorder);
-                    }
-                }
+                    canvas.DrawRoundRect(barRoundRect, _highlightBorderPaint);
 
                 // Hazard pattern for FAILED states
                 if (isCriticalFailure)
-                {
                     DrawHazardPattern(canvas, x1, TIMELINE_Y, barW, BAR_HEIGHT, barRoundRect);
-                }
 
                 // Status indicator border
                 if (state.Status == "SUCCESS")
                 {
-                    using (var successBorder = new SKPaint { Color = SKColor.Parse("#4CAF50"), Style = SKPaintStyle.Stroke, StrokeWidth = 2, IsAntialias = true })
-                    {
-                        canvas.DrawRoundRect(barRoundRect, successBorder);
-                    }
+                    _edgePaint.Color = SKColor.Parse("#4CAF50");
+                    _edgePaint.StrokeWidth = 2;
+                    canvas.DrawRoundRect(barRoundRect, _edgePaint);
+                    _edgePaint.StrokeWidth = 0.8f;
                 }
 
                 // Text label with auto-contrast
@@ -305,54 +406,44 @@ namespace IndiLogs_3._0.Controls
                     string displayText = state.Name;
                     if (isCriticalFailure) displayText += " (FAILED!)";
 
-                    using (var labelPaint = new SKPaint { TextSize = 12, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold) })
+                    float textWidth = _labelPaint.MeasureText(displayText);
+                    if (textWidth > barW - 10)
                     {
-                        float textWidth = labelPaint.MeasureText(displayText);
-                        if (textWidth > barW - 10)
-                        {
-                            // Truncate with ellipsis
-                            while (displayText.Length > 3 && labelPaint.MeasureText(displayText + "..") > barW - 10)
-                                displayText = displayText.Substring(0, displayText.Length - 1);
-                            displayText += "..";
-                            textWidth = labelPaint.MeasureText(displayText);
-                        }
-
-                        // Auto-contrast: white on dark, dark on light
-                        float brightness = (baseColor.Red * 0.299f + baseColor.Green * 0.587f + baseColor.Blue * 0.114f) / 255f;
-                        labelPaint.Color = brightness > 0.55f ? SKColor.Parse("#333333") : SKColors.White;
-
-                        float textX = x1 + (barW - textWidth) / 2;
-                        float textY = TIMELINE_Y + BAR_HEIGHT / 2 + 4.5f;
-                        canvas.DrawText(displayText, textX, textY, labelPaint);
+                        while (displayText.Length > 3 && _labelPaint.MeasureText(displayText + "..") > barW - 10)
+                            displayText = displayText.Substring(0, displayText.Length - 1);
+                        displayText += "..";
+                        textWidth = _labelPaint.MeasureText(displayText);
                     }
+
+                    float brightness = (baseColor.Red * 0.299f + baseColor.Green * 0.587f + baseColor.Blue * 0.114f) / 255f;
+                    _labelPaint.Color = brightness > 0.55f ? SKColor.Parse("#333333") : SKColors.White;
+
+                    float textX = x1 + (barW - textWidth) / 2;
+                    float textY = TIMELINE_Y + BAR_HEIGHT / 2 + 4.5f;
+                    canvas.DrawText(displayText, textX, textY, _labelPaint);
                 }
             }
 
             // ─── Draw markers ───
-            if (Markers != null)
+            if (_cachedMarkers != null)
             {
-                foreach (var marker in Markers)
+                for (int i = 0; i < _cachedMarkers.Count; i++)
                 {
-                    double mx = TimeToX((marker.Time - minTime).TotalSeconds, w, totalSeconds);
-                    float mxf = (float)mx;
+                    var marker = _cachedMarkers[i];
+                    float mxf = (float)TimeToX((marker.Time - _cachedMinTime).TotalSeconds, w, _cachedTotalSeconds);
                     if (mxf < 0 || mxf > w) continue;
 
                     if (marker.Type == TimelineMarkerType.Error)
                     {
                         float my = TIMELINE_Y - MARKER_AREA;
                         DrawErrorMarker(canvas, mxf, my);
-
-                        // Hover detection for error markers
                         if (Math.Abs(hoverX - mxf) < 10 && Math.Abs(hoverY - (my + 6)) < 10)
                             hoveredObj = marker;
                     }
                     else
                     {
                         float my = TIMELINE_Y + BAR_HEIGHT + 8;
-                        SKColor markerColor = SKColor.Parse("#00BCD4"); // Cyan for events
-                        DrawEventMarker(canvas, mxf, my, markerColor);
-
-                        // Hover detection for event markers
+                        DrawEventMarker(canvas, mxf, my, SKColor.Parse("#00BCD4"));
                         if (Math.Abs(hoverX - mxf) < 8 && Math.Abs(hoverY - my) < 8)
                             hoveredObj = marker;
                     }
@@ -360,7 +451,7 @@ namespace IndiLogs_3._0.Controls
             }
 
             // ─── Draw time axis ───
-            DrawTimeAxis(canvas, chartBottom, w, totalSeconds, minTime);
+            DrawTimeAxis(canvas, chartBottom, w, _cachedTotalSeconds, _cachedMinTime);
 
             // ─── Draw zoom selection rectangle ───
             if (_isZooming)
@@ -405,14 +496,11 @@ namespace IndiLogs_3._0.Controls
             {
                 float step = 15;
                 for (float i = -bh; i < bw; i += step)
-                {
                     canvas.DrawLine(x + i, y, x + i + bh, y + bh, stripePaint);
-                }
             }
 
             canvas.Restore();
 
-            // X mark in center
             float cx = x + bw / 2;
             float cy = y + bh / 2;
             float s = 6;
@@ -425,13 +513,9 @@ namespace IndiLogs_3._0.Controls
 
         private void DrawErrorMarker(SKCanvas canvas, float x, float y)
         {
-            // Outer glow
             using (var glowPaint = new SKPaint { Color = SKColors.Red.WithAlpha(60), Style = SKPaintStyle.Fill, IsAntialias = true })
-            {
                 canvas.DrawCircle(x, y + 6, 12, glowPaint);
-            }
 
-            // Main circle with gradient
             using (var circlePaint = new SKPaint { Style = SKPaintStyle.Fill, IsAntialias = true })
             {
                 circlePaint.Shader = SKShader.CreateRadialGradient(
@@ -441,13 +525,9 @@ namespace IndiLogs_3._0.Controls
                 canvas.DrawCircle(x, y + 6, 8, circlePaint);
             }
 
-            // White border
             using (var borderPaint = new SKPaint { Color = SKColors.White.WithAlpha(180), StrokeWidth = 1.2f, Style = SKPaintStyle.Stroke, IsAntialias = true })
-            {
                 canvas.DrawCircle(x, y + 6, 8, borderPaint);
-            }
 
-            // X mark
             using (var xPaint = new SKPaint { Color = SKColors.White, StrokeWidth = 2, Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeCap = SKStrokeCap.Round })
             {
                 canvas.DrawLine(x - 3, y + 3, x + 3, y + 9, xPaint);
@@ -457,13 +537,9 @@ namespace IndiLogs_3._0.Controls
 
         private void DrawEventMarker(SKCanvas canvas, float x, float y, SKColor color)
         {
-            // Outer glow
             using (var glowPaint = new SKPaint { Color = color.WithAlpha(50), Style = SKPaintStyle.Fill, IsAntialias = true })
-            {
                 canvas.DrawCircle(x, y, 10, glowPaint);
-            }
 
-            // Diamond shape
             using (var path = new SKPath())
             {
                 path.MoveTo(x, y - 6);
@@ -472,7 +548,6 @@ namespace IndiLogs_3._0.Controls
                 path.LineTo(x - 6, y);
                 path.Close();
 
-                // Gradient fill
                 using (var fillPaint = new SKPaint { Style = SKPaintStyle.Fill, IsAntialias = true })
                 {
                     fillPaint.Shader = SKShader.CreateLinearGradient(
@@ -482,43 +557,38 @@ namespace IndiLogs_3._0.Controls
                     canvas.DrawPath(path, fillPaint);
                 }
 
-                // Border
                 using (var borderPaint = new SKPaint { Color = SKColors.White.WithAlpha(180), StrokeWidth = 1, Style = SKPaintStyle.Stroke, IsAntialias = true })
-                {
                     canvas.DrawPath(path, borderPaint);
-                }
             }
         }
 
         private void DrawTimeAxis(SKCanvas canvas, float y, float w, double totalSeconds, DateTime startTime)
         {
-            using (var axisPaint = new SKPaint { Color = _gridColor, StrokeWidth = 1, Style = SKPaintStyle.Stroke })
-            using (var tickPaint = new SKPaint { Color = _gridColor, StrokeWidth = 1, Style = SKPaintStyle.Stroke })
-            using (var textPaint = new SKPaint { Color = _textColor, TextSize = 11, IsAntialias = true, Typeface = SKTypeface.FromFamilyName("Segoe UI") })
+            _axisPaint.Color = _gridColor;
+            _axisTextPaint.Color = _textColor;
+
+            canvas.DrawLine(0, y, w, y, _axisPaint);
+
+            double pixelPerSecond = (w * ViewScale) / totalSeconds;
+            double step = 100 / pixelPerSecond;
+            if (step < 1) step = 1;
+            if (step > 60) step = 60;
+            else if (step > 30) step = 30;
+            else if (step > 10) step = 10;
+            else if (step > 5) step = 5;
+
+            double startSec = XToSeconds(0, w, totalSeconds);
+            double endSec = XToSeconds(w, w, totalSeconds);
+
+            for (double t = Math.Floor(startSec / step) * step; t < endSec; t += step)
             {
-                canvas.DrawLine(0, y, w, y, axisPaint);
+                float x = (float)TimeToX(t, w, totalSeconds);
+                canvas.DrawLine(x, y, x, y + 5, _axisPaint);
 
-                double pixelPerSecond = (w * ViewScale) / totalSeconds;
-                double step = 100 / pixelPerSecond;
-                if (step < 1) step = 1;
-                if (step > 60) step = 60;
-                else if (step > 30) step = 30;
-                else if (step > 10) step = 10;
-                else if (step > 5) step = 5;
-
-                double startSec = XToSeconds(0, w, totalSeconds);
-                double endSec = XToSeconds(w, w, totalSeconds);
-
-                for (double t = Math.Floor(startSec / step) * step; t < endSec; t += step)
-                {
-                    float x = (float)TimeToX(t, w, totalSeconds);
-                    canvas.DrawLine(x, y, x, y + 5, tickPaint);
-
-                    DateTime absoluteTime = startTime.AddSeconds(t);
-                    string label = absoluteTime.ToString("HH:mm:ss");
-                    float tw = textPaint.MeasureText(label);
-                    canvas.DrawText(label, x - tw / 2, y + 20, textPaint);
-                }
+                DateTime absoluteTime = startTime.AddSeconds(t);
+                string label = absoluteTime.ToString("HH:mm:ss");
+                float tw = _axisTextPaint.MeasureText(label);
+                canvas.DrawText(label, x - tw / 2, y + 20, _axisTextPaint);
             }
         }
 
@@ -560,7 +630,6 @@ namespace IndiLogs_3._0.Controls
                 float tooltipW = maxWidth + 20 + accentBarWidth;
                 float tooltipH = lines.Length * 16 + 14;
 
-                // Keep tooltip on screen
                 if (x + tooltipW > canvasW - 10) x = canvasW - tooltipW - 10;
                 if (y + tooltipH > canvasH - 10) y = canvasH - tooltipH - 10;
                 if (x < 5) x = 5;
@@ -569,34 +638,21 @@ namespace IndiLogs_3._0.Controls
                 var tooltipRect = new SKRect(x, y, x + tooltipW, y + tooltipH);
                 var tooltipRoundRect = new SKRoundRect(tooltipRect, 6, 6);
 
-                // Shadow
                 using (var shadowPaint = new SKPaint { Color = SKColor.Parse("#60000000"), Style = SKPaintStyle.Fill, IsAntialias = true })
-                {
                     canvas.DrawRoundRect(new SKRoundRect(new SKRect(x + 2, y + 2, x + tooltipW + 2, y + tooltipH + 2), 6, 6), shadowPaint);
-                }
 
-                // Background
                 using (var bgPaint = new SKPaint { Color = _isLightTheme ? SKColor.Parse("#F0FFFFFF") : SKColor.Parse("#F01B2838"), Style = SKPaintStyle.Fill, IsAntialias = true })
-                {
                     canvas.DrawRoundRect(tooltipRoundRect, bgPaint);
-                }
 
-                // Border
                 using (var borderPaint = new SKPaint { Color = accentColor, Style = SKPaintStyle.Stroke, StrokeWidth = 1.5f, IsAntialias = true })
-                {
                     canvas.DrawRoundRect(tooltipRoundRect, borderPaint);
-                }
 
-                // Left accent bar
                 canvas.Save();
                 canvas.ClipRoundRect(tooltipRoundRect);
                 using (var accentPaint = new SKPaint { Color = accentColor, Style = SKPaintStyle.Fill })
-                {
                     canvas.DrawRect(new SKRect(x, y, x + accentBarWidth, y + tooltipH), accentPaint);
-                }
                 canvas.Restore();
 
-                // Text
                 float ty = y + 16;
                 foreach (var line in lines)
                 {
@@ -649,27 +705,23 @@ namespace IndiLogs_3._0.Controls
             {
                 SkiaCanvas.InvalidateVisual();
             }
-            else if (_isDragging && States != null && States.Any())
+            else if (_isDragging && _cachedStates != null && _cachedStates.Count > 0)
             {
                 double dx = _currentMousePos.X - _dragStart.X;
-                DateTime min = States.Min(s => s.StartTime);
-                DateTime max = States.Max(s => s.EndTime);
-                double totalSec = (max - min).TotalSeconds;
-                double pixelsPerSecond = (SkiaCanvas.ActualWidth * ViewScale) / totalSec;
+                double pixelsPerSecond = (SkiaCanvas.ActualWidth * ViewScale) / _cachedTotalSeconds;
                 if (pixelsPerSecond > 0)
                     ViewOffset = _dragStartOffset - (dx / pixelsPerSecond);
                 SkiaCanvas.InvalidateVisual();
             }
             else
             {
-                // Hover update
                 SkiaCanvas.InvalidateVisual();
             }
         }
 
         private void OnMouseUp(object sender, MouseButtonEventArgs e)
         {
-            if (_isZooming && States != null && States.Any())
+            if (_isZooming && _cachedStates != null && _cachedStates.Count > 0)
             {
                 double x1 = Math.Min(_zoomStartPoint.X, _currentMousePos.X);
                 double x2 = Math.Max(_zoomStartPoint.X, _currentMousePos.X);
@@ -677,15 +729,12 @@ namespace IndiLogs_3._0.Controls
 
                 if (width > 10)
                 {
-                    DateTime min = States.Min(s => s.StartTime);
-                    DateTime max = States.Max(s => s.EndTime);
-                    double totalSec = (max - min).TotalSeconds;
-                    double t1 = XToSeconds(x1, SkiaCanvas.ActualWidth, totalSec);
-                    double t2 = XToSeconds(x2, SkiaCanvas.ActualWidth, totalSec);
+                    double t1 = XToSeconds(x1, SkiaCanvas.ActualWidth, _cachedTotalSeconds);
+                    double t2 = XToSeconds(x2, SkiaCanvas.ActualWidth, _cachedTotalSeconds);
                     double newRange = t2 - t1;
                     if (newRange > 0)
                     {
-                        ViewScale = totalSec / newRange;
+                        ViewScale = _cachedTotalSeconds / newRange;
                         ViewOffset = t1;
                     }
                 }
@@ -698,20 +747,17 @@ namespace IndiLogs_3._0.Controls
 
         private void OnMouseWheel(object sender, MouseWheelEventArgs e)
         {
-            if (States == null || !States.Any()) return;
+            if (_cachedStates == null || _cachedStates.Count == 0) return;
 
             Point mousePos = e.GetPosition(SkiaCanvas);
-            DateTime min = States.Min(s => s.StartTime);
-            DateTime max = States.Max(s => s.EndTime);
-            double totalSec = (max - min).TotalSeconds;
-            if (totalSec <= 0) return;
+            if (_cachedTotalSeconds <= 0) return;
 
-            double mouseTimeBefore = XToSeconds(mousePos.X, SkiaCanvas.ActualWidth, totalSec);
+            double mouseTimeBefore = XToSeconds(mousePos.X, SkiaCanvas.ActualWidth, _cachedTotalSeconds);
             double zoomFactor = e.Delta > 0 ? 1.2 : 0.8;
             ViewScale *= zoomFactor;
             if (ViewScale < 0.1) ViewScale = 0.1;
 
-            double mouseTimeAfter = (mousePos.X / (SkiaCanvas.ActualWidth * ViewScale)) * totalSec;
+            double mouseTimeAfter = (mousePos.X / (SkiaCanvas.ActualWidth * ViewScale)) * _cachedTotalSeconds;
             ViewOffset = mouseTimeBefore - mouseTimeAfter;
 
             SkiaCanvas.InvalidateVisual();
@@ -735,17 +781,15 @@ namespace IndiLogs_3._0.Controls
 
         private object GetHitObject(Point p)
         {
-            if (States == null || !States.Any()) return null;
+            if (_cachedStates == null || _cachedStates.Count == 0) return null;
 
-            DateTime min = States.Min(s => s.StartTime);
-            DateTime max = States.Max(s => s.EndTime);
-            double totalSec = (max - min).TotalSeconds;
+            double w = SkiaCanvas.ActualWidth;
 
-            if (Markers != null)
+            if (_cachedMarkers != null)
             {
-                foreach (var m in Markers)
+                foreach (var m in _cachedMarkers)
                 {
-                    double mx = TimeToX((m.Time - min).TotalSeconds, SkiaCanvas.ActualWidth, totalSec);
+                    double mx = TimeToX((m.Time - _cachedMinTime).TotalSeconds, w, _cachedTotalSeconds);
                     double my = m.Type == TimelineMarkerType.Error ? TIMELINE_Y - MARKER_AREA + 6 : TIMELINE_Y + BAR_HEIGHT + 8;
                     if (Math.Abs(p.X - mx) < 10 && Math.Abs(p.Y - my) < 10) return m;
                 }
@@ -753,10 +797,14 @@ namespace IndiLogs_3._0.Controls
 
             if (p.Y >= TIMELINE_Y && p.Y <= TIMELINE_Y + BAR_HEIGHT)
             {
-                double timeClicked = XToSeconds(p.X, SkiaCanvas.ActualWidth, totalSec);
-                return States.FirstOrDefault(s =>
-                    timeClicked >= (s.StartTime - min).TotalSeconds &&
-                    timeClicked <= (s.EndTime - min).TotalSeconds);
+                double timeClicked = XToSeconds(p.X, w, _cachedTotalSeconds);
+                for (int i = 0; i < _cachedStates.Count; i++)
+                {
+                    var s = _cachedStates[i];
+                    double sStart = (s.StartTime - _cachedMinTime).TotalSeconds;
+                    double sEnd = (s.EndTime - _cachedMinTime).TotalSeconds;
+                    if (timeClicked >= sStart && timeClicked <= sEnd) return s;
+                }
             }
             return null;
         }
