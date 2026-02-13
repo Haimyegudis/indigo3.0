@@ -192,13 +192,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private bool _isAppErrorFilterActive;
-        public bool IsAppErrorFilterActive
-        {
-            get => _isAppErrorFilterActive;
-            set { _isAppErrorFilterActive = value; OnPropertyChanged(); }
-        }
-
         private bool _isAppFilterActive;
         public bool IsAppFilterActive
         {
@@ -274,13 +267,8 @@ namespace IndiLogs_3._0.ViewModels.Components
         private List<string> _negativeFilters = new List<string>();
         public List<string> NegativeFilters => _negativeFilters;
 
-        // PLC thread filters
         private TrackedList<string> _activeThreadFilters = new TrackedList<string>("ActiveThreadFilters");
         public TrackedList<string> ActiveThreadFilters => _activeThreadFilters;
-
-        // APP thread filters (separate from PLC)
-        private TrackedList<string> _appActiveThreadFilters = new TrackedList<string>("AppActiveThreadFilters");
-        public TrackedList<string> AppActiveThreadFilters => _appActiveThreadFilters;
 
         // New Lists for independent column filtering
         private List<string> _activeLoggerFilters = new List<string>();
@@ -306,7 +294,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         public bool HasAppStoredFilter =>
             (_appFilterRoot != null && _appFilterRoot.Children != null && _appFilterRoot.Children.Count > 0) ||
-            _appActiveThreadFilters.Any() ||
+            _activeThreadFilters.Any() ||
             _activeLoggerFilters.Any() ||
             _activeMethodFilters.Any() ||
             _treeShowOnlyLogger != null ||
@@ -325,147 +313,91 @@ namespace IndiLogs_3._0.ViewModels.Components
         public List<ActiveFilterItem> GetActiveFilters()
         {
             var items = new List<ActiveFilterItem>();
-            int tab = _parent?.SelectedTabIndex ?? 0;
-            bool isAppTab = (tab == 2);
-            bool isPLCTab = (tab == 0 || tab == 1);
 
-            if (isAppTab)
+            // Advanced filter (Main)
+            if (_isMainFilterActive && _mainFilterRoot != null && _mainFilterRoot.Children?.Count > 0)
             {
-                // === APP TAB FILTERS ===
-
-                // Advanced filter (APP) - show each rule even when checkbox unchecked
-                if (_appFilterRoot != null && _appFilterRoot.Children?.Count > 0)
-                {
-                    CollectFilterNodeDescriptions(items, _appFilterRoot, "FILTER", "");
-                }
-
-                // Show Errors filter active
-                if (_isAppErrorFilterActive)
-                {
-                    items.Add(new ActiveFilterItem { Category = "FILTER", Description = "Level Equals \"Error\"", IsActive = true });
-                }
-
-                // APP Time Focus
-                if (_isAppTimeFocusActive)
-                {
-                    items.Add(new ActiveFilterItem { Category = "TIME RANGE", Description = "Time Focus active", IsActive = true });
-                }
-
-                // Thread filters (APP-specific) - show as single consolidated line
-                if (_appActiveThreadFilters.Any())
-                {
-                    items.Add(new ActiveFilterItem { Category = "THREAD", Description = "EQUALS " + string.Join(", ", _appActiveThreadFilters), IsActive = true });
-                }
-
-                // Logger filters
-                if (_activeLoggerFilters.Any())
-                {
-                    foreach (var l in _activeLoggerFilters)
-                        items.Add(new ActiveFilterItem { Category = "LOGGER", Description = l, IsActive = true });
-                }
-
-                // Method filters
-                if (_activeMethodFilters.Any())
-                {
-                    foreach (var m in _activeMethodFilters)
-                        items.Add(new ActiveFilterItem { Category = "METHOD", Description = m, IsActive = true });
-                }
-
-                // Tree filters (logger tree)
-                if (_treeShowOnlyLogger != null)
-                    items.Add(new ActiveFilterItem { Category = "LOGGER", Description = $"Show only: {_treeShowOnlyLogger}", IsActive = true });
-                if (_treeShowOnlyPrefix != null)
-                    items.Add(new ActiveFilterItem { Category = "LOGGER", Description = $"Show prefix: {_treeShowOnlyPrefix}", IsActive = true });
-                if (_treeHiddenLoggers.Count > 0)
-                {
-                    foreach (var h in _treeHiddenLoggers)
-                        items.Add(new ActiveFilterItem { Category = "FILTER OUT", Description = $"Logger: {h}", IsActive = true });
-                }
-                if (_treeHiddenPrefixes.Count > 0)
-                {
-                    foreach (var h in _treeHiddenPrefixes)
-                        items.Add(new ActiveFilterItem { Category = "FILTER OUT", Description = $"Prefix: {h}", IsActive = true });
-                }
+                items.Add(new ActiveFilterItem { Category = "FILTER", Description = $"Advanced filter ({_mainFilterRoot.Children.Count} rules)", IsActive = true });
             }
-            else if (isPLCTab)
+
+            // Time Focus (Main)
+            if (_isTimeFocusActive)
             {
-                // === PLC TAB FILTERS ===
+                items.Add(new ActiveFilterItem { Category = "FILTER", Description = "Time Focus active", IsActive = true });
+            }
 
-                // Advanced filter (Main) - show each rule even when checkbox unchecked
-                if (_mainFilterRoot != null && _mainFilterRoot.Children?.Count > 0)
-                {
-                    CollectFilterNodeDescriptions(items, _mainFilterRoot, "FILTER", "");
-                }
+            // Global Time Range
+            if (IsGlobalTimeRangeActive)
+            {
+                items.Add(new ActiveFilterItem { Category = "FILTER", Description = $"Time Range: {_globalTimeRangeStart:HH:mm:ss} - {_globalTimeRangeEnd:HH:mm:ss}", IsActive = true });
+            }
 
-                // Time Focus (Main)
-                if (_isTimeFocusActive)
-                {
-                    items.Add(new ActiveFilterItem { Category = "TIME RANGE", Description = "Time Focus active", IsActive = true });
-                }
+            // Thread filters
+            if (_activeThreadFilters.Any())
+            {
+                foreach (var t in _activeThreadFilters)
+                    items.Add(new ActiveFilterItem { Category = "FILTER", Description = $"Thread: {t}", IsActive = _isMainFilterActive || _isAppFilterActive });
+            }
 
-                // Thread filters - show as single consolidated line
-                if (_activeThreadFilters.Any())
-                {
-                    items.Add(new ActiveFilterItem { Category = "THREAD", Description = "EQUALS " + string.Join(", ", _activeThreadFilters), IsActive = true });
-                }
+            // Logger filters (APP)
+            if (_activeLoggerFilters.Any())
+            {
+                foreach (var l in _activeLoggerFilters)
+                    items.Add(new ActiveFilterItem { Category = "FILTER", Description = $"Logger: {l}", IsActive = _isAppFilterActive });
+            }
 
-                // Filter Out (negative filters) - PLC only
-                if (_negativeFilters.Any())
+            // Method filters (APP)
+            if (_activeMethodFilters.Any())
+            {
+                foreach (var m in _activeMethodFilters)
+                    items.Add(new ActiveFilterItem { Category = "FILTER", Description = $"Method: {m}", IsActive = _isAppFilterActive });
+            }
+
+            // Advanced filter (APP)
+            if (_isAppFilterActive && _appFilterRoot != null && _appFilterRoot.Children?.Count > 0)
+            {
+                items.Add(new ActiveFilterItem { Category = "FILTER", Description = $"APP Advanced filter ({_appFilterRoot.Children.Count} rules)", IsActive = true });
+            }
+
+            // APP Time Focus
+            if (_isAppTimeFocusActive)
+            {
+                items.Add(new ActiveFilterItem { Category = "FILTER", Description = "APP Time Focus active", IsActive = true });
+            }
+
+            // Tree filters (logger tree)
+            if (_treeShowOnlyLogger != null)
+                items.Add(new ActiveFilterItem { Category = "FILTER", Description = $"Show only: {_treeShowOnlyLogger}", IsActive = true });
+            if (_treeShowOnlyPrefix != null)
+                items.Add(new ActiveFilterItem { Category = "FILTER", Description = $"Show prefix: {_treeShowOnlyPrefix}", IsActive = true });
+            if (_treeHiddenLoggers.Count > 0)
+            {
+                foreach (var h in _treeHiddenLoggers)
+                    items.Add(new ActiveFilterItem { Category = "FILTER", Description = $"Hidden: {h}", IsActive = true });
+            }
+            if (_treeHiddenPrefixes.Count > 0)
+            {
+                foreach (var h in _treeHiddenPrefixes)
+                    items.Add(new ActiveFilterItem { Category = "FILTER", Description = $"Hidden prefix: {h}", IsActive = true });
+            }
+
+            // Filter Out (negative filters)
+            if (_negativeFilters.Any())
+            {
+                foreach (var nf in _negativeFilters)
                 {
-                    foreach (var nf in _negativeFilters)
-                    {
-                        string desc = nf.StartsWith("THREAD:") ? $"Thread: {nf.Substring(7)}" : $"Message: \"{nf}\"";
-                        items.Add(new ActiveFilterItem { Category = "FILTER OUT", Description = desc, IsActive = true });
-                    }
+                    string desc = nf.StartsWith("THREAD:") ? $"Thread: {nf.Substring(7)}" : nf;
+                    items.Add(new ActiveFilterItem { Category = "FILTER OUT", Description = desc, IsActive = _isMainFilterOutActive });
                 }
             }
 
-            // === SHARED FILTERS (all log tabs) ===
-            if (isPLCTab || isAppTab)
+            // Search text
+            if (!string.IsNullOrWhiteSpace(SearchText) && SearchText.Length >= 2)
             {
-                // Global Time Range
-                if (IsGlobalTimeRangeActive)
-                {
-                    items.Add(new ActiveFilterItem { Category = "TIME RANGE", Description = $"{_globalTimeRangeStart:HH:mm:ss} → {_globalTimeRangeEnd:HH:mm:ss}", IsActive = true });
-                }
-
-                // Search text
-                if (!string.IsNullOrWhiteSpace(SearchText) && SearchText.Length >= 2)
-                {
-                    items.Add(new ActiveFilterItem { Category = "SEARCH", Description = $"\"{SearchText}\"", IsActive = true });
-                }
-
-                // Range selection in progress
-                if (_hasRangeStart && _rangeStartLog != null)
-                {
-                    items.Add(new ActiveFilterItem { Category = "RANGE", Description = $"Start: {_rangeStartLog.Date:HH:mm:ss.fff} (select End Range)", IsActive = true });
-                }
+                items.Add(new ActiveFilterItem { Category = "SEARCH", Description = $"\"{SearchText}\"", IsActive = true });
             }
 
             return items;
-        }
-
-        /// <summary>
-        /// Recursively collects filter rule descriptions from a FilterNode tree
-        /// </summary>
-        private void CollectFilterNodeDescriptions(List<ActiveFilterItem> items, FilterNode node, string category, string prefix)
-        {
-            if (node == null) return;
-
-            if (node.Type == NodeType.Condition)
-            {
-                // Skip ThreadName conditions - they are already shown via the THREAD category
-                if (node.Field == "ThreadName" && (_activeThreadFilters.Any() || _appActiveThreadFilters.Any()))
-                    return;
-
-                string desc = $"{prefix}{node.Field} {node.Operator} \"{node.Value}\"";
-                items.Add(new ActiveFilterItem { Category = category, Description = desc, IsActive = true });
-            }
-            else if (node.Children != null)
-            {
-                foreach (var child in node.Children)
-                    CollectFilterNodeDescriptions(items, child, category, prefix);
-            }
         }
 
         // --- Caches ---
@@ -724,7 +656,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             // בדיקה האם יש פילטרים שמורים (Stored) - אבל נחיל אותם רק אם הצ'קבוקס מסומן
             bool hasSearch = !string.IsNullOrWhiteSpace(SearchText);
             // Filters are only applied when checkbox is checked (isActive)
-            bool hasThreadFilter = isActive && _appActiveThreadFilters.Any();
+            bool hasThreadFilter = isActive && _activeThreadFilters.Any();
             bool hasLoggerFilter = isActive && _activeLoggerFilters.Any();
             bool hasMethodFilter = isActive && _activeMethodFilters.Any();
             bool hasTreeFilter = isActive && (_treeShowOnlyLogger != null || _treeShowOnlyPrefix != null || _treeHiddenLoggers.Count > 0 || _treeHiddenPrefixes.Count > 0);
@@ -739,9 +671,9 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             var query = source.AsParallel().AsOrdered();
 
-            // 1. Thread Filter (only if checkbox checked) - use APP-specific list
+            // 1. Thread Filter (only if checkbox checked)
             if (hasThreadFilter)
-                query = query.Where(l => _appActiveThreadFilters.Contains(l.ThreadName));
+                query = query.Where(l => _activeThreadFilters.Contains(l.ThreadName));
 
             // 2. Logger Filter (only if checkbox checked) - use HashSet for O(1) lookup
             if (hasLoggerFilter)
@@ -814,8 +746,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
 
             AppDevLogsFiltered.ReplaceAll(query.ToList());
-            _parent?.NotifyPropertyChanged(nameof(_parent.ActiveFilters));
-            _parent?.NotifyPropertyChanged(nameof(_parent.HasActiveFilters));
         }
 
         public bool EvaluateFilterNode(LogEntry log, FilterNode node)
@@ -900,7 +830,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             _savedFilterRoot = null;
             IsMainFilterActive = false;
             IsAppFilterActive = false;
-            IsAppErrorFilterActive = false;
             IsMainFilterOutActive = false;
             IsTimeFocusActive = false;
             IsAppTimeFocusActive = false;
@@ -910,7 +839,6 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             // Clear all column filters
             _activeThreadFilters.Clear();
-            _appActiveThreadFilters.Clear();
             _activeLoggerFilters.Clear();
             _activeMethodFilters.Clear();
 
@@ -992,7 +920,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                                 AppFilterRoot = null;
                                 _activeLoggerFilters.Clear();
                                 _activeMethodFilters.Clear();
-                                _appActiveThreadFilters.Clear();
+                                _activeThreadFilters.Clear();
                                 IsAppFilterActive = false;
                                 IsAppTimeFocusActive = false;
                                 LastFilteredAppCache = null;
@@ -1156,13 +1084,10 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             if (win.ShowDialog() == true)
             {
-                // Use the correct thread filter list per tab
-                var threadList = isAppTab ? _appActiveThreadFilters : _activeThreadFilters;
-
                 if (win.ShouldClear)
                 {
                     System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Clearing filters");
-                    threadList.Clear();
+                    _activeThreadFilters.Clear();
                     // Also remove thread conditions from the filter tree
                     RemoveThreadConditionsFromFilterTree(isAppTab);
                     CheckIfFiltersEmpty(isAppTab);
@@ -1170,9 +1095,9 @@ namespace IndiLogs_3._0.ViewModels.Components
                 else if (win.SelectedThreads != null && win.SelectedThreads.Any())
                 {
                     System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Selected threads: {string.Join(", ", win.SelectedThreads)}");
-                    threadList.Clear();
-                    threadList.AddRange(win.SelectedThreads);
-                    System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Active thread filters now: {string.Join(", ", threadList)}");
+                    _activeThreadFilters.Clear();
+                    _activeThreadFilters.AddRange(win.SelectedThreads);
+                    System.Diagnostics.Debug.WriteLine($"[THREAD FILTER] Active thread filters now: {string.Join(", ", _activeThreadFilters)}");
                     // Sync thread filters to filter tree so they appear in Filter Window
                     SyncThreadFiltersToFilterTree(isAppTab, win.SelectedThreads);
                     SetFilterActive(isAppTab);
@@ -1454,7 +1379,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 bool appFilterRootEmpty = _appFilterRoot == null || _appFilterRoot.Children == null || _appFilterRoot.Children.Count == 0;
                 bool noTreeFilters = _treeShowOnlyLogger == null && _treeShowOnlyPrefix == null && _treeHiddenLoggers.Count == 0 && _treeHiddenPrefixes.Count == 0;
 
-                if (!_appActiveThreadFilters.Any() && !_activeLoggerFilters.Any() && !_activeMethodFilters.Any() && appFilterRootEmpty && noTreeFilters)
+                if (!_activeThreadFilters.Any() && !_activeLoggerFilters.Any() && !_activeMethodFilters.Any() && appFilterRootEmpty && noTreeFilters)
                 {
                     IsAppFilterActive = false;
                     _parent?.NotifyPropertyChanged(nameof(_parent.IsFilterActive));
@@ -1491,7 +1416,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     if (_sessionVM.AllAppLogsCache != null)
                     {
-                        var contextLogs = _sessionVM.AllAppLogsCache.Where(l => l.Date >= startTime && l.Date <= endTime).OrderBy(l => l.Date).ToList();
+                        var contextLogs = _sessionVM.AllAppLogsCache.Where(l => l.Date >= startTime && l.Date <= endTime).OrderByDescending(l => l.Date).ToList();
                         Application.Current.Dispatcher.Invoke(() =>
                         {
                             LastFilteredAppCache = contextLogs;
@@ -1508,7 +1433,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     if (_sessionVM.AllLogsCache != null)
                     {
-                        var contextLogs = _sessionVM.AllLogsCache.Where(l => l.Date >= startTime && l.Date <= endTime).OrderBy(l => l.Date).ToList();
+                        var contextLogs = _sessionVM.AllLogsCache.Where(l => l.Date >= startTime && l.Date <= endTime).OrderByDescending(l => l.Date).ToList();
                         Application.Current.Dispatcher.Invoke(() =>
                         {
                             LastFilteredCache = contextLogs;
@@ -1536,10 +1461,8 @@ namespace IndiLogs_3._0.ViewModels.Components
         {
             if (_parent.SelectedLog == null || _rangeStartLog == null) return;
 
-            var logA = _rangeStartLog;
-            var logB = _parent.SelectedLog;
-            var startTime = logA.Date < logB.Date ? logA.Date : logB.Date;
-            var endTime = logA.Date < logB.Date ? logB.Date : logA.Date;
+            var startTime = _rangeStartLog.Date < _parent.SelectedLog.Date ? _rangeStartLog.Date : _parent.SelectedLog.Date;
+            var endTime = _rangeStartLog.Date < _parent.SelectedLog.Date ? _parent.SelectedLog.Date : _rangeStartLog.Date;
 
             _sessionVM.IsBusy = true;
             bool isAppTab = _parent.SelectedTabIndex == 2;
@@ -1550,21 +1473,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     if (_sessionVM.AllAppLogsCache != null)
                     {
-                        // Find indices of the two selected rows to get exact range
-                        int idxA = _sessionVM.AllAppLogsCache.IndexOf(logA);
-                        int idxB = _sessionVM.AllAppLogsCache.IndexOf(logB);
-                        List<LogEntry> rangedLogs;
-                        if (idxA >= 0 && idxB >= 0)
-                        {
-                            int startIdx = Math.Min(idxA, idxB);
-                            int endIdx = Math.Max(idxA, idxB);
-                            rangedLogs = _sessionVM.AllAppLogsCache.Skip(startIdx).Take(endIdx - startIdx + 1).ToList();
-                        }
-                        else
-                        {
-                            // Fallback to time-based range
-                            rangedLogs = _sessionVM.AllAppLogsCache.Where(l => l.Date >= startTime && l.Date <= endTime).ToList();
-                        }
+                        var rangedLogs = _sessionVM.AllAppLogsCache.Where(l => l.Date >= startTime && l.Date <= endTime).OrderByDescending(l => l.Date).ToList();
                         Application.Current.Dispatcher.Invoke(() =>
                         {
                             LastFilteredAppCache = rangedLogs;
@@ -1581,21 +1490,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     if (_sessionVM.AllLogsCache != null)
                     {
-                        // Find indices of the two selected rows to get exact range
-                        int idxA = _sessionVM.AllLogsCache.IndexOf(logA);
-                        int idxB = _sessionVM.AllLogsCache.IndexOf(logB);
-                        List<LogEntry> rangedLogs;
-                        if (idxA >= 0 && idxB >= 0)
-                        {
-                            int startIdx = Math.Min(idxA, idxB);
-                            int endIdx = Math.Max(idxA, idxB);
-                            rangedLogs = _sessionVM.AllLogsCache.Skip(startIdx).Take(endIdx - startIdx + 1).ToList();
-                        }
-                        else
-                        {
-                            // Fallback to time-based range
-                            rangedLogs = _sessionVM.AllLogsCache.Where(l => l.Date >= startTime && l.Date <= endTime).ToList();
-                        }
+                        var rangedLogs = _sessionVM.AllLogsCache.Where(l => l.Date >= startTime && l.Date <= endTime).OrderByDescending(l => l.Date).ToList();
                         Application.Current.Dispatcher.Invoke(() =>
                         {
                             LastFilteredCache = rangedLogs;
@@ -1618,33 +1513,6 @@ namespace IndiLogs_3._0.ViewModels.Components
         {
             _rangeStartLog = null;
             HasRangeStart = false;
-
-            // Also clear the applied range filter (TimeFocus) so it disappears from ACTIVE FILTERS
-            bool isAppTab = _parent.SelectedTabIndex == 2;
-            if (isAppTab)
-            {
-                if (_isAppTimeFocusActive)
-                {
-                    IsAppTimeFocusActive = false;
-                    LastFilteredAppCache = null;
-                    IsAppFilterActive = false;
-                }
-            }
-            else
-            {
-                if (_isTimeFocusActive)
-                {
-                    IsTimeFocusActive = false;
-                    LastFilteredCache = null;
-                    IsMainFilterActive = false;
-                }
-            }
-
-            // Re-apply filters (will show unfiltered if no other filters remain)
-            ToggleFilterView(false);
-
-            _parent?.NotifyPropertyChanged(nameof(_parent.ActiveFilters));
-            _parent?.NotifyPropertyChanged(nameof(_parent.HasActiveFilters));
             _sessionVM.StatusMessage = "Range selection cleared";
         }
 
@@ -2080,9 +1948,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             // הטאב הזה צריך להישאר עם הנתונים המקוריים (Manager, Events, Error)
             // ולא להיות מושפע מהפילטר של PLC Logs.
             // הנתונים נטענים פעם אחת ב-SwitchToSession ונשארים קבועים.
-
-            _parent?.NotifyPropertyChanged(nameof(_parent.ActiveFilters));
-            _parent?.NotifyPropertyChanged(nameof(_parent.HasActiveFilters));
         }
 
         private void ApplyGlobalTimeRangeFilter()

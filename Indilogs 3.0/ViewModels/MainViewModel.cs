@@ -371,6 +371,28 @@ namespace IndiLogs_3._0.ViewModels
                     OnPropertyChanged(nameof(IsPLCTabSelected));
                     OnPropertyChanged(nameof(IsAppTabSelected));
                     OnPropertyChanged(nameof(IsExportVisible));
+                    OnPropertyChanged(nameof(ActiveFilters));
+                    OnPropertyChanged(nameof(HasActiveFilters));
+
+                    // Auto-manage panel visibility per tab type
+                    // Tabs 0,1,2 (PLC, PLC FILTERED, APP) = both panels visible
+                    // Tab 8 (CHARTS) = left panel visible, right panel hidden
+                    // Tabs 3,4,5,6,7,9 (EVENTS, SCREENSHOTS, CONFIG, DB&CONFIG, SETUP INFO, CPR) = both panels hidden
+                    if (_selectedTabIndex == 0 || _selectedTabIndex == 1 || _selectedTabIndex == 2)
+                    {
+                        IsLeftPanelVisible = true;
+                        IsRightPanelVisible = true;
+                    }
+                    else if (_selectedTabIndex == 8) // CHARTS
+                    {
+                        IsLeftPanelVisible = true;
+                        IsRightPanelVisible = false;
+                    }
+                    else // EVENTS, SCREENSHOTS, CONFIG, DB&CONFIG, SETUP INFO, CPR
+                    {
+                        IsLeftPanelVisible = false;
+                        IsRightPanelVisible = false;
+                    }
 
                     // Apply pending sync scroll when user switches to the target tab
                     if (_pendingSyncLog != null && _selectedTabIndex == _pendingSyncTabIndex)
@@ -742,6 +764,7 @@ namespace IndiLogs_3._0.ViewModels
         // --- Commands ---
         public ICommand LoadCommand { get; }
         public ICommand ClearCommand { get; }
+        public ICommand RemoveSessionCommand { get; }
         public ICommand MarkRowCommand { get; }
         public ICommand NextMarkedCommand { get; }
         public ICommand PrevMarkedCommand { get; }
@@ -764,6 +787,12 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand OpenMethodFilterCommand { get; }
         public ICommand FilterContextCommand { get; }
         public ICommand UndoFilterOutCommand { get; }
+        public ICommand StartRangeCommand { get; }
+        public ICommand EndRangeCommand { get; }
+        public ICommand ClearRangeCommand { get; }
+        public bool HasRangeStart => FilterVM?.HasRangeStart ?? false;
+        public List<Models.ActiveFilterItem> ActiveFilters => FilterVM?.GetActiveFilters() ?? new List<Models.ActiveFilterItem>();
+        public bool HasActiveFilters => ActiveFilters.Count > 0;
         public ICommand ToggleThemeCommand { get; }
         public ICommand ZoomInCommand { get; }
         public ICommand ZoomOutCommand { get; }
@@ -902,6 +931,7 @@ namespace IndiLogs_3._0.ViewModels
 
             LoadCommand = SessionVM.LoadCommand;
             ClearCommand = new RelayCommand(o => { SessionVM.ClearCommand.Execute(o); IsExplorerMenuOpen = false; });
+            RemoveSessionCommand = SessionVM.RemoveSessionCommand;
             MarkRowCommand = new RelayCommand(MarkRow);
             NextMarkedCommand = new RelayCommand(GoToNextMarked);
             PrevMarkedCommand = new RelayCommand(GoToPrevMarked);
@@ -936,6 +966,9 @@ namespace IndiLogs_3._0.ViewModels
             OpenMethodFilterCommand = FilterVM.OpenMethodFilterCommand;
             FilterContextCommand = FilterVM.FilterContextCommand;
             UndoFilterOutCommand = FilterVM.UndoFilterOutCommand;
+            StartRangeCommand = FilterVM.StartRangeCommand;
+            EndRangeCommand = FilterVM.EndRangeCommand;
+            ClearRangeCommand = FilterVM.ClearRangeCommand;
 
             ResetTimeFocusCommand = new RelayCommand(ResetTimeFocus);
 
@@ -1681,8 +1714,11 @@ namespace IndiLogs_3._0.ViewModels
                     FilterVM?.AppDevLogsFiltered?.ReplaceAll(errors);
                     IsBusy = false;
                     StatusMessage = $"Showing {errors.Count} Errors";
+                    FilterVM.IsAppErrorFilterActive = true;
                     FilterVM.IsAppFilterActive = true;
                     OnPropertyChanged(nameof(IsFilterActive));
+                    OnPropertyChanged(nameof(ActiveFilters));
+                    OnPropertyChanged(nameof(HasActiveFilters));
                 });
             });
         }

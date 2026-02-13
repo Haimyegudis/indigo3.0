@@ -182,6 +182,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         // Commands
         public ICommand LoadCommand { get; }
         public ICommand ClearCommand { get; }
+        public ICommand RemoveSessionCommand { get; }
 
         public LogSessionViewModel(MainViewModel parent, LogFileService logService, LogColoringService coloringService)
         {
@@ -201,6 +202,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             // Initialize commands
             LoadCommand = new RelayCommand(LoadFile);
             ClearCommand = new RelayCommand(ClearLogs);
+            RemoveSessionCommand = new RelayCommand(RemoveSession);
         }
 
         // Set dependent ViewModels after construction (circular dependency resolution)
@@ -464,8 +466,8 @@ namespace IndiLogs_3._0.ViewModels.Components
             System.Diagnostics.Debug.WriteLine("[SESSION VM] Clearing FilterVM collections...");
             if (_filterVM != null)
             {
-                // Reset tree filters first
-                _filterVM.ResetTreeFilters();
+                // Clear ALL filters (thread, logger, method, time focus, search, negative, etc.)
+                _filterVM.ClearFilters();
 
                 if (_filterVM.FilteredLogs != null)
                 {
@@ -484,6 +486,10 @@ namespace IndiLogs_3._0.ViewModels.Components
                     _filterVM.LoggerTreeRoot.Clear();
                     _parent.OnPropertyChanged(nameof(_parent.LoggerTreeRoot));
                 }
+
+                // Notify ACTIVE FILTERS panel to update
+                _parent.OnPropertyChanged(nameof(_parent.ActiveFilters));
+                _parent.OnPropertyChanged(nameof(_parent.HasActiveFilters));
             }
 
             // Clear ConfigVM collections directly
@@ -505,6 +511,31 @@ namespace IndiLogs_3._0.ViewModels.Components
             System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════════════════════");
             System.Diagnostics.Debug.WriteLine("[SESSION VM] ========== CLEAR COMPLETED ==========");
             System.Diagnostics.Debug.WriteLine("═══════════════════════════════════════════════════════");
+        }
+
+        private void RemoveSession(object obj)
+        {
+            if (obj is LogSessionData session && _loadedSessions != null && _loadedSessions.Contains(session))
+            {
+                bool wasSelected = (session == _selectedSession);
+                _loadedSessions.Remove(session);
+                OnPropertyChanged(nameof(LoadedSessions));
+
+                if (wasSelected)
+                {
+                    // If removed session was selected, switch to the first remaining session or clear
+                    if (_loadedSessions.Count > 0)
+                    {
+                        SelectedSession = _loadedSessions[0];
+                    }
+                    else
+                    {
+                        SelectedSession = null;
+                        // Clear everything since no sessions remain
+                        ClearLogs(null);
+                    }
+                }
+            }
         }
 
         private void SwitchToSession(LogSessionData session)

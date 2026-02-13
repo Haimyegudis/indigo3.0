@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build:*)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Professional\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"IndiLogs 3.0.csproj\" /t:Build /p:Configuration=Debug /verbosity:quiet)",
+      "Bash(\"C:/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe\" \"C:/Users/yegudish/source/repos/indilogs3.0/Indilogs 3.0/IndiLogs 3.0.csproj\" /t:Build /p:Configuration=Debug /verbosity:quiet)",
+      "Bash(\"C:/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe\" \"IndiLogs 3.0.csproj\" -t:Build -p:Configuration=Debug -verbosity:quiet)",
+      "Bash(\"C:/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe\" \"C:/Users/yegudish/source/repos/indilogs3.0/Indilogs 3.0/IndiLogs 3.0.csproj\" -t:Build -p:Configuration=Debug -verbosity:quiet)",
+      "Bash(dir /s \"C:\\\\Users\\\\yegudish\\\\source\\\\repos\\\\indilogs3.0\\\\Installer\")",
+      "Bash(dir:*)",
+      "Bash(find:*)",
+      "Bash(powershell:*)",
+      "Bash(BuildInstaller.bat)",
+      "Bash(cmd.exe /c BuildInstaller.bat)",
+      "Bash(\"C:\\\\Program Files \\(x86\\)\\\\Inno Setup 6\\\\ISCC.exe\" \"C:\\\\Users\\\\yegudish\\\\source\\\\repos\\\\indilogs3.0\\\\Installer\\\\IndiLogsSuite.iss\")",
+      "Bash(git log:*)",
+      "Bash(ls -la \"C:\\\\Program Files\\\\IndiLogs Suite\"\" 2>/dev/null || echo \"Directory not found or access denied \")",
+      "Bash(cmd /c \"dir \"\"C:\\\\Program Files\\\\IndiLogs Suite\"\" 2>&1\")",
+      "Bash(cmd /c \"if exist \"\"C:\\\\Program Files\\\\IndiLogs Suite\"\" \\(echo exists\\) else \\(echo not found\\)\")",
+      "Bash(ls:*)"
+    ]
+  }
+}

@@ -25,14 +25,13 @@
                 <ContextMenu>
                     <MenuItem Command="{Binding PlacementTarget.DataContext.FilterContextCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Header="Time Focus Filter"/>
                     <Separator/>
+                    <MenuItem Header="📍 Start Range" Command="{Binding PlacementTarget.DataContext.StartRangeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" FontWeight="SemiBold"/>
+                    <MenuItem Header="🏁 End Range" Command="{Binding PlacementTarget.DataContext.EndRangeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    <Separator/>
                     <MenuItem Header="✏️ Add/Edit Annotation" Command="{Binding AddAnnotationCommand}" CommandParameter="{Binding SelectedLog}"/>
                     <MenuItem Header="🗑 Delete Annotation" Command="{Binding DeleteAnnotationCommand}" CommandParameter="{Binding SelectedLog}"/>
                     <Separator/>
                     <MenuItem Header="Filter Out (Message)..." Command="{Binding FilterOutCommand}"/>
-                    <Separator/>
-                    <MenuItem Header="📌 Start Range" Command="{Binding StartRangeCommand}"/>
-                    <MenuItem Header="📌 End Range" Command="{Binding EndRangeCommand}"/>
-                    <MenuItem Header="❌ Clear Range" Command="{Binding ClearRangeCommand}"/>
                 </ContextMenu>
             </DataGrid.ContextMenu>
 
@@ -245,9 +244,6 @@
                                                 <Setter Property="Foreground" Value="Black"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding IsMarked}" Value="True">
-                                                <Setter Property="Foreground" Value="Black"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding IsCurrentMarked}" Value="True">
                                                 <Setter Property="Foreground" Value="Black"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
