@@ -43,6 +43,14 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly MainViewModel _parent;
         private readonly LogSessionViewModel _sessionVM;
 
+        // User-configurable default PLC filter (replaces hardcoded IsDefaultLog)
+        private FilterNode _defaultPlcFilter;
+        public FilterNode DefaultPlcFilter
+        {
+            get => _defaultPlcFilter;
+            set { _defaultPlcFilter = value; OnPropertyChanged(); }
+        }
+
         // --- Search ---
         private string _searchText;
         public string SearchText
@@ -885,12 +893,8 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         public bool IsDefaultLog(LogEntry l)
         {
-            if (string.Equals(l.Level, "Error", StringComparison.OrdinalIgnoreCase)) return true;
-            if (l.Message != null && l.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase)) return true;
-            if (l.ThreadName != null && l.ThreadName.Equals("Events", StringComparison.OrdinalIgnoreCase)) return true;
-            if (l.Logger != null && l.Logger.IndexOf("Manager", StringComparison.OrdinalIgnoreCase) >= 0) return true;
-            if (l.ThreadName != null && l.ThreadName.Equals("Manager", StringComparison.OrdinalIgnoreCase)) return true;
-            return false;
+            var filter = _defaultPlcFilter ?? DefaultConfigurationService.GetFactoryPlcFilter();
+            return EvaluateFilterNode(l, filter);
         }
 
         public void ClearFilters()

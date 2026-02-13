@@ -14,27 +14,59 @@ namespace IndiLogs_3._0.Services
         // Cache compiled Regex to avoid recompiling every line
         private readonly ConcurrentDictionary<string, Regex> _regexCache = new ConcurrentDictionary<string, Regex>();
 
+        // User-configurable default coloring rules (loaded from _defaults.json)
+        public List<ColoringCondition> UserDefaultMainRules { get; set; }
+        public List<ColoringCondition> UserDefaultAppRules { get; set; }
+
         /// <summary>
-        /// מחיל צבעי ברירת מחדל.
-        /// isAppLog = true -> צובע רק שגיאות באדום (עבור APP). כל השאר מתאפס.
-        /// isAppLog = false -> צובע את הסט המלא (Manager, PlcMngr וכו') עבור LOGS.
+        /// Applies default colors. Uses user-configured rules if available, otherwise falls back to factory defaults.
         /// </summary>
         public async Task ApplyDefaultColorsAsync(IEnumerable<LogEntry> logs, bool isAppLog)
         {
+            var userRules = isAppLog ? UserDefaultAppRules : UserDefaultMainRules;
+
+            if (userRules != null && userRules.Count > 0)
+            {
+                // User has custom default coloring — reset all colors then apply rules
+                await Task.Run(() =>
+                {
+                    Parallel.ForEach(logs, log =>
+                    {
+                        log.CustomColor = null;
+                        log.IsErrorOrEvents = false;
+                        log.RowForeground = null;
+
+                        // Always mark errors for red text regardless of user rules
+                        if (string.Equals(log.Level, "Error", StringComparison.OrdinalIgnoreCase))
+                        {
+                            log.IsErrorOrEvents = true;
+                        }
+                    });
+                });
+                await ApplyCustomColoringAsync(logs, userRules);
+            }
+            else
+            {
+                // No user defaults — use factory hardcoded logic
+                await ApplyFactoryDefaultColorsAsync(logs, isAppLog);
+            }
+        }
+
+        /// <summary>
+        /// Factory-default coloring logic (original hardcoded rules).
+        /// </summary>
+        private async Task ApplyFactoryDefaultColorsAsync(IEnumerable<LogEntry> logs, bool isAppLog)
+        {
             await Task.Run(() =>
             {
-                // שימוש ב-Parallel לביצועים גבוהים
                 Parallel.ForEach(logs, log =>
                 {
-                    // --- תיקון קריטי: מחקנו את הבדיקה if (log.IsMarked) return; ---
-                    // אנחנו מחשבים את הצבע גם לשורות מסומנות, כדי שאם תבטל סימון, הצבע הנכון יופיע מיד.
-
-                    // 1. איפוס צבע קיים (מוחק צבעים ישנים)
+                    // 1. Reset existing colors
                     log.CustomColor = null;
                     log.IsErrorOrEvents = false;
                     log.RowForeground = null;
 
-                    // 2. חוק מיוחד: PipelineCancellationProvider errors -> Strong Orange with Black text
+                    // 2. PipelineCancellationProvider errors -> Strong Orange with Black text
                     if (isAppLog &&
                         string.Equals(log.Level, "Error", StringComparison.OrdinalIgnoreCase) &&
                         log.Logger != null &&
@@ -45,7 +77,7 @@ namespace IndiLogs_3._0.Services
                         return;
                     }
 
-                    // 2b. חוק מיוחד: PressStateManager + FallToPressStateAsync -> Orange
+                    // 2b. PressStateManager + FallToPressStateAsync -> Orange
                     if (isAppLog &&
                         log.Logger != null &&
                         log.Logger.Contains("PressStateManager") &&
@@ -57,32 +89,29 @@ namespace IndiLogs_3._0.Services
                         return;
                     }
 
-                    // 3. חוק משותף: שגיאה (Error) - טקסט אדום (לא רקע)
+                    // 3. Error -> Red text
                     if (string.Equals(log.Level, "Error", StringComparison.OrdinalIgnoreCase))
                     {
-                        log.IsErrorOrEvents = true; // Mark for red text in XAML
-                        return; // סיימנו עם השורה הזו
+                        log.IsErrorOrEvents = true;
+                        return;
                     }
 
-                    // 4. אם זה APP Log - עוצרים כאן (רק שגיאות נצבעות בדיפולט, כל השאר נקי)
+                    // 4. APP logs stop here
                     if (isAppLog) return;
 
-                    // 5. חוקים ל-MAIN LOGS בלבד - PLC FILTERED Rules
-                    // Thread = Events -> Red text (לא רקע)
+                    // 5. PLC-only rules
                     if (string.Equals(log.ThreadName, "Events", StringComparison.OrdinalIgnoreCase))
                     {
-                        log.IsErrorOrEvents = true; // Mark for red text in XAML
+                        log.IsErrorOrEvents = true;
                     }
-                    // Thread = Manager AND Message contains "->" AND Message begins with "PlcMngr:" -> Light Blue (state transitions only)
                     else if (string.Equals(log.ThreadName, "Manager", StringComparison.OrdinalIgnoreCase) &&
                              log.Message != null &&
                              log.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) &&
                              log.Message.Contains("->"))
                     {
                         log.CustomColor = Color.FromRgb(173, 216, 230); // Light Blue
-                        log.RowForeground = Brushes.Black; // Black text on light blue background
+                        log.RowForeground = Brushes.Black;
                     }
-                    // הוסרו: MechInit, GetReady, Print - לא צובעים יותר
                 });
             });
         }

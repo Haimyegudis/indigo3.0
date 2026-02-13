@@ -261,6 +261,7 @@
     <Compile Include="Converters\AnnotationTextBrushConverter.cs" />
     <Compile Include="Converters\ArrayConverter.cs" />
     <Compile Include="Converters\BoolToVisibilityConverter.cs" />
+    <Compile Include="Converters\ScreenshotWidthConverter.cs" />
     <Compile Include="Converters\DiffSegmentsConverter.cs" />
     <Compile Include="Converters\InverseBooleanConverter.cs" />
     <Compile Include="Converters\SKColorToBrushConverter.cs" />
@@ -372,6 +373,7 @@
     <Compile Include="Models\GapInfo.cs" />
     <Compile Include="Models\ActiveFilterItem.cs" />
     <Compile Include="Models\SavedConfiguration.cs" />
+    <Compile Include="Models\DefaultConfiguration.cs" />
     <Compile Include="Views\AnnotationWindow.xaml.cs">
       <DependentUpon>AnnotationWindow.xaml</DependentUpon>
     </Compile>
@@ -395,6 +397,7 @@
     </Compile>
     <Compile Include="Services\ILogAnalyzer.cs" />
     <Compile Include="Services\LogColoringService.cs" />
+    <Compile Include="Services\DefaultConfigurationService.cs" />
     <Compile Include="Services\LogFileService.cs" />
     <Compile Include="Services\LogParserService.cs" />
     <Compile Include="Services\FilterEditorViewModel.cs" />

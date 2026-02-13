@@ -356,12 +356,14 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _parent.PressConfig = newSession.PressConfiguration;
                 _parent.VersionsInfo = newSession.VersionsInfo;
 
-                // Update Config files (if any)
+                // Update Config files (if any) or terminal logs
                 if (newSession.ConfigurationFiles != null && newSession.ConfigurationFiles.Any() ||
-                    newSession.DatabaseFiles != null && newSession.DatabaseFiles.Any())
+                    newSession.DatabaseFiles != null && newSession.DatabaseFiles.Any() ||
+                    newSession.TerminalLogFiles != null && newSession.TerminalLogFiles.Any())
                 {
                     _configVM.LoadConfigurationFiles();
                 }
+                _parent.NotifyPropertyChanged(nameof(_parent.DbConfigTabHeader));
 
                 // Update FilterVM - apply initial filters (this is the FIRST and MAIN filter application)
                 // Subsequent filter calls happen only when user changes filter settings
@@ -559,6 +561,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             _configVM.LoadConfigurationFiles();
             _parent.NotifyPropertyChanged(nameof(_parent.ConfigurationFiles));
             _parent.NotifyPropertyChanged(nameof(_parent.SelectedConfigFile));
+            _parent.NotifyPropertyChanged(nameof(_parent.DbConfigTabHeader));
 
             // Update Events and Screenshots
             Events.Clear();

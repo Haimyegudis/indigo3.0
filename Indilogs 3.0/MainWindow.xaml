@@ -26,6 +26,8 @@
         <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
         <converters:BoolToArrowConverter x:Key="BoolToArrowConverter"/>
         <converters:BoolToArrowConverter x:Key="BoolToArrowConverterRight" TrueValue="▶" FalseValue="◀"/>
+        <converters:ScreenshotWidthConverter x:Key="ScreenshotWidthConverter"/>
+        <converters:ScreenshotScaleConverter x:Key="ScreenshotScaleConverter"/>
     </Window.Resources>
 
     <Window.DataContext>
@@ -616,8 +618,31 @@
                                 <ItemsControl ItemsSource="{Binding Screenshots}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border BorderBrush="#333" BorderThickness="1" Margin="20">
-                                                <Image Source="{Binding}" Width="{Binding DataContext.ScreenshotZoom, RelativeSource={RelativeSource AncestorType=Window}}" Stretch="Uniform"/>
+                                            <Border BorderBrush="#333" BorderThickness="1" Margin="5">
+                                                <Image Source="{Binding}" Stretch="Uniform">
+                                                    <Image.Width>
+                                                        <MultiBinding Converter="{StaticResource ScreenshotWidthConverter}">
+                                                            <Binding Path="DataContext.ScreenshotZoom" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                            <Binding Path="DataContext.Screenshots.Count" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                        </MultiBinding>
+                                                    </Image.Width>
+                                                    <Image.LayoutTransform>
+                                                        <ScaleTransform>
+                                                            <ScaleTransform.ScaleX>
+                                                                <MultiBinding Converter="{StaticResource ScreenshotScaleConverter}">
+                                                                    <Binding Path="DataContext.ScreenshotZoom" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                                    <Binding Path="DataContext.Screenshots.Count" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                                </MultiBinding>
+                                                            </ScaleTransform.ScaleX>
+                                                            <ScaleTransform.ScaleY>
+                                                                <MultiBinding Converter="{StaticResource ScreenshotScaleConverter}">
+                                                                    <Binding Path="DataContext.ScreenshotZoom" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                                    <Binding Path="DataContext.Screenshots.Count" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                                </MultiBinding>
+                                                            </ScaleTransform.ScaleY>
+                                                        </ScaleTransform>
+                                                    </Image.LayoutTransform>
+                                                </Image>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
@@ -630,7 +655,7 @@
                         <TextBox Text="{Binding PressConfig}" IsReadOnly="True" FontFamily="{DynamicResource ContentFontFamily}" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderThickness="0" VerticalScrollBarVisibility="Auto" Padding="10"/>
                     </TabItem>
 
-                    <TabItem Header="DB &amp; CONFIG">
+                    <TabItem Header="{Binding DbConfigTabHeader}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
@@ -803,7 +828,58 @@
                                         </TreeView.ItemTemplate>
                                     </TreeView>
                                 </Grid>
-                                <TextBox Text="{Binding ConfigFileContent}" IsReadOnly="True" FontFamily="Consolas, Courier New" FontSize="12" FontWeight="Normal" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderThickness="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" AcceptsReturn="True" Padding="10" Visibility="{Binding IsDbFileSelected, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                <!-- CSV DataGrid (for terminal CSV files) -->
+                                <DataGrid ItemsSource="{Binding CsvDataView}" AutoGenerateColumns="True" IsReadOnly="True"
+                                          Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}"
+                                          BorderThickness="0" GridLinesVisibility="All"
+                                          HorizontalGridLinesBrush="#333" VerticalGridLinesBrush="#333"
+                                          RowBackground="{DynamicResource BgDark}" AlternatingRowBackground="#1E1E2E"
+                                          HeadersVisibility="Column" CanUserSortColumns="True" CanUserReorderColumns="True"
+                                          FontFamily="Consolas, Courier New" FontSize="11"
+                                          EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                                          Visibility="{Binding IsCsvFileSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <DataGrid.ColumnHeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader">
+                                            <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                            <Setter Property="FontSize" Value="11"/>
+                                            <Setter Property="Padding" Value="6,4"/>
+                                            <Setter Property="BorderBrush" Value="#333"/>
+                                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                        </Style>
+                                    </DataGrid.ColumnHeaderStyle>
+                                    <DataGrid.CellStyle>
+                                        <Style TargetType="DataGridCell">
+                                            <Setter Property="BorderBrush" Value="#333"/>
+                                            <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                                            <Setter Property="Padding" Value="4,2"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGrid.CellStyle>
+                                </DataGrid>
+                                <!-- Text viewer (non-DB, non-CSV files) -->
+                                <TextBox Text="{Binding ConfigFileContent}" IsReadOnly="True" FontFamily="Consolas, Courier New" FontSize="12" FontWeight="Normal" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderThickness="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" AcceptsReturn="True" Padding="10">
+                                    <TextBox.Style>
+                                        <Style TargetType="TextBox">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsDbFileSelected}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsCsvFileSelected}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBox.Style>
+                                </TextBox>
                             </Grid>
                         </Grid>
                     </TabItem>
@@ -1002,6 +1078,11 @@
                                     <Button Command="{Binding SaveConfigCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource SuccessColor}" Foreground="White" Margin="0,0,0,5">
                                         <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
                                             <TextBlock Text="💾 Save Current"/>
+                                        </Viewbox>
+                                    </Button>
+                                    <Button Command="{Binding SetAsDefaultCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource PrimaryColor}" Foreground="White" Margin="0,0,0,5" ToolTip="Save current filters and coloring as session defaults">
+                                        <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                            <TextBlock Text="⭐ Set as Default"/>
                                         </Viewbox>
                                     </Button>
                                     <Button Command="{Binding LoadConfigCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5">

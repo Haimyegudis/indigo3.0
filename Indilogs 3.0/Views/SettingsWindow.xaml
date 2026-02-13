@@ -70,6 +70,28 @@
 
             <Separator Background="{DynamicResource BorderColor}" Margin="0,10"/>
 
+            <TextBlock Text="Defaults" FontWeight="Bold" Foreground="{DynamicResource TextSecondary}" Margin="0,0,0,5"/>
+
+            <Button Click="EditDefaultFilter_Click"
+                    Style="{DynamicResource ModernBtn}"
+                    Height="30" ToolTip="Edit the default filter for PLC Filtered tab" Margin="0,3">
+                <TextBlock Text="PLC Default Filter" VerticalAlignment="Center"/>
+            </Button>
+
+            <Button Click="EditDefaultColoring_Click"
+                    Style="{DynamicResource ModernBtn}"
+                    Height="30" ToolTip="Edit default coloring rules for PLC and APP" Margin="0,3">
+                <TextBlock Text="Default Coloring" VerticalAlignment="Center"/>
+            </Button>
+
+            <Button Click="ResetDefaults_Click"
+                    Style="{DynamicResource ModernBtn}"
+                    Height="30" ToolTip="Reset all defaults to factory settings" Margin="0,3">
+                <TextBlock Text="Reset to Factory" VerticalAlignment="Center"/>
+            </Button>
+
+            <Separator Background="{DynamicResource BorderColor}" Margin="0,10"/>
+
             <Button Click="OpenHelp_Click"
                     Style="{DynamicResource ModernBtn}" 
                     Height="30" ToolTip="Help &amp; Manual" Margin="0,5">

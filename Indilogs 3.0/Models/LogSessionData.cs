@@ -22,6 +22,12 @@ namespace IndiLogs_3._0.Models
         // Binary DB files (SQLite) - stored as byte arrays
         public Dictionary<string, byte[]> DatabaseFiles { get; set; } = new Dictionary<string, byte[]>();
 
+        // Terminal log files (from \TerminalLogs\ path in binary APP ZIPs)
+        public Dictionary<string, string> TerminalLogFiles { get; set; } = new Dictionary<string, string>();
+
+        // Flag: true when this session has binary APP logs (numeric .file pattern)
+        public bool HasBinaryAppLogs { get; set; }
+
         public List<EventEntry> Events { get; set; } = new List<EventEntry>();
         public List<BitmapImage> Screenshots { get; set; } = new List<BitmapImage>();
         public ObservableCollection<LogEntry> MarkedLogs { get; set; } = new ObservableCollection<LogEntry>();

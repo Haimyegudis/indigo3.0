@@ -121,6 +121,7 @@ namespace IndiLogs_3._0.Services
                 long processedBytesGlobal = 0;
                 string detectedSwVersion = "Unknown";
                 string detectedPlcVersion = "Unknown";
+                bool hasBinaryAppLogs = false;
                 var nonZipFiles = new List<ZipEntryData>();
 
                 try
@@ -210,13 +211,47 @@ namespace IndiLogs_3._0.Services
                                         continue;
                                     }
 
+                                    // 1b. Terminal log files (from \TerminalLogs\ path)
+                                    bool isTerminalLog = lowerName.Contains("/terminallogs/") ||
+                                                         lowerName.Contains("\\terminallogs\\") ||
+                                                         lowerName.Contains("\\terminallogs/") ||
+                                                         lowerName.Contains("/terminallogs\\") ||
+                                                         lowerName.StartsWith("terminallogs/") ||
+                                                         lowerName.StartsWith("terminallogs\\");
+
+                                    if (isTerminalLog)
+                                    {
+                                        try
+                                        {
+                                            string fileNameOnly = Path.GetFileName(entry.Name);
+                                            if (!string.IsNullOrEmpty(fileNameOnly))
+                                            {
+                                                using (var ms = CopyToMemory(entry))
+                                                using (var r = new StreamReader(ms))
+                                                {
+                                                    string content = r.ReadToEnd();
+                                                    if (!session.TerminalLogFiles.ContainsKey(fileNameOnly))
+                                                    {
+                                                        session.TerminalLogFiles.Add(fileNameOnly, content);
+                                                        Debug.WriteLine($"✅ Loaded terminal log: {fileNameOnly}");
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            Debug.WriteLine($"Failed to read terminal log {entry.Name}: {ex.Message}");
+                                        }
+                                        continue;
+                                    }
+
                                     // 2. לוגים ראשיים
                                     if (entry.Name.IndexOf("engineGroupA.file", StringComparison.OrdinalIgnoreCase) >= 0)
                                     {
                                         entryData.Type = FileType.MainLog;
                                         shouldProcess = true;
                                     }
-                                    // 3. לוגים של אפליקציה
+                                    // 3. לוגים של אפליקציה (text format)
                                     else if ((entry.Name.IndexOf("APPDEV", StringComparison.OrdinalIgnoreCase) >= 0 ||
                                               entry.Name.IndexOf("PRESS.HOST.APP", StringComparison.OrdinalIgnoreCase) >= 0) &&
                                              (lowerName.Contains("indigologs/logger files") || lowerName.Contains("indigologs\\logger files")))
@@ -224,9 +259,18 @@ namespace IndiLogs_3._0.Services
                                         entryData.Type = FileType.AppDevLog;
                                         shouldProcess = true;
                                     }
-                                    // 4. Events CSV
-                                    else if (entry.Name.StartsWith("event-history__From", StringComparison.OrdinalIgnoreCase) &&
-                                             entry.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+                                    // 3b. APP binary logs (numeric .file pattern, e.g. 50300001.file)
+                                    else if (IsNumericAppFile(entry.Name))
+                                    {
+                                        entryData.Type = FileType.AppBinaryLog;
+                                        shouldProcess = true;
+                                        hasBinaryAppLogs = true;
+                                    }
+                                    // 4. Events CSV (both formats: "event-history__From*.csv" and "pressEvents.*.csv" in \PressEvents\)
+                                    else if ((entry.Name.StartsWith("event-history__From", StringComparison.OrdinalIgnoreCase) &&
+                                              entry.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)) ||
+                                             (Path.GetFileName(entry.Name).StartsWith("pressEvents.", StringComparison.OrdinalIgnoreCase) &&
+                                              entry.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)))
                                     {
                                         entryData.Type = FileType.EventsCsv;
                                         shouldProcess = true;
@@ -322,6 +366,14 @@ namespace IndiLogs_3._0.Services
                                                 if (result.Transitions.Count > 0) localTransLists.Add(result.Transitions);
                                                 if (result.Failures.Count > 0) localFailLists.Add(result.Failures);
                                             }
+                                            else if (item.Type == FileType.AppBinaryLog)
+                                            {
+                                                // Parse with same binary parser as PLC, but route to APP lists
+                                                var result = ParseLogStream(item.Stream, stringPool);
+                                                foreach (var log in result.AllLogs)
+                                                    log.ProcessName = stringPool.Intern("APP");
+                                                if (result.AllLogs.Count > 0) localAppLists.Add(result.AllLogs);
+                                            }
                                             else if (item.Type == FileType.AppDevLog)
                                             {
                                                 var logs = ParseAppDevLogStream(item.Stream, stringPool);
@@ -395,7 +447,12 @@ namespace IndiLogs_3._0.Services
                             {
                                 nonZipFiles.Add(new ZipEntryData { Name = filePath, Type = FileType.AppDevLog });
                             }
-                            else if (lowerName.StartsWith("event-history__from") && lowerName.EndsWith(".csv"))
+                            else if (IsNumericAppFile(lowerName))
+                            {
+                                nonZipFiles.Add(new ZipEntryData { Name = filePath, Type = FileType.AppBinaryLog });
+                                hasBinaryAppLogs = true;
+                            }
+                            else if ((lowerName.StartsWith("event-history__from") || lowerName.StartsWith("pressevents.")) && lowerName.EndsWith(".csv"))
                             {
                                 nonZipFiles.Add(new ZipEntryData { Name = filePath, Type = FileType.EventsCsv });
                             }
@@ -476,6 +533,14 @@ namespace IndiLogs_3._0.Services
                                         if (result.Transitions.Count > 0) nzLocalTrans.Add(result.Transitions);
                                         if (result.Failures.Count > 0) nzLocalFails.Add(result.Failures);
                                     }
+                                    else if (item.Type == FileType.AppBinaryLog)
+                                    {
+                                        // Parse with same binary parser as PLC, but route to APP lists
+                                        var result = ParseLogStream(fs, stringPool);
+                                        foreach (var log in result.AllLogs)
+                                            log.ProcessName = stringPool.Intern("APP");
+                                        if (result.AllLogs.Count > 0) nzLocalApps.Add(result.AllLogs);
+                                    }
                                     else if (item.Type == FileType.AppDevLog)
                                     {
                                         var logs = ParseAppDevLogStream(fs, stringPool);
@@ -512,6 +577,7 @@ namespace IndiLogs_3._0.Services
                     }
 
                     session.VersionsInfo = $"SW: {detectedSwVersion} | PLC: {detectedPlcVersion}";
+                    session.HasBinaryAppLogs = hasBinaryAppLogs;
 
                     // Merge any remaining ConcurrentBag entries (from non-ZIP single file paths)
                     // mergedLogs etc. are only populated from ZIP path; bags from single file path
@@ -903,7 +969,28 @@ namespace IndiLogs_3._0.Services
             return null;
         }
 
-        private enum FileType { MainLog, AppDevLog, EventsCsv }
+        /// <summary>
+        /// Detects numeric APP log files (e.g. "50300001.file", "50300001.file.log.8865")
+        /// that use binary format but should go to the APP tab.
+        /// Excludes engineGroup files which are PLC logs.
+        /// </summary>
+        private static bool IsNumericAppFile(string fileName)
+        {
+            string name = Path.GetFileName(fileName).ToLower();
+
+            // Must not be an engineGroup file (those are PLC)
+            if (name.Contains("enginegroup")) return false;
+
+            // Match patterns: "50300001.file", "50300001.file.log.8865"
+            int dotFileIdx = name.IndexOf(".file");
+            if (dotFileIdx <= 0) return false;
+
+            // Check that the part before ".file" ends with digits
+            string prefix = name.Substring(0, dotFileIdx);
+            return prefix.Length > 0 && char.IsDigit(prefix[prefix.Length - 1]);
+        }
+
+        private enum FileType { MainLog, AppDevLog, AppBinaryLog, EventsCsv }
         private class ZipEntryData
         {
             public string Name;

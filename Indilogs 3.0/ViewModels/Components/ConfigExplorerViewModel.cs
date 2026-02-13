@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Data;
 using System.Data.SQLite;
 using System.IO;
 using System.Linq;
@@ -85,6 +86,10 @@ namespace IndiLogs_3._0.ViewModels.Components
                     if (IsDbFileSelected)
                     {
                         DebouncedFilterDbTree();
+                    }
+                    else if (IsCsvFileSelected)
+                    {
+                        FilterCsvData();
                     }
                     else
                     {
@@ -190,6 +195,30 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        private bool _isCsvFileSelected;
+        public bool IsCsvFileSelected
+        {
+            get => _isCsvFileSelected;
+            set
+            {
+                _isCsvFileSelected = value;
+                OnPropertyChanged();
+                _parent?.NotifyPropertyChanged(nameof(_parent.IsCsvFileSelected));
+            }
+        }
+
+        private DataView _csvDataView;
+        public DataView CsvDataView
+        {
+            get => _csvDataView;
+            set
+            {
+                _csvDataView = value;
+                OnPropertyChanged();
+                _parent?.NotifyPropertyChanged(nameof(_parent.CsvDataView));
+            }
+        }
+
         // Menu states
         private bool _isExplorerMenuOpen;
         public bool IsExplorerMenuOpen
@@ -255,16 +284,46 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 ConfigFileContent = "";
                 IsDbFileSelected = false;
+                IsCsvFileSelected = false;
+                CsvDataView = null;
                 DbTreeNodes.Clear();
                 return;
             }
 
             try
             {
+                // Terminal logs mode: read from TerminalLogFiles dictionary
+                if (_sessionVM.SelectedSession.HasBinaryAppLogs &&
+                    _sessionVM.SelectedSession.TerminalLogFiles != null &&
+                    _sessionVM.SelectedSession.TerminalLogFiles.ContainsKey(SelectedConfigFile))
+                {
+                    IsDbFileSelected = false;
+                    DbTreeNodes.Clear();
+
+                    string terminalContent = _sessionVM.SelectedSession.TerminalLogFiles[SelectedConfigFile];
+
+                    // CSV files: parse into DataTable for grid display
+                    if (SelectedConfigFile.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+                    {
+                        IsCsvFileSelected = true;
+                        ConfigFileContent = "";
+                        CsvDataView = ParseCsvToDataView(terminalContent);
+                    }
+                    else
+                    {
+                        IsCsvFileSelected = false;
+                        CsvDataView = null;
+                        ConfigFileContent = terminalContent;
+                    }
+                    return;
+                }
+
                 // Check if this is a SQLite database file
                 if (SelectedConfigFile.EndsWith(".db", StringComparison.OrdinalIgnoreCase))
                 {
                     IsDbFileSelected = true;
+                    IsCsvFileSelected = false;
+                    CsvDataView = null;
                     ConfigFileContent = ""; // Clear text content for DB files
 
                     if (_sessionVM.SelectedSession.DatabaseFiles != null &&
@@ -282,6 +341,8 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                 // For non-DB files, clear tree and show text
                 IsDbFileSelected = false;
+                IsCsvFileSelected = false;
+                CsvDataView = null;
                 DbTreeNodes.Clear();
 
                 // Handle JSON/text configuration files
@@ -335,6 +396,35 @@ namespace IndiLogs_3._0.ViewModels.Components
                 var lines = ConfigFileContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
                 var filtered = lines.Where(line => line.IndexOf(ConfigSearchText, StringComparison.OrdinalIgnoreCase) >= 0);
                 FilteredConfigContent = string.Join(Environment.NewLine, filtered);
+            }
+        }
+
+        private void FilterCsvData()
+        {
+            if (CsvDataView == null || CsvDataView.Table == null) return;
+
+            if (string.IsNullOrWhiteSpace(ConfigSearchText))
+            {
+                CsvDataView.RowFilter = "";
+                return;
+            }
+
+            try
+            {
+                // Build a RowFilter that searches across all columns
+                var table = CsvDataView.Table;
+                var searchText = ConfigSearchText.Replace("'", "''"); // Escape single quotes
+                var conditions = new List<string>();
+                foreach (DataColumn col in table.Columns)
+                {
+                    conditions.Add($"CONVERT([{col.ColumnName}], 'System.String') LIKE '%{searchText}%'");
+                }
+                CsvDataView.RowFilter = string.Join(" OR ", conditions);
+            }
+            catch
+            {
+                // If filter expression fails, clear it
+                CsvDataView.RowFilter = "";
             }
         }
 
@@ -545,6 +635,18 @@ namespace IndiLogs_3._0.ViewModels.Components
             if (_sessionVM.SelectedSession == null)
                 return;
 
+            // Terminal logs mode: show terminal log files instead of config/db
+            if (_sessionVM.SelectedSession.HasBinaryAppLogs &&
+                _sessionVM.SelectedSession.TerminalLogFiles != null &&
+                _sessionVM.SelectedSession.TerminalLogFiles.Count > 0)
+            {
+                foreach (var fileName in _sessionVM.SelectedSession.TerminalLogFiles.Keys)
+                {
+                    ConfigurationFiles.Add(fileName);
+                }
+                return;
+            }
+
             // Add configuration files
             if (_sessionVM.SelectedSession.ConfigurationFiles != null)
             {
@@ -574,6 +676,52 @@ namespace IndiLogs_3._0.ViewModels.Components
             ConfigFileContent = "";
             FilteredConfigContent = "";
             IsDbFileSelected = false;
+            IsCsvFileSelected = false;
+            CsvDataView = null;
+        }
+
+        private DataView ParseCsvToDataView(string csvContent)
+        {
+            try
+            {
+                var dt = new DataTable();
+                var lines = csvContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                if (lines.Length == 0) return null;
+
+                // Parse header
+                var headers = lines[0].Split(',');
+                foreach (var header in headers)
+                {
+                    string colName = header.Trim();
+                    if (string.IsNullOrEmpty(colName)) colName = $"Col{dt.Columns.Count}";
+                    // Ensure unique column names
+                    string uniqueName = colName;
+                    int suffix = 2;
+                    while (dt.Columns.Contains(uniqueName))
+                    {
+                        uniqueName = $"{colName}_{suffix++}";
+                    }
+                    dt.Columns.Add(uniqueName, typeof(string));
+                }
+
+                // Parse data rows
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split(',');
+                    var row = dt.NewRow();
+                    for (int j = 0; j < dt.Columns.Count && j < values.Length; j++)
+                    {
+                        row[j] = values[j].Trim();
+                    }
+                    dt.Rows.Add(row);
+                }
+
+                return dt.DefaultView;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         // INotifyPropertyChanged implementation

@@ -977,6 +977,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 foreach (var f in Directory.GetFiles(path, "*.json"))
                 {
+                    // Skip the defaults configuration file (managed by DefaultConfigurationService)
+                    if (Path.GetFileName(f).StartsWith("_")) continue;
+
                     try
                     {
                         var c = JsonConvert.DeserializeObject<SavedConfiguration>(File.ReadAllText(f));

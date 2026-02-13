@@ -62,6 +62,9 @@ namespace IndiLogs_3._0.ViewModels
         private readonly LogFileService _logService;
         private readonly LogColoringService _coloringService;
         private readonly CsvExportService _csvService;
+        private readonly DefaultConfigurationService _defaultConfigService = new DefaultConfigurationService();
+        public DefaultConfigurationService DefaultConfigService => _defaultConfigService;
+        public LogColoringService ColoringService => _coloringService;
 
         // Windows Instances
         private StatesWindow _statesWindow;
@@ -270,6 +273,12 @@ namespace IndiLogs_3._0.ViewModels
             get => ConfigVM?.IsDbFileSelected ?? false;
             set { if (ConfigVM != null) ConfigVM.IsDbFileSelected = value; }
         }
+        public bool IsCsvFileSelected
+        {
+            get => ConfigVM?.IsCsvFileSelected ?? false;
+            set { if (ConfigVM != null) ConfigVM.IsCsvFileSelected = value; }
+        }
+        public System.Data.DataView CsvDataView => ConfigVM?.CsvDataView;
         public bool IsExplorerMenuOpen
         {
             get => ConfigVM?.IsExplorerMenuOpen ?? false;
@@ -285,6 +294,10 @@ namespace IndiLogs_3._0.ViewModels
             get => ConfigVM?.IsLoggersMenuOpen ?? false;
             set { if (ConfigVM != null) ConfigVM.IsLoggersMenuOpen = value; }
         }
+
+        // Dynamic tab header: "TERMINALS" for binary APP logs, "DB & CONFIG" otherwise
+        public string DbConfigTabHeader =>
+            SelectedSession?.HasBinaryAppLogs == true ? "TERMINALS" : "DB & CONFIG";
 
         // --- PANEL VISIBILITY ---
         private bool _isLeftPanelVisible = true;
@@ -833,6 +846,8 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand OpenGlobalGrepCommand { get; }
         public ICommand OpenStripeAnalysisCommand { get; }
         public ICommand OpenComparisonCommand { get; }
+        public ICommand SetAsDefaultCommand { get; }
+        public ICommand ResetDefaultsCommand { get; }
 
         public MainViewModel()
         {
@@ -1002,9 +1017,13 @@ namespace IndiLogs_3._0.ViewModels
             SaveCaseCommand = new RelayCommand(SaveCase);
             LoadCaseCommand = new RelayCommand(LoadCase);
 
+            SetAsDefaultCommand = new RelayCommand(SetCurrentAsDefault);
+            ResetDefaultsCommand = new RelayCommand(ResetDefaults);
+
             _isDarkMode = Properties.Settings.Default.IsDarkMode;
             ApplyTheme(_isDarkMode);
             LoadSavedConfigurations();
+            LoadUserDefaults();
         }
 
         private void OnSearchTimerTick(object sender, EventArgs e)
@@ -1868,6 +1887,65 @@ namespace IndiLogs_3._0.ViewModels
             WindowManager.ShowDialog(snakeWindow);
         }
         private void LoadSavedConfigurations() => CaseVM?.LoadSavedConfigs();
+
+        private void LoadUserDefaults()
+        {
+            _defaultConfigService.Load();
+            var defaults = _defaultConfigService.CurrentDefaults;
+            if (defaults == null) return;
+
+            if (defaults.HasCustomMainColoring && defaults.MainDefaultColoringRules != null)
+                _coloringService.UserDefaultMainRules = defaults.MainDefaultColoringRules;
+            if (defaults.HasCustomAppColoring && defaults.AppDefaultColoringRules != null)
+                _coloringService.UserDefaultAppRules = defaults.AppDefaultColoringRules;
+            if (defaults.HasCustomPlcFilter && defaults.PlcFilteredDefaultFilter != null)
+                FilterVM.DefaultPlcFilter = defaults.PlcFilteredDefaultFilter;
+        }
+
+        private void SetCurrentAsDefault(object obj)
+        {
+            var config = new Models.DefaultConfiguration();
+
+            // Save PLC Filtered default filter from current state
+            if (FilterVM.DefaultPlcFilter != null)
+            {
+                config.PlcFilteredDefaultFilter = FilterVM.DefaultPlcFilter.DeepClone();
+                config.HasCustomPlcFilter = true;
+            }
+
+            // Save Main coloring rules
+            if (CaseVM?.MainColoringRules != null && CaseVM.MainColoringRules.Count > 0)
+            {
+                config.MainDefaultColoringRules = CaseVM.MainColoringRules.Select(r => r.Clone()).ToList();
+                config.HasCustomMainColoring = true;
+            }
+
+            // Save App coloring rules
+            if (CaseVM?.AppColoringRules != null && CaseVM.AppColoringRules.Count > 0)
+            {
+                config.AppDefaultColoringRules = CaseVM.AppColoringRules.Select(r => r.Clone()).ToList();
+                config.HasCustomAppColoring = true;
+            }
+
+            _defaultConfigService.Save(config);
+
+            // Update live state
+            _coloringService.UserDefaultMainRules = config.MainDefaultColoringRules;
+            _coloringService.UserDefaultAppRules = config.AppDefaultColoringRules;
+
+            SessionVM.StatusMessage = "Current settings saved as defaults.";
+        }
+
+        private void ResetDefaults(object obj)
+        {
+            _defaultConfigService.Reset();
+            _coloringService.UserDefaultMainRules = null;
+            _coloringService.UserDefaultAppRules = null;
+            FilterVM.DefaultPlcFilter = null;
+
+            SessionVM.StatusMessage = "Defaults reset to factory settings.";
+        }
+
         private void ApplyConfiguration(object parameter) { if (parameter is SavedConfiguration c) CaseVM?.ApplyConfiguration(c); }
         private void RemoveConfiguration(object parameter) => CaseVM?.DeleteConfigCommand.Execute(parameter);
         private void SaveConfiguration(object obj) => CaseVM?.SaveConfigCommand.Execute(obj);
