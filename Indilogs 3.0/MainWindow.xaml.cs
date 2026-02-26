@@ -34,7 +34,7 @@ namespace IndiLogs_3._0
         // Per-tab panel width storage (default is 200 for all tabs)
         private System.Collections.Generic.Dictionary<int, double> _tabPanelWidths = new System.Collections.Generic.Dictionary<int, double>();
         private const double DEFAULT_PANEL_WIDTH = 200;
-        private const int CHARTS_TAB_INDEX = 9;
+        private const int CHARTS_TAB_INDEX = AppConstants.TAB_CHARTS;
         private int _previousTabIndex = 0;
 
         // Deferred scroll-to-bottom for tabs not yet rendered (WPF TabControl content virtualization)

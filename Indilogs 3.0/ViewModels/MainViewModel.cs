@@ -789,11 +789,11 @@ namespace IndiLogs_3._0.ViewModels
                     _selectedTabIndex = value;
                     OnPropertyChanged();
 
-                    if (_selectedTabIndex == 1) // APP Tab
+                    if (_selectedTabIndex == AppConstants.TAB_APP) // APP Tab
                     {
                         LeftTabIndex = 1; // LOGGERS
                     }
-                    else if (_selectedTabIndex == 0) // PLC Tab
+                    else if (_selectedTabIndex == AppConstants.TAB_PLC) // PLC Tab
                     {
                         LeftTabIndex = 0; // EXPLORER
                     }
@@ -813,16 +813,16 @@ namespace IndiLogs_3._0.ViewModels
                     // Tabs 0,1 (PLC, APP) = left + right + bottom panels visible
                     // Tab 9 (CHARTS), 10 (CPR), 11 (STEP RECORDER), 12 (DIFFERENT LOGS) = all panels hidden
                     // Other tabs = left + right hidden, bottom visible
-                    if (_selectedTabIndex == 0 || _selectedTabIndex == 1)
+                    if (_selectedTabIndex == AppConstants.TAB_PLC || _selectedTabIndex == AppConstants.TAB_APP)
                     {
                         IsLeftPanelVisible = true;
                         IsRightPanelVisible = true;
                         IsBottomPanelVisible = true;
                     }
-                    else if (_selectedTabIndex == 9  || // CHARTS
-                             _selectedTabIndex == 10 || // CPR
-                             _selectedTabIndex == 11 || // STEP RECORDER
-                             _selectedTabIndex == 12)   // DIFFERENT LOGS
+                    else if (_selectedTabIndex == AppConstants.TAB_CHARTS  || // CHARTS
+                             _selectedTabIndex == AppConstants.TAB_CPR || // CPR
+                             _selectedTabIndex == AppConstants.TAB_STEP_RECORDER || // STEP RECORDER
+                             _selectedTabIndex == AppConstants.TAB_DIFFERENT_LOGS)   // DIFFERENT LOGS
                     {
                         IsLeftPanelVisible = false;
                         IsRightPanelVisible = false;
@@ -884,8 +884,8 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
-        public bool IsPLCTabSelected => _selectedTabIndex == 0;
-        public bool IsAppTabSelected => _selectedTabIndex == 1;
+        public bool IsPLCTabSelected => _selectedTabIndex == AppConstants.TAB_PLC;
+        public bool IsAppTabSelected => _selectedTabIndex == AppConstants.TAB_APP;
 
         /// <summary>Print Analysis visible only on APP tab AND when NOT S4-5 (S6 only).</summary>
         public bool IsPrintAnalysisVisible => IsAppTabSelected && !HasBinaryAppLogs;
@@ -899,7 +899,7 @@ namespace IndiLogs_3._0.ViewModels
 
         public string LoggerTabTitle =>
             IsPLCTabSelected ? "PLC LOGGERS" : "APP LOGGERS";
-        public bool IsExportVisible => _selectedTabIndex == 0 || _selectedTabIndex == 9;
+        public bool IsExportVisible => _selectedTabIndex == AppConstants.TAB_PLC || _selectedTabIndex == AppConstants.TAB_CHARTS;
 
 
         private int _leftTabIndex;
@@ -1031,13 +1031,13 @@ namespace IndiLogs_3._0.ViewModels
         {
             get
             {
-                if (SelectedTabIndex == 12) return DifferentLogsVM?.IsFilterActive ?? false;
-                return SelectedTabIndex == 1 ? IsAppFilterActive : IsMainFilterActive;
+                if (SelectedTabIndex == AppConstants.TAB_DIFFERENT_LOGS) return DifferentLogsVM?.IsFilterActive ?? false;
+                return SelectedTabIndex == AppConstants.TAB_APP ? IsAppFilterActive : IsMainFilterActive;
             }
             set
             {
                 // Different Logs tab: toggle its own filter
-                if (SelectedTabIndex == 12)
+                if (SelectedTabIndex == AppConstants.TAB_DIFFERENT_LOGS)
                 {
                     var diffVM = DifferentLogsVM;
                     if (diffVM != null && diffVM.IsFilterActive != value)
@@ -1068,7 +1068,7 @@ namespace IndiLogs_3._0.ViewModels
                     SaveScrollPosition(savedSelectedLog);
                 }
 
-                if (SelectedTabIndex == 1)
+                if (SelectedTabIndex == AppConstants.TAB_APP)
                 {
                     if (FilterVM != null && FilterVM.IsAppFilterActive != value)
                     {
@@ -1129,7 +1129,7 @@ namespace IndiLogs_3._0.ViewModels
 
         public bool IsFilterOutActive
         {
-            get => SelectedTabIndex == 1 ? IsAppFilterOutActive : IsMainFilterOutActive;
+            get => SelectedTabIndex == AppConstants.TAB_APP ? IsAppFilterOutActive : IsMainFilterOutActive;
             set
             {
                 // Save the currently selected log and its scroll position BEFORE changing filter state
@@ -1139,7 +1139,7 @@ namespace IndiLogs_3._0.ViewModels
                     SaveScrollPosition(savedSelectedLog);
                 }
 
-                if (SelectedTabIndex == 1)
+                if (SelectedTabIndex == AppConstants.TAB_APP)
                 {
                     if (FilterVM != null && FilterVM.IsAppFilterOutActive != value)
                     {
@@ -1512,12 +1512,12 @@ namespace IndiLogs_3._0.ViewModels
 
             ZoomInCommand = new RelayCommand(o =>
             {
-                if (SelectedTabIndex == 3) ScreenshotZoom = Math.Min(5000, ScreenshotZoom + 100);
+                if (SelectedTabIndex == AppConstants.TAB_SCREENSHOTS) ScreenshotZoom = Math.Min(5000, ScreenshotZoom + 100);
                 else GridFontSize = Math.Min(30, GridFontSize + 1);
             });
             ZoomOutCommand = new RelayCommand(o =>
             {
-                if (SelectedTabIndex == 3) ScreenshotZoom = Math.Max(100, ScreenshotZoom - 100);
+                if (SelectedTabIndex == AppConstants.TAB_SCREENSHOTS) ScreenshotZoom = Math.Max(100, ScreenshotZoom - 100);
                 else GridFontSize = Math.Max(8, GridFontSize - 1);
             });
 
@@ -1602,7 +1602,7 @@ namespace IndiLogs_3._0.ViewModels
         {
             IEnumerable<LogEntry> targetList = null;
 
-            if (SelectedTabIndex == 1) // APP Tab
+            if (SelectedTabIndex == AppConstants.TAB_APP) // APP Tab
             {
                 targetList = SessionVM?.AllAppLogsCache;
             }
@@ -1926,7 +1926,7 @@ namespace IndiLogs_3._0.ViewModels
                 _isVisualMode = false;
                 OnPropertyChanged(nameof(IsVisualMode));
 
-                SelectedTabIndex = 0;
+                SelectedTabIndex = AppConstants.TAB_PLC;
                 OnPropertyChanged(nameof(SelectedTabIndex));
                 LeftTabIndex = 0;
                 OnPropertyChanged(nameof(LeftTabIndex));
@@ -2089,7 +2089,7 @@ namespace IndiLogs_3._0.ViewModels
                     FilterVM.ApplyMainLogsFilter();
 
                     // Switch to PLC tab to show filtered results
-                    SelectedTabIndex = 0;
+                    SelectedTabIndex = AppConstants.TAB_PLC;
 
                     int logCount = Logs?.Count() ?? 0;
                     MessageBox.Show($"Filter applied: Logger = {filterValue}\n\nShowing {logCount} matching logs.",
@@ -2103,7 +2103,7 @@ namespace IndiLogs_3._0.ViewModels
                     FilterVM.ApplyMainLogsFilter();
 
                     // Switch to PLC tab to show filtered results
-                    SelectedTabIndex = 0;
+                    SelectedTabIndex = AppConstants.TAB_PLC;
 
                     int logCount = Logs?.Count() ?? 0;
                     MessageBox.Show($"Filter applied: STATE = {filterValue}\n\nShowing {logCount} matching logs.",
@@ -2124,7 +2124,7 @@ namespace IndiLogs_3._0.ViewModels
             {
                 // Determine which tab to switch to based on log type
                 bool isAppLog = !string.IsNullOrEmpty(log.Logger) && !log.Logger.Contains("E1.PLC");
-                SelectedTabIndex = isAppLog ? 1 : 0;
+                SelectedTabIndex = isAppLog ? AppConstants.TAB_APP : AppConstants.TAB_PLC;
 
                 SelectedLog = log;
                 ScrollToLog(log);
@@ -2158,7 +2158,7 @@ namespace IndiLogs_3._0.ViewModels
                             FilterVM.SavedFilterRoot = null;
                             FilterVM.IsTimeFocusActive = true;
                             FilterVM.IsMainFilterActive = true;
-                            SelectedTabIndex = 0;
+                            SelectedTabIndex = AppConstants.TAB_PLC;
                             UpdateMainLogsFilter(true);
                             if (FilterVM?.FilteredLogs != null)
                             {
@@ -2291,7 +2291,7 @@ namespace IndiLogs_3._0.ViewModels
                 if (csvFiles.Length > 0)
                 {
                     // Load the first CSV into CPR
-                    SelectedTabIndex = 10; // CPR tab
+                    SelectedTabIndex = AppConstants.TAB_CPR; // CPR tab
                     CprVM?.LoadFileDirect(csvFiles[0]);
                 }
 
@@ -2307,7 +2307,7 @@ namespace IndiLogs_3._0.ViewModels
                             bool handled = await DifferentLogsVM.LoadFileAsync(logFiles[0]);
                             if (handled)
                             {
-                                SelectedTabIndex = 12; // DIFFERENT LOGS tab
+                                SelectedTabIndex = AppConstants.TAB_DIFFERENT_LOGS; // DIFFERENT LOGS tab
                                 return;
                             }
                         }
@@ -2323,7 +2323,7 @@ namespace IndiLogs_3._0.ViewModels
             try
             {
             var win = new FilterWindow();
-            bool isAppTab = SelectedTabIndex == 1;
+            bool isAppTab = SelectedTabIndex == AppConstants.TAB_APP;
             var currentRoot = isAppTab ? FilterVM.AppFilterRoot : FilterVM.MainFilterRoot;
 
             if (currentRoot != null) { win.ViewModel.RootNodes.Clear(); win.ViewModel.RootNodes.Add(currentRoot.DeepClone()); }
@@ -2870,7 +2870,7 @@ namespace IndiLogs_3._0.ViewModels
                 if (ext == ".csv" && !isEventCsv)
                 {
                     // Switch to CPR tab and load
-                    SelectedTabIndex = 10; // CPR tab
+                    SelectedTabIndex = AppConstants.TAB_CPR; // CPR tab
                     CprVM?.LoadFileDirect(files[0]);
                     return;
                 }
@@ -2883,7 +2883,7 @@ namespace IndiLogs_3._0.ViewModels
                     bool handled = await DifferentLogsVM.LoadFileAsync(files[0]);
                     if (handled)
                     {
-                        SelectedTabIndex = 12; // DIFFERENT LOGS tab
+                        SelectedTabIndex = AppConstants.TAB_DIFFERENT_LOGS; // DIFFERENT LOGS tab
                         return;
                     }
                 }

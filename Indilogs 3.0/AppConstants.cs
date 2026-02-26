@@ -36,5 +36,21 @@ namespace IndiLogs_3._0
         /// Systab file extension.
         /// </summary>
         public const string SystabExtension = ".txt";
+
+        // ── Tab Indices ─────────────────────────────────────────────
+        // Must match the order of TabItems in MainWindow.xaml
+        public const int TAB_PLC = 0;
+        public const int TAB_APP = 1;
+        public const int TAB_PLC_FILTERED = 2;
+        public const int TAB_SCREENSHOTS = 3;
+        public const int TAB_GLOBALS = 4;
+        public const int TAB_SYSTAB = 5;
+        public const int TAB_EVENTS = 6;
+        public const int TAB_TERMINALS = 7;
+        public const int TAB_TIMELINE = 8;
+        public const int TAB_CHARTS = 9;
+        public const int TAB_CPR = 10;
+        public const int TAB_STEP_RECORDER = 11;
+        public const int TAB_DIFFERENT_LOGS = 12;
     }
 }
