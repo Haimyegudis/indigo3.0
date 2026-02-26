@@ -204,7 +204,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             _loadedSessions = new ObservableCollection<LogSessionData>();
 
             // Initialize commands
-            LoadCommand = new RelayCommand(LoadFile);
+            LoadCommand = new RelayCommand(o => _ = LoadFile(o));
             ClearCommand = new RelayCommand(ClearLogs);
             RemoveSessionCommand = new RelayCommand(RemoveSession);
         }
@@ -273,7 +273,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             return filter.ToString();
         }
 
-        private async void LoadFile(object obj)
+        private async Task LoadFile(object obj)
         {
             try
             {

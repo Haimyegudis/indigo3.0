@@ -52,7 +52,7 @@ namespace IndiLogs_3._0.Views
         /// <summary>
         /// Load stripe data from log entries (async for better UI responsiveness)
         /// </summary>
-        public async void LoadFromLogs(IEnumerable<LogEntry> logs)
+        public async Task LoadFromLogs(IEnumerable<LogEntry> logs)
         {
             try
             {
@@ -94,7 +94,7 @@ namespace IndiLogs_3._0.Views
         /// <summary>
         /// Load stripe data directly from JSON string (async for better UI responsiveness)
         /// </summary>
-        public async void LoadFromJson(string json)
+        public async Task LoadFromJson(string json)
         {
             try
             {

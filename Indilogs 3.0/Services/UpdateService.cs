@@ -217,13 +217,29 @@ namespace IndiLogs_3._0.Services
         {
             try
             {
-                // Step 1: Verify Authenticode digital signature
+                // Step 1: Verify Authenticode digital signature with chain validation
                 var cert = System.Security.Cryptography.X509Certificates.X509Certificate2.CreateFromSignedFile(installerPath);
                 if (cert != null)
                 {
-                    UpdateLogger.Log($"[VERIFY] Authenticode signature found: {cert.Subject}");
-                    // Signature exists - installer is signed
-                    return true;
+                    // Validate the certificate chains to a trusted root
+                    using (var chain = new System.Security.Cryptography.X509Certificates.X509Chain())
+                    {
+                        chain.ChainPolicy.RevocationMode = System.Security.Cryptography.X509Certificates.X509RevocationMode.Online;
+                        chain.ChainPolicy.RevocationFlag = System.Security.Cryptography.X509Certificates.X509RevocationFlag.EntireChain;
+                        bool chainValid = chain.Build(cert);
+                        if (chainValid)
+                        {
+                            UpdateLogger.Log($"[VERIFY] Authenticode signature valid: {cert.Subject}");
+                            return true;
+                        }
+                        else
+                        {
+                            UpdateLogger.Log($"[VERIFY] Authenticode signature found but chain validation failed: {cert.Subject}");
+                            foreach (var status in chain.ChainStatus)
+                                UpdateLogger.Log($"[VERIFY]   Chain error: {status.StatusInformation}");
+                            // Fall through to hash verification
+                        }
+                    }
                 }
             }
             catch (CryptographicException)

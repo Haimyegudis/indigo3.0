@@ -71,7 +71,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             RunAnalysisCommand = new RelayCommand(RunAnalysis);
             OpenStatesWindowCommand = new RelayCommand(OpenStatesWindow);
             OpenGlobalGrepCommand = new RelayCommand(o => OpenGlobalGrepWindow());
-            OpenStripeAnalysisCommand = new RelayCommand(o => OpenStripeAnalysisWindow());
+            OpenStripeAnalysisCommand = new RelayCommand(async o => await OpenStripeAnalysisWindow());
             OpenComparisonCommand = new RelayCommand(o => OpenComparisonWindow(),
                 o => _parent.SessionVM?.AllLogsCache?.Count > 0 || _parent.SessionVM?.AllAppLogsCache?.Count > 0);
             OpenSnakeGameCommand = new RelayCommand(OpenSnakeGame);
@@ -238,7 +238,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             );
         }
 
-        private async void OpenStripeAnalysisWindow()
+        private async Task OpenStripeAnalysisWindow()
         {
             try
             {

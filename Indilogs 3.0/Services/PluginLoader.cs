@@ -162,12 +162,21 @@ namespace IndiLogs_3._0.Services
 
             try
             {
-                // Check for Authenticode signature
+                // Check for Authenticode signature with chain validation
                 var cert = X509Certificate2.CreateFromSignedFile(dllPath);
                 if (cert != null)
                 {
-                    AppLogger.Info($"Plugin signed by: {cert.Subject}");
-                    return true;
+                    using (var chain = new System.Security.Cryptography.X509Certificates.X509Chain())
+                    {
+                        chain.ChainPolicy.RevocationMode = System.Security.Cryptography.X509Certificates.X509RevocationMode.Online;
+                        chain.ChainPolicy.RevocationFlag = System.Security.Cryptography.X509Certificates.X509RevocationFlag.EntireChain;
+                        if (chain.Build(cert))
+                        {
+                            AppLogger.Info($"Plugin signed by (chain valid): {cert.Subject}");
+                            return true;
+                        }
+                        AppLogger.Warn($"Plugin cert chain invalid for: {Path.GetFileName(dllPath)} ({cert.Subject})");
+                    }
                 }
             }
             catch (System.Security.Cryptography.CryptographicException)

@@ -64,8 +64,8 @@ namespace IndiLogs_3._0.ViewModels
         private readonly ILogFileService _logService;
         private readonly ILogColoringService _coloringService;
         private readonly ICsvExportService _csvService;
-        private readonly DefaultConfigurationService _defaultConfigService = new DefaultConfigurationService();
-        public DefaultConfigurationService DefaultConfigService => _defaultConfigService;
+        private readonly IDefaultConfigurationService _defaultConfigService;
+        public IDefaultConfigurationService DefaultConfigService => _defaultConfigService;
         public ILogColoringService ColoringService => _coloringService;
 
         // Windows Instances
@@ -1015,15 +1015,16 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand ResetDefaultsCommand { get; }
 
         public MainViewModel()
-            : this(new LogFileService(new PluginLoader()), new LogColoringService(), new CsvExportService())
+            : this(new LogFileService(new PluginLoader()), new LogColoringService(), new CsvExportService(), new DefaultConfigurationService())
         {
         }
 
-        public MainViewModel(ILogFileService logService, ILogColoringService coloringService, ICsvExportService csvService)
+        public MainViewModel(ILogFileService logService, ILogColoringService coloringService, ICsvExportService csvService, IDefaultConfigurationService defaultConfigService)
         {
             _logService = logService;
             _coloringService = coloringService;
             _csvService = csvService;
+            _defaultConfigService = defaultConfigService;
             _isTimeSyncEnabled = false;
 
             // Initialize child ViewModels
@@ -1093,10 +1094,10 @@ namespace IndiLogs_3._0.ViewModels
 
             OpenMarkedLogsWindowCommand = new RelayCommand(o => { OpenMarkedLogsWindow(o); IsExplorerMenuOpen = false; });
             OpenStatesWindowCommand = new RelayCommand(o => { OpenStatesWindow(o); IsExplorerMenuOpen = false; });
-            ExportParsedDataCommand = new RelayCommand(o => { ExportParsedData(o); IsExplorerMenuOpen = false; });
+            ExportParsedDataCommand = new RelayCommand(o => { _ = ExportParsedData(o); IsExplorerMenuOpen = false; });
             RunAnalysisCommand = new RelayCommand(o => { RunAnalysis(o); IsExplorerMenuOpen = false; });
             OpenGlobalGrepCommand = new RelayCommand(o => { OpenGlobalGrepWindow(); IsExplorerMenuOpen = false; });
-            OpenStripeAnalysisCommand = new RelayCommand(o => { OpenStripeAnalysisWindow(); IsExplorerMenuOpen = false; });
+            OpenStripeAnalysisCommand = new RelayCommand(o => { _ = OpenStripeAnalysisWindow(); IsExplorerMenuOpen = false; });
             OpenComparisonCommand = new RelayCommand(o => { OpenComparisonWindow(); }, o => SessionVM.AllLogsCache?.Count > 0 || SessionVM.AllAppLogsCache?.Count > 0);
 
             ToggleSearchCommand = FilterVM.ToggleSearchCommand;
@@ -1789,7 +1790,7 @@ namespace IndiLogs_3._0.ViewModels
 
         private void LivePlay(object obj) => LiveVM?.LivePlayCommand.Execute(obj);
         private void LivePause(object obj) => LiveVM?.LivePauseCommand.Execute(obj);
-        private async void LoadFile(object obj)
+        private async Task LoadFile(object obj)
         {
             try
             {
@@ -1830,7 +1831,7 @@ namespace IndiLogs_3._0.ViewModels
             }
             catch (Exception ex) { AppLogger.Error("LoadFile failed", ex); }
         }
-        private async void OpenFilterWindow(object obj)
+        private async Task OpenFilterWindow(object obj)
         {
             try
             {
@@ -1878,7 +1879,7 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         private bool EvaluateFilterNode(LogEntry log, FilterNode node) => FilterVM?.EvaluateFilterNode(log, node) ?? true;
-        private async void ExportParsedData(object obj)
+        private async Task ExportParsedData(object obj)
         {
             try
             {
@@ -2082,7 +2083,7 @@ namespace IndiLogs_3._0.ViewModels
             );
         }
 
-        private async void OpenStripeAnalysisWindow()
+        private async Task OpenStripeAnalysisWindow()
         {
             try
             {
@@ -2116,7 +2117,7 @@ namespace IndiLogs_3._0.ViewModels
             // Load data asynchronously after window is shown
             await Task.Run(() => { }).ContinueWith(_ =>
             {
-                window.LoadFromLogs(logs);
+                _ = window.LoadFromLogs(logs);
             }, TaskScheduler.FromCurrentSynchronizationContext());
             }
             catch (Exception ex) { AppLogger.Error("OpenStripeAnalysisWindow failed", ex); }

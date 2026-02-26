@@ -156,7 +156,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             });
             SaveCaseCommand = new RelayCommand(SaveCase);
             LoadCaseCommand = new RelayCommand(LoadCase);
-            OpenColoringWindowCommand = new RelayCommand(OpenColoringWindow);
+            OpenColoringWindowCommand = new RelayCommand(async o => await OpenColoringWindow(o));
         }
 
         private void CloseAnnotation(object obj)
@@ -766,7 +766,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                             Application.Current.Dispatcher.Invoke(() =>
                             {
                                 _sessionVM.StatusMessage = "Applying case settings...";
-                                ApplyCaseSettings(caseFile);
+                                _ = ApplyCaseSettings(caseFile);
                                 _isLoadingCase = false;
                                 _sessionVM.StatusMessage = "Case loaded successfully!";
                             });
@@ -794,7 +794,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// Applies case settings after logs are loaded
         /// </summary>
-        private async void ApplyCaseSettings(CaseFile caseFile)
+        private async Task ApplyCaseSettings(CaseFile caseFile)
         {
             try
             {
@@ -1148,12 +1148,12 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         public bool IsLoadingCase => _isLoadingCase;
 
-        private async void OpenColoringWindow(object obj)
+        private async Task OpenColoringWindow(object obj)
         {
             // ── Different Logs tab (index 12): route to its own coloring logic ──
             if (_parent.SelectedTabIndex == 12)
             {
-                OpenDifferentLogsColoringWindow(obj);
+                await OpenDifferentLogsColoringWindow(obj);
                 return;
             }
 
@@ -1215,7 +1215,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// Opens the coloring window targeting the Different Logs tab (tab 12).
         /// Uses dynamic fields from the loaded plugin columns.
         /// </summary>
-        private async void OpenDifferentLogsColoringWindow(object obj)
+        private async Task OpenDifferentLogsColoringWindow(object obj)
         {
             try
             {

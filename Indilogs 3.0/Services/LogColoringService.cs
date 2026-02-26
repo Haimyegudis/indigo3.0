@@ -223,7 +223,7 @@ namespace IndiLogs_3._0.Services
                 if (pc.OpLower == "regex" && !string.IsNullOrEmpty(r.Value))
                 {
                     try { pc.CachedRegex = new Regex(r.Value, RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(2)); }
-                    catch { }
+                    catch (Exception ex) { AppLogger.Warn($"Invalid regex pattern '{r.Value}': {ex.Message}"); }
                 }
                 list.Add(pc);
             }

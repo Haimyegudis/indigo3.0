@@ -224,15 +224,11 @@ namespace IndiLogs_3._0.ViewModels
         {
             if (FilteredLogs == null || FilteredLogs.Count == 0) return;
 
-            // Find the nearest log entry by time
-            var nearestLog = FilteredLogs
-                .OrderBy(l => System.Math.Abs((l.Date - time).TotalMilliseconds))
-                .FirstOrDefault();
-
-            if (nearestLog != null)
+            // Use O(log N) binary search instead of O(N log N) sort
+            int idx = BinarySearchNearest(FilteredLogs, time);
+            if (idx >= 0)
             {
-                // Request the UI to scroll to this log
-                RequestScrollToLog?.Invoke(nearestLog);
+                RequestScrollToLog?.Invoke(FilteredLogs[idx]);
             }
         }
 

@@ -683,7 +683,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         }));
                 }
             });
-            OpenFilterWindowCommand = new RelayCommand(OpenFilterWindow);
+            OpenFilterWindowCommand = new RelayCommand(async o => await OpenFilterWindow(o));
             FilterOutCommand = new RelayCommand(FilterOut);
             FilterOutThreadCommand = new RelayCommand(FilterOutThread);
 
@@ -1363,14 +1363,14 @@ namespace IndiLogs_3._0.ViewModels.Components
             _treeShowOnlyPrefix = null;
         }
 
-        private async void OpenFilterWindow(object obj)
+        private async Task OpenFilterWindow(object obj)
         {
             try
             {
             // ── Different Logs tab (index 12): route to its own filter logic ──
             if (_parent.SelectedTabIndex == 12)
             {
-                OpenDifferentLogsFilterWindow(obj);
+                await OpenDifferentLogsFilterWindow(obj);
                 return;
             }
 
@@ -1518,7 +1518,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// Opens the filter window targeting the Different Logs tab (tab 12).
         /// Uses dynamic fields from the loaded plugin columns.
         /// </summary>
-        private async void OpenDifferentLogsFilterWindow(object obj)
+        private async Task OpenDifferentLogsFilterWindow(object obj)
         {
             try
             {

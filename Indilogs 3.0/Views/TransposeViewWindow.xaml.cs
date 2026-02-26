@@ -89,7 +89,7 @@ namespace IndiLogs_3._0.Views
             _availableSpreads = new HashSet<int>(_allEntries.Select(e => e.SpreadId).Distinct());
             PopulateSpreadFilter();
 
-            BuildTransposeTableAsync();
+            _ = BuildTransposeTableAsync();
         }
 
         private void PopulateSpreadFilter()
@@ -105,7 +105,7 @@ namespace IndiLogs_3._0.Views
             CmbSingleSpread.SelectedIndex = 0;
         }
 
-        private async void BuildTransposeTableAsync()
+        private async Task BuildTransposeTableAsync()
         {
             if (_filteredEntries == null || _filteredEntries.Count == 0)
             {
@@ -275,7 +275,7 @@ namespace IndiLogs_3._0.Views
             TxtSpreadTo.Text = "";
             CmbSingleSpread.SelectedIndex = 0;
             _filteredEntries = _allEntries;
-            BuildTransposeTableAsync();
+            _ = BuildTransposeTableAsync();
         }
 
         private void ApplySpreadFilter()
@@ -323,7 +323,7 @@ namespace IndiLogs_3._0.Views
                 return;
             }
 
-            BuildTransposeTableAsync();
+            _ = BuildTransposeTableAsync();
         }
 
         #endregion

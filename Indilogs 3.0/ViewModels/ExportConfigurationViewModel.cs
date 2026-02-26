@@ -333,10 +333,10 @@ namespace IndiLogs_3._0.ViewModels
             DeselectAllCHStepsCommand = new RelayCommand(_ => DeselectAll(CHStepComponents));
             DeselectAllThreadsCommand = new RelayCommand(_ => DeselectAll(ThreadItems));
 
-            LoadComponentsAndThreads();
+            _ = LoadComponentsAndThreads();
         }
 
-        private async void LoadComponentsAndThreads()
+        private async Task LoadComponentsAndThreads()
         {
             try
             {

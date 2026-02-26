@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -235,7 +236,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                LoadInMemoryData(dataPackage);
+                _ = LoadInMemoryData(dataPackage);
             }));
         }
 
@@ -243,7 +244,7 @@ namespace IndiLogs_3._0.Controls.Charts
         /// Loads data directly from memory without file I/O.
         /// Heavy work (timestamp formatting, time mapping) runs on a background thread.
         /// </summary>
-        public async void LoadInMemoryData(ChartDataPackage dataPackage)
+        public async Task LoadInMemoryData(ChartDataPackage dataPackage)
         {
             if (dataPackage == null) return;
 

@@ -9,7 +9,7 @@ using System.Windows.Media;
 
 namespace IndiLogs_3._0.Services
 {
-    public class DefaultConfigurationService
+    public class DefaultConfigurationService : Interfaces.IDefaultConfigurationService
     {
         private static readonly string DefaultsFilePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
