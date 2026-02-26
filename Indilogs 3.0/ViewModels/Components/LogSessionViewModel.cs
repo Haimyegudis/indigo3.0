@@ -1,5 +1,6 @@
 ﻿using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
+using IndiLogs_3._0.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -20,8 +21,8 @@ namespace IndiLogs_3._0.ViewModels.Components
     public class LogSessionViewModel : ViewModelBase
     {
         private readonly MainViewModel _parent;
-        private readonly LogFileService _logService;
-        private readonly LogColoringService _coloringService;
+        private readonly ILogFileService _logService;
+        private readonly ILogColoringService _coloringService;
         private FilterSearchViewModel _filterVM;
         private CaseManagementViewModel _caseVM;
         private ConfigExplorerViewModel _configVM;
@@ -187,7 +188,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand ClearCommand { get; }
         public ICommand RemoveSessionCommand { get; }
 
-        public LogSessionViewModel(MainViewModel parent, LogFileService logService, LogColoringService coloringService)
+        public LogSessionViewModel(MainViewModel parent, ILogFileService logService, ILogColoringService coloringService)
         {
             _parent = parent;
             _logService = logService;

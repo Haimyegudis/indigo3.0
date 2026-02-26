@@ -1,5 +1,6 @@
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
+using IndiLogs_3._0.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -26,8 +27,8 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly LogSessionViewModel _sessionVM;
         private readonly FilterSearchViewModel _filterVM;
         private readonly CaseManagementViewModel _caseVM;
-        private readonly LogFileService _logService;
-        private readonly LogColoringService _coloringService;
+        private readonly ILogFileService _logService;
+        private readonly ILogColoringService _coloringService;
 
         // Live monitoring state
         private bool _isLiveMode;
@@ -100,7 +101,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         public LiveMonitoringViewModel(MainViewModel parent, LogSessionViewModel sessionVM,
             FilterSearchViewModel filterVM, CaseManagementViewModel caseVM,
-            LogFileService logService, LogColoringService coloringService)
+            ILogFileService logService, ILogColoringService coloringService)
         {
             _parent = parent;
             _sessionVM = sessionVM;

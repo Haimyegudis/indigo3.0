@@ -13,5 +13,7 @@ namespace IndiLogs_3._0.Services.Interfaces
         List<EventEntry> ParseEventsCsv(Stream stream);
         List<LogEntry> ParseLogStreamPartial(Stream stream);
         (List<LogEntry> AllLogs, List<LogEntry> Transitions, List<LogEntry> Failures) ParseLogStream(Stream stream, StringPool pool = null);
+        (List<LogEntry> NewEntries, int TotalCount) ParseLogStreamSkipExisting(Stream stream, int skipCount);
+        IPluginLoader GetPluginLoader();
     }
 }

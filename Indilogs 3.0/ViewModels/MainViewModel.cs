@@ -3,6 +3,7 @@ using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Analysis;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Analysis;
+using IndiLogs_3._0.Services.Interfaces;
 using IndiLogs_3._0.Services.Charts;
 using IndiLogs_3._0.Views;
 using IndiLogs_3._0.ViewModels.Components;
@@ -63,12 +64,12 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand ToggleVisualModeCommand { get; }
 
         public ObservableCollection<LogEntry> MarkedAppLogs => CaseVM?.MarkedAppLogs;
-        private readonly LogFileService _logService;
-        private readonly LogColoringService _coloringService;
-        private readonly CsvExportService _csvService;
+        private readonly ILogFileService _logService;
+        private readonly ILogColoringService _coloringService;
+        private readonly ICsvExportService _csvService;
         private readonly DefaultConfigurationService _defaultConfigService = new DefaultConfigurationService();
         public DefaultConfigurationService DefaultConfigService => _defaultConfigService;
-        public LogColoringService ColoringService => _coloringService;
+        public ILogColoringService ColoringService => _coloringService;
 
         // Windows Instances
         private StatesWindow _statesWindow;
@@ -1395,10 +1396,15 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand ResetDefaultsCommand { get; }
 
         public MainViewModel()
+            : this(new LogFileService(new PluginLoader()), new LogColoringService(), new CsvExportService())
         {
-            _csvService = new CsvExportService();
-            _logService = new LogFileService(new PluginLoader());
-            _coloringService = new LogColoringService();
+        }
+
+        public MainViewModel(ILogFileService logService, ILogColoringService coloringService, ICsvExportService csvService)
+        {
+            _logService = logService;
+            _coloringService = coloringService;
+            _csvService = csvService;
             _isTimeSyncEnabled = false;
 
             // Initialize child ViewModels
