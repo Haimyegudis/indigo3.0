@@ -230,6 +230,15 @@ namespace IndiLogs_3._0.ViewModels
                 string fileName = Path.GetFileName(cleanName);
                 string destPath = Path.Combine(tempDir, fileName);
 
+                // Prevent ZIP Slip: verify resolved path is inside tempDir
+                string resolvedPath = Path.GetFullPath(destPath);
+                string resolvedDir = Path.GetFullPath(tempDir + Path.DirectorySeparatorChar);
+                if (!resolvedPath.StartsWith(resolvedDir, StringComparison.OrdinalIgnoreCase))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[DifferentLogs] Path traversal detected: {cleanName}");
+                    return null;
+                }
+
                 // Remove old file if it exists
                 if (File.Exists(destPath))
                 {

@@ -523,7 +523,8 @@ namespace IndiLogs_3._0.Services.Charts
             new System.Text.RegularExpressions.Regex(
                 @"STATE_(\w+)\s*-\s*(Enter|Exit)",
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase |
-                System.Text.RegularExpressions.RegexOptions.Compiled);
+                System.Text.RegularExpressions.RegexOptions.Compiled,
+                AppConstants.RegexTimeout);
 
         private StateData ParseMachineState(
             List<LogEntry> logs,

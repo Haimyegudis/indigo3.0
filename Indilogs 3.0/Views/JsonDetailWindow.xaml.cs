@@ -30,7 +30,7 @@ namespace IndiLogs_3._0.Views
 
             try
             {
-                var obj = JObject.Load(new JsonTextReader(new System.IO.StringReader(_jsonContent)) { MaxDepth = 128 });
+                var obj = JObject.Load(new JsonTextReader(new System.IO.StringReader(_jsonContent)) { MaxDepth = AppConstants.JsonMaxDepth });
 
                 // Get all leaf values with their full paths
                 foreach (var token in obj.Descendants().OfType<JValue>())

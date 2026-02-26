@@ -55,7 +55,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
                 {
                     string t = s?.Trim();
                     if (string.IsNullOrEmpty(t) || !t.StartsWith("{")) continue;
-                    try { JObject.Load(new JsonTextReader(new System.IO.StringReader(t)) { MaxDepth = 128 }); return true; }
+                    try { JObject.Load(new JsonTextReader(new System.IO.StringReader(t)) { MaxDepth = AppConstants.JsonMaxDepth }); return true; }
                     catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[JsonLogPlugin] JSON validation failed: {ex.Message}"); }
                 }
             }
@@ -101,7 +101,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
                     if (string.IsNullOrEmpty(line) || !line.StartsWith("{")) continue;
 
                     JObject obj;
-                    try { obj = JObject.Load(new JsonTextReader(new System.IO.StringReader(line)) { MaxDepth = 128 }); }
+                    try { obj = JObject.Load(new JsonTextReader(new System.IO.StringReader(line)) { MaxDepth = AppConstants.JsonMaxDepth }); }
                     catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[JsonLogPlugin] JSON parse failed: {ex.Message}"); continue; }
 
                     // Detect format on first valid object

@@ -134,8 +134,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
 
             // Build URL: http://localhost/{name}/login?next=%2F{name}%2Fapp%2Fhome
-            string nextParam = Uri.EscapeDataString($"/{machineName}/app/home");
-            string url       = $"http://localhost/{machineName}/login?next={nextParam}";
+            string escapedMachineName = Uri.EscapeDataString(machineName);
+            string nextParam = Uri.EscapeDataString($"/{escapedMachineName}/app/home");
+            string url       = $"http://localhost/{escapedMachineName}/login?next={nextParam}";
             OpenUrl(url);
         }
 

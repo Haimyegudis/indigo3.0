@@ -79,8 +79,18 @@ namespace IndiLogs_3._0.Views
                     try
                     {
                         // Create a temporary database file (keep it for searches)
-                        _tempDbPath = Path.Combine(Path.GetTempPath(), $"temp_browse_{Guid.NewGuid()}.db");
-                        File.WriteAllBytes(_tempDbPath, _dbBytes);
+                        string tempPath = Path.Combine(Path.GetTempPath(), $"temp_browse_{Guid.NewGuid()}.db");
+                        try
+                        {
+                            File.WriteAllBytes(tempPath, _dbBytes);
+                        }
+                        catch
+                        {
+                            // Clean up on failure
+                            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+                            throw;
+                        }
+                        _tempDbPath = tempPath;
 
                         using (var connection = new SQLiteConnection($"Data Source={_tempDbPath};Version=3;"))
                         {
@@ -258,7 +268,7 @@ namespace IndiLogs_3._0.Views
                             {
                                 try
                                 {
-                                    dataObj[col.ColumnName] = JToken.Load(new JsonTextReader(new System.IO.StringReader(strValue)) { MaxDepth = 128 });
+                                    dataObj[col.ColumnName] = JToken.Load(new JsonTextReader(new System.IO.StringReader(strValue)) { MaxDepth = AppConstants.JsonMaxDepth });
                                 }
                                 catch
                                 {
@@ -366,7 +376,7 @@ namespace IndiLogs_3._0.Views
                     {
                         try
                         {
-                            var obj = JObject.Load(new JsonTextReader(new System.IO.StringReader(jsonValue)) { MaxDepth = 128 });
+                            var obj = JObject.Load(new JsonTextReader(new System.IO.StringReader(jsonValue)) { MaxDepth = AppConstants.JsonMaxDepth });
                             // Get all leaf values (JValue) and their paths
                             var descendants = obj.Descendants().OfType<JValue>().ToList();
                             foreach (var token in descendants)
@@ -417,7 +427,7 @@ namespace IndiLogs_3._0.Views
                     {
                         try
                         {
-                            var obj = JObject.Load(new JsonTextReader(new System.IO.StringReader(jsonValue)) { MaxDepth = 128 });
+                            var obj = JObject.Load(new JsonTextReader(new System.IO.StringReader(jsonValue)) { MaxDepth = AppConstants.JsonMaxDepth });
                             foreach (var token in obj.Descendants().OfType<JValue>())
                             {
                                 // Use sanitized column name to match the column we created
@@ -556,7 +566,7 @@ namespace IndiLogs_3._0.Views
                     {
                         try
                         {
-                            var token = JToken.Load(new JsonTextReader(new System.IO.StringReader(jsonValue)) { MaxDepth = 128 });
+                            var token = JToken.Load(new JsonTextReader(new System.IO.StringReader(jsonValue)) { MaxDepth = AppConstants.JsonMaxDepth });
                             if (token is JObject obj)
                             {
                                 foreach (var prop in obj.Properties())
@@ -800,7 +810,7 @@ namespace IndiLogs_3._0.Views
             var paths = new HashSet<string>();
             try
             {
-                var token = JToken.Load(new JsonTextReader(new System.IO.StringReader(json)) { MaxDepth = 128 });
+                var token = JToken.Load(new JsonTextReader(new System.IO.StringReader(json)) { MaxDepth = AppConstants.JsonMaxDepth });
                 CollectPaths(token, "", paths);
             }
             catch (Exception ex)
@@ -844,7 +854,7 @@ namespace IndiLogs_3._0.Views
             var result = new Dictionary<string, string>();
             try
             {
-                var token = JToken.Load(new JsonTextReader(new System.IO.StringReader(json)) { MaxDepth = 128 });
+                var token = JToken.Load(new JsonTextReader(new System.IO.StringReader(json)) { MaxDepth = AppConstants.JsonMaxDepth });
                 FlattenToken(token, "", result);
             }
             catch (Exception ex)

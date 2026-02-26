@@ -76,12 +76,15 @@ namespace IndiLogs_3._0.ViewModels.Components
         private int _lastParsedLogCount = 0;
 
         // Polling state
-        private bool _isRefreshActive;
+        private volatile bool _isRefreshActive;
         private long _lastFileSize = 0;
 
         // Local cache: avoids re-reading the entire file from network on every poll.
         // We keep a local copy and only fetch new bytes from the network each poll.
         private MemoryStream _cachedStream;
+
+        // Lock for thread-safe access to _cachedStream, _lastFileSize, _lastParsedLogCount
+        private readonly object _streamLock = new object();
 
         // Lock for thread-safe collection access
         private readonly object _collectionLock = new object();
@@ -167,11 +170,14 @@ namespace IndiLogs_3._0.ViewModels.Components
             _liveCts?.Dispose();
             _liveCts = null;
 
-            // Dispose cached stream
-            if (_cachedStream != null)
+            // Dispose cached stream (synchronized with polling loop)
+            lock (_streamLock)
             {
-                _cachedStream.Dispose();
-                _cachedStream = null;
+                if (_cachedStream != null)
+                {
+                    _cachedStream.Dispose();
+                    _cachedStream = null;
+                }
             }
 
             // Remove synthetic live session
@@ -559,8 +565,11 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _liveCts?.Dispose();
                 _liveCts = null;
 
-                _cachedStream?.Dispose();
-                _cachedStream = null;
+                lock (_streamLock)
+                {
+                    _cachedStream?.Dispose();
+                    _cachedStream = null;
+                }
             }
             base.Dispose(disposing);
         }

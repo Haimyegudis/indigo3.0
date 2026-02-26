@@ -54,7 +54,7 @@ namespace IndiLogs_3._0.Views
 
             try
             {
-                var obj = JToken.Load(new JsonTextReader(new System.IO.StringReader(json)) { MaxDepth = 128 });
+                var obj = JToken.Load(new JsonTextReader(new System.IO.StringReader(json)) { MaxDepth = AppConstants.JsonMaxDepth });
                 return obj.ToString(Formatting.Indented);
             }
             catch (Exception ex)
