@@ -29,8 +29,9 @@ namespace IndiLogs_3._0.Services
                     CurrentDefaults = JsonConvert.DeserializeObject<DefaultConfiguration>(json, new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth });
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                AppLogger.Error("Failed to load default configuration", ex);
                 CurrentDefaults = null;
             }
         }

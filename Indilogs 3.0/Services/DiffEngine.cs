@@ -31,9 +31,9 @@ namespace IndiLogs_3._0.Services
                     {
                         _maskRegex = new Regex(value, RegexOptions.Compiled | RegexOptions.IgnoreCase, TimeSpan.FromSeconds(2));
                     }
-                    catch (ArgumentException)
+                    catch (ArgumentException ex)
                     {
-                        // Invalid regex - leave _maskRegex as null
+                        AppLogger.Warn($"Invalid mask regex '{value}': {ex.Message}");
                     }
                 }
             }
@@ -56,8 +56,9 @@ namespace IndiLogs_3._0.Services
             {
                 return _maskRegex.Replace(text, "#");
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Warn($"Mask regex failed on text (length={text.Length}): {ex.Message}");
                 return text;
             }
         }
