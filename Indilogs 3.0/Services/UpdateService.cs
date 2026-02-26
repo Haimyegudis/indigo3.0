@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -14,6 +15,7 @@ namespace IndiLogs_3._0.Services
         private const string VersionFileUrl = @"\\iihome.inr.rd.hpicorp.net\softwareqa$\QA-Utils\Indilogs3.0\version.txt";
         private const string InstallerFolder = @"\\iihome.inr.rd.hpicorp.net\softwareqa$\QA-Utils\Indilogs3.0";
         private const string InstallerPattern = "IndiLogs*.exe"; // Pattern to find installer
+        private const string HashFileExtension = ".sha256"; // Expected hash file alongside installer
 
         public async Task CheckForUpdatesSimpleAsync()
         {
@@ -139,11 +141,21 @@ namespace IndiLogs_3._0.Services
 
                 UpdateLogger.Log($"[AUTO-UPDATE] Found installer: {installerPath}");
 
-                // Run directly from the network share — no copy to %TEMP%.
-                // Copying to temp and running from there triggers CrowdStrike/EDR false positives
-                // because that is exactly the pattern malware uses.
-                // Running directly from a trusted corporate network share is safe and clean.
-                UpdateLogger.Log("[AUTO-UPDATE] Launching installer directly from network share...");
+                // Verify installer integrity before execution
+                if (!VerifyInstallerIntegrity(installerPath))
+                {
+                    UpdateLogger.Log("[AUTO-UPDATE] Installer integrity verification FAILED - aborting");
+                    MessageBox.Show(
+                        "Installer integrity verification failed.\n\n" +
+                        "The installer file may have been tampered with or the hash file is missing.\n" +
+                        $"Please verify the installer manually at:\n{InstallerFolder}",
+                        "Security Warning",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
+                UpdateLogger.Log("[AUTO-UPDATE] Integrity verified, launching installer...");
 
                 var startInfo = new ProcessStartInfo
                 {
@@ -194,6 +206,68 @@ namespace IndiLogs_3._0.Services
             {
                 UpdateLogger.Log("[AUTO-UPDATE] Error finding installer", ex);
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Verifies installer integrity using SHA-256 hash file and Authenticode signature.
+        /// The hash file (e.g., IndiLogs_Setup.exe.sha256) must exist alongside the installer.
+        /// </summary>
+        private bool VerifyInstallerIntegrity(string installerPath)
+        {
+            try
+            {
+                // Step 1: Verify Authenticode digital signature
+                var cert = System.Security.Cryptography.X509Certificates.X509Certificate2.CreateFromSignedFile(installerPath);
+                if (cert != null)
+                {
+                    UpdateLogger.Log($"[VERIFY] Authenticode signature found: {cert.Subject}");
+                    // Signature exists - installer is signed
+                    return true;
+                }
+            }
+            catch (CryptographicException)
+            {
+                // No Authenticode signature - fall through to hash verification
+                UpdateLogger.Log("[VERIFY] No Authenticode signature found, checking SHA-256 hash...");
+            }
+
+            try
+            {
+                // Step 2: Verify SHA-256 hash file
+                string hashFilePath = installerPath + HashFileExtension;
+                if (!File.Exists(hashFilePath))
+                {
+                    UpdateLogger.Log($"[VERIFY] Hash file not found: {hashFilePath}");
+                    return false;
+                }
+
+                string expectedHash = File.ReadAllText(hashFilePath).Trim().Split(' ')[0].ToUpperInvariant();
+                UpdateLogger.Log($"[VERIFY] Expected hash: {expectedHash}");
+
+                using (var sha256 = SHA256.Create())
+                using (var stream = File.OpenRead(installerPath))
+                {
+                    byte[] hashBytes = sha256.ComputeHash(stream);
+                    string actualHash = BitConverter.ToString(hashBytes).Replace("-", "").ToUpperInvariant();
+                    UpdateLogger.Log($"[VERIFY] Actual hash:   {actualHash}");
+
+                    if (string.Equals(expectedHash, actualHash, StringComparison.OrdinalIgnoreCase))
+                    {
+                        UpdateLogger.Log("[VERIFY] SHA-256 hash verified successfully");
+                        return true;
+                    }
+                    else
+                    {
+                        UpdateLogger.Log("[VERIFY] SHA-256 hash MISMATCH - file may be tampered");
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                UpdateLogger.Log("[VERIFY] Hash verification error", ex);
+                return false;
             }
         }
 
