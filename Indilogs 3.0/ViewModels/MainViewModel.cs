@@ -2238,7 +2238,7 @@ namespace IndiLogs_3._0.ViewModels
                 WindowManager.OpenWindow(new LogDetailsWindow(log));
             }
         }
-        public async void SortAppLogs(string sortBy, bool ascending)
+        public async Task SortAppLogs(string sortBy, bool ascending)
         {
             try
             {
@@ -2853,7 +2853,7 @@ namespace IndiLogs_3._0.ViewModels
                 catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[MainVM] Clipboard copy failed: {ex.Message}"); }
             }
         }
-        public async void OnFilesDropped(string[] files)
+        public async Task OnFilesDropped(string[] files)
         {
             try
             {

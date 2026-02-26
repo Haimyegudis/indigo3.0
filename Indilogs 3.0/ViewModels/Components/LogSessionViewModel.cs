@@ -318,7 +318,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogSessionViewModel.LoadFile] Unhandled: {ex.Message}"); }
         }
 
-        public async void ProcessFiles(string[] filePaths, Action<LogSessionData> onLoadComplete = null)
+        public async Task ProcessFiles(string[] filePaths, Action<LogSessionData> onLoadComplete = null)
         {
             bool isWatchableFile = false; // Track if we should start auto-refresh after loading
 

@@ -516,7 +516,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        public async void ApplyConfiguration(SavedConfiguration c)
+        public async Task ApplyConfiguration(SavedConfiguration c)
         {
             try
             {
