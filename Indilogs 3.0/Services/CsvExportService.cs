@@ -11,7 +11,7 @@ using System.Windows;
 
 namespace IndiLogs_3._0.Services
 {
-    public class CsvExportService
+    public class CsvExportService : Interfaces.ICsvExportService
     {
         private readonly string[] _axisParams = new[] { "SetP", "ActP", "SetV", "ActV", "Trq", "LagErr", "Trigger" };
         private readonly string[] _chStepParams = new[] { "StepMessage", "SubStepNo", "CHObjType", "PrevStepNo", "DiffTime", "State", "Parent", "SubsysID" };

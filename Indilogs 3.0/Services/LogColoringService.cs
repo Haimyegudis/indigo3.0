@@ -9,7 +9,7 @@ using System.Windows.Media;
 
 namespace IndiLogs_3._0.Services
 {
-    public class LogColoringService
+    public class LogColoringService : Interfaces.ILogColoringService
     {
         // Cache compiled Regex to avoid recompiling every line
         private readonly ConcurrentDictionary<string, Regex> _regexCache = new ConcurrentDictionary<string, Regex>();

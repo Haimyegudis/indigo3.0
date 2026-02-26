@@ -3,6 +3,7 @@ using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Charts;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Charts;
+using IndiLogs_3._0.Services.Interfaces;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using System;
@@ -23,7 +24,7 @@ namespace IndiLogs_3._0.ViewModels
     public class ExportConfigurationViewModel : ViewModelBase
     {
         private readonly LogSessionData _sessionData;
-        private readonly CsvExportService _csvService;
+        private readonly ICsvExportService _csvService;
 
         // S4-5 mode: binary APP — hides AXIS, CHStep, Thread columns (show only IO)
         public bool IsBinaryApp { get; private set; }
@@ -298,7 +299,7 @@ namespace IndiLogs_3._0.ViewModels
 
         public bool CanOpenInViewer => !string.IsNullOrEmpty(LastExportedFilePath) && File.Exists(LastExportedFilePath);
 
-        public ExportConfigurationViewModel(LogSessionData sessionData, CsvExportService csvService)
+        public ExportConfigurationViewModel(LogSessionData sessionData, ICsvExportService csvService)
         {
             _sessionData = sessionData;
             _csvService = csvService;

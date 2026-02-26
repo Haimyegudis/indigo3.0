@@ -2,6 +2,7 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using IndiLogs_3._0;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
+using IndiLogs_3._0.Services.Interfaces;
 using IndiLogs_3._0.Views;
 using Microsoft.Win32;
 using Newtonsoft.Json;
@@ -26,7 +27,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly MainViewModel _parent;
         private readonly LogSessionViewModel _sessionVM;
         private readonly FilterSearchViewModel _filterVM;
-        private readonly LogColoringService _coloringService;
+        private readonly ILogColoringService _coloringService;
 
         // Case management
         private CaseFile _currentCase = null;

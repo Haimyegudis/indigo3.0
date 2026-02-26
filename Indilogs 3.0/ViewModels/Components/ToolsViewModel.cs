@@ -26,7 +26,7 @@ namespace IndiLogs_3._0.ViewModels.Components
     public class ToolsViewModel : ViewModelBase
     {
         private readonly MainViewModel _parent;
-        private readonly CsvExportService _csvService;
+        private readonly ICsvExportService _csvService;
         private readonly IWindowManager _windowManager;
 
         // Windows Instances
@@ -55,7 +55,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand ZoomOutCommand { get; }
         public ICommand ViewLogDetailsCommand { get; }
 
-        public ToolsViewModel(MainViewModel parent, CsvExportService csvService)
+        public ToolsViewModel(MainViewModel parent, ICsvExportService csvService)
         {
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
             _csvService = csvService ?? throw new ArgumentNullException(nameof(csvService));
