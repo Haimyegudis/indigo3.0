@@ -295,6 +295,7 @@
     <Compile Include="Services\CustomLiveLogReader.cs" />
     <Compile Include="Services\GlobalGrepService.cs" />
     <Compile Include="Services\SystabParserService.cs" />
+    <Compile Include="Services\AppLogger.cs" />
     <Compile Include="Services\TabTearOffManager.cs" />
     <Compile Include="Services\WindowManager.cs" />
     <Compile Include="Services\Charts\ChartDataService.cs" />
@@ -308,8 +309,15 @@
     <Compile Include="Services\BuiltInPlugins\IndigoAppLogPlugin.cs" />
     <Compile Include="Services\BuiltInPlugins\JsonLogPlugin.cs" />
     <Compile Include="Services\BuiltInPlugins\Log4NetPlugin.cs" />
+    <Compile Include="Services\Interfaces\ICsvExportService.cs" />
+    <Compile Include="Services\Interfaces\IChartDataTransferService.cs" />
+    <Compile Include="Services\Interfaces\IGlobalGrepService.cs" />
+    <Compile Include="Services\Interfaces\ILogColoringService.cs" />
     <Compile Include="Services\Interfaces\ILogFileService.cs" />
     <Compile Include="Services\Interfaces\IPluginLoader.cs" />
+    <Compile Include="Services\Interfaces\ITabTearOffManager.cs" />
+    <Compile Include="Services\Interfaces\IUpdateService.cs" />
+    <Compile Include="Services\Interfaces\IWindowManager.cs" />
     <Compile Include="Services\PluginLoader.cs" />
     <Compile Include="ViewModels\Components\CaseManagementViewModel.cs" />
     <Compile Include="ViewModels\Components\ConfigExplorerViewModel.cs" />
