@@ -576,7 +576,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     // Cleanup temp file
                     if (tempDbPath != null && File.Exists(tempDbPath))
                     {
-                        try { File.Delete(tempDbPath); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ConfigExplorer] Temp DB cleanup failed: {ex.Message}"); }
+                        try { File.Delete(tempDbPath); } catch (Exception ex) { AppLogger.Error("Temp DB cleanup failed", ex); }
                     }
 
                     return root;

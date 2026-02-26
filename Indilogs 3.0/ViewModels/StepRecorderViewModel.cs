@@ -1,3 +1,4 @@
+using IndiLogs_3._0.Services;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -359,7 +360,7 @@ namespace IndiLogs_3._0.ViewModels
                     e.FullName.Replace('\\', '/').StartsWith("IndigoLogs/ISR/",
                         StringComparison.OrdinalIgnoreCase));
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[StepRecorderViewModel] ZipHasIsrFolder failed: {ex.Message}"); return false; }
+            catch (Exception ex) { AppLogger.Error("ZipHasIsrFolder failed", ex); return false; }
         }
 
         // ─── Helpers ──────────────────────────────────────────────────────────

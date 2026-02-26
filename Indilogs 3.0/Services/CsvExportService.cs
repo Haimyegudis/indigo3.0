@@ -469,7 +469,7 @@ namespace IndiLogs_3._0.Services
                             }
                         }
                     }
-                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CsvExport] Parse failed: {ex.Message}"); }
+                    catch (Exception ex) { AppLogger.Error("Parse failed", ex); }
                 }
                 // A2: AxM - Optimized AxisMon pattern (20.01.2026)
                 // AxM: SubsysID,MotorID,SetP=val,ActP=val,...,LagE=val,trigger
@@ -525,7 +525,7 @@ namespace IndiLogs_3._0.Services
                             }
                         }
                     }
-                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CsvExport] Parse failed: {ex.Message}"); }
+                    catch (Exception ex) { AppLogger.Error("Parse failed", ex); }
                 }
                 // B: IO_Mon - Current pattern
                 // IO_Mon: SubsytemID, SimbolName=value
@@ -617,7 +617,7 @@ namespace IndiLogs_3._0.Services
                             }
                         }
                     }
-                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CsvExport] Parse failed: {ex.Message}"); }
+                    catch (Exception ex) { AppLogger.Error("Parse failed", ex); }
                 }
                 // B2: IO - Optimized IO_Mon pattern (20.01.2026)
                 // IO: SubsytemID,SimbolName=value           (if eIoStatus = Operational)
@@ -711,7 +711,7 @@ namespace IndiLogs_3._0.Services
                             }
                         }
                     }
-                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CsvExport] Parse failed: {ex.Message}"); }
+                    catch (Exception ex) { AppLogger.Error("Parse failed", ex); }
                 }
                 // C+D: CHStep messages - handles both Machine State (PlcMngr) and regular CHStep
                 else if (msg.StartsWith("CHStep:", StringComparison.OrdinalIgnoreCase))

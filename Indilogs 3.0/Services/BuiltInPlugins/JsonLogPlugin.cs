@@ -13,6 +13,7 @@
  */
 
 using IndiLogs.PluginAPI;
+using IndiLogs_3._0.Services;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -56,7 +57,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
                     string t = s?.Trim();
                     if (string.IsNullOrEmpty(t) || !t.StartsWith("{")) continue;
                     try { JObject.Load(new JsonTextReader(new System.IO.StringReader(t)) { MaxDepth = AppConstants.JsonMaxDepth }); return true; }
-                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[JsonLogPlugin] JSON validation failed: {ex.Message}"); }
+                    catch (Exception ex) { AppLogger.Error("JSON validation failed", ex); }
                 }
             }
             // If no sample lines, accept by extension alone
@@ -102,7 +103,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
 
                     JObject obj;
                     try { obj = JObject.Load(new JsonTextReader(new System.IO.StringReader(line)) { MaxDepth = AppConstants.JsonMaxDepth }); }
-                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[JsonLogPlugin] JSON parse failed: {ex.Message}"); continue; }
+                    catch (Exception ex) { AppLogger.Error("JSON parse failed", ex); continue; }
 
                     // Detect format on first valid object
                     if (format == JsonFormat.Unknown)
@@ -159,7 +160,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
                     default:                  return ParseGeneric(obj);
                 }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[JsonLogPlugin] ParseEntry failed: {ex.Message}"); return null; }
+            catch (Exception ex) { AppLogger.Error("ParseEntry failed", ex); return null; }
         }
 
         private static LogEntryDto ParseWinston(JObject o)

@@ -7,6 +7,7 @@ using System.Windows.Documents;
 using System.Windows.Media;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using IndiLogs_3._0.Services;
 
 namespace IndiLogs_3._0.Views
 {
@@ -42,7 +43,7 @@ namespace IndiLogs_3._0.Views
             foreach (var file in _tempFiles)
             {
                 try { if (File.Exists(file)) File.Delete(file); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[RowDetailWindow] Temp file cleanup failed: {ex.Message}"); }
+                catch (Exception ex) { AppLogger.Error("Temp file cleanup failed", ex); }
             }
             _tempFiles.Clear();
         }

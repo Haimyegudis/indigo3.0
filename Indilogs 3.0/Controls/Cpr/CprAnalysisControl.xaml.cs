@@ -7,6 +7,7 @@ using System.Windows.Media;
 using IndiLogs_3._0.Models.Cpr;
 using IndiLogs_3._0.ViewModels;
 using Microsoft.Win32;
+using IndiLogs_3._0.Services;
 
 namespace IndiLogs_3._0.Controls.Cpr
 {
@@ -438,7 +439,7 @@ namespace IndiLogs_3._0.Controls.Cpr
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[CprAnalysisControl] Updating detached window theme failed: {ex.Message}");
+                    AppLogger.Error("Updating detached window theme failed", ex);
                 }
             }
         }
@@ -637,7 +638,7 @@ namespace IndiLogs_3._0.Controls.Cpr
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[CprAnalysisControl] UpdateChartTheme failed: {ex.Message}");
+                AppLogger.Error("UpdateChartTheme failed", ex);
             }
         }
 
@@ -653,7 +654,7 @@ namespace IndiLogs_3._0.Controls.Cpr
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[CprAnalysisControl] TryGetColor failed for key '{resourceKey}': {ex.Message}");
+                AppLogger.Error($"TryGetColor failed for key '{resourceKey}'", ex);
             }
             return null;
         }

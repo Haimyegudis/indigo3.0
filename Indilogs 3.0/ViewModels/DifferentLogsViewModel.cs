@@ -235,7 +235,7 @@ namespace IndiLogs_3._0.ViewModels
                 string resolvedDir = Path.GetFullPath(tempDir + Path.DirectorySeparatorChar);
                 if (!resolvedPath.StartsWith(resolvedDir, StringComparison.OrdinalIgnoreCase))
                 {
-                    System.Diagnostics.Debug.WriteLine($"[DifferentLogs] Path traversal detected: {cleanName}");
+                    AppLogger.Warn($"Path traversal detected: {cleanName}");
                     return null;
                 }
 
@@ -243,7 +243,7 @@ namespace IndiLogs_3._0.ViewModels
                 if (File.Exists(destPath))
                 {
                     try { File.SetAttributes(destPath, FileAttributes.Normal); File.Delete(destPath); }
-                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[DifferentLogsViewModel] File delete failed: {ex.Message}"); destPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N") + "_" + fileName); }
+                    catch (Exception ex) { AppLogger.Error("File delete failed", ex); destPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N") + "_" + fileName); }
                 }
 
                 using var archive = ZipFile.OpenRead(zipPath);
@@ -255,7 +255,7 @@ namespace IndiLogs_3._0.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[DifferentLogs] Single-entry extraction failed: {ex.Message}");
+                AppLogger.Error("Single-entry extraction failed", ex);
                 return null;
             }
         }
@@ -286,7 +286,7 @@ namespace IndiLogs_3._0.ViewModels
             var plugin = _allPlugins.FirstOrDefault(p =>
             {
                 try { return p.CanHandle(fileName, sampleLines); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[DifferentLogsViewModel] CanHandle failed: {ex.Message}"); return false; }
+                catch (Exception ex) { AppLogger.Error("CanHandle failed", ex); return false; }
             });
 
             if (plugin == null)
@@ -299,7 +299,7 @@ namespace IndiLogs_3._0.ViewModels
 
             // Apply column definitions before data arrives so DataGrid rebuilds
             IReadOnlyList<PluginColumnDef> pluginCols;
-            try { pluginCols = plugin.GetColumns(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[DifferentLogsViewModel] GetColumns failed: {ex.Message}"); pluginCols = null; }
+            try { pluginCols = plugin.GetColumns(); } catch (Exception ex) { AppLogger.Error("GetColumns failed", ex); pluginCols = null; }
             Columns = (pluginCols != null && pluginCols.Count > 0) ? pluginCols : BuildDefaultColumns();
 
             // Parse in background
@@ -368,12 +368,12 @@ namespace IndiLogs_3._0.ViewModels
             string fileName = Path.GetFileName(filePath);
             string[] sampleLines;
             try { sampleLines = ReadSampleLines(filePath, 30); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[DifferentLogsViewModel] ReadSampleLines failed: {ex.Message}"); return false; }
+            catch (Exception ex) { AppLogger.Error("ReadSampleLines failed", ex); return false; }
 
             return _allPlugins.Any(p =>
             {
                 try { return p.CanHandle(fileName, sampleLines); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[DifferentLogsViewModel] CanHandle failed: {ex.Message}"); return false; }
+                catch (Exception ex) { AppLogger.Error("CanHandle failed", ex); return false; }
             });
         }
 

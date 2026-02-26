@@ -98,7 +98,7 @@ namespace IndiLogs_3._0.Services
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[PluginLoader] Creating plugins folder failed: {ex.Message}");
+                    AppLogger.Error("Creating plugins folder failed", ex);
                 }
             }
 
@@ -121,14 +121,14 @@ namespace IndiLogs_3._0.Services
                     {
                         if (!VerifyPluginAssembly(dll))
                         {
-                            System.Diagnostics.Debug.WriteLine($"[PluginLoader] Skipping unsigned/unverified plugin: {Path.GetFileName(dll)}");
+                            AppLogger.Warn($"Skipping unsigned/unverified plugin: {Path.GetFileName(dll)}");
                             continue;
                         }
                         LoadPluginsFromAssembly(dll);
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[PluginLoader] Loading plugins from assembly '{System.IO.Path.GetFileName(dll)}' failed: {ex.Message}");
+                        AppLogger.Error($"Loading plugins from assembly '{System.IO.Path.GetFileName(dll)}' failed", ex);
                     }
                 }
             }
@@ -156,7 +156,7 @@ namespace IndiLogs_3._0.Services
             string allowUnsigned = Environment.GetEnvironmentVariable("INDILOGS_ALLOW_UNSIGNED_PLUGINS");
             if (allowUnsigned == "1")
             {
-                System.Diagnostics.Debug.WriteLine($"[PluginLoader] Dev mode: allowing unsigned plugin {Path.GetFileName(dllPath)}");
+                AppLogger.Info($"Dev mode: allowing unsigned plugin {Path.GetFileName(dllPath)}");
                 return true;
             }
 
@@ -166,7 +166,7 @@ namespace IndiLogs_3._0.Services
                 var cert = X509Certificate2.CreateFromSignedFile(dllPath);
                 if (cert != null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[PluginLoader] Plugin signed by: {cert.Subject}");
+                    AppLogger.Info($"Plugin signed by: {cert.Subject}");
                     return true;
                 }
             }
@@ -182,7 +182,7 @@ namespace IndiLogs_3._0.Services
                 byte[] publicKey = asmName.GetPublicKeyToken();
                 if (publicKey != null && publicKey.Length > 0)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[PluginLoader] Plugin has strong name: {asmName.Name}");
+                    AppLogger.Info($"Plugin has strong name: {asmName.Name}");
                     return true;
                 }
             }
@@ -191,7 +191,7 @@ namespace IndiLogs_3._0.Services
                 // Cannot read assembly name
             }
 
-            System.Diagnostics.Debug.WriteLine($"[PluginLoader] REJECTED unsigned plugin: {Path.GetFileName(dllPath)}");
+            AppLogger.Warn($"REJECTED unsigned plugin: {Path.GetFileName(dllPath)}");
             return false;
         }
 
@@ -215,7 +215,7 @@ namespace IndiLogs_3._0.Services
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[PluginLoader] Instantiating plugin type '{type.FullName}' failed: {ex.Message}");
+                    AppLogger.Error($"Instantiating plugin type '{type.FullName}' failed", ex);
                 }
             }
         }

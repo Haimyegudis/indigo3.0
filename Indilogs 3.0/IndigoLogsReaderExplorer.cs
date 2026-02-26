@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using IndiLogs_3._0.Services;
 
 public class IndigoLogsReaderExplorer
 {
@@ -94,7 +95,7 @@ public class IndigoLogsReaderTests
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[IndigoLogsReaderTests] Reading log position failed: {ex.Message}");
+                        AppLogger.Error("Reading log position failed", ex);
                     }
 
                     count++;
@@ -103,7 +104,7 @@ public class IndigoLogsReaderTests
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[IndigoLogsReaderTests] TestPositionTracking failed: {ex.Message}");
+            AppLogger.Error("TestPositionTracking failed", ex);
         }
     }
 
@@ -144,7 +145,7 @@ public class IndigoLogsReaderTests
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[IndigoLogsReaderTests] Reading from seeked position failed: {ex.Message}");
+                            AppLogger.Error("Reading from seeked position failed", ex);
                         }
                     }
                 }
@@ -152,7 +153,7 @@ public class IndigoLogsReaderTests
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[IndigoLogsReaderTests] TestStreamPositionSeeking failed: {ex.Message}");
+            AppLogger.Error("TestStreamPositionSeeking failed", ex);
         }
     }
 }

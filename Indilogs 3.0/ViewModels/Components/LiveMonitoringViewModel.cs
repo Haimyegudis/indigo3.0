@@ -295,7 +295,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[LIVE] Cannot access file: {ex.Message}");
+                    AppLogger.Error("Cannot access file", ex);
                     return;
                 }
 
@@ -344,13 +344,13 @@ namespace IndiLogs_3._0.ViewModels.Components
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"[LIVE] Cache update error: {ex.Message}");
+                        AppLogger.Error("Cache update error", ex);
                     }
                 });
 
                 if (!cacheUpdated)
                 {
-                    Debug.WriteLine("[LIVE] Cache not updated (network error or no new data)");
+                    AppLogger.Info("Cache not updated (network error or no new data)");
                     return;
                 }
 
@@ -388,13 +388,13 @@ namespace IndiLogs_3._0.ViewModels.Components
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"[LIVE] Parse error: {ex.Message}");
+                        AppLogger.Error("Parse error", ex);
                         newLogs = new List<LogEntry>();
                     }
                 });
 
                 long parseMs = sw.ElapsedMilliseconds - cacheMs;
-                Debug.WriteLine($"[LIVE] Cache: {cacheMs}ms ({deltaBytes:N0} bytes) | Parse: {parseMs}ms (total={totalParsed:N0}, new={newLogs?.Count ?? 0})");
+                AppLogger.Info($"Cache: {cacheMs}ms ({deltaBytes:N0} bytes) | Parse: {parseMs}ms (total={totalParsed:N0}, new={newLogs?.Count ?? 0})");
 
                 // ── Update UI ─────────────────────────────────────────────────
                 if (newLogs != null && newLogs.Count > 0)
@@ -409,7 +409,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                             if (_caseVM.MainColoringRules != null && _caseVM.MainColoringRules.Any())
                                 await _coloringService.ApplyCustomColoringAsync(logsForColoring, _caseVM.MainColoringRules);
                         }
-                        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LiveMonitoring] Coloring failed: {ex.Message}"); }
+                        catch (Exception ex) { AppLogger.Error("Coloring failed", ex); }
                     });
 
                     var logsToAdd = newLogs;
@@ -440,7 +440,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                             }
                             catch (Exception ex)
                             {
-                                Debug.WriteLine($"[LIVE] UI update error: {ex.Message}");
+                                AppLogger.Error("UI update error", ex);
                             }
                         }
                     }, System.Windows.Threading.DispatcherPriority.DataBind);
@@ -455,7 +455,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[LIVE] RefreshLogsOptimized error: {ex.Message}");
+                AppLogger.Error("RefreshLogsOptimized error", ex);
             }
             finally
             {
@@ -476,7 +476,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[LIVE] Polling error: {ex.Message}");
+                    AppLogger.Error("Polling error", ex);
                 }
 
                 try
@@ -536,11 +536,11 @@ namespace IndiLogs_3._0.ViewModels.Components
                         fs.CopyTo(_cachedStream);
                         _lastFileSize = fs.Length;
                     }
-                    Debug.WriteLine($"[LIVE] Cache pre-filled: {_lastFileSize:N0} bytes in {sw.ElapsedMilliseconds}ms");
+                    AppLogger.Info($"Cache pre-filled: {_lastFileSize:N0} bytes in {sw.ElapsedMilliseconds}ms");
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[LIVE] Cache pre-fill error: {ex.Message}");
+                    AppLogger.Error("Cache pre-fill error", ex);
                     _lastFileSize = 0;
                     // Cache will be built on first poll cycle instead
                 }

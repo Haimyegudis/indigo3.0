@@ -11,6 +11,7 @@ using IndiLogs_3._0;
 using Newtonsoft.Json;
 using IndiLogs_3._0.Interfaces;
 using IndiLogs_3._0.Models;
+using IndiLogs_3._0.Services;
 
 namespace IndiLogs_3._0.Controls
 {
@@ -315,7 +316,7 @@ namespace IndiLogs_3._0.Controls
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[AppLogsTabControl] Saving column settings failed: {ex.Message}");
+                AppLogger.Error("Saving column settings failed", ex);
             }
         }
 
@@ -352,7 +353,7 @@ namespace IndiLogs_3._0.Controls
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[AppLogsTabControl] Loading column settings failed: {ex.Message}");
+                AppLogger.Error("Loading column settings failed", ex);
             }
         }
 

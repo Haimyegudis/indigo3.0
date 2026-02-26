@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Charts;
+using IndiLogs_3._0.Services;
 
 namespace IndiLogs_3._0.Services.Charts
 {
@@ -270,7 +271,7 @@ namespace IndiLogs_3._0.Services.Charts
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[ChartDataTransferService] ParseIOSignals message parsing failed: {ex.Message}");
+                    AppLogger.Error("ParseIOSignals message parsing failed", ex);
                 }
             }
 
@@ -372,7 +373,7 @@ namespace IndiLogs_3._0.Services.Charts
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[ChartDataTransferService] ParseAxisSignals message parsing failed: {ex.Message}");
+                    AppLogger.Error("ParseAxisSignals message parsing failed", ex);
                 }
             }
 
@@ -469,7 +470,7 @@ namespace IndiLogs_3._0.Services.Charts
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[ChartDataTransferService] Extracting CHStep bracket data failed: {ex.Message}");
+                            AppLogger.Error("Extracting CHStep bracket data failed", ex);
                         }
 
                         // Build rich tooltip
@@ -505,7 +506,7 @@ namespace IndiLogs_3._0.Services.Charts
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[ChartDataTransferService] ParseCHStepStates message parsing failed: {ex.Message}");
+                    AppLogger.Error("ParseCHStepStates message parsing failed", ex);
                 }
             }
 
@@ -755,7 +756,7 @@ namespace IndiLogs_3._0.Services.Charts
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[ChartDataTransferService] ParseEvents message parsing failed: {ex.Message}");
+                    AppLogger.Error("ParseEvents message parsing failed", ex);
                 }
 
                 events.Add(new EventMarkerData

@@ -14,6 +14,7 @@ using IndiLogs_3._0.ViewModels;
 using IndiLogs_3._0.Views;
 using IndiLogs.PluginAPI;
 using Newtonsoft.Json;
+using IndiLogs_3._0.Services;
 
 namespace IndiLogs_3._0.Controls
 {
@@ -313,7 +314,7 @@ namespace IndiLogs_3._0.Controls
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[DifferentLogsTabControl] Saving column settings failed: {ex.Message}");
+                AppLogger.Error("Saving column settings failed", ex);
             }
         }
 
@@ -369,7 +370,7 @@ namespace IndiLogs_3._0.Controls
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[DifferentLogsTabControl] Restoring column settings failed: {ex.Message}");
+                AppLogger.Error("Restoring column settings failed", ex);
             }
         }
 
@@ -384,7 +385,7 @@ namespace IndiLogs_3._0.Controls
                            ?? new Dictionary<string, DiffColumnSettings>();
                 }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[DifferentLogsTabControl] Loading all column settings failed: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("Loading all column settings failed", ex); }
             return new Dictionary<string, DiffColumnSettings>();
         }
 

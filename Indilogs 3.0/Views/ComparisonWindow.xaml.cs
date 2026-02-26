@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using IndiLogs_3._0.Models;
+using IndiLogs_3._0.Services;
 using IndiLogs_3._0.ViewModels;
 
 namespace IndiLogs_3._0.Views
@@ -215,7 +216,7 @@ namespace IndiLogs_3._0.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[ComparisonWindow] GetEstimatedRowHeight failed: {ex.Message}");
+                AppLogger.Error("GetEstimatedRowHeight failed", ex);
             }
 
             return 25.0; // Default estimate

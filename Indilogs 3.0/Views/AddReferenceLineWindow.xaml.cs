@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using IndiLogs_3._0.Models.Charts;
 using SkiaSharp;
+using IndiLogs_3._0.Services;
 
 namespace IndiLogs_3._0.Views
 {
@@ -52,7 +53,7 @@ namespace IndiLogs_3._0.Views
                 {
                     ColorPreview.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString(colorHex));
                 }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[AddReferenceLine] Color preview failed: {ex.Message}"); }
+                catch (Exception ex) { AppLogger.Error("Color preview failed", ex); }
             }
         }
 

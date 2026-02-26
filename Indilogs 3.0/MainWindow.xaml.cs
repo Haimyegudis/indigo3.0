@@ -90,7 +90,7 @@ namespace IndiLogs_3._0
             {
                 SaveAllGridColumnSettings(this);
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[MainWindow] Saving grid column settings on close failed: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("Saving grid column settings on close failed", ex); }
 
             TabTearOffManager.ReattachAll();
             base.OnClosed(e);
@@ -528,7 +528,7 @@ namespace IndiLogs_3._0
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[MainWindow] MapsToLogRow scroll failed: {ex.Message}");
+                AppLogger.Error("MapsToLogRow scroll failed", ex);
                 _isProgrammaticScroll = false;
             }
         }
@@ -581,7 +581,7 @@ namespace IndiLogs_3._0
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[MainWindow] ScrollGridToBottom failed: {ex.Message}");
+                AppLogger.Error("ScrollGridToBottom failed", ex);
             }
         }
 
@@ -758,7 +758,7 @@ namespace IndiLogs_3._0
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[MainWindow] SaveScrollPositionForLog failed: {ex.Message}");
+                AppLogger.Error("SaveScrollPositionForLog failed", ex);
             }
         }
 
@@ -970,7 +970,7 @@ namespace IndiLogs_3._0
                 sb.AppendLine($"{time} {level} {thread} {msg}");
             }
             try { Clipboard.SetText(sb.ToString()); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[MainWindow] CopySelectedLogsToClipboard failed: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("CopySelectedLogsToClipboard failed", ex); }
         }
 
         private void SearchTextBox_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)

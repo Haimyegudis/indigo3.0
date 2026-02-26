@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using SkiaSharp;
 using System.Windows.Media;
+using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Charts;
 
 namespace IndiLogs_3._0.Models.Charts
@@ -61,7 +62,7 @@ namespace IndiLogs_3._0.Models.Charts
                         var wpfColor = (System.Windows.Media.Color)ColorConverter.ConvertFromString(value);
                         Color = new SKColor(wpfColor.R, wpfColor.G, wpfColor.B, wpfColor.A);
                     }
-                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChartModels] Color parse failed: {ex.Message}"); }
+                    catch (Exception ex) { AppLogger.Error("Color parse failed", ex); }
                 }
             }
         }

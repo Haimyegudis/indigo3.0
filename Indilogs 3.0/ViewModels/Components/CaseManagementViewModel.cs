@@ -604,7 +604,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             _sessionVM.IsBusy = false;
             _sessionVM.StatusMessage = "Configuration loaded successfully.";
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CaseManagementViewModel.ApplyConfiguration] Unhandled: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("ApplyConfiguration failed", ex); }
         }
 
         private void SaveCase(object parameter)
@@ -850,7 +850,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                                 var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(annotation.Color);
                                 matchingLog.CustomColor = color;
                             }
-                            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CaseManagement] Color restore failed: {ex.Message}"); }
+                            catch (Exception ex) { AppLogger.Error("Color restore failed", ex); }
                         }
 
                         annotationsRestored++;
@@ -927,7 +927,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     "Case Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
             });
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CaseManagementViewModel.ApplyCaseSettings] Unhandled: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("ApplyCaseSettings failed", ex); }
         }
 
         /// <summary>
@@ -1080,7 +1080,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 string legacyNotBinary = Path.Combine(configDir, "app_not_binary.json");
                 if (File.Exists(legacyNotBinary)) File.Delete(legacyNotBinary);
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CaseManagementViewModel] Legacy config cleanup failed: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("Legacy config cleanup failed", ex); }
 
             // S4-5: PLC_FILTERED config
             string s45Path = Path.Combine(configDir, ConfigFileS45 + ".json");

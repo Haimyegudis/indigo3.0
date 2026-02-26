@@ -54,7 +54,7 @@ namespace IndiLogs_3._0.Services
                     while (!token.IsCancellationRequested)
                     {
                         bool hasMore = false;
-                        try { hasMore = reader.MoveToNext(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CustomLiveLogReader] MoveToNext failed during re-sync: {ex.Message}"); break; }
+                        try { hasMore = reader.MoveToNext(); } catch (Exception ex) { AppLogger.Error("MoveToNext failed during re-sync", ex); break; }
                         if (!hasMore) break;
 
                         // דילוג מהיר ללא הקצאת זיכרון
@@ -84,7 +84,7 @@ namespace IndiLogs_3._0.Services
                     while (!token.IsCancellationRequested)
                     {
                         bool hasMore = false;
-                        try { hasMore = reader.MoveToNext(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CustomLiveLogReader] MoveToNext failed during initial load: {ex.Message}"); break; }
+                        try { hasMore = reader.MoveToNext(); } catch (Exception ex) { AppLogger.Error("MoveToNext failed during initial load", ex); break; }
                         if (!hasMore) break;
 
                         // אופטימיזציה: דילוג על כל ההתחלה
@@ -118,7 +118,7 @@ namespace IndiLogs_3._0.Services
                     while (true)
                     {
                         bool success = false;
-                        try { success = reader.MoveToNext(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CustomLiveLogReader] MoveToNext failed during tail: {ex.Message}"); break; }
+                        try { success = reader.MoveToNext(); } catch (Exception ex) { AppLogger.Error("MoveToNext failed during tail", ex); break; }
                         if (!success) break;
 
                         var log = MapToLogEntry(reader);

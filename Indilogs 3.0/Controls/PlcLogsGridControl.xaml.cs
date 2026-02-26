@@ -15,6 +15,7 @@ using IndiLogs.PluginAPI;
 using IndiLogs_3._0.Interfaces;
 using IndiLogs_3._0.Models;
 using Newtonsoft.Json;
+using IndiLogs_3._0.Services;
 
 namespace IndiLogs_3._0.Controls
 {
@@ -280,7 +281,7 @@ namespace IndiLogs_3._0.Controls
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[PlcLogsGridControl] Hooking column resize handlers failed: {ex.Message}");
+                AppLogger.Error("Hooking column resize handlers failed", ex);
             }
         }
 
@@ -543,7 +544,7 @@ namespace IndiLogs_3._0.Controls
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[PlcLogsGridControl] Saving column settings failed: {ex.Message}");
+                AppLogger.Error("Saving column settings failed", ex);
             }
         }
         private string GetColumnHeaderText(DataGridColumn column)
@@ -616,7 +617,7 @@ namespace IndiLogs_3._0.Controls
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[PlcLogsGridControl] Loading column settings failed: {ex.Message}");
+                AppLogger.Error("Loading column settings failed", ex);
             }
         }
 

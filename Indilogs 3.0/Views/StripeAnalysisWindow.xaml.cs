@@ -321,7 +321,7 @@ namespace IndiLogs_3._0.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[StripeAnalysisWindow] Loading column settings failed: {ex.Message}");
+                AppLogger.Error("Loading column settings failed", ex);
             }
         }
 
@@ -346,7 +346,7 @@ namespace IndiLogs_3._0.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[StripeAnalysisWindow] Saving column settings failed: {ex.Message}");
+                AppLogger.Error("Saving column settings failed", ex);
             }
         }
 

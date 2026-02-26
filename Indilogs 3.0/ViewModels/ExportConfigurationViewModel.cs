@@ -461,7 +461,7 @@ namespace IndiLogs_3._0.ViewModels
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[ExportConfigurationViewModel] Parsing IO_Mon component failed: {ex.Message}");
+                            AppLogger.Error("Parsing IO_Mon component failed", ex);
                         }
                     }
                     // IO Components - optimized IO: pattern (20.01.2026)
@@ -500,7 +500,7 @@ namespace IndiLogs_3._0.ViewModels
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[ExportConfigurationViewModel] Parsing IO component failed: {ex.Message}");
+                            AppLogger.Error("Parsing IO component failed", ex);
                         }
                     }
                     // Axis Components - current AxisMon pattern
@@ -524,7 +524,7 @@ namespace IndiLogs_3._0.ViewModels
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[ExportConfigurationViewModel] Parsing AxisMon component failed: {ex.Message}");
+                            AppLogger.Error("Parsing AxisMon component failed", ex);
                         }
                     }
                     // Axis Components - optimized AxM: pattern (20.01.2026)
@@ -548,7 +548,7 @@ namespace IndiLogs_3._0.ViewModels
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[ExportConfigurationViewModel] Parsing AxM component failed: {ex.Message}");
+                            AppLogger.Error("Parsing AxM component failed", ex);
                         }
                     }
                     // CHStep Components - optimized with faster string parsing
@@ -583,7 +583,7 @@ namespace IndiLogs_3._0.ViewModels
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[ExportConfigurationViewModel] Parsing CHStep component failed: {ex.Message}");
+                            AppLogger.Error("Parsing CHStep component failed", ex);
                         }
                     }
 
@@ -674,7 +674,7 @@ namespace IndiLogs_3._0.ViewModels
                 }));
             });
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ExportConfigurationViewModel.LoadComponentsAndThreads] Unhandled: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("LoadComponentsAndThreads failed", ex); }
         }
 
         private bool CanExport()
@@ -1187,7 +1187,7 @@ namespace IndiLogs_3._0.ViewModels
                 // Add sub-second ticks (1 tick = 100 ns)
                 return dt.AddTicks(remainNs / 100L);
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ExportConfigurationViewModel] RawTimeToDateTime failed: {ex.Message}"); return DateTime.MinValue; }
+            catch (Exception ex) { AppLogger.Error("RawTimeToDateTime failed", ex); return DateTime.MinValue; }
         }
 
         /// <summary>

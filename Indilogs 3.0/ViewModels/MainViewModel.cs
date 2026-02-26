@@ -166,7 +166,7 @@ namespace IndiLogs_3._0.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[MainViewModel] Loading events CSV failed: {ex.Message}");
+                AppLogger.Error("Loading events CSV failed", ex);
             }
         }
 
@@ -520,7 +520,7 @@ namespace IndiLogs_3._0.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[MainViewModel] LoadGlobalsFileContent failed: {ex.Message}");
+                AppLogger.Error("LoadGlobalsFileContent failed", ex);
             }
         }
 
@@ -1696,7 +1696,7 @@ namespace IndiLogs_3._0.ViewModels
             {
                 if (tempDbPath != null && File.Exists(tempDbPath))
                 {
-                    try { File.Delete(tempDbPath); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[MainVM] Temp DB cleanup failed: {ex.Message}"); }
+                    try { File.Delete(tempDbPath); } catch (Exception ex) { AppLogger.Error("Temp DB cleanup failed", ex); }
                 }
             }
             return sb.ToString();
@@ -1810,7 +1810,7 @@ namespace IndiLogs_3._0.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[MainViewModel] StartBackgroundAnalysis failed: {ex.Message}");
+                    AppLogger.Error("StartBackgroundAnalysis failed", ex);
                 }
                 finally
                 {
@@ -2131,7 +2131,7 @@ namespace IndiLogs_3._0.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[MainViewModel] NavigateToLogFromStats failed: {ex.Message}");
+                AppLogger.Error("NavigateToLogFromStats failed", ex);
             }
         }
 
@@ -2265,7 +2265,7 @@ namespace IndiLogs_3._0.ViewModels
                 });
             });
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[MainViewModel.SortAppLogs] Unhandled: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("SortAppLogs failed", ex); }
         }
 
         private void ToggleFilterView(bool show) => FilterVM?.ToggleFilterView(show);
@@ -2316,7 +2316,7 @@ namespace IndiLogs_3._0.ViewModels
                 }
             }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[MainViewModel.LoadFile] Unhandled: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("LoadFile failed", ex); }
         }
         private async void OpenFilterWindow(object obj)
         {
@@ -2362,7 +2362,7 @@ namespace IndiLogs_3._0.ViewModels
                 });
             }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[MainViewModel.OpenFilterWindow] Unhandled: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("OpenFilterWindow failed", ex); }
         }
 
         private bool EvaluateFilterNode(LogEntry log, FilterNode node) => FilterVM?.EvaluateFilterNode(log, node) ?? true;
@@ -2388,7 +2388,7 @@ namespace IndiLogs_3._0.ViewModels
             _exportConfigWindow.Closed += (s, e) => _exportConfigWindow = null;
             WindowManager.OpenWindow(_exportConfigWindow);
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[MainViewModel.ExportParsedData] Unhandled: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("ExportParsedData failed", ex); }
         }
         private void OpenAnalysisWindow(List<AnalysisResult> results)
         {
@@ -2736,7 +2736,7 @@ namespace IndiLogs_3._0.ViewModels
                 window.LoadFromLogs(logs);
             }, TaskScheduler.FromCurrentSynchronizationContext());
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[MainViewModel.OpenStripeAnalysisWindow] Unhandled: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("OpenStripeAnalysisWindow failed", ex); }
         }
 
         private void NavigateToGrepResult(GrepResult result)
@@ -2850,7 +2850,7 @@ namespace IndiLogs_3._0.ViewModels
                 {
                     Clipboard.SetText(node.Name);
                 }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[MainVM] Clipboard copy failed: {ex.Message}"); }
+                catch (Exception ex) { AppLogger.Error("Clipboard copy failed", ex); }
             }
         }
         public async Task OnFilesDropped(string[] files)
@@ -2891,7 +2891,7 @@ namespace IndiLogs_3._0.ViewModels
 
             ProcessFiles(files);
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[MainViewModel.OnFilesDropped] Unhandled: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("OnFilesDropped failed", ex); }
         }
 
         public LogAnnotation GetAnnotation(LogEntry log) => CaseVM?.GetAnnotation(log);

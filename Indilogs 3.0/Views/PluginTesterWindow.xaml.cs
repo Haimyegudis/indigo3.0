@@ -400,7 +400,7 @@ namespace IndiLogs_3._0.Views
         private static IReadOnlyList<PluginColumnDef> GetPluginColumns(ILogFilePlugin plugin)
         {
             try   { return plugin?.GetColumns(); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PluginTesterWindow] GetPluginColumns failed: {ex.Message}"); return null; }
+            catch (Exception ex) { AppLogger.Error("GetPluginColumns failed", ex); return null; }
         }
 
         // ── Plugin card builder ───────────────────────────────────────
@@ -599,13 +599,13 @@ namespace IndiLogs_3._0.Views
                 }
                 return lines.ToArray();
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PluginTesterWindow] ReadSampleLines failed: {ex.Message}"); return new string[0]; }
+            catch (Exception ex) { AppLogger.Error("ReadSampleLines failed", ex); return new string[0]; }
         }
 
         private static bool SafeCanHandle(ILogFilePlugin plugin, string fileName, string[] sampleLines)
         {
             try   { return plugin.CanHandle(fileName, sampleLines); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PluginTesterWindow] SafeCanHandle failed: {ex.Message}"); return false; }
+            catch (Exception ex) { AppLogger.Error("SafeCanHandle failed", ex); return false; }
         }
 
         // ── ComboBox item wrapper ─────────────────────────────────────

@@ -103,7 +103,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         public void OpenUrl(string url)
         {
             try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Tools] OpenUrl failed: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("OpenUrl failed", ex); }
         }
 
         private void OpenOutlook(object obj)
@@ -270,7 +270,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             _ = window.LoadFromLogs(logs);
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ToolsViewModel.OpenStripeAnalysisWindow] Unhandled: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("OpenStripeAnalysisWindow failed", ex); }
         }
 
         #endregion

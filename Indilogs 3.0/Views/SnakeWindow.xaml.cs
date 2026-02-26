@@ -10,6 +10,7 @@ using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using IndiLogs_3._0.Services;
 
 namespace IndiLogs_3._0.Views
 {
@@ -279,7 +280,7 @@ namespace IndiLogs_3._0.Views
                 Directory.CreateDirectory(System.IO.Path.GetDirectoryName(_scoreFile));
                 File.WriteAllText(_scoreFile, JsonConvert.SerializeObject(scores));
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SnakeWindow] Save scores failed: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("Save scores failed", ex); }
         }
 
         private void LoadHighScores()
@@ -292,7 +293,7 @@ namespace IndiLogs_3._0.Views
                     HighScoresText.Text = string.Join("\n", scores.Select((s, i) => $"#{i + 1} : {s}"));
                 }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[SnakeWindow] LoadHighScores failed: {ex.Message}"); HighScoresText.Text = "Error"; }
+            catch (Exception ex) { AppLogger.Error("LoadHighScores failed", ex); HighScoresText.Text = "Error"; }
         }
 
         // עזר להשוואת נקודות (בגלל ש-Point משתמש ב-Double)

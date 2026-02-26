@@ -50,7 +50,7 @@ namespace IndiLogs_3._0.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[DefaultConfigurationService] Saving defaults failed: {ex.Message}");
+                AppLogger.Error("Saving defaults failed", ex);
             }
         }
 
@@ -63,7 +63,7 @@ namespace IndiLogs_3._0.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[DefaultConfigurationService] Resetting defaults file failed: {ex.Message}");
+                AppLogger.Error("Resetting defaults file failed", ex);
             }
             CurrentDefaults = null;
         }

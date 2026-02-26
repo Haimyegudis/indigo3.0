@@ -21,6 +21,7 @@
  */
 
 using IndiLogs.PluginAPI;
+using IndiLogs_3._0.Services;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -205,7 +206,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
                     pattern:     m.Groups["Pattern"].Value,
                     ctx:         m.Groups["Context"].Value);
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[IndigoAppLogPlugin] TryParseOld failed: {ex.Message}"); return null; }
+            catch (Exception ex) { AppLogger.Error("TryParseOld failed", ex); return null; }
         }
 
         private static LogEntryDto TryParseNew(string text)
@@ -230,7 +231,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
                     pattern:     m.Groups["Pattern"].Value,
                     ctx:         m.Groups["Context"].Value);
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[IndigoAppLogPlugin] TryParseNew failed: {ex.Message}"); return null; }
+            catch (Exception ex) { AppLogger.Error("TryParseNew failed", ex); return null; }
         }
 
         private static LogEntryDto BuildEntry(

@@ -238,7 +238,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     }
                 }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogSessionViewModel] BuildFileDialogFilter plugin extensions failed: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("BuildFileDialogFilter plugin extensions failed", ex); }
 
             // Remove extensions already covered by standard built-in filter groups
             // so they don't create a redundant "Plugin Files" entry for common types
@@ -315,7 +315,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 }
             }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogSessionViewModel.LoadFile] Unhandled: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("LoadFile failed", ex); }
         }
 
         public async Task ProcessFiles(string[] filePaths, Action<LogSessionData> onLoadComplete = null)
@@ -513,7 +513,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[LogSession] Time-sync calculation failed: {ex.Message}");
+                    AppLogger.Error("Time-sync calculation failed", ex);
                 }
 
                 // Update Events and cache (already sorted by LogFileService)

@@ -194,7 +194,7 @@ namespace IndiLogs_3._0.Services
                                         }
                                         catch (Exception ex)
                                         {
-                                            System.Diagnostics.Debug.WriteLine($"[LogFileService] Reading globals XML file failed: {ex.Message}");
+                                            AppLogger.Error("Reading globals XML file failed", ex);
                                         }
                                         continue;
                                     }
@@ -239,7 +239,7 @@ namespace IndiLogs_3._0.Services
                                         }
                                         catch (Exception ex)
                                         {
-                                            System.Diagnostics.Debug.WriteLine($"[LogFileService] Systab extraction failed: {ex.Message}");
+                                            AppLogger.Error("Systab extraction failed", ex);
                                         }
                                         continue;
                                     }
@@ -284,7 +284,7 @@ namespace IndiLogs_3._0.Services
                                         }
                                         catch (Exception ex)
                                         {
-                                            System.Diagnostics.Debug.WriteLine($"[LogFileService] Reading configuration file failed: {ex.Message}");
+                                            AppLogger.Error("Reading configuration file failed", ex);
                                         }
                                         continue;
                                     }
@@ -345,7 +345,7 @@ namespace IndiLogs_3._0.Services
                                         }
                                         catch (Exception ex)
                                         {
-                                            System.Diagnostics.Debug.WriteLine($"[LogFileService] Reading terminal log file failed: {ex.Message}");
+                                            AppLogger.Error("Reading terminal log file failed", ex);
                                         }
                                         continue;
                                     }
@@ -398,7 +398,7 @@ namespace IndiLogs_3._0.Services
                                         }
                                         catch (Exception ex)
                                         {
-                                            System.Diagnostics.Debug.WriteLine($"[LogFileService] Reading database file from ZIP failed: {ex.Message}");
+                                            AppLogger.Error("Reading database file from ZIP failed", ex);
                                         }
                                         continue;
                                     }
@@ -450,7 +450,7 @@ namespace IndiLogs_3._0.Services
                                             var innerMs = CopyToMemory(entry);
                                             innerZipStreams.Add((innerMs, entry.FullName));
                                         }
-                                        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] Extracting nested ZIP failed: {ex.Message}"); }
+                                        catch (Exception ex) { AppLogger.Error("Extracting nested ZIP failed", ex); }
                                         continue;
                                     }
                                     else
@@ -479,7 +479,7 @@ namespace IndiLogs_3._0.Services
                                                 if (session.PluginColumns == null)
                                                 {
                                                     try { session.PluginColumns = plugin.GetColumns(); }
-                                                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] Plugin GetColumns failed: {ex.Message}"); }
+                                                    catch (Exception ex) { AppLogger.Error("Plugin GetColumns failed", ex); }
                                                 }
                                             }
                                             else
@@ -534,7 +534,7 @@ namespace IndiLogs_3._0.Services
                                                                 session.GlobalsFiles.Add(key, content);
                                                         }
                                                     }
-                                                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] Reading inner ZIP globals file failed: {ex.Message}"); }
+                                                    catch (Exception ex) { AppLogger.Error("Reading inner ZIP globals file failed", ex); }
                                                     continue;
                                                 }
 
@@ -565,7 +565,7 @@ namespace IndiLogs_3._0.Services
                                                             }
                                                         }
                                                     }
-                                                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] Reading inner ZIP systab file failed: {ex.Message}"); }
+                                                    catch (Exception ex) { AppLogger.Error("Reading inner ZIP systab file failed", ex); }
                                                     continue;
                                                 }
 
@@ -596,7 +596,7 @@ namespace IndiLogs_3._0.Services
                                                             }
                                                         }
                                                     }
-                                                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] Reading inner ZIP configuration file failed: {ex.Message}"); }
+                                                    catch (Exception ex) { AppLogger.Error("Reading inner ZIP configuration file failed", ex); }
                                                     continue;
                                                 }
 
@@ -646,7 +646,7 @@ namespace IndiLogs_3._0.Services
                                                             // Skip .arl and other formats
                                                         }
                                                     }
-                                                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] Reading inner ZIP terminal log failed: {ex.Message}"); }
+                                                    catch (Exception ex) { AppLogger.Error("Reading inner ZIP terminal log failed", ex); }
                                                     continue;
                                                 }
 
@@ -696,7 +696,7 @@ namespace IndiLogs_3._0.Services
                                                                 session.DatabaseFiles.Add(fName, ms.ToArray());
                                                         }
                                                     }
-                                                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] Reading inner ZIP database file failed: {ex.Message}"); }
+                                                    catch (Exception ex) { AppLogger.Error("Reading inner ZIP database file failed", ex); }
                                                     continue;
                                                 }
                                                 // Screenshots
@@ -740,11 +740,11 @@ namespace IndiLogs_3._0.Services
                                             }
                                         }
 
-                                        System.Diagnostics.Debug.WriteLine($"[Nested ZIP] Processed inner ZIP: {innerZipName}");
+                                        AppLogger.Info($"Processed inner ZIP: {innerZipName}");
                                     }
                                     catch (Exception ex)
                                     {
-                                        System.Diagnostics.Debug.WriteLine($"[Nested ZIP] Error processing {innerZipName}: {ex.Message}");
+                                        AppLogger.Error($"Error processing nested ZIP {innerZipName}", ex);
                                     }
                                 }
                                 // --- End nested ZIP processing ---
@@ -816,7 +816,7 @@ namespace IndiLogs_3._0.Services
                                     }
                                     catch (Exception ex)
                                     {
-                                        System.Diagnostics.Debug.WriteLine($"[LogFileService] Parallel log file processing failed: {ex.Message}");
+                                        AppLogger.Error("Parallel log file processing failed", ex);
                                     }
                                     finally
                                     {
@@ -877,7 +877,7 @@ namespace IndiLogs_3._0.Services
                                             session.TerminalLogFiles.Add(fileNameOnly, File.ReadAllText(filePath));
                                     }
                                 }
-                                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] Reading loose terminal log file failed: {ex.Message}"); }
+                                catch (Exception ex) { AppLogger.Error("Reading loose terminal log file failed", ex); }
                             }
                             // ===========================================================
 
@@ -911,7 +911,7 @@ namespace IndiLogs_3._0.Services
                                     if (!session.DatabaseFiles.ContainsKey(fileNameOnly))
                                         session.DatabaseFiles.Add(fileNameOnly, dbBytes);
                                 }
-                                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] Reading loose database file failed: {ex.Message}"); }
+                                catch (Exception ex) { AppLogger.Error("Reading loose database file failed", ex); }
                             }
                             else if (lowerName.Equals("readme.txt"))
                             {
@@ -922,7 +922,7 @@ namespace IndiLogs_3._0.Services
                                     if (sw != "Unknown") detectedSwVersion = sw;
                                     if (plc != "Unknown" && detectedPlcVersion == "Unknown") detectedPlcVersion = plc;
                                 }
-                                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] Parsing readme.txt versions failed: {ex.Message}"); }
+                                catch (Exception ex) { AppLogger.Error("Parsing readme.txt versions failed", ex); }
                             }
                             else if (lowerName.EndsWith("_setupinfo.json"))
                             {
@@ -932,7 +932,7 @@ namespace IndiLogs_3._0.Services
                                     string plcVer = ExtractPlcVersionFromSetupInfo(session.SetupInfo);
                                     if (!string.IsNullOrEmpty(plcVer)) detectedPlcVersion = plcVer;
                                 }
-                                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] Parsing setup info JSON failed: {ex.Message}"); }
+                                catch (Exception ex) { AppLogger.Error("Parsing setup info JSON failed", ex); }
                             }
                             else if (lowerName.EndsWith(".png") || lowerName.EndsWith(".jpg"))
                             {
@@ -946,7 +946,7 @@ namespace IndiLogs_3._0.Services
                                     bmp.Freeze();
                                     screenshotsBag.Add(bmp);
                                 }
-                                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] Loading screenshot image failed: {ex.Message}"); }
+                                catch (Exception ex) { AppLogger.Error("Loading screenshot image failed", ex); }
                             }
                             else
                             {
@@ -976,7 +976,7 @@ namespace IndiLogs_3._0.Services
                                         if (session.PluginColumns == null)
                                         {
                                             try { session.PluginColumns = plugin.GetColumns(); }
-                                            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] Plugin GetColumns for loose file failed: {ex.Message}"); }
+                                            catch (Exception ex) { AppLogger.Error("Plugin GetColumns for loose file failed", ex); }
                                         }
                                     }
                                 }
@@ -1108,8 +1108,7 @@ namespace IndiLogs_3._0.Services
                             session.ConfigurationType = "S4-5";
                         }
 
-                        System.Diagnostics.Debug.WriteLine(
-                            $"[S6/S4-5 Detection] No APP logs found. Manager thread: {hasManagerThread} → {session.ConfigurationType}");
+                        AppLogger.Info($"No APP logs found. Manager thread: {hasManagerThread} → {session.ConfigurationType}");
                     }
 
                     if (!logsBag.IsEmpty) { foreach (var l in logsBag) mergedLogs.Add(l); }
@@ -1287,7 +1286,7 @@ namespace IndiLogs_3._0.Services
                     }
                 }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] Parsing events CSV failed: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("Parsing events CSV failed", ex); }
             return list;
         }
 
@@ -1322,7 +1321,7 @@ namespace IndiLogs_3._0.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[LogFileService] ParseLogStreamPartial failed: {ex.Message}");
+                AppLogger.Error("ParseLogStreamPartial failed", ex);
             }
 
             return newLogs;
@@ -1372,7 +1371,7 @@ namespace IndiLogs_3._0.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[LogFileService] ParseLogStreamSkipping failed: {ex.Message}");
+                AppLogger.Error("ParseLogStreamSkipping failed", ex);
             }
 
             return (newEntries, totalCount);
@@ -1480,7 +1479,7 @@ namespace IndiLogs_3._0.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[LogFileService] Parsing app dev log failed: {ex.Message}");
+                AppLogger.Error("Parsing app dev log failed", ex);
             }
             return list;
         }
@@ -1591,7 +1590,7 @@ namespace IndiLogs_3._0.Services
                     return bitmap;
                 }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] LoadBitmapFromZip failed: {ex.Message}"); return null; }
+            catch (Exception ex) { AppLogger.Error("LoadBitmapFromZip failed", ex); return null; }
         }
 
         private (string sw, string plc) ParseReadmeVersions(string content)
@@ -1602,7 +1601,7 @@ namespace IndiLogs_3._0.Services
                 var plc = Regex.Match(content, @"PressPlcVersion[:=]\s*(.+)", RegexOptions.IgnoreCase);
                 return (sw.Success ? sw.Groups[1].Value.Trim() : "Unknown", plc.Success ? plc.Groups[1].Value.Trim() : "Unknown");
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] ParseReadmeVersions failed: {ex.Message}"); return ("Unknown", "Unknown"); }
+            catch (Exception ex) { AppLogger.Error("ParseReadmeVersions failed", ex); return ("Unknown", "Unknown"); }
         }
 
         private string ExtractPlcVersionFromSetupInfo(string jsonContent)
@@ -1612,7 +1611,7 @@ namespace IndiLogs_3._0.Services
                 var match = Regex.Match(jsonContent, @"\""Name\""\s*:\s*\""press-content-mcs-plc\""[\s\S]*?\""Version\""\s*:\s*\""(?<ver>[^\""]+)\""", RegexOptions.IgnoreCase);
                 if (match.Success) return match.Groups["ver"].Value.Trim();
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] ExtractPlcVersionFromSetupInfo failed: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("ExtractPlcVersionFromSetupInfo failed", ex); }
             return null;
         }
 
@@ -1718,7 +1717,7 @@ namespace IndiLogs_3._0.Services
 
                 if (stream.CanSeek) stream.Position = 0;
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] ReadSampleLines failed: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("ReadSampleLines failed", ex); }
             return lines.ToArray();
         }
 
@@ -1738,7 +1737,7 @@ namespace IndiLogs_3._0.Services
                         lines.Add(line);
                 }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogFileService] ReadSampleLinesFromFile failed: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("ReadSampleLinesFromFile failed", ex); }
             return lines.ToArray();
         }
 
@@ -1759,7 +1758,7 @@ namespace IndiLogs_3._0.Services
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[LogFileService] Plugin CanHandle check failed: {ex.Message}");
+                    AppLogger.Error("Plugin CanHandle check failed", ex);
                 }
             }
             return null;

@@ -1511,7 +1511,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 });
             }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[FilterSearchViewModel.OpenFilterWindow] Unhandled: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("OpenFilterWindow failed", ex); }
         }
 
         /// <summary>
@@ -1593,7 +1593,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _parent.NotifyPropertyChanged(nameof(_parent.IsFilterActive));
             }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[FilterSearchViewModel.OpenDifferentLogsFilterWindow] Unhandled: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("OpenDifferentLogsFilterWindow failed", ex); }
         }
 
         private void FilterOut(object p)

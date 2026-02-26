@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using IndiLogs_3._0.Models.Cpr;
+using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Cpr;
 
 namespace IndiLogs_3._0.ViewModels
@@ -400,7 +401,7 @@ namespace IndiLogs_3._0.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[CprAnalysisViewModel] CPR analysis execution failed: {ex.Message}");
+                AppLogger.Error("CPR analysis execution failed", ex);
             }
         }
 

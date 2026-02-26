@@ -228,7 +228,7 @@ namespace IndiLogs_3._0.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[BrowseTableWindow] LoadDataWithSearch failed: {ex.Message}");
+                AppLogger.Error("LoadDataWithSearch failed", ex);
             }
         }
 
@@ -388,7 +388,7 @@ namespace IndiLogs_3._0.Views
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[BrowseTableWindow] Collecting JSON paths failed: {ex.Message}");
+                            AppLogger.Error("Collecting JSON paths failed", ex);
                         }
                     }
                 }
@@ -440,7 +440,7 @@ namespace IndiLogs_3._0.Views
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[BrowseTableWindow] Extracting flattened JSON values failed: {ex.Message}");
+                            AppLogger.Error("Extracting flattened JSON values failed", ex);
                         }
                     }
                 }
@@ -582,7 +582,7 @@ namespace IndiLogs_3._0.Views
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[BrowseTableWindow] Parsing first-level JSON failed: {ex.Message}");
+                            AppLogger.Error("Parsing first-level JSON failed", ex);
                         }
                     }
                 }
@@ -712,7 +712,7 @@ namespace IndiLogs_3._0.Views
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[BrowseTableWindow] Getting JSON paths failed: {ex.Message}");
+                            AppLogger.Error("Getting JSON paths failed", ex);
                         }
                     }
                 }
@@ -772,7 +772,7 @@ namespace IndiLogs_3._0.Views
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[BrowseTableWindow] Flattening JSON values failed: {ex.Message}");
+                            AppLogger.Error("Flattening JSON values failed", ex);
                         }
                     }
                 }
@@ -815,7 +815,7 @@ namespace IndiLogs_3._0.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[BrowseTableWindow] GetJsonPaths parsing failed: {ex.Message}");
+                AppLogger.Error("GetJsonPaths parsing failed", ex);
             }
             return paths;
         }
@@ -859,7 +859,7 @@ namespace IndiLogs_3._0.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[BrowseTableWindow] FlattenJson parsing failed: {ex.Message}");
+                AppLogger.Error("FlattenJson parsing failed", ex);
             }
             return result;
         }
@@ -912,7 +912,7 @@ namespace IndiLogs_3._0.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[BrowseTableWindow] CleanupTempFile failed: {ex.Message}");
+                AppLogger.Error("CleanupTempFile failed", ex);
             }
         }
 
@@ -1133,7 +1133,7 @@ namespace IndiLogs_3._0.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[BrowseTableWindow] ResetColumnsButton_Click failed: {ex.Message}");
+                AppLogger.Error("ResetColumnsButton_Click failed", ex);
             }
         }
 
@@ -1171,7 +1171,7 @@ namespace IndiLogs_3._0.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[BrowseTableWindow] LoadColumnSettings failed: {ex.Message}");
+                AppLogger.Error("LoadColumnSettings failed", ex);
             }
         }
 
@@ -1198,7 +1198,7 @@ namespace IndiLogs_3._0.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[BrowseTableWindow] SaveColumnSettings failed: {ex.Message}");
+                AppLogger.Error("SaveColumnSettings failed", ex);
             }
         }
 

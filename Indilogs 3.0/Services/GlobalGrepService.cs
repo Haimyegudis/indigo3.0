@@ -162,7 +162,7 @@ namespace IndiLogs_3._0.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[GlobalGrepService] Searching ZIP entry failed: {ex.Message}");
+                AppLogger.Error("Searching ZIP entry failed", ex);
             }
         }
 

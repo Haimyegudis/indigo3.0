@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using SkiaSharp;
 using IndiLogs_3._0.Models.Charts;
+using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Charts;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Views;
@@ -66,7 +67,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
             // Read theme from settings immediately so charts created before Loaded event use correct theme
             try { _isLightTheme = !Properties.Settings.Default.IsDarkMode; }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChartTabControl] Reading IsDarkMode setting failed: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("Reading IsDarkMode setting failed", ex); }
 
             _dataService = new ChartDataService();
             _syncService = new ChartSyncService();
@@ -1788,7 +1789,7 @@ namespace IndiLogs_3._0.Controls.Charts
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[ChartTabControl] Copying resource '{key}' to floating window failed: {ex.Message}");
+                    AppLogger.Error($"Copying resource '{key}' to floating window failed", ex);
                 }
             }
 

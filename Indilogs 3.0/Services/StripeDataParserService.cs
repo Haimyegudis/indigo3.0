@@ -43,7 +43,7 @@ namespace IndiLogs_3._0.Services
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[StripeDataParserService] Parsing stripe entry failed: {ex.Message}");
+                    AppLogger.Error("Parsing stripe entry failed", ex);
                 }
             }
 
