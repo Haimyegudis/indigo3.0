@@ -239,9 +239,10 @@ namespace IndiLogs_3._0.Controls.Charts
         }
 
         /// <summary>
-        /// Loads data directly from memory without file I/O
+        /// Loads data directly from memory without file I/O.
+        /// Heavy work (timestamp formatting, time mapping) runs on a background thread.
         /// </summary>
-        public void LoadInMemoryData(ChartDataPackage dataPackage)
+        public async void LoadInMemoryData(ChartDataPackage dataPackage)
         {
             if (dataPackage == null) return;
 
@@ -250,106 +251,100 @@ namespace IndiLogs_3._0.Controls.Charts
             LoadingText.Text = "Loading chart data...";
             LoadingDetail.Text = $"Processing {dataPackage.Signals?.Count ?? 0} signals";
 
-            // Defer heavy work so the overlay renders first
-            Dispatcher.BeginInvoke(new Action(() =>
+            try
             {
-                try
+                _currentDataPackage = dataPackage;
+                _inMemoryDataLoaded = true;
+
+                // Use SetDataPackage for full support of CHSTEP and Thread items
+                SignalList.SetDataPackage(dataPackage);
+
+                // Set total data length
+                _totalDataLength = dataPackage.TimeStamps.Count;
+                if (_totalDataLength == 0 && dataPackage.Signals.Any())
                 {
-                    _currentDataPackage = dataPackage;
-                    _inMemoryDataLoaded = true;
-
-                    // Use SetDataPackage for full support of CHSTEP and Thread items
-                    SignalList.SetDataPackage(dataPackage);
-
-                    // Set total data length
-                    _totalDataLength = dataPackage.TimeStamps.Count;
-                    if (_totalDataLength == 0 && dataPackage.Signals.Any())
-                    {
-                        _totalDataLength = dataPackage.Signals.Max(s => s.Data?.Length ?? 0);
-                    }
-
-                    LoadingDetail.Text = $"Formatting {_totalDataLength:N0} timestamps...";
-
-                    // Build time mapping for sync - parallel timestamp formatting for large datasets
-                    if (dataPackage.TimeStamps.Any())
-                    {
-                        var stamps = dataPackage.TimeStamps;
-                        var timeArr = new string[stamps.Count];
-                        if (stamps.Count > 5000)
-                        {
-                            System.Threading.Tasks.Parallel.For(0, stamps.Count,
-                                new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
-                                i => { timeArr[i] = stamps[i].ToString("yyyy-MM-dd HH:mm:ss.ffffff"); });
-                        }
-                        else
-                        {
-                            for (int i = 0; i < stamps.Count; i++)
-                                timeArr[i] = stamps[i].ToString("yyyy-MM-dd HH:mm:ss.ffffff");
-                        }
-                        _timeData = timeArr;
-                        _syncService.BuildTimeMapping(_timeData);
-                    }
-
-                    // Extract global states from state data (MachineState for timeline)
-                    _globalStates.Clear();
-                    var machineState = dataPackage.States.FirstOrDefault(s =>
-                        s.Name.Equals("MachineState", StringComparison.OrdinalIgnoreCase) ||
-                        s.Name.Equals("PlcMngr", StringComparison.OrdinalIgnoreCase));
-
-                    if (machineState != null)
-                    {
-                        _globalStates.AddRange(machineState.Intervals);
-                    }
-
-                    // Reset view
-                    _viewStartIndex = 0;
-                    _viewEndIndex = _totalDataLength - 1;
-
-                    // Update timeline with machine states only
-                    StateTimeline.SetStates(_globalStates, _totalDataLength);
-
-                    // Store thread messages (NOT displayed automatically - user selects from list)
-                    _threadMessages = dataPackage.ThreadMessages ?? new List<ThreadMessageData>();
-
-                    // Store CHSTEP states (NOT displayed automatically - user selects from list)
-                    _chStepStates = dataPackage.States
-                        .Where(s => !s.Name.Equals("MachineState", StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-
-                    // Store event markers for display on charts
-                    _eventMarkers = dataPackage.Events ?? new List<EventMarkerData>();
-
-                    // Compute time gap regions from timestamps (suppressed for IO terminal data)
-                    _timeGapRegions = dataPackage.SuppressGapDetection
-                        ? new List<GapRegion>()
-                        : ComputeTimeGapRegions(dataPackage.TimeStamps);
-
-                    // Update empty state message
-                    EmptyStateMessage.Visibility = Visibility.Collapsed;
-
-                    // Clear existing charts - user will add signals manually
-                    _charts.Clear();
-
-                    // Ensure theme is current before creating charts
-                    SyncThemeFromSettings();
-
-                    // Add an empty chart ready for user to add signals
-                    AddNewChart();
-
-                    // Update slider
-                    NavSlider.Maximum = _totalDataLength > 0 ? _totalDataLength - 1 : 100;
-
-                    RefreshChartViews();
+                    _totalDataLength = dataPackage.Signals.Max(s => s.Data?.Length ?? 0);
                 }
-                catch (Exception ex)
+
+                LoadingDetail.Text = $"Formatting {_totalDataLength:N0} timestamps...";
+
+                // Build time mapping on background thread to avoid UI freeze
+                if (dataPackage.TimeStamps.Any())
                 {
-                    MessageBox.Show($"Error loading In-Memory data: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    var stamps = dataPackage.TimeStamps;
+                    var timeArr = await System.Threading.Tasks.Task.Run(() =>
+                    {
+                        var arr = new string[stamps.Count];
+                        System.Threading.Tasks.Parallel.For(0, stamps.Count,
+                            new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                            i => { arr[i] = stamps[i].ToString("yyyy-MM-dd HH:mm:ss.ffffff"); });
+                        return arr;
+                    });
+                    _timeData = timeArr;
+
+                    // Build time mapping on background thread (includes sort)
+                    await System.Threading.Tasks.Task.Run(() => _syncService.BuildTimeMapping(_timeData));
                 }
-                finally
+
+                // Extract global states from state data (MachineState for timeline)
+                _globalStates.Clear();
+                var machineState = dataPackage.States.FirstOrDefault(s =>
+                    s.Name.Equals("MachineState", StringComparison.OrdinalIgnoreCase) ||
+                    s.Name.Equals("PlcMngr", StringComparison.OrdinalIgnoreCase));
+
+                if (machineState != null)
                 {
-                    LoadingOverlay.Visibility = Visibility.Collapsed;
+                    _globalStates.AddRange(machineState.Intervals);
                 }
-            }), DispatcherPriority.Background);
+
+                // Reset view
+                _viewStartIndex = 0;
+                _viewEndIndex = _totalDataLength - 1;
+
+                // Update timeline with machine states only
+                StateTimeline.SetStates(_globalStates, _totalDataLength);
+
+                // Store thread messages (NOT displayed automatically - user selects from list)
+                _threadMessages = dataPackage.ThreadMessages ?? new List<ThreadMessageData>();
+
+                // Store CHSTEP states (NOT displayed automatically - user selects from list)
+                _chStepStates = dataPackage.States
+                    .Where(s => !s.Name.Equals("MachineState", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                // Store event markers for display on charts
+                _eventMarkers = dataPackage.Events ?? new List<EventMarkerData>();
+
+                // Compute time gap regions on background thread (suppressed for IO terminal data)
+                _timeGapRegions = dataPackage.SuppressGapDetection
+                    ? new List<GapRegion>()
+                    : await System.Threading.Tasks.Task.Run(() => ComputeTimeGapRegions(dataPackage.TimeStamps));
+
+                // Update empty state message
+                EmptyStateMessage.Visibility = Visibility.Collapsed;
+
+                // Clear existing charts - user will add signals manually
+                _charts.Clear();
+
+                // Ensure theme is current before creating charts
+                SyncThemeFromSettings();
+
+                // Add an empty chart ready for user to add signals
+                AddNewChart();
+
+                // Update slider
+                NavSlider.Maximum = _totalDataLength > 0 ? _totalDataLength - 1 : 100;
+
+                RefreshChartViews();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading In-Memory data: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                LoadingOverlay.Visibility = Visibility.Collapsed;
+            }
         }
 
         /// <summary>
@@ -1410,6 +1405,13 @@ namespace IndiLogs_3._0.Controls.Charts
         /// <summary>
         /// Computes time gap regions from string timestamps (for CSV loaded data)
         /// </summary>
+        private static readonly string[] _gapTimeFormats = new[]
+        {
+            "yyyy-MM-dd HH:mm:ss.ffffff", "yyyy-MM-dd HH:mm:ss.fffffff",
+            "yyyy-MM-dd HH:mm:ss.fff", "yyyy-MM-dd HH:mm:ss",
+            "HH:mm:ss.ffffff", "HH:mm:ss.fff", "HH:mm:ss"
+        };
+
         private List<GapRegion> ComputeTimeGapRegionsFromStrings(string[] timeData)
         {
             var regions = new List<GapRegion>();
@@ -1420,7 +1422,10 @@ namespace IndiLogs_3._0.Controls.Charts
             DateTime prevTime = DateTime.MinValue;
             for (int i = 0; i < timeData.Length; i++)
             {
-                if (DateTime.TryParse(timeData[i], out DateTime currentTime))
+                // Use TryParseExact with known formats - much faster than TryParse
+                if (DateTime.TryParseExact(timeData[i], _gapTimeFormats,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out DateTime currentTime))
                 {
                     if (prevTime != DateTime.MinValue)
                     {

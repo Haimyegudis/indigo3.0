@@ -13,6 +13,9 @@ namespace IndiLogs_3._0.Services.Charts
         // Sorted list of (DateTime, ChartIndex) for fast lookup
         private List<(DateTime Time, int Index)> _timeMap = new List<(DateTime, int)>();
 
+        // Reverse index: chartIndex -> DateTime for O(1) lookup in GetTimeForIndex
+        private Dictionary<int, DateTime> _indexToTimeMap = new Dictionary<int, DateTime>();
+
         // Events for bidirectional synchronization
         public event Action<DateTime> ChartTimeClicked;
         public event Action<int> LogTimeSelected;
@@ -37,6 +40,11 @@ namespace IndiLogs_3._0.Services.Charts
 
             // Sort by time for binary search
             _timeMap = _timeMap.OrderBy(x => x.Time).ToList();
+
+            // Build reverse index for O(1) GetTimeForIndex
+            _indexToTimeMap = new Dictionary<int, DateTime>(_timeMap.Count);
+            foreach (var entry in _timeMap)
+                _indexToTimeMap[entry.Index] = entry.Time;
         }
 
         /// <summary>
@@ -56,6 +64,11 @@ namespace IndiLogs_3._0.Services.Charts
 
             // Sort by time for binary search
             _timeMap = _timeMap.OrderBy(x => x.Time).ToList();
+
+            // Build reverse index for O(1) GetTimeForIndex
+            _indexToTimeMap = new Dictionary<int, DateTime>(_timeMap.Count);
+            foreach (var entry in _timeMap)
+                _indexToTimeMap[entry.Index] = entry.Time;
         }
 
         /// <summary>
@@ -99,23 +112,37 @@ namespace IndiLogs_3._0.Services.Charts
         }
 
         /// <summary>
-        /// Get the time for a given chart index
+        /// Get the time for a given chart index - O(1) via dictionary, O(log N) fallback via binary search
         /// </summary>
         public DateTime GetTimeForIndex(int chartIndex)
         {
-            // Direct lookup since index should be unique
-            var match = _timeMap.FirstOrDefault(x => x.Index == chartIndex);
-            if (match.Time != default)
-            {
-                return match.Time;
-            }
+            // O(1) direct lookup
+            if (_indexToTimeMap.TryGetValue(chartIndex, out DateTime time))
+                return time;
 
-            // If not found, interpolate from neighboring points
             if (_timeMap.Count == 0) return DateTime.MinValue;
 
-            // Find the closest indexed entry
-            var closest = _timeMap.OrderBy(x => Math.Abs(x.Index - chartIndex)).First();
-            return closest.Time;
+            // O(log N) binary search for closest index
+            int left = 0, right = _timeMap.Count - 1;
+            while (left < right)
+            {
+                int mid = (left + right) / 2;
+                if (_timeMap[mid].Index < chartIndex)
+                    left = mid + 1;
+                else
+                    right = mid;
+            }
+
+            // Check if previous entry is closer
+            if (left > 0)
+            {
+                int diffPrev = Math.Abs(_timeMap[left - 1].Index - chartIndex);
+                int diffCurr = Math.Abs(_timeMap[left].Index - chartIndex);
+                if (diffPrev < diffCurr)
+                    return _timeMap[left - 1].Time;
+            }
+
+            return _timeMap[left].Time;
         }
 
         /// <summary>
@@ -235,6 +262,7 @@ namespace IndiLogs_3._0.Services.Charts
         public void Clear()
         {
             _timeMap.Clear();
+            _indexToTimeMap.Clear();
         }
     }
 }
