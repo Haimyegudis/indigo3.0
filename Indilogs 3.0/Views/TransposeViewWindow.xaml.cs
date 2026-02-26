@@ -1,3 +1,4 @@
+using IndiLogs_3._0.Services;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -211,8 +212,9 @@ namespace IndiLogs_3._0.Views
                     {
                         row[i + 1] = prop.Getter(_filteredEntries[i]);
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        AppLogger.Warn($"Property getter failed for entry {i}: {ex.Message}");
                         row[i + 1] = "";
                     }
                 }
@@ -458,6 +460,7 @@ namespace IndiLogs_3._0.Views
                 }
                 catch (Exception ex)
                 {
+                    AppLogger.Error("CSV export failed", ex);
                     MessageBox.Show($"Error exporting:\n{ex.Message}", "Export Error",
                         MessageBoxButton.OK, MessageBoxImage.Error);
                 }

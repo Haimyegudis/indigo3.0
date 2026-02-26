@@ -87,7 +87,7 @@ namespace IndiLogs_3._0.Views
                         catch
                         {
                             // Clean up on failure
-                            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+                            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (Exception cleanupEx) { AppLogger.Warn($"Temp file cleanup failed: {cleanupEx.Message}"); }
                             throw;
                         }
                         _tempDbPath = tempPath;

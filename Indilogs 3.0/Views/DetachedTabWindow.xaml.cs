@@ -224,7 +224,7 @@ namespace IndiLogs_3._0.Views
                 string msg = log.Message ?? "";
                 sb.AppendLine($"{time} {level} {thread} {msg}");
             }
-            try { Clipboard.SetText(sb.ToString()); } catch { }
+            try { Clipboard.SetText(sb.ToString()); } catch (Exception ex) { AppLogger.Warn("Clipboard copy failed: " + ex.Message); }
         }
 
         /// <summary>

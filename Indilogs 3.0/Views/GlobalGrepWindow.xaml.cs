@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Forms;
 using IndiLogs_3._0.Models;
+using IndiLogs_3._0.Services;
 using IndiLogs_3._0.ViewModels;
 
 namespace IndiLogs_3._0.Views
@@ -52,6 +53,7 @@ namespace IndiLogs_3._0.Views
             }
             catch (Exception ex)
             {
+                AppLogger.Error("Log navigation failed", ex);
                 System.Windows.MessageBox.Show($"Navigation Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -73,6 +75,7 @@ namespace IndiLogs_3._0.Views
             }
             catch (Exception ex)
             {
+                AppLogger.Error("Opening multiple files failed", ex);
                 System.Windows.MessageBox.Show($"Error opening files: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }

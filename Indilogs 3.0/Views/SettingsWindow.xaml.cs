@@ -27,7 +27,7 @@ namespace IndiLogs_3._0.Views
             // Don't close if a child dialog (like Fonts) is open or already closing
             if (!_isChildDialogOpen && IsLoaded)
             {
-                try { Close(); } catch { }
+                try { Close(); } catch (Exception ex) { AppLogger.Warn("Settings window close failed: " + ex.Message); }
             }
         }
 

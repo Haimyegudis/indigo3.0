@@ -1,4 +1,5 @@
 ﻿using IndiLogs_3._0.Models;
+using IndiLogs_3._0.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -59,7 +60,7 @@ namespace IndiLogs_3._0.Views
             }
 
             try { Clipboard.SetText(sb.ToString()); }
-            catch (Exception ex) { MessageBox.Show($"Failed to copy: {ex.Message}"); }
+            catch (Exception ex) { AppLogger.Error("Clipboard copy failed", ex); MessageBox.Show($"Failed to copy: {ex.Message}"); }
         }
     }
 }
