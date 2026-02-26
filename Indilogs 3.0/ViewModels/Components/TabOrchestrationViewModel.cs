@@ -2,7 +2,6 @@ using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services.Charts;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 

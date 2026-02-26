@@ -290,7 +290,6 @@
     <Compile Include="Models\Charts\ChartModels.cs" />
     <Compile Include="Models\Charts\ChartStateConfig.cs" />
     <Compile Include="Models\Cpr\CprModels.cs" />
-    <Compile Include="Services\Analysis\StateFailureAnalyzer.cs" />
     <Compile Include="Services\Analysis\UniversalStateFailureAnalyzer.cs" />
     <Compile Include="Services\CustomLiveLogReader.cs" />
     <Compile Include="Services\GlobalGrepService.cs" />
