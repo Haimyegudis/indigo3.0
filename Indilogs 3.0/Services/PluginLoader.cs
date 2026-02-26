@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 
 namespace IndiLogs_3._0.Services
 {
@@ -118,6 +119,11 @@ namespace IndiLogs_3._0.Services
 
                     try
                     {
+                        if (!VerifyPluginAssembly(dll))
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[PluginLoader] Skipping unsigned/unverified plugin: {Path.GetFileName(dll)}");
+                            continue;
+                        }
                         LoadPluginsFromAssembly(dll);
                     }
                     catch (Exception ex)
@@ -138,6 +144,56 @@ namespace IndiLogs_3._0.Services
         // ---------------------------------------------------------------
         // Private helpers
         // ---------------------------------------------------------------
+
+        /// <summary>
+        /// Verifies that a plugin DLL has a valid Authenticode signature or a strong name.
+        /// Unsigned plugins in production builds are rejected to prevent code injection.
+        /// Set INDILOGS_ALLOW_UNSIGNED_PLUGINS=1 environment variable to allow unsigned plugins during development.
+        /// </summary>
+        private bool VerifyPluginAssembly(string dllPath)
+        {
+            // Allow unsigned plugins in development via environment variable
+            string allowUnsigned = Environment.GetEnvironmentVariable("INDILOGS_ALLOW_UNSIGNED_PLUGINS");
+            if (allowUnsigned == "1")
+            {
+                System.Diagnostics.Debug.WriteLine($"[PluginLoader] Dev mode: allowing unsigned plugin {Path.GetFileName(dllPath)}");
+                return true;
+            }
+
+            try
+            {
+                // Check for Authenticode signature
+                var cert = X509Certificate2.CreateFromSignedFile(dllPath);
+                if (cert != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PluginLoader] Plugin signed by: {cert.Subject}");
+                    return true;
+                }
+            }
+            catch (System.Security.Cryptography.CryptographicException)
+            {
+                // No Authenticode signature
+            }
+
+            try
+            {
+                // Check for strong name as fallback
+                var asmName = AssemblyName.GetAssemblyName(dllPath);
+                byte[] publicKey = asmName.GetPublicKeyToken();
+                if (publicKey != null && publicKey.Length > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PluginLoader] Plugin has strong name: {asmName.Name}");
+                    return true;
+                }
+            }
+            catch (Exception)
+            {
+                // Cannot read assembly name
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[PluginLoader] REJECTED unsigned plugin: {Path.GetFileName(dllPath)}");
+            return false;
+        }
 
         private void LoadPluginsFromAssembly(string dllPath)
         {
