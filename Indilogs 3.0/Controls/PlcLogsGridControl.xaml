@@ -1,0 +1,689 @@
+<UserControl x:Class="IndiLogs_3._0.Controls.PlcLogsGridControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:IndiLogs_3._0.Controls"
+             xmlns:converters="clr-namespace:IndiLogs_3._0.Converters"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- DataGrid -->
+        <DataGrid x:Name="LogsDataGrid"
+              Margin="0,0,12,0"
+              AutomationProperties.Name="PLC Logs Grid"
+              ItemsSource="{Binding LogsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
+              SelectedItem="{Binding SelectedLog, Mode=TwoWay}"
+              FontSize="{Binding GridFontSize}"
+              FontFamily="{DynamicResource ContentFontFamily}"
+              FontWeight="{DynamicResource ContentFontWeight}"
+              AutoGenerateColumns="False"
+              IsReadOnly="True"
+              SelectionMode="Extended"
+              SelectionUnit="FullRow"
+              HorizontalScrollBarVisibility="Auto"
+              CanUserReorderColumns="True"
+              CanUserResizeColumns="True"
+              VirtualizingPanel.IsVirtualizing="True"
+              VirtualizingPanel.VirtualizationMode="Recycling"
+              VirtualizingStackPanel.CacheLength="2,2"
+              VirtualizingStackPanel.CacheLengthUnit="Page"
+              ScrollViewer.CanContentScroll="True"
+              EnableRowVirtualization="True"
+              EnableColumnVirtualization="True"
+              PreviewKeyDown="LogsDataGrid_PreviewKeyDown"
+              RequestBringIntoView="LogsDataGrid_RequestBringIntoView"
+              Loaded="LogsDataGrid_Loaded"
+              LoadingRow="LogsDataGrid_LoadingRow"
+              ColumnReordered="LogsDataGrid_ColumnReordered">
+
+        <DataGrid.Style>
+            <Style TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
+                <Setter Property="Visibility" Value="Visible"/>
+                <Style.Triggers>
+                    <!-- Only hide in visual mode if this is the main PLC grid (not PLC FILTERED) -->
+                    <MultiDataTrigger>
+                        <MultiDataTrigger.Conditions>
+                            <Condition Binding="{Binding IsVisualMode}" Value="True"/>
+                            <Condition Binding="{Binding GridType, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="PLC"/>
+                        </MultiDataTrigger.Conditions>
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                    </MultiDataTrigger>
+                    <!-- PLC FILTERED: always collapse row details (annotations) -->
+                    <DataTrigger Binding="{Binding GridType, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="FILTERED">
+                        <Setter Property="RowDetailsVisibilityMode" Value="Collapsed"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </DataGrid.Style>
+
+        <DataGrid.ContextMenu>
+            <ContextMenu>
+                <MenuItem Command="{Binding PlacementTarget.DataContext.FilterContextCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Header="Time Focus Filter"/>
+                <Separator/>
+                <MenuItem Header="📝 Add/Edit Annotation" Command="{Binding AddAnnotationCommand}" CommandParameter="{Binding SelectedLog}"/>
+                <MenuItem Header="🗑 Delete Annotation" Command="{Binding DeleteAnnotationCommand}" CommandParameter="{Binding SelectedLog}"/>
+                <Separator/>
+                <MenuItem Header="Filter Out (Message)..." Command="{Binding FilterOutCommand}"/>
+                <MenuItem Header="Filter Out (Thread)..." Command="{Binding FilterOutThreadCommand}"/>
+                <Separator/>
+                <MenuItem Header="📌 Start Range" Command="{Binding StartRangeCommand}"/>
+                <MenuItem Header="📌 End Range" Command="{Binding EndRangeCommand}"/>
+                <MenuItem Header="❌ Clear Range" Command="{Binding ClearRangeCommand}"/>
+                <Separator/>
+                <MenuItem Header="⏱ Show Synced Time Column" IsCheckable="True"
+                          IsChecked="{Binding ShowSyncedTimeColumn, Mode=TwoWay}"
+                          IsEnabled="{Binding HasTimeSyncData}"/>
+            </ContextMenu>
+        </DataGrid.ContextMenu>
+
+
+        <DataGrid.InputBindings>
+            <KeyBinding Key="Space" Command="{Binding MarkRowCommand}" />
+            <MouseBinding Gesture="LeftDoubleClick" Command="{Binding ViewLogDetailsCommand}" CommandParameter="{Binding SelectedLog}" />
+        </DataGrid.InputBindings>
+
+        <DataGrid.Columns>
+            <!-- Annotation Icon Column -->
+            <DataGridTemplateColumn Header="" Width="30" CanUserSort="False">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <Button Content="{Binding AnnotationIcon}"
+                                Command="{Binding DataContext.ToggleAnnotationCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                CommandParameter="{Binding}"
+                                BorderThickness="0"
+                                Cursor="Hand"
+                                FontSize="14"
+                                Padding="0"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                ToolTip="Click to show/hide annotation">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <ContentPresenter/>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <!-- Show annotation icon when annotation exists -->
+                                        <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                        <!-- PLC FILTERED: always hide annotation button (last trigger wins) -->
+                                        <DataTrigger Binding="{Binding GridType, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="FILTERED">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTemplateColumn Header="Lvl" Width="70" SortMemberPath="Level" CanUserSort="True">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <controls:SelectableTextBlock Text="{Binding Level, Mode=OneWay}" FontWeight="Bold">
+                            <controls:SelectableTextBlock.Style>
+                                <Style TargetType="controls:SelectableTextBlock" BasedOn="{StaticResource SelectableTextBlockStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Level}" Value="DEBUG">
+                                            <Setter Property="Foreground" Value="#4FC3F7"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsCurrentMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <!-- PLC FILTERED: reset foreground, suppress custom colors/annotations.
+                                             IsMarked/IsCurrentMarked==False: marked rows still show Black text.
+                                             HasSystemDefaultColor==False: state-transition rows keep their Black text. -->
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding GridType, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="FILTERED"/>
+                                                <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="False"/>
+                                                <Condition Binding="{Binding IsErrorOrEvents}" Value="False"/>
+                                                <Condition Binding="{Binding HasSystemDefaultColor}" Value="False"/>
+                                                <Condition Binding="{Binding IsMarked}" Value="False"/>
+                                                <Condition Binding="{Binding IsCurrentMarked}" Value="False"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </controls:SelectableTextBlock.Style>
+                        </controls:SelectableTextBlock>
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTemplateColumn Header="Timestamp" Width="180" SortMemberPath="Date" CanUserSort="True">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <controls:SelectableTextBlock Text="{Binding Date, Mode=OneWay, StringFormat='yyyy-MM-dd HH:mm:ss.ffffff'}" FontFamily="{StaticResource ContentFontFamily}">
+                            <controls:SelectableTextBlock.Style>
+                                <Style TargetType="controls:SelectableTextBlock" BasedOn="{StaticResource SelectableTextBlockStyle}">
+                                    <Setter Property="Padding" Value="8,0"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsCurrentMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <!-- PLC FILTERED: reset foreground, suppress custom colors/annotations.
+                                             IsMarked/IsCurrentMarked==False: marked rows still show Black text.
+                                             HasSystemDefaultColor==False: state-transition rows keep their Black text. -->
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding GridType, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="FILTERED"/>
+                                                <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="False"/>
+                                                <Condition Binding="{Binding IsErrorOrEvents}" Value="False"/>
+                                                <Condition Binding="{Binding HasSystemDefaultColor}" Value="False"/>
+                                                <Condition Binding="{Binding IsMarked}" Value="False"/>
+                                                <Condition Binding="{Binding IsCurrentMarked}" Value="False"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </controls:SelectableTextBlock.Style>
+                        </controls:SelectableTextBlock>
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTemplateColumn Header="Synced Time" Width="180" SortMemberPath="SyncedTime" CanUserSort="True"
+                                    Visibility="Collapsed">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <controls:SelectableTextBlock Text="{Binding SyncedTime, Mode=OneWay, StringFormat='yyyy-MM-dd HH:mm:ss.ffffff'}" FontFamily="{StaticResource ContentFontFamily}">
+                            <controls:SelectableTextBlock.Style>
+                                <Style TargetType="controls:SelectableTextBlock" BasedOn="{StaticResource SelectableTextBlockStyle}">
+                                    <Setter Property="Padding" Value="8,0"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsCurrentMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <!-- PLC FILTERED: reset foreground, suppress custom colors/annotations.
+                                             IsMarked/IsCurrentMarked==False: marked rows still show Black text.
+                                             HasSystemDefaultColor==False: state-transition rows keep their Black text. -->
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding GridType, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="FILTERED"/>
+                                                <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="False"/>
+                                                <Condition Binding="{Binding IsErrorOrEvents}" Value="False"/>
+                                                <Condition Binding="{Binding HasSystemDefaultColor}" Value="False"/>
+                                                <Condition Binding="{Binding IsMarked}" Value="False"/>
+                                                <Condition Binding="{Binding IsCurrentMarked}" Value="False"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </controls:SelectableTextBlock.Style>
+                        </controls:SelectableTextBlock>
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTemplateColumn Width="130" SortMemberPath="ThreadName" CanUserSort="True">
+                <DataGridTemplateColumn.Header>
+                    <Button Content="🔍 Thread"
+                            Click="ThreadFilterButton_Click"
+                            Cursor="Hand"
+                            ToolTip="Click to filter by thread"
+                            FontSize="12"
+                            Padding="6,2"
+                            AutomationProperties.Name="Filter by Thread">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="border" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="4">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                                    <Setter Property="Foreground" Value="Black"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </DataGridTemplateColumn.Header>
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <controls:SelectableTextBlock Text="{Binding ThreadName, Mode=OneWay}">
+                            <controls:SelectableTextBlock.Style>
+                                <Style TargetType="controls:SelectableTextBlock" BasedOn="{StaticResource SelectableTextBlockStyle}">
+                                    <Setter Property="Padding" Value="25,0"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsCurrentMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <!-- PLC FILTERED: reset to PrimaryColor, suppress custom colors/annotations.
+                                             IsMarked/IsCurrentMarked==False: marked rows still show Black text. -->
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding GridType, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="FILTERED"/>
+                                                <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="False"/>
+                                                <Condition Binding="{Binding IsErrorOrEvents}" Value="False"/>
+                                                <Condition Binding="{Binding HasSystemDefaultColor}" Value="False"/>
+                                                <Condition Binding="{Binding IsMarked}" Value="False"/>
+                                                <Condition Binding="{Binding IsCurrentMarked}" Value="False"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </controls:SelectableTextBlock.Style>
+                        </controls:SelectableTextBlock>
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTemplateColumn Header="Logger" Width="250" Visibility="Collapsed" SortMemberPath="Logger" CanUserSort="True">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <controls:SelectableTextBlock Text="{Binding Logger, Mode=OneWay}">
+                            <controls:SelectableTextBlock.Style>
+                                <Style TargetType="controls:SelectableTextBlock" BasedOn="{StaticResource SelectableTextBlockStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsCurrentMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <!-- PLC FILTERED: reset foreground, suppress custom colors/annotations.
+                                             IsMarked/IsCurrentMarked==False: marked rows still show Black text.
+                                             HasSystemDefaultColor==False: state-transition rows keep their Black text. -->
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding GridType, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="FILTERED"/>
+                                                <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="False"/>
+                                                <Condition Binding="{Binding IsErrorOrEvents}" Value="False"/>
+                                                <Condition Binding="{Binding HasSystemDefaultColor}" Value="False"/>
+                                                <Condition Binding="{Binding IsMarked}" Value="False"/>
+                                                <Condition Binding="{Binding IsCurrentMarked}" Value="False"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </controls:SelectableTextBlock.Style>
+                        </controls:SelectableTextBlock>
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTemplateColumn Header="Method" Width="200" Visibility="Collapsed" SortMemberPath="Method" CanUserSort="True">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <controls:SelectableTextBlock Text="{Binding Method, Mode=OneWay}">
+                            <controls:SelectableTextBlock.Style>
+                                <Style TargetType="controls:SelectableTextBlock" BasedOn="{StaticResource SelectableTextBlockStyle}">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsCurrentMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <!-- PLC FILTERED: reset to TextSecondary, suppress custom colors/annotations.
+                                             IsMarked/IsCurrentMarked==False: marked rows still show Black text. -->
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding GridType, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="FILTERED"/>
+                                                <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="False"/>
+                                                <Condition Binding="{Binding IsErrorOrEvents}" Value="False"/>
+                                                <Condition Binding="{Binding HasSystemDefaultColor}" Value="False"/>
+                                                <Condition Binding="{Binding IsMarked}" Value="False"/>
+                                                <Condition Binding="{Binding IsCurrentMarked}" Value="False"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </controls:SelectableTextBlock.Style>
+                        </controls:SelectableTextBlock>
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTemplateColumn Header="Data" Width="300" Visibility="Collapsed" SortMemberPath="Data" CanUserSort="True">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <controls:SelectableTextBlock Text="{Binding Data, Mode=OneWay}">
+                            <controls:SelectableTextBlock.Style>
+                                <Style TargetType="controls:SelectableTextBlock" BasedOn="{StaticResource SelectableTextBlockStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsCurrentMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <!-- PLC FILTERED: reset foreground, suppress custom colors/annotations.
+                                             IsMarked/IsCurrentMarked==False: marked rows still show Black text.
+                                             HasSystemDefaultColor==False: state-transition rows keep their Black text. -->
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding GridType, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="FILTERED"/>
+                                                <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="False"/>
+                                                <Condition Binding="{Binding IsErrorOrEvents}" Value="False"/>
+                                                <Condition Binding="{Binding HasSystemDefaultColor}" Value="False"/>
+                                                <Condition Binding="{Binding IsMarked}" Value="False"/>
+                                                <Condition Binding="{Binding IsCurrentMarked}" Value="False"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </controls:SelectableTextBlock.Style>
+                        </controls:SelectableTextBlock>
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTemplateColumn Header="Pattern" Width="150" Visibility="Collapsed" SortMemberPath="Pattern" CanUserSort="True">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <controls:SelectableTextBlock Text="{Binding Pattern, Mode=OneWay}">
+                            <controls:SelectableTextBlock.Style>
+                                <Style TargetType="controls:SelectableTextBlock" BasedOn="{StaticResource SelectableTextBlockStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsCurrentMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <!-- PLC FILTERED: reset foreground, suppress custom colors/annotations.
+                                             IsMarked/IsCurrentMarked==False: marked rows still show Black text.
+                                             HasSystemDefaultColor==False: state-transition rows keep their Black text. -->
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding GridType, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="FILTERED"/>
+                                                <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="False"/>
+                                                <Condition Binding="{Binding IsErrorOrEvents}" Value="False"/>
+                                                <Condition Binding="{Binding HasSystemDefaultColor}" Value="False"/>
+                                                <Condition Binding="{Binding IsMarked}" Value="False"/>
+                                                <Condition Binding="{Binding IsCurrentMarked}" Value="False"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </controls:SelectableTextBlock.Style>
+                        </controls:SelectableTextBlock>
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTemplateColumn Header="Process" Width="120" Visibility="Collapsed" SortMemberPath="Process" CanUserSort="True">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <controls:SelectableTextBlock Text="{Binding Process, Mode=OneWay}">
+                            <controls:SelectableTextBlock.Style>
+                                <Style TargetType="controls:SelectableTextBlock" BasedOn="{StaticResource SelectableTextBlockStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsCurrentMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <!-- PLC FILTERED: reset foreground, suppress custom colors/annotations.
+                                             IsMarked/IsCurrentMarked==False: marked rows still show Black text.
+                                             HasSystemDefaultColor==False: state-transition rows keep their Black text. -->
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding GridType, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="FILTERED"/>
+                                                <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="False"/>
+                                                <Condition Binding="{Binding IsErrorOrEvents}" Value="False"/>
+                                                <Condition Binding="{Binding HasSystemDefaultColor}" Value="False"/>
+                                                <Condition Binding="{Binding IsMarked}" Value="False"/>
+                                                <Condition Binding="{Binding IsCurrentMarked}" Value="False"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </controls:SelectableTextBlock.Style>
+                        </controls:SelectableTextBlock>
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTemplateColumn Header="Message" Width="*" MinWidth="400">
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                        <controls:HighlightTextBlock Text="{Binding Message}" HighlightText="{Binding DataContext.SearchText, RelativeSource={RelativeSource AncestorType=Window}}" VerticalAlignment="Center">
+                            <controls:HighlightTextBlock.Style>
+                                <Style TargetType="controls:HighlightTextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                    <Setter Property="TextWrapping" Value="NoWrap"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding HasAnnotation}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsCurrentMarked}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                        </DataTrigger>
+                                        <!-- PLC FILTERED: reset foreground, suppress custom colors/annotations.
+                                             IsMarked/IsCurrentMarked==False: marked rows still show Black text.
+                                             HasSystemDefaultColor==False: state-transition rows keep their Black text. -->
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding GridType, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="FILTERED"/>
+                                                <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="False"/>
+                                                <Condition Binding="{Binding IsErrorOrEvents}" Value="False"/>
+                                                <Condition Binding="{Binding HasSystemDefaultColor}" Value="False"/>
+                                                <Condition Binding="{Binding IsMarked}" Value="False"/>
+                                                <Condition Binding="{Binding IsCurrentMarked}" Value="False"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </controls:HighlightTextBlock.Style>
+                        </controls:HighlightTextBlock>
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+        </DataGrid.Columns>
+
+        <!-- Row Details Template for Annotations -->
+        <DataGrid.RowDetailsTemplate>
+            <DataTemplate>
+                <Border Background="{DynamicResource BgDark}" BorderBrush="{DynamicResource WarningColor}" BorderThickness="2" Padding="12" Margin="5,0,5,5" CornerRadius="4">
+                    <!-- Annotation Text -->
+                    <TextBlock Text="{Binding AnnotationContent}"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextPrimary}"
+                               FontStyle="Italic"
+                               VerticalAlignment="Center"/>
+                </Border>
+            </DataTemplate>
+        </DataGrid.RowDetailsTemplate>
+
+        <!-- Row Style with Details Visibility -->
+        <DataGrid.RowStyle>
+            <Style TargetType="DataGridRow" BasedOn="{StaticResource LogRowStyle}">
+                <Style.Triggers>
+                    <!-- PLC FILTERED: suppress user-set custom colors; show factory-default colour and marks.
+                         IsMarked/IsCurrentMarked==False so marked rows still get their highlight in FILTERED
+                         (marking is shared between PLC and FILTERED since they are the same LogEntry objects). -->
+                    <MultiDataTrigger>
+                        <MultiDataTrigger.Conditions>
+                            <Condition Binding="{Binding GridType, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="FILTERED"/>
+                            <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsSelected}" Value="False"/>
+                            <Condition Binding="{Binding IsMarked}" Value="False"/>
+                            <Condition Binding="{Binding IsCurrentMarked}" Value="False"/>
+                        </MultiDataTrigger.Conditions>
+                        <Setter Property="Background" Value="{Binding FilteredRowBackground}"/>
+                    </MultiDataTrigger>
+                </Style.Triggers>
+            </Style>
+        </DataGrid.RowStyle>
+    </DataGrid>
+
+        <!-- Log Heatmap Scrollbar - positioned on the right edge -->
+        <controls:LogHeatmapControl x:Name="HeatmapControl"
+                                    Width="10"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Stretch"
+                                    Margin="0,22,0,18"
+                                    ItemsSource="{Binding LogsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+    </Grid>
+</UserControl>

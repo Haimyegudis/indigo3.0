@@ -1,0 +1,878 @@
+﻿using IndiLogs_3._0.Models;
+using IndiLogs_3._0.Services;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.IO;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media.Imaging;
+
+namespace IndiLogs_3._0.ViewModels.Components
+{
+    /// <summary>
+    /// Manages log data sessions - loading files, storing logs, switching between sessions
+    /// </summary>
+    public class LogSessionViewModel : ViewModelBase
+    {
+        private readonly MainViewModel _parent;
+        private readonly LogFileService _logService;
+        private readonly LogColoringService _coloringService;
+        private FilterSearchViewModel _filterVM;
+        private CaseManagementViewModel _caseVM;
+        private ConfigExplorerViewModel _configVM;
+        private LiveMonitoringViewModel _liveVM;
+
+        // Main data collections
+        private IEnumerable<LogEntry> _logs;
+        public IEnumerable<LogEntry> Logs
+        {
+            get => _logs;
+            set
+            {
+                _logs = value;
+                OnPropertyChanged();
+                // Notify parent so UI updates
+                _parent?.NotifyPropertyChanged(nameof(_parent.Logs));
+            }
+        }
+
+        private IList<LogEntry> _allLogsCache;
+        public IList<LogEntry> AllLogsCache
+        {
+            get => _allLogsCache;
+            set
+            {
+                _allLogsCache = value;
+                OnPropertyChanged();
+                _parent?.NotifyPropertyChanged(nameof(_parent.AllLogsCache));
+            }
+        }
+
+        private IList<LogEntry> _allAppLogsCache;
+        public IList<LogEntry> AllAppLogsCache
+        {
+            get => _allAppLogsCache;
+            set
+            {
+                _allAppLogsCache = value;
+                OnPropertyChanged();
+                _parent?.NotifyPropertyChanged(nameof(_parent.AllAppLogsCache));
+            }
+        }
+
+        private ObservableCollection<EventEntry> _events;
+        public ObservableCollection<EventEntry> Events
+        {
+            get => _events;
+            set
+            {
+                _events = value;
+                OnPropertyChanged();
+                _parent?.NotifyPropertyChanged(nameof(_parent.Events));
+            }
+        }
+
+        // Cache for all events (before time filtering)
+        private List<EventEntry> _allEvents;
+        public List<EventEntry> AllEvents
+        {
+            get => _allEvents;
+            set
+            {
+                _allEvents = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private ObservableCollection<BitmapImage> _screenshots;
+        public ObservableCollection<BitmapImage> Screenshots
+        {
+            get => _screenshots;
+            set
+            {
+                _screenshots = value;
+                OnPropertyChanged();
+                _parent?.NotifyPropertyChanged(nameof(_parent.Screenshots));
+            }
+        }
+
+        private ObservableCollection<string> _loadedFiles;
+        public ObservableCollection<string> LoadedFiles
+        {
+            get => _loadedFiles;
+            set
+            {
+                _loadedFiles = value;
+                OnPropertyChanged();
+                _parent?.NotifyPropertyChanged(nameof(_parent.LoadedFiles));
+            }
+        }
+
+        private ObservableCollection<LogSessionData> _loadedSessions;
+        public ObservableCollection<LogSessionData> LoadedSessions
+        {
+            get => _loadedSessions;
+            set
+            {
+                _loadedSessions = value;
+                OnPropertyChanged();
+                _parent?.NotifyPropertyChanged(nameof(_parent.LoadedSessions));
+            }
+        }
+
+        private LogSessionData _selectedSession;
+        public LogSessionData SelectedSession
+        {
+            get => _selectedSession;
+            set
+            {
+                if (_selectedSession != value)
+                {
+                    // Save filter state of the outgoing session before switching
+                    SaveFilterState(_selectedSession);
+
+                    _selectedSession = value;
+                    OnPropertyChanged();
+                    _parent?.NotifyPropertyChanged(nameof(_parent.SelectedSession));
+                    _parent?.NotifyPropertyChanged(nameof(_parent.HasSessionLoaded));
+                    SwitchToSession(_selectedSession);
+                }
+            }
+        }
+
+        // Progress tracking
+        private double _currentProgress;
+        public double CurrentProgress
+        {
+            get => _currentProgress;
+            set
+            {
+                _currentProgress = value;
+                OnPropertyChanged();
+                _parent?.NotifyPropertyChanged(nameof(_parent.CurrentProgress));
+            }
+        }
+
+        private string _statusMessage;
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            set
+            {
+                _statusMessage = value;
+                OnPropertyChanged();
+                _parent?.NotifyPropertyChanged(nameof(_parent.StatusMessage));
+            }
+        }
+
+        private bool _isBusy;
+        public bool IsBusy
+        {
+            get => _isBusy;
+            set
+            {
+                _isBusy = value;
+                OnPropertyChanged();
+                _parent?.NotifyPropertyChanged(nameof(_parent.IsBusy));
+            }
+        }
+
+        // Commands
+        public ICommand LoadCommand { get; }
+        public ICommand ClearCommand { get; }
+        public ICommand RemoveSessionCommand { get; }
+
+        public LogSessionViewModel(MainViewModel parent, LogFileService logService, LogColoringService coloringService)
+        {
+            _parent = parent;
+            _logService = logService;
+            _coloringService = coloringService;
+
+            // Initialize collections
+            _allLogsCache = new List<LogEntry>();
+            _logs = new List<LogEntry>();
+            _events = new ObservableCollection<EventEntry>();
+            _allEvents = new List<EventEntry>();
+            _screenshots = new ObservableCollection<BitmapImage>();
+            _loadedFiles = new ObservableCollection<string>();
+            _loadedSessions = new ObservableCollection<LogSessionData>();
+
+            // Initialize commands
+            LoadCommand = new RelayCommand(LoadFile);
+            ClearCommand = new RelayCommand(ClearLogs);
+            RemoveSessionCommand = new RelayCommand(RemoveSession);
+        }
+
+        // Set dependent ViewModels after construction (circular dependency resolution)
+        public void SetDependencies(FilterSearchViewModel filterVM, CaseManagementViewModel caseVM,
+            ConfigExplorerViewModel configVM, LiveMonitoringViewModel liveVM)
+        {
+            _filterVM = filterVM;
+            _caseVM = caseVM;
+            _configVM = configVM;
+            _liveVM = liveVM;
+        }
+
+        /// <summary>
+        /// Builds the OpenFileDialog Filter string dynamically, adding an entry for
+        /// every file extension declared by loaded plugins.
+        /// </summary>
+        private string BuildFileDialogFilter()
+        {
+            // Collect unique globs from all loaded plugins (e.g. "*.csvlog", "*.devicelog")
+            var pluginExts = new List<string>();
+            try
+            {
+                var loader = _parent.GetPluginLoader();
+                if (loader != null)
+                {
+                    foreach (var p in loader.Plugins)
+                    {
+                        var exts = p.SupportedExtensions;
+                        if (exts != null) pluginExts.AddRange(exts);
+                    }
+                }
+            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogSessionViewModel] BuildFileDialogFilter plugin extensions failed: {ex.Message}"); }
+
+            // Remove extensions already covered by standard built-in filter groups
+            // so they don't create a redundant "Plugin Files" entry for common types
+            var standardExts = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "*.log", "*.txt", "*.err", "*.error", "*.out",
+                "*.json", "*.jsonl", "*.csv", "*.xml", "*.zip"
+            };
+            pluginExts = pluginExts
+                .Distinct()
+                .Where(e => !standardExts.Contains(e))
+                .ToList();
+
+            string pluginGlobAll = pluginExts.Count > 0 ? string.Join(";", pluginExts) : "";
+
+            // Base set includes all common log types + plugin-specific extensions
+            const string baseGlobs = "*.zip;*.log;*.txt;*.json;*.jsonl;*.csv;*.xml;*.err;*.error;*.out";
+            string allSupportedGlobs = baseGlobs + (pluginGlobAll.Length > 0 ? ";" + pluginGlobAll : "");
+
+            var filter = new System.Text.StringBuilder();
+            filter.Append($"All Supported Files ({allSupportedGlobs})|{allSupportedGlobs}");
+            filter.Append("|Text Log Files (*.log;*.txt;*.err;*.error;*.out)|*.log;*.txt;*.err;*.error;*.out");
+            filter.Append("|JSON Logs (*.json;*.jsonl)|*.json;*.jsonl");
+            filter.Append("|CSV Files (*.csv)|*.csv");
+            filter.Append("|XML / log4net (*.xml)|*.xml");
+            filter.Append("|Log Archives (*.zip)|*.zip");
+            if (pluginGlobAll.Length > 0)
+                filter.Append($"|Plugin Files ({pluginGlobAll})|{pluginGlobAll}");
+            filter.Append("|All files (*.*)|*.*");
+
+            return filter.ToString();
+        }
+
+        private async void LoadFile(object obj)
+        {
+            try
+            {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Multiselect = true,
+                Filter = BuildFileDialogFilter()
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                // Route CSV files to CPR tab instead of log processing
+                var csvFiles = dialog.FileNames.Where(f => Path.GetExtension(f).ToLower() == ".csv").ToArray();
+                var logFiles = dialog.FileNames.Where(f => Path.GetExtension(f).ToLower() != ".csv").ToArray();
+
+                if (csvFiles.Length > 0)
+                {
+                    _parent.SelectedTabIndex = 10; // CPR tab
+                    _parent.CprVM?.LoadFileDirect(csvFiles[0]);
+                }
+
+                if (logFiles.Length > 0)
+                {
+                    // For single non-session files, try routing to Different Logs tab
+                    if (logFiles.Length == 1 && _parent.DifferentLogsVM != null)
+                    {
+                        var ext = Path.GetExtension(logFiles[0]).ToLower();
+                        bool isKnownSessionExt = ext == ".zip" || ext == ".log" || ext == ".file";
+                        if (!isKnownSessionExt)
+                        {
+                            bool handled = await _parent.DifferentLogsVM.LoadFileAsync(logFiles[0]);
+                            if (handled)
+                            {
+                                _parent.SelectedTabIndex = 12; // DIFFERENT LOGS tab
+                                return;
+                            }
+                        }
+                    }
+                    ProcessFiles(logFiles);
+                }
+            }
+            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[LogSessionViewModel.LoadFile] Unhandled: {ex.Message}"); }
+        }
+
+        public async void ProcessFiles(string[] filePaths, Action<LogSessionData> onLoadComplete = null)
+        {
+            bool isWatchableFile = false; // Track if we should start auto-refresh after loading
+
+            // Check if this is a live log file (active file being written to)
+            if (filePaths.Length == 1 && File.Exists(filePaths[0]))
+            {
+                var filePath = filePaths[0];
+                var fileName = Path.GetFileName(filePath);
+                var ext = Path.GetExtension(filePath).ToLower();
+
+                // Detect live log files: .log or .file extension, or specific patterns like "no-sn.engineGroupA.file"
+                if (ext == ".log" || ext == ".file" ||
+                    fileName.IndexOf("engineGroup", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    fileName.IndexOf("no-sn", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    // Check if file is actively being written by another process
+                    // Try to open with exclusive access - if it fails, the file is locked (live)
+                    bool isLiveFile = false;
+                    try
+                    {
+                        // Try to open with exclusive write access
+                        // If another process is writing to it, this will fail
+                        using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                        {
+                            // If we CAN open exclusively, file is NOT being written to - load as static
+                            isLiveFile = false;
+                        }
+                    }
+                    catch (IOException)
+                    {
+                        // File is locked by another process - it's a live file
+                        isLiveFile = true;
+                    }
+                    catch
+                    {
+                        // Other errors (permissions etc.) - treat as static file
+                        isLiveFile = false;
+                    }
+
+                    if (isLiveFile)
+                    {
+                        _liveVM.StartLiveMonitoring(filePath);
+                        return;
+                    }
+                    // Otherwise, continue to load as static file below — but mark for auto-refresh
+                    isWatchableFile = true;
+                }
+            }
+
+            IsBusy = true;
+            StatusMessage = "Processing files...";
+
+            try
+            {
+                var progress = new Progress<(double Percent, string Message)>(update =>
+                {
+                    CurrentProgress = update.Percent;
+                    StatusMessage = update.Message;
+                });
+
+                var newSession = await _logService.LoadSessionAsync(filePaths, progress);
+
+                newSession.FileName = Path.GetFileName(filePaths[0]);
+                if (filePaths.Length > 1) newSession.FileName += $" (+{filePaths.Length - 1})";
+                newSession.FilePath = filePaths[0];
+
+                // Run APP log parsing and color application in parallel for maximum speed
+                StatusMessage = "Processing logs...";
+                var postTasks = new List<Task>();
+
+                // Parse APP logs (extracts Pattern, Data, Exception fields)
+                if (newSession.AppDevLogs != null && newSession.AppDevLogs.Count > 0)
+                {
+                    postTasks.Add(Services.LogParserService.ParseLogEntriesAsync(newSession.AppDevLogs));
+                }
+
+                // Apply colors to main logs
+                postTasks.Add(_coloringService.ApplyDefaultColorsAsync(newSession.Logs, false));
+                if (newSession.AppDevLogs != null && newSession.AppDevLogs.Any())
+                    postTasks.Add(_coloringService.ApplyDefaultColorsAsync(newSession.AppDevLogs, true));
+
+                await Task.WhenAll(postTasks);
+
+                LoadedSessions.Add(newSession);
+                SelectedSession = newSession;
+
+                // Update SessionVM with ALL loaded data
+                // Share reference instead of copying to avoid doubling memory usage
+                Logs = newSession.Logs;
+                AllLogsCache = newSession.Logs;
+                AllAppLogsCache = newSession.AppDevLogs ?? new List<LogEntry>();
+
+                // Auto-calculate time sync offset between PLC and APP logs.
+                // APP is the authoritative baseline (synced to PC/BIOS clock).
+                //
+                // Matching rule:
+                //   APP:  Logger == PrcSymptomMapperManager  AND  Message starts with "--> eventID: <X>"
+                //   PLC:  ThreadName == "Events"             AND  Message starts with "Send event <X>" or "Enqueue event <X>"
+                //
+                // Search order: iterate APP logs earliest-first; for each candidate extract <X> and
+                // find the PLC entry with the same event name whose raw timestamp is CLOSEST to the
+                // APP log AND within ±2 minutes.  Using "closest" instead of "first" prevents
+                // accidentally syncing to an earlier repeated occurrence of the same event name.
+                // The very first valid pair becomes the anchor; offset = APP.Date - PLC.Date.
+                _parent.HasTimeSyncData      = false;
+                _parent.ShowSyncedTimeColumn = false;
+                try
+                {
+                    if (newSession.Logs.Count > 0 && newSession.AppDevLogs != null && newSession.AppDevLogs.Count > 0)
+                    {
+                        const string appLogger   = "Press.BL.PrintCare.Symptoms.PrcSymptomMapperManager";
+                        const string appPrefix   = "--> eventID: ";
+                        const string plcThread   = "Events";
+                        const double maxDiffMin  = 2.0;
+
+                        TimeSpan? syncOffset = null;
+
+                        // Pre-filter PLC Events logs once to avoid re-scanning on every APP candidate
+                        var plcEventLogs = newSession.Logs
+                            .Where(l => string.Equals(l.ThreadName, plcThread, StringComparison.OrdinalIgnoreCase)
+                                        && l.Message != null)
+                            .ToList(); // still in ascending date order
+
+                        // Iterate APP logs in chronological order (earliest = most reliable anchor)
+                        foreach (var appLog in newSession.AppDevLogs)
+                        {
+                            if (!string.Equals(appLog.Logger, appLogger, StringComparison.OrdinalIgnoreCase))
+                                continue;
+                            if (appLog.Message == null || !appLog.Message.StartsWith(appPrefix, StringComparison.OrdinalIgnoreCase))
+                                continue;
+
+                            // Extract event ID – everything after the prefix up to the first comma (or end)
+                            var afterPrefix = appLog.Message.Substring(appPrefix.Length).TrimStart();
+                            var commaIdx    = afterPrefix.IndexOf(',');
+                            var eventId     = (commaIdx >= 0 ? afterPrefix.Substring(0, commaIdx) : afterPrefix).Trim();
+                            if (string.IsNullOrEmpty(eventId)) continue;
+
+                            // Skip noisy/repeated events that are unreliable sync anchors
+                            if (string.Equals(eventId, "PLC_FAILURE_STATE_CHANGE", StringComparison.OrdinalIgnoreCase))
+                                continue;
+
+                            var sendPrefix    = "Send event "    + eventId;
+                            var enqueuePrefix = "Enqueue event " + eventId;
+
+                            // Among all PLC Events logs that carry this event name, prefer "Enqueue event"
+                            // over "Send event" (Enqueue is the original posting, Send is a downstream
+                            // dispatch). Within the same message-type preference, pick the closest in time.
+                            LogEntry bestEnqueueLog = null;
+                            LogEntry bestSendLog    = null;
+                            double   bestEnqueueDiff = double.MaxValue;
+                            double   bestSendDiff    = double.MaxValue;
+
+                            foreach (var plcLog in plcEventLogs)
+                            {
+                                var diffMin = Math.Abs((appLog.Date - plcLog.Date).TotalMinutes);
+                                if (diffMin > maxDiffMin)
+                                    continue;
+
+                                if (plcLog.Message.StartsWith(enqueuePrefix, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    if (diffMin < bestEnqueueDiff) { bestEnqueueDiff = diffMin; bestEnqueueLog = plcLog; }
+                                }
+                                else if (plcLog.Message.StartsWith(sendPrefix, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    if (diffMin < bestSendDiff) { bestSendDiff = diffMin; bestSendLog = plcLog; }
+                                }
+                            }
+
+                            // Prefer Enqueue; fall back to Send only if no Enqueue match exists
+                            var bestPlcLog = bestEnqueueLog ?? bestSendLog;
+
+                            if (bestPlcLog != null)
+                            {
+                                syncOffset = appLog.Date - bestPlcLog.Date;
+                                break; // First valid APP anchor wins
+                            }
+                        }
+
+                        if (syncOffset.HasValue && Math.Abs(syncOffset.Value.TotalSeconds) > 1)
+                        {
+                            _parent.TimeSyncOffsetSeconds = syncOffset.Value.TotalSeconds;
+
+                            // Apply offset to every PLC log: SyncedTime == PLC raw time shifted to APP clock
+                            foreach (var log in newSession.Logs)
+                                log.SyncedTime = log.Date.Add(syncOffset.Value);
+
+                            _parent.HasTimeSyncData      = true;
+                            _parent.ShowSyncedTimeColumn = true;
+                            _parent.StatusMessage = $"⏱ Time sync: offset {syncOffset.Value.TotalMilliseconds:F0}ms ({syncOffset.Value.TotalSeconds:F1}s)";
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[LogSession] Time-sync calculation failed: {ex.Message}");
+                }
+
+                // Update Events and cache (already sorted by LogFileService)
+                if (newSession.Events != null && newSession.Events.Count > 0)
+                {
+                    AllEvents = newSession.Events; // Already sorted, share reference
+                    // Single collection replacement — fires one PropertyChanged instead of N CollectionChanged
+                    Events = new ObservableCollection<EventEntry>(newSession.Events);
+                }
+                else
+                {
+                    AllEvents = new List<EventEntry>();
+                    Events = new ObservableCollection<EventEntry>();
+                }
+
+                _parent.LoadEventsDataView();
+
+                // Update Screenshots — single collection replacement
+                Screenshots = new ObservableCollection<BitmapImage>(newSession.Screenshots ?? new List<BitmapImage>());
+
+                // Update LoadedFiles
+                LoadedFiles.Clear();
+                LoadedFiles.Add(newSession.FileName);
+
+                // Update Setup Info, Press Config, Versions through parent
+                _parent.SetupInfo = newSession.SetupInfo;
+                _parent.PressConfig = newSession.PressConfiguration;
+                _parent.VersionsInfo = newSession.VersionsInfo;
+
+                // Update Config files (if any) or terminal logs
+                if (newSession.ConfigurationFiles != null && newSession.ConfigurationFiles.Any() ||
+                    newSession.DatabaseFiles != null && newSession.DatabaseFiles.Any() ||
+                    newSession.TerminalLogFiles != null && newSession.TerminalLogFiles.Any() ||
+                    newSession.TerminalCsvBytes != null && newSession.TerminalCsvBytes.Any())
+                {
+                    _configVM.LoadConfigurationFiles();
+                }
+                _parent.NotifyPropertyChanged(nameof(_parent.DbConfigTabHeader));
+                _parent.NotifyPropertyChanged(nameof(_parent.HasBinaryAppLogs));
+                _parent.LoadGlobalsFiles();
+                _parent.LoadSystabFiles();
+
+                // Update FilterVM - apply initial filters (this is the FIRST and MAIN filter application)
+                // Subsequent filter calls happen only when user changes filter settings
+                _filterVM.ApplyMainLogsFilter();
+                _filterVM.ApplyAppLogsFilter();
+
+                // Scroll all tabs to last row after loading
+                // Use ApplicationIdle priority to ensure DataGrid virtualization is fully rendered
+                // Use ScrollTabToBottom (not ScrollToLog) to directly target each grid,
+                // because FindGridForLog always matches PLC first for shared log objects
+                Application.Current?.Dispatcher?.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.ApplicationIdle,
+                    new Action(() =>
+                    {
+                        _parent.ScrollTabToBottom("PLC");
+                        _parent.ScrollTabToBottom("FILTERED");
+                        _parent.ScrollTabToBottom("APP");
+                    }));
+
+                CurrentProgress = 100;
+                StatusMessage = $"Logs Loaded ({newSession.Logs.Count:N0} PLC logs). Running Analysis in Background...";
+                IsBusy = false;
+
+                // Select PLC tab after loading
+                _parent.SelectedTabIndex = 0;
+
+                _parent.StartBackgroundAnalysis(newSession);
+
+                // Call callback after successful load
+                onLoadComplete?.Invoke(newSession);
+
+                // Start auto-refresh for .file files so new logs are picked up automatically
+                if (isWatchableFile && filePaths.Length == 1 && newSession.Logs.Count > 0)
+                {
+                    _liveVM.StartFileWatcher(filePaths[0], newSession);
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error: {ex.Message}";
+                MessageBox.Show($"Error loading files: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                IsBusy = false;
+            }
+        }
+
+        private void ClearLogs(object obj)
+        {
+            // Clear logs
+            if (_allLogsCache != null) _allLogsCache.Clear();
+            if (_allAppLogsCache != null) _allAppLogsCache.Clear();
+
+            Logs = new List<LogEntry>();
+            OnPropertyChanged(nameof(Logs));
+
+            // Clear events
+            if (_events != null)
+            {
+                _events.Clear();
+                OnPropertyChanged(nameof(Events));
+            }
+
+            // Clear screenshots
+            if (_screenshots != null)
+            {
+                _screenshots.Clear();
+                OnPropertyChanged(nameof(Screenshots));
+            }
+
+            // Clear files
+            if (_loadedFiles != null)
+            {
+                _loadedFiles.Clear();
+                OnPropertyChanged(nameof(LoadedFiles));
+            }
+
+            // Clear sessions
+            if (_loadedSessions != null)
+            {
+                _loadedSessions.Clear();
+                OnPropertyChanged(nameof(LoadedSessions));
+            }
+
+            SelectedSession = null;
+            CurrentProgress = 0;
+
+            // Clear chart state
+            _parent.ChartVM?.RestoreChartState(null);
+
+            // Clear text info properties in parent
+            _parent.SetupInfo = "";
+            _parent.PressConfig = "";
+            _parent.VersionsInfo = "";
+            _parent.WindowTitle = "IndiLogs 3.0";
+
+            // Clear FilterVM collections directly
+            if (_filterVM != null)
+            {
+                // Clear ALL filters (thread, logger, method, time focus, search, negative, etc.)
+                _filterVM.ClearFilters();
+
+                if (_filterVM.FilteredLogs != null)
+                {
+                    _filterVM.FilteredLogs.Clear();
+                    _parent.NotifyPropertyChanged(nameof(_parent.FilteredLogs));
+                }
+
+                if (_filterVM.AppDevLogsFiltered != null)
+                {
+                    _filterVM.AppDevLogsFiltered.Clear();
+                    _parent.NotifyPropertyChanged(nameof(_parent.AppDevLogsFiltered));
+                }
+
+                if (_filterVM.LoggerTreeRoot != null)
+                {
+                    _filterVM.LoggerTreeRoot.Clear();
+                    _parent.NotifyPropertyChanged(nameof(_parent.LoggerTreeRoot));
+                }
+                if (_filterVM.PlcLoggerTreeRoot != null)
+                {
+                    _filterVM.PlcLoggerTreeRoot.Clear();
+                    _parent.NotifyPropertyChanged(nameof(_parent.PlcLoggerTreeRoot));
+                    _parent.NotifyPropertyChanged(nameof(_parent.ActiveLoggerTree));
+                }
+
+                // Notify ACTIVE FILTERS panel to update
+                _parent.NotifyPropertyChanged(nameof(_parent.ActiveFilters));
+                _parent.NotifyPropertyChanged(nameof(_parent.HasActiveFilters));
+            }
+
+            // Clear ConfigVM collections directly
+            if (_configVM != null)
+            {
+                _configVM.ClearConfigurationFiles();
+                _parent.NotifyPropertyChanged(nameof(_parent.ConfigurationFiles));
+                _parent.NotifyPropertyChanged(nameof(_parent.DbTreeNodes));
+                _parent.NotifyPropertyChanged(nameof(_parent.SelectedConfigFile));
+                _parent.NotifyPropertyChanged(nameof(_parent.ConfigFileContent));
+                _parent.NotifyPropertyChanged(nameof(_parent.FilteredConfigContent));
+                _parent.NotifyPropertyChanged(nameof(_parent.ConfigSearchText));
+                _parent.NotifyPropertyChanged(nameof(_parent.IsDbFileSelected));
+            }
+
+            StatusMessage = "Logs cleared";
+        }
+
+        private void RemoveSession(object obj)
+        {
+            if (obj is LogSessionData session && _loadedSessions != null && _loadedSessions.Contains(session))
+            {
+                bool wasSelected = (session == _selectedSession);
+                _loadedSessions.Remove(session);
+                OnPropertyChanged(nameof(LoadedSessions));
+
+                if (wasSelected)
+                {
+                    // If removed session was selected, switch to the first remaining session or clear
+                    if (_loadedSessions.Count > 0)
+                    {
+                        SelectedSession = _loadedSessions[0];
+                    }
+                    else
+                    {
+                        SelectedSession = null;
+                        // Clear everything since no sessions remain
+                        ClearLogs(null);
+                    }
+                }
+            }
+        }
+
+        private void SwitchToSession(LogSessionData session)
+        {
+            if (session == null) return;
+            IsBusy = true;
+
+            AllLogsCache = session.Logs;
+            Logs = session.Logs;
+            _parent.CurrentPluginColumns = session.PluginColumns;
+
+            // Load configuration and database files through ConfigVM
+            _configVM.LoadConfigurationFiles();
+            _parent.NotifyPropertyChanged(nameof(_parent.ConfigurationFiles));
+            _parent.NotifyPropertyChanged(nameof(_parent.SelectedConfigFile));
+            _parent.NotifyPropertyChanged(nameof(_parent.DbConfigTabHeader));
+            _parent.NotifyPropertyChanged(nameof(_parent.HasBinaryAppLogs));
+            _parent.LoadGlobalsFiles();
+
+            // Update Events and Screenshots — single collection replacement instead of per-item Add
+            Events = new ObservableCollection<EventEntry>(session.Events);
+            _parent.LoadEventsDataView();
+
+            Screenshots = new ObservableCollection<BitmapImage>(session.Screenshots);
+
+            _parent.MarkedLogs = session.MarkedLogs;
+            _parent.NotifyPropertyChanged(nameof(_parent.MarkedLogs));
+            _parent.SetupInfo = session.SetupInfo;
+            _parent.PressConfig = session.PressConfiguration;
+
+            if (!string.IsNullOrEmpty(session.VersionsInfo))
+                _parent.WindowTitle = $"IndiLogs 3.0 - {session.FileName} ({session.VersionsInfo})";
+            else
+                _parent.WindowTitle = $"IndiLogs 3.0 - {session.FileName}";
+
+            AllAppLogsCache = session.AppDevLogs ?? new List<LogEntry>();
+            // Note: Parsing already done in LogFileService when case logs were loaded or when saving case
+
+            _filterVM.BuildLoggerTree(AllAppLogsCache);
+            _filterVM.BuildPlcLoggerTree(AllLogsCache);
+
+            // Don't reset search/filters when loading a case - will be restored by ApplyCaseSettings
+            if (!_caseVM.IsLoadingCase)
+            {
+                // Reload saved configs filtered by session type (show only the matching default)
+                _caseVM.LoadSavedConfigs(session.HasBinaryAppLogs);
+
+                // Try to restore previously saved filter state for this session
+                if (!RestoreFilterState(session))
+                {
+                    // First time opening this session — start with no filters
+                    _parent.SearchText = "";
+                    _filterVM.IsTimeFocusActive = false;
+                    _filterVM.IsAppTimeFocusActive = false;
+
+                    _filterVM.NegativeFilters.Clear();
+                    _filterVM.ActiveThreadFilters.Clear();
+
+                    _filterVM.MainFilterRoot = null;
+                    _filterVM.AppFilterRoot = null;
+                    _filterVM.LastFilteredAppCache = null;
+                    _filterVM.LastFilteredCache = null;
+
+                    _parent.ResetTreeFilters();
+
+                    _filterVM.IsMainFilterActive = false;
+                    _filterVM.IsAppFilterActive = false;
+                    _filterVM.IsMainFilterOutActive = false;
+                    _filterVM.IsAppFilterOutActive = false;
+
+                    _filterVM.ApplyAppLogsFilter();
+                }
+            }
+            else
+            {
+                _filterVM.ApplyAppLogsFilter();
+            }
+
+            // Restore chart state for this session (or clear if no saved state)
+            _parent.ChartVM?.RestoreChartState(session.SavedChartState);
+
+            IsBusy = false;
+        }
+
+        /// <summary>
+        /// Saves the current filter state into the session so it persists across switches.
+        /// </summary>
+        private void SaveFilterState(LogSessionData session)
+        {
+            if (session == null) return;
+
+            session.SavedFilterState = new SessionFilterState
+            {
+                MainFilterRoot = _filterVM.MainFilterRoot?.DeepClone(),
+                AppFilterRoot = _filterVM.AppFilterRoot?.DeepClone(),
+                IsMainFilterActive = _filterVM.IsMainFilterActive,
+                IsAppFilterActive = _filterVM.IsAppFilterActive,
+                IsMainFilterOutActive = _filterVM.IsMainFilterOutActive,
+                IsAppFilterOutActive = _filterVM.IsAppFilterOutActive,
+                IsTimeFocusActive = _filterVM.IsTimeFocusActive,
+                IsAppTimeFocusActive = _filterVM.IsAppTimeFocusActive,
+                NegativeFilters = _filterVM.NegativeFilters.ToList(),
+                ActiveThreadFilters = _filterVM.ActiveThreadFilters.ToList(),
+                SearchText = _parent.SearchText,
+                LastFilteredCache = _filterVM.LastFilteredCache,
+                LastFilteredAppCache = _filterVM.LastFilteredAppCache
+            };
+
+            // Save chart state for this session
+            session.SavedChartState = _parent.ChartVM?.SaveChartState();
+        }
+
+        /// <summary>
+        /// Restores a previously saved filter state for the session.
+        /// Returns true if state was restored, false if no saved state exists.
+        /// </summary>
+        private bool RestoreFilterState(LogSessionData session)
+        {
+            var state = session?.SavedFilterState;
+            if (state == null) return false;
+
+            _parent.SearchText = state.SearchText ?? "";
+            _filterVM.IsTimeFocusActive = state.IsTimeFocusActive;
+            _filterVM.IsAppTimeFocusActive = state.IsAppTimeFocusActive;
+
+            _filterVM.NegativeFilters.Clear();
+            foreach (var nf in state.NegativeFilters) _filterVM.NegativeFilters.Add(nf);
+
+            _filterVM.ActiveThreadFilters.Clear();
+            foreach (var tf in state.ActiveThreadFilters) _filterVM.ActiveThreadFilters.Add(tf);
+
+            _filterVM.MainFilterRoot = state.MainFilterRoot?.DeepClone();
+            _filterVM.AppFilterRoot = state.AppFilterRoot?.DeepClone();
+            _filterVM.LastFilteredCache = state.LastFilteredCache;
+            _filterVM.LastFilteredAppCache = state.LastFilteredAppCache;
+
+            _filterVM.IsMainFilterActive = state.IsMainFilterActive;
+            _filterVM.IsAppFilterActive = state.IsAppFilterActive;
+            _filterVM.IsMainFilterOutActive = state.IsMainFilterOutActive;
+            _filterVM.IsAppFilterOutActive = state.IsAppFilterOutActive;
+
+            _parent.NotifyPropertyChanged(nameof(_parent.IsFilterActive));
+            _parent.NotifyPropertyChanged(nameof(_parent.IsFilterOutActive));
+
+            _filterVM.ApplyMainLogsFilter();
+            _filterVM.ApplyAppLogsFilter();
+
+            return true;
+        }
+
+        // INotifyPropertyChanged inherited from ViewModelBase
+    }
+}

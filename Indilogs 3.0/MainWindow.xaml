@@ -1,0 +1,1859 @@
+﻿<Window x:Class="IndiLogs_3._0.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:IndiLogs_3._0.ViewModels"
+        xmlns:controls="clr-namespace:IndiLogs_3._0.Controls"
+        xmlns:charts="clr-namespace:IndiLogs_3._0.Controls.Charts"
+        xmlns:views="clr-namespace:IndiLogs_3._0.Views"
+        xmlns:converters="clr-namespace:IndiLogs_3._0.Converters"
+        xmlns:cpr="clr-namespace:IndiLogs_3._0.Controls.Cpr"
+        mc:Ignorable="d"
+        Title="{Binding WindowTitle}"
+        Height="700" Width="1100"
+        Background="{DynamicResource BgDark}"
+        WindowStartupLocation="CenterScreen"
+        AllowDrop="True"
+        Drop="Window_Drop"
+        TextOptions.TextFormattingMode="Display"
+        UseLayoutRounding="True">
+
+    <Window.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+        <converters:BoolToArrowConverter x:Key="BoolToArrowConverter"/>
+        <converters:BoolToArrowConverter x:Key="BoolToArrowConverterRight" TrueValue="▶" FalseValue="◀"/>
+        <converters:ScreenshotWidthConverter x:Key="ScreenshotWidthConverter"/>
+        <converters:ScreenshotScaleConverter x:Key="ScreenshotScaleConverter"/>
+    </Window.Resources>
+
+    <Window.DataContext>
+        <vm:MainViewModel />
+    </Window.DataContext>
+
+    <Window.InputBindings>
+        <KeyBinding Key="S" Modifiers="Ctrl" Command="{Binding OpenSnakeGameCommand}" />
+        <KeyBinding Key="I" Modifiers="Ctrl" Command="{Binding OpenIndigoInvadersCommand}" />
+        <KeyBinding Key="Space" Command="{Binding MarkRowCommand}" />
+        <KeyBinding Key="Z" Modifiers="Ctrl" Command="{Binding UndoFilterOutCommand}" />
+        <KeyBinding Key="OemPlus" Modifiers="Ctrl" Command="{Binding ZoomInCommand}" />
+        <KeyBinding Key="Add" Modifiers="Ctrl" Command="{Binding ZoomInCommand}" />
+        <KeyBinding Key="OemMinus" Modifiers="Ctrl" Command="{Binding ZoomOutCommand}" />
+        <KeyBinding Key="Subtract" Modifiers="Ctrl" Command="{Binding ZoomOutCommand}" />
+        <KeyBinding Key="F" Modifiers="Ctrl" Command="{Binding ToggleSearchCommand}" />
+        <KeyBinding Key="Esc" Command="{Binding CloseSearchCommand}" />
+        <KeyBinding Key="F1" Command="{Binding OpenHelpCommand}" />
+    </Window.InputBindings>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="50"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="24"/>
+        </Grid.RowDefinitions>
+
+        <controls:HeaderControl Grid.Row="0" DataContext="{Binding}"/>
+
+        <Grid Grid.Row="1" x:Name="MainContentGrid">
+            <Grid.ColumnDefinitions>
+                <!-- Left panel - Column 0 -->
+                <ColumnDefinition x:Name="LeftPanelColumn" Width="200"/>
+                <!-- GridSplitter column - Column 1 -->
+                <ColumnDefinition x:Name="LeftSplitterColumn" Width="Auto"/>
+                <!-- Main content - Column 2 -->
+                <ColumnDefinition Width="*"/>
+                <!-- Right splitter - Column 3 -->
+                <ColumnDefinition x:Name="RightSplitterColumn" Width="Auto"/>
+                <!-- Right panel - Column 4 -->
+                <ColumnDefinition x:Name="RightPanelColumn" Width="200"/>
+                <!-- Column 5 kept for index stability but no longer used for the show button -->
+                <ColumnDefinition x:Name="RightShowButtonColumn" Width="0"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Panel with hover toggle button -->
+            <Grid Grid.Column="0" Visibility="{Binding IsLeftPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid Background="{DynamicResource BgPanel}">
+                <TabControl x:Name="LeftPanelTabs" Background="Transparent" BorderThickness="0" Margin="0" Padding="0" SelectedIndex="{Binding LeftTabIndex}" Width="200">
+                    <TabItem Header="EXPLORER">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="OPEN SESSIONS" Foreground="{DynamicResource TextSecondary}" FontWeight="Bold" FontSize="11" Margin="15,15,0,10"/>
+                            <ListBox x:Name="SessionsListBox" Grid.Row="1" ItemsSource="{Binding LoadedSessions}" SelectedItem="{Binding SelectedSession, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Margin="5,0" AutomationProperties.Name="Open Sessions List">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Remove Session"
+                                                              Command="{Binding DataContext.RemoveSessionCommand, Source={x:Reference SessionsListBox}}"
+                                                              CommandParameter="{Binding}"/>
+                                                </ContextMenu>
+                                            </Grid.ContextMenu>
+                                            <TextBlock Text="📄" Margin="0,0,10,0" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding FileName}" ToolTip="{Binding FilePath}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Padding" Value="10,6"/>
+                                        <Setter Property="Cursor" Value="Hand"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border Name="Border" Background="Transparent" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Border" Property="Background" Value="#15888888"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="Border" Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                                            <Setter Property="Foreground" Value="White"/>
+                                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                            </ListBox>
+
+                            <Grid Grid.Row="2" VerticalAlignment="Bottom" Margin="10,0,10,10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Border Grid.Row="0" Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10" Visibility="{Binding IsExplorerMenuOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="Black" Opacity="0.2" BlurRadius="10" ShadowDepth="2"/>
+                                    </Border.Effect>
+                                    <StackPanel>
+                                        <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                                            <TextBlock Text="Actions" FontWeight="Bold" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" FontSize="11"/>
+                                        </DockPanel>
+                                        <Button Command="{Binding ClearCommand}" Background="{DynamicResource DangerColor}" Style="{DynamicResource PrimaryBtn}" Margin="0,0,0,8" AutomationProperties.Name="Clear All">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="🗑 Clear All"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Button Command="{Binding OpenMarkedLogsWindowCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" AutomationProperties.Name="Marked Lines">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="📌 Marked Lines"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Button Command="{Binding OpenGlobalGrepCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" AutomationProperties.Name="Global Grep">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="🔍 Global Grep"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Button Command="{Binding OpenComparisonCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" ToolTip="Compare logs from different sources" Visibility="Collapsed" AutomationProperties.Name="Compare">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="🔀 Compare"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Button Command="{Binding OpenStatesWindowCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsPLCTabSelected, Converter={StaticResource BoolToVisibilityConverter}}" AutomationProperties.Name="States">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="🔄 States"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Button Command="{Binding ExportParsedDataCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsExportVisible, Converter={StaticResource BoolToVisibilityConverter}}" AutomationProperties.Name="Export CSV">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="📊 Export CSV"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Button Command="{Binding RunAnalysisCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" AutomationProperties.Name="Reports">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="{Binding ReportsButtonText}"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Button Command="{Binding OpenStripeAnalysisCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsPrintAnalysisVisible, Converter={StaticResource BoolToVisibilityConverter}}" AutomationProperties.Name="Print Analysis">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="🖨 Print Analysis"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Separator Margin="0,10,0,10" Background="{DynamicResource BorderColor}"/>
+                                        <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                                            <TextBlock Text="Case File" FontWeight="Bold" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" FontSize="11"/>
+                                        </DockPanel>
+                                        <Button Command="{Binding SaveCaseCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" AutomationProperties.Name="Save Case">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="💾 Save Case"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Button Command="{Binding LoadCaseCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" AutomationProperties.Name="Load Case">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="📂 Load Case"/>
+                                            </Viewbox>
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+                                <Button Grid.Row="1" Command="{Binding ToggleExplorerMenuCommand}" Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" HorizontalAlignment="Left" Width="40" Height="40" ToolTip="Show Actions" AutomationProperties.Name="Show Actions">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="20">
+                                                <Border.Effect>
+                                                    <DropShadowEffect Color="Black" Opacity="0.15" BlurRadius="5" ShadowDepth="2"/>
+                                                </Border.Effect>
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource BgCardHover}"/>
+                                                    <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
+                                                </Trigger>
+                                                <Trigger Property="IsPressed" Value="True">
+                                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                    <Grid>
+                                        <TextBlock Text="••" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-8,0,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsExplorerMenuOpen}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Text="✕" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsExplorerMenuOpen}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </Button>
+                            </Grid>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem Header="LOGGERS">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="{Binding LoggerTabTitle}" Foreground="{DynamicResource TextSecondary}" FontWeight="Bold" FontSize="11" Margin="15,15,0,10"/>
+                            <TreeView Grid.Row="1" ItemsSource="{Binding ActiveLoggerTree}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" Margin="5,0" AutomationProperties.Name="Logger Tree">
+                                <TreeView.ItemContainerStyle>
+                                    <Style TargetType="TreeViewItem">
+                                        <Setter Property="IsExpanded" Value="False"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                        <Setter Property="Opacity" Value="1"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsHidden}" Value="True">
+                                                <Setter Property="Opacity" Value="0.65"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TreeView.ItemContainerStyle>
+                                <TreeView.ItemTemplate>
+                                    <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                        <Grid Margin="0,2" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=TreeView}}">
+                                            <Grid.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Show This" Command="{Binding PlacementTarget.Tag.TreeShowThisCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                    <MenuItem Header="Hide This" Command="{Binding PlacementTarget.Tag.TreeHideThisCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                    <MenuItem Header="Show Only This" Command="{Binding PlacementTarget.Tag.TreeShowOnlyThisCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                    <MenuItem Header="Show With Children" Command="{Binding PlacementTarget.Tag.TreeShowWithChildrenCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                    <MenuItem Header="Hide With Children" Command="{Binding PlacementTarget.Tag.TreeHideWithChildrenCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                    <Separator/>
+                                                    <MenuItem Header="Show All" Command="{Binding PlacementTarget.Tag.TreeShowAllCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                </ContextMenu>
+                                            </Grid.ContextMenu>
+                                            <StackPanel Orientation="Horizontal">
+                                                <!-- Status icon: green checkmark for active, red X for hidden -->
+                                                <TextBlock Text="&#x2715;" Foreground="{DynamicResource DangerColor}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,4,0">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsHidden}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Text="&#x2713;" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,4,0">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{DynamicResource SuccessColor}"/>
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <!-- Logger name: green when active, dimmed when hidden -->
+                                                <TextBlock ToolTip="{Binding FullPath}" VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="{Binding Name}"/>
+                                                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsHidden}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource SuccessColor}"/>
+                                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <!-- Count -->
+                                                <TextBlock Text="{Binding Count, StringFormat=' ({0})'}" Margin="5,0,0,0" VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsHidden}" Value="True">
+                                                                    <Setter Property="Foreground" Value="#88808080"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource SuccessColor}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Grid>
+                                    </HierarchicalDataTemplate>
+                                </TreeView.ItemTemplate>
+                            </TreeView>
+
+                            <Grid Grid.Row="2" VerticalAlignment="Bottom" Margin="10,0,10,10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Border Grid.Row="0" Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10" Visibility="{Binding IsExplorerMenuOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="Black" Opacity="0.2" BlurRadius="10" ShadowDepth="2"/>
+                                    </Border.Effect>
+                                    <StackPanel>
+                                        <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                                            <TextBlock Text="Actions" FontWeight="Bold" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" FontSize="11"/>
+                                        </DockPanel>
+                                        <Button Command="{Binding ClearCommand}" Background="{DynamicResource DangerColor}" Style="{DynamicResource PrimaryBtn}" Margin="0,0,0,8" AutomationProperties.Name="Clear All">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="🗑 Clear All"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Button Command="{Binding OpenMarkedLogsWindowCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" AutomationProperties.Name="Marked Lines">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="📌 Marked Lines"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Button Command="{Binding OpenGlobalGrepCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" AutomationProperties.Name="Global Grep">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="🔍 Global Grep"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Button Command="{Binding OpenComparisonCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" ToolTip="Compare logs from different sources" Visibility="Collapsed" AutomationProperties.Name="Compare">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="🔀 Compare"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Button Command="{Binding OpenStatesWindowCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsPLCTabSelected, Converter={StaticResource BoolToVisibilityConverter}}" AutomationProperties.Name="States">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="🔄 States"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Button Command="{Binding ExportParsedDataCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsExportVisible, Converter={StaticResource BoolToVisibilityConverter}}" AutomationProperties.Name="Export CSV">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="📊 Export CSV"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Button Command="{Binding RunAnalysisCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" AutomationProperties.Name="Reports">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="{Binding ReportsButtonText}"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Button Command="{Binding OpenStripeAnalysisCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" Visibility="{Binding IsPrintAnalysisVisible, Converter={StaticResource BoolToVisibilityConverter}}" AutomationProperties.Name="Print Analysis">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="🖨 Print Analysis"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Separator Margin="0,10,0,10" Background="{DynamicResource BorderColor}"/>
+                                        <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                                            <TextBlock Text="Case File" FontWeight="Bold" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" FontSize="11"/>
+                                        </DockPanel>
+                                        <Button Command="{Binding SaveCaseCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" AutomationProperties.Name="Save Case">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="💾 Save Case"/>
+                                            </Viewbox>
+                                        </Button>
+                                        <Button Command="{Binding LoadCaseCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" AutomationProperties.Name="Load Case">
+                                            <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                <TextBlock Text="📂 Load Case"/>
+                                            </Viewbox>
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+                                <Button Grid.Row="1" Command="{Binding ToggleExplorerMenuCommand}" Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" HorizontalAlignment="Left" Width="40" Height="40" ToolTip="Show Actions" AutomationProperties.Name="Show Actions">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="20">
+                                                <Border.Effect>
+                                                    <DropShadowEffect Color="Black" Opacity="0.15" BlurRadius="5" ShadowDepth="2"/>
+                                                </Border.Effect>
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource BgCardHover}"/>
+                                                    <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
+                                                </Trigger>
+                                                <Trigger Property="IsPressed" Value="True">
+                                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                    <Grid>
+                                        <TextBlock Text="••" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-8,0,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsExplorerMenuOpen}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Text="✕" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsExplorerMenuOpen}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </Button>
+                            </Grid>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
+                </Grid>
+                <!-- Left panel hide button (appears on hover at right edge) - double-click to hide -->
+                <Border x:Name="LeftPanelHideButton" Width="16" HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Height="36" CornerRadius="4"
+                        Background="Transparent" Cursor="Hand"
+                        MouseLeftButtonDown="LeftPanelHideButton_Click"
+                        ToolTip="Click to hide panel">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Opacity" Value="0"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource BgCardHover}"/>
+                                    <Setter Property="Opacity" Value="1"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="◀" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondary}"/>
+                </Border>
+            </Grid>
+
+            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent" ShowsPreview="True"
+                          Visibility="{Binding IsLeftPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="5"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <controls:SearchPanelControl Grid.Row="0" DataContext="{Binding}"
+                              Visibility="{Binding IsSearchPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                <TabControl x:Name="MainTabs" Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}" BorderThickness="0" Background="Transparent" Padding="0" SelectionChanged="TabControl_SelectionChanged" AutomationProperties.Name="Main Log Tabs"
+                            Visibility="{Binding ShowMainTabs, Converter={StaticResource BoolToVisibilityConverter}}">
+
+                    <TabItem Header="{Binding PlcTabHeader}"
+                             Visibility="{Binding HasSessionLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TabItem.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding DataContext.PlcTabHeader, RelativeSource={RelativeSource AncestorType=Window}}" VerticalAlignment="Center"/>
+                                    <Button Content="&#x29C9;" FontSize="10" Margin="6,0,0,0" Padding="2,0" VerticalAlignment="Center" Cursor="Hand"
+                                            ToolTip="Detach to separate window" Click="DetachTab_Click"
+                                            Background="Transparent" BorderThickness="0"
+                                            Foreground="{DynamicResource TextSecondary}" Opacity="0.5">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Opacity" Value="1"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </TabItem.HeaderTemplate>
+                        <controls:PlcLogsTabControl x:Name="PlcLogsTab" DataContext="{Binding}" Loaded="PlcLogsTab_Loaded"/>
+                    </TabItem>
+
+                    <TabItem Header="APP"
+                             Visibility="{Binding HasSessionLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TabItem.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="APP" VerticalAlignment="Center"/>
+                                    <Button Content="&#x29C9;" FontSize="10" Margin="6,0,0,0" Padding="2,0" VerticalAlignment="Center" Cursor="Hand"
+                                            ToolTip="Detach to separate window" Click="DetachTab_Click"
+                                            Background="Transparent" BorderThickness="0"
+                                            Foreground="{DynamicResource TextSecondary}" Opacity="0.5">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Opacity" Value="1"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </TabItem.HeaderTemplate>
+                        <controls:AppLogsTabControl x:Name="AppLogsTab" DataContext="{Binding}"/>
+                    </TabItem>
+
+                    <TabItem Header="EVENTS"
+                             Visibility="{Binding HasSessionLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <DataGrid ItemsSource="{Binding EventsDataView}" FontSize="{Binding GridFontSize}" FontFamily="{DynamicResource ContentFontFamily}" AutoGenerateColumns="True" IsReadOnly="True" CanUserAddRows="False" VerticalScrollBarVisibility="Auto" CanUserSortColumns="True" CanUserReorderColumns="True" CanUserResizeColumns="True"
+                                  Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextSecondary}" BorderThickness="0"
+                                  GridLinesVisibility="None"
+                                  RowBackground="{DynamicResource BgDark}" AlternatingRowBackground="{DynamicResource BgPanel}"
+                                  HeadersVisibility="Column"
+                                  EnableRowVirtualization="True" EnableColumnVirtualization="True">
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="{DynamicResource BgCard}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                    <Setter Property="FontWeight" Value="Normal"/>
+                                    <Setter Property="Padding" Value="8,5"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+                                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow">
+                                    <Setter Property="Height" Value="24"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.RowStyle>
+                            <DataGrid.CellStyle>
+                                <Style TargetType="DataGridCell">
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Padding" Value="4,2"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.CellStyle>
+                        </DataGrid>
+                    </TabItem>
+
+                    <TabItem Header="SCREENSHOTS"
+                             Visibility="{Binding HasSessionLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Grid Background="{DynamicResource BgDark}" ClipToBounds="True">
+                            <ScrollViewer x:Name="ScreenshotScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" PanningMode="Both" Cursor="SizeAll" PreviewMouseLeftButtonDown="OnImageMouseLeftButtonDown" PreviewMouseLeftButtonUp="OnImageMouseLeftButtonUp" PreviewMouseMove="OnImageMouseMove" PreviewMouseWheel="OnScreenshotMouseWheel">
+                                <ItemsControl ItemsSource="{Binding Screenshots}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Margin="5">
+                                                <Image Source="{Binding}" Stretch="Uniform">
+                                                    <Image.Width>
+                                                        <MultiBinding Converter="{StaticResource ScreenshotWidthConverter}">
+                                                            <Binding Path="DataContext.ScreenshotZoom" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                            <Binding Path="DataContext.Screenshots.Count" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                        </MultiBinding>
+                                                    </Image.Width>
+                                                    <Image.LayoutTransform>
+                                                        <ScaleTransform>
+                                                            <ScaleTransform.ScaleX>
+                                                                <MultiBinding Converter="{StaticResource ScreenshotScaleConverter}">
+                                                                    <Binding Path="DataContext.ScreenshotZoom" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                                    <Binding Path="DataContext.Screenshots.Count" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                                </MultiBinding>
+                                                            </ScaleTransform.ScaleX>
+                                                            <ScaleTransform.ScaleY>
+                                                                <MultiBinding Converter="{StaticResource ScreenshotScaleConverter}">
+                                                                    <Binding Path="DataContext.ScreenshotZoom" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                                    <Binding Path="DataContext.Screenshots.Count" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                                </MultiBinding>
+                                                            </ScaleTransform.ScaleY>
+                                                        </ScaleTransform>
+                                                    </Image.LayoutTransform>
+                                                </Image>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem Header="CONFIG"
+                             Visibility="{Binding HasSessionLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBox Text="{Binding PressConfig}" IsReadOnly="True" FontFamily="{DynamicResource ContentFontFamily}" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderThickness="0" VerticalScrollBarVisibility="Auto" Padding="10"/>
+                    </TabItem>
+
+                    <TabItem Header="{Binding DbConfigTabHeader}"
+                             Visibility="{Binding HasSessionLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Background="{DynamicResource BgPanel}" Padding="10" Margin="0,0,0,5" CornerRadius="4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Select File:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" Margin="0,0,10,0" FontWeight="Normal"/>
+                                    <ComboBox ItemsSource="{Binding ConfigurationFiles}" SelectedItem="{Binding SelectedConfigFile, Mode=TwoWay}" Width="350" Height="30" VerticalContentAlignment="Center" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="5,0">
+                                        <ComboBox.Template>
+                                            <ControlTemplate TargetType="ComboBox">
+                                                <Grid>
+                                                    <ToggleButton Name="ToggleButton" Grid.Column="2" Focusable="false" IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" ClickMode="Press" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                                                        <ToggleButton.Template>
+                                                            <ControlTemplate TargetType="ToggleButton">
+                                                                <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*"/>
+                                                                            <ColumnDefinition Width="20"/>
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <ContentPresenter Grid.Column="0" Content="{TemplateBinding Content}" Margin="5,0"/>
+                                                                        <Path Grid.Column="1" Data="M 0 0 L 4 4 L 8 0 Z" Fill="{DynamicResource TextSecondary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    </Grid>
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </ToggleButton.Template>
+                                                    </ToggleButton>
+                                                    <ContentPresenter Name="ContentSite" IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" Margin="5,0,25,0" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                                                    <Popup Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                                        <Border Name="DropDownBorder" Background="{DynamicResource BgDark}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="4" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="200">
+                                                            <Border.Effect>
+                                                                <DropShadowEffect Color="Black" Opacity="0.3" BlurRadius="10" ShadowDepth="2"/>
+                                                            </Border.Effect>
+                                                            <ScrollViewer Margin="0" SnapsToDevicePixels="True">
+                                                                <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                                            </ScrollViewer>
+                                                        </Border>
+                                                    </Popup>
+                                                </Grid>
+                                            </ControlTemplate>
+                                        </ComboBox.Template>
+                                        <ComboBox.ItemContainerStyle>
+                                            <Style TargetType="ComboBoxItem">
+                                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="Padding" Value="8,6"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="ComboBoxItem">
+                                                            <Border Name="Border" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                                                                <ContentPresenter/>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsHighlighted" Value="True">
+                                                                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                                                    <Setter Property="Foreground" Value="White"/>
+                                                                </Trigger>
+                                                                <Trigger Property="IsSelected" Value="True">
+                                                                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                                                    <Setter Property="Foreground" Value="White"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </ComboBox.ItemContainerStyle>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Row="1" Background="{DynamicResource BgPanel}" Padding="10" Margin="0,0,0,5" CornerRadius="4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Search:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" Margin="0,0,10,0" FontWeight="Normal"/>
+                                    <TextBox Text="{Binding ConfigSearchText, UpdateSourceTrigger=PropertyChanged}" Width="350" Height="28" VerticalContentAlignment="Center" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="5,0" FontFamily="{DynamicResource ContentFontFamily}" FontSize="12"/>
+                                </StackPanel>
+                            </Border>
+                            <Grid Grid.Row="2">
+                                <Grid Visibility="{Binding IsDbFileSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <Border Grid.Row="0" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="350"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Name" Foreground="{DynamicResource TextSecondary}" FontWeight="SemiBold" Padding="25,8,5,8" FontSize="12"/>
+                                            <TextBlock Grid.Column="1" Text="Type" Foreground="{DynamicResource TextSecondary}" FontWeight="SemiBold" Padding="5,8" FontSize="12"/>
+                                            <TextBlock Grid.Column="2" Text="Schema" Foreground="{DynamicResource TextSecondary}" FontWeight="SemiBold" Padding="5,8" FontSize="12"/>
+                                        </Grid>
+                                    </Border>
+                                    <TreeView Grid.Row="1" ItemsSource="{Binding DbTreeNodes}" Background="{DynamicResource BgDark}" BorderThickness="0" Padding="0" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
+                                        <TreeView.Resources>
+                                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="Transparent"/>
+                                            <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="Transparent"/>
+                                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="{Binding Color, Source={StaticResource TextPrimary}}"/>
+                                            <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="{Binding Color, Source={StaticResource TextPrimary}}"/>
+                                        </TreeView.Resources>
+                                        <TreeView.ItemContainerStyle>
+                                            <Style TargetType="TreeViewItem">
+                                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                                <Setter Property="Visibility" Value="{Binding IsVisible, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="BorderThickness" Value="0"/>
+                                                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                            </Style>
+                                        </TreeView.ItemContainerStyle>
+                                        <TreeView.ItemTemplate>
+                                            <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                                <Grid Width="800">
+                                                    <Grid.ContextMenu>
+                                                        <ContextMenu>
+                                                            <MenuItem Header="📊 Browse Table Data" Command="{Binding DataContext.BrowseTableCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}">
+                                                                <MenuItem.Style>
+                                                                    <Style TargetType="MenuItem">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding NodeType}" Value="Table">
+                                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </MenuItem.Style>
+                                                            </MenuItem>
+                                                            <MenuItem Header="📋 Copy Table Name" Command="{Binding DataContext.CopyTableNameCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}">
+                                                                <MenuItem.Style>
+                                                                    <Style TargetType="MenuItem">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding NodeType}" Value="Table">
+                                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </MenuItem.Style>
+                                                            </MenuItem>
+                                                            <MenuItem Header="📋 Copy Column Name" Command="{Binding DataContext.CopyTableNameCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}">
+                                                                <MenuItem.Style>
+                                                                    <Style TargetType="MenuItem">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding NodeType}" Value="Column">
+                                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </MenuItem.Style>
+                                                            </MenuItem>
+                                                        </ContextMenu>
+                                                    </Grid.ContextMenu>
+                                                    <Grid.InputBindings>
+                                                        <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding DataContext.BrowseTableCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                                    </Grid.InputBindings>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="330"/>
+                                                        <ColumnDefinition Width="100"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding Name}" Foreground="{DynamicResource TextPrimary}" FontSize="11" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Type}" Foreground="{DynamicResource PrimaryHover}" FontFamily="{DynamicResource ContentFontFamily}" FontSize="10" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding Schema}" Foreground="{DynamicResource TextSecondary}" FontFamily="{DynamicResource ContentFontFamily}" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                </Grid>
+                                            </HierarchicalDataTemplate>
+                                        </TreeView.ItemTemplate>
+                                    </TreeView>
+                                </Grid>
+                                <!-- CSV DataGrid (for terminal CSV files) -->
+                                <DataGrid ItemsSource="{Binding CsvDataView}" AutoGenerateColumns="True" IsReadOnly="True"
+                                          Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextSecondary}"
+                                          BorderThickness="0" GridLinesVisibility="None"
+                                          RowBackground="{DynamicResource BgDark}" AlternatingRowBackground="{DynamicResource BgPanel}"
+                                          HeadersVisibility="Column" CanUserSortColumns="True" CanUserReorderColumns="True"
+                                          FontFamily="{DynamicResource ContentFontFamily}" FontSize="11"
+                                          EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                                          Visibility="{Binding IsCsvFileSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <DataGrid.ColumnHeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader">
+                                            <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                            <Setter Property="FontWeight" Value="Normal"/>
+                                            <Setter Property="FontSize" Value="11"/>
+                                            <Setter Property="Padding" Value="6,4"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+                                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                        </Style>
+                                    </DataGrid.ColumnHeaderStyle>
+                                    <DataGrid.CellStyle>
+                                        <Style TargetType="DataGridCell">
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Setter Property="Padding" Value="4,2"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGrid.CellStyle>
+                                </DataGrid>
+                                <!-- Text viewer (non-DB, non-CSV files) -->
+                                <TextBox Text="{Binding FilteredConfigContent, Mode=OneWay}" IsReadOnly="True" FontFamily="{DynamicResource ContentFontFamily}" FontSize="12" FontWeight="Normal" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderThickness="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" AcceptsReturn="True" Padding="10">
+                                    <TextBox.Style>
+                                        <Style TargetType="TextBox">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsDbFileSelected}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsCsvFileSelected}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBox.Style>
+                                </TextBox>
+                            </Grid>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem Header="SETUP INFO">
+                        <TabItem.Style>
+                            <Style TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
+                                <Setter Property="Visibility" Value="{Binding HasBinaryAppLogs, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasSessionLoaded}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TabItem.Style>
+                        <TextBox Text="{Binding SetupInfo}" IsReadOnly="True" FontFamily="{DynamicResource ContentFontFamily}" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderThickness="0" VerticalScrollBarVisibility="Auto" Padding="10"/>
+                    </TabItem>
+
+                    <TabItem Header="GLOBALS" Visibility="{Binding HasGlobalsFiles, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Background="{DynamicResource BgPanel}" Padding="10" Margin="0,0,0,5" CornerRadius="4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Select File:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" Margin="0,0,10,0" FontWeight="Normal"/>
+                                    <ComboBox ItemsSource="{Binding GlobalsFileNames}" SelectedItem="{Binding SelectedGlobalsFile, Mode=TwoWay}" Width="350" Height="30" VerticalContentAlignment="Center" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="5,0">
+                                        <ComboBox.Template>
+                                            <ControlTemplate TargetType="ComboBox">
+                                                <Grid>
+                                                    <ToggleButton Name="ToggleButton" Grid.Column="2" Focusable="false" IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" ClickMode="Press" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                                                        <ToggleButton.Template>
+                                                            <ControlTemplate TargetType="ToggleButton">
+                                                                <Border Name="Border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*"/>
+                                                                            <ColumnDefinition Width="20"/>
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <ContentPresenter Grid.Column="0" Content="{TemplateBinding Content}" Margin="5,0"/>
+                                                                        <Path Grid.Column="1" Data="M 0 0 L 4 4 L 8 0 Z" Fill="{DynamicResource TextSecondary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    </Grid>
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </ToggleButton.Template>
+                                                    </ToggleButton>
+                                                    <ContentPresenter Name="ContentSite" IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" Margin="5,0,25,0" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                                                    <Popup Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                                        <Border Name="DropDownBorder" Background="{DynamicResource BgDark}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="4" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="200">
+                                                            <Border.Effect>
+                                                                <DropShadowEffect Color="Black" Opacity="0.3" BlurRadius="10" ShadowDepth="2"/>
+                                                            </Border.Effect>
+                                                            <ScrollViewer Margin="0" SnapsToDevicePixels="True">
+                                                                <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                                            </ScrollViewer>
+                                                        </Border>
+                                                    </Popup>
+                                                </Grid>
+                                            </ControlTemplate>
+                                        </ComboBox.Template>
+                                        <ComboBox.ItemContainerStyle>
+                                            <Style TargetType="ComboBoxItem">
+                                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="Padding" Value="8,6"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="ComboBoxItem">
+                                                            <Border Name="Border" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                                                                <ContentPresenter/>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsHighlighted" Value="True">
+                                                                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                                                    <Setter Property="Foreground" Value="White"/>
+                                                                </Trigger>
+                                                                <Trigger Property="IsSelected" Value="True">
+                                                                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                                                    <Setter Property="Foreground" Value="White"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </ComboBox.ItemContainerStyle>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Row="1" Background="{DynamicResource BgPanel}" Padding="10" Margin="0,0,0,5" CornerRadius="4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Search:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" Margin="0,0,10,0" FontWeight="Normal"/>
+                                    <TextBox Text="{Binding GlobalsSearchText, UpdateSourceTrigger=PropertyChanged}" Width="350" Height="28" VerticalContentAlignment="Center" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="5,0" FontFamily="{DynamicResource ContentFontFamily}" FontSize="12"/>
+                                    <Button Content="X" Command="{Binding ClearGlobalsSearchCommand}" Width="28" Height="28" Margin="5,0,0,0" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextSecondary}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Cursor="Hand" FontWeight="Normal" FontSize="10"/>
+
+                                    <!-- Show differences filter toggle -->
+                                    <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="10,4"/>
+                                    <Button Command="{Binding ToggleGlobalsDiffsCommand}"
+                                            Height="28" Padding="8,0"
+                                            ToolTip="Show only entries where Value ≠ Default"
+                                            Cursor="Hand" FontSize="11" FontWeight="SemiBold">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Background" Value="{DynamicResource BgDark}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+                                                <Setter Property="BorderThickness" Value="1"/>
+                                                <Setter Property="Content" Value="⚡ DIFF"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding GlobalsShowDiffsOnly}" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource WarningColor}"/>
+                                                        <Setter Property="Foreground" Value="Black"/>
+                                                        <Setter Property="Content" Value="⚡ DIFF ON"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                            <DataGrid Grid.Row="2" ItemsSource="{Binding GlobalsEntries}" AutoGenerateColumns="False" IsReadOnly="True" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextSecondary}" BorderThickness="0" GridLinesVisibility="None" RowBackground="{DynamicResource BgDark}" AlternatingRowBackground="{DynamicResource BgPanel}" CanUserSortColumns="True" CanUserReorderColumns="True" CanUserResizeColumns="True" HeadersVisibility="Column" SelectionMode="Single" FontFamily="{DynamicResource ContentFontFamily}" FontSize="12" EnableRowVirtualization="True" EnableColumnVirtualization="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" MinWidth="200"/>
+                                    <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="120"/>
+                                    <DataGridTextColumn Header="Default" Binding="{Binding Default}" Width="120"/>
+                                    <DataGridCheckBoxColumn Header="IsRelevant" Binding="{Binding IsRelevant}" Width="100"/>
+                                </DataGrid.Columns>
+                                <DataGrid.ColumnHeaderStyle>
+                                    <Style TargetType="DataGridColumnHeader">
+                                        <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                        <Setter Property="Padding" Value="8,5"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+                                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                        <Setter Property="FontWeight" Value="Normal"/>
+                                        <Setter Property="FontSize" Value="12"/>
+                                    </Style>
+                                </DataGrid.ColumnHeaderStyle>
+                                <DataGrid.CellStyle>
+                                    <Style TargetType="DataGridCell">
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Padding" Value="4,2"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGrid.CellStyle>
+                            </DataGrid>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem Header="SYSTAB" Visibility="{Binding HasSystabFiles, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="280"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Left: TreeView for topics -->
+                            <Grid Grid.Column="0" Background="{DynamicResource BgPanel}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Text="TOPICS" Foreground="{DynamicResource TextSecondary}" FontWeight="Bold" FontSize="11" Margin="15,10,0,10"/>
+                                <TreeView Grid.Row="1" ItemsSource="{Binding SystabTree}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" Margin="5,0"
+                                          SelectedItemChanged="SystabTree_SelectedItemChanged">
+                                    <TreeView.ItemContainerStyle>
+                                        <Style TargetType="TreeViewItem">
+                                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                        </Style>
+                                    </TreeView.ItemContainerStyle>
+                                    <TreeView.ItemTemplate>
+                                        <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                                <TextBlock Text="*" Foreground="{DynamicResource WarningColor}" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,4,0">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding HasDifferences}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Count, StringFormat=' ({0})'}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                                            </StackPanel>
+                                        </HierarchicalDataTemplate>
+                                    </TreeView.ItemTemplate>
+                                </TreeView>
+                            </Grid>
+
+                            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent" ShowsPreview="True"/>
+
+                            <!-- Right: DataGrid for parameters -->
+                            <Grid Grid.Column="2">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Search bar -->
+                                <Border Grid.Row="0" Background="{DynamicResource BgPanel}" Padding="10" Margin="0,0,0,5" CornerRadius="4">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Search:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" Margin="0,0,10,0" FontWeight="Normal"/>
+                                        <TextBox Text="{Binding SystabSearchText, UpdateSourceTrigger=PropertyChanged}" Width="250" Height="28" VerticalContentAlignment="Center" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="5,0" FontFamily="{DynamicResource ContentFontFamily}" FontSize="12"/>
+                                        <Button Content="X" Command="{Binding ClearSystabSearchCommand}" Width="28" Height="28" Margin="5,0,0,0" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextSecondary}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Cursor="Hand" FontWeight="Bold" FontSize="10"/>
+                                        <CheckBox Content="Diffs Only" IsChecked="{Binding SystabShowDiffsOnly}" VerticalAlignment="Center" Margin="15,0,0,0" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- DataGrid with systab entries -->
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding SystabEntries}" AutoGenerateColumns="False" IsReadOnly="True"
+                                          Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderThickness="0"
+                                          GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333"
+                                          RowBackground="{DynamicResource BgDark}" AlternatingRowBackground="{DynamicResource BgPanel}"
+                                          CanUserSortColumns="True" CanUserReorderColumns="True" CanUserResizeColumns="True"
+                                          HeadersVisibility="Column" SelectionMode="Single" FontFamily="{DynamicResource ContentFontFamily}" FontSize="12">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Parameter" Binding="{Binding Parameter}" Width="*" MinWidth="200"/>
+                                        <DataGridTextColumn Header="Saved" Binding="{Binding Saved}" Width="120"/>
+                                        <DataGridTextColumn Header="Default" Binding="{Binding Default}" Width="120"/>
+                                        <DataGridTextColumn Header="Minimum" Binding="{Binding Minimum}" Width="120"/>
+                                        <DataGridTextColumn Header="Maximum" Binding="{Binding Maximum}" Width="120"/>
+                                    </DataGrid.Columns>
+                                    <DataGrid.ColumnHeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader">
+                                            <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                            <Setter Property="Padding" Value="8,6"/>
+                                            <Setter Property="BorderBrush" Value="#444"/>
+                                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                            <Setter Property="FontSize" Value="12"/>
+                                        </Style>
+                                    </DataGrid.ColumnHeaderStyle>
+                                    <DataGrid.RowStyle>
+                                        <Style TargetType="DataGridRow">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsDifferent}" Value="True">
+                                                    <Setter Property="Background" Value="#44FFD700"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGrid.RowStyle>
+                                    <DataGrid.CellStyle>
+                                        <Style TargetType="DataGridCell">
+                                            <Setter Property="BorderBrush" Value="#333"/>
+                                            <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                                            <Setter Property="Padding" Value="4,2"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGrid.CellStyle>
+                                </DataGrid>
+                            </Grid>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem Header="CHARTS"
+                             Visibility="{Binding HasSessionLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TabItem.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="CHARTS" VerticalAlignment="Center"/>
+                                    <Button Content="&#x29C9;" FontSize="10" Margin="6,0,0,0" Padding="2,0" VerticalAlignment="Center" Cursor="Hand"
+                                            ToolTip="Detach to separate window" Click="DetachTab_Click"
+                                            Background="Transparent" BorderThickness="0"
+                                            Foreground="{DynamicResource TextSecondary}" Opacity="0.5">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Opacity" Value="1"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </TabItem.HeaderTemplate>
+                        <charts:ChartTabControl x:Name="ChartTab"/>
+                    </TabItem>
+
+                    <TabItem Header="CPR"
+                             Visibility="{Binding HasSessionLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TabItem.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="CPR" VerticalAlignment="Center"/>
+                                    <Button Content="&#x29C9;" FontSize="10" Margin="6,0,0,0" Padding="2,0" VerticalAlignment="Center" Cursor="Hand"
+                                            ToolTip="Detach to separate window" Click="DetachTab_Click"
+                                            Background="Transparent" BorderThickness="0"
+                                            Foreground="{DynamicResource TextSecondary}" Opacity="0.5">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Opacity" Value="1"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </TabItem.HeaderTemplate>
+                        <cpr:CprAnalysisControl x:Name="CprTab" DataContext="{Binding CprVM}" Loaded="CprTab_Loaded"/>
+                    </TabItem>
+
+                    <TabItem Header="STEP RECORDER"
+                             Visibility="{Binding StepRecorderVM.HasIsr, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <controls:StepRecorderTabControl DataContext="{Binding StepRecorderVM}"/>
+                    </TabItem>
+
+                    <TabItem Header="DIFFERENT LOGS">
+                        <controls:DifferentLogsTabControl DataContext="{Binding DifferentLogsVM}"/>
+                    </TabItem>
+                </TabControl>
+
+                <GridSplitter Grid.Row="2" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Center" Background="{DynamicResource BorderColor}" ShowsPreview="True">
+                    <GridSplitter.Style>
+                        <Style TargetType="GridSplitter">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="1">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </GridSplitter.Style>
+                </GridSplitter>
+
+                <!-- APP Selected Log Details Panel - REMOVED (use double-click to open Log Details Window instead) -->
+
+                <Border Grid.Row="4" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" Padding="15,8"
+                        Visibility="{Binding IsBottomPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Grid>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="🔍 Edit Filters..." Command="{Binding OpenFilterWindowCommand}" CommandParameter="{Binding RelativeSource={RelativeSource Self}}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgCard}"/>
+                            <Button Content="🎨 Color Rules..." Command="{Binding OpenColoringWindowCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgCard}"/>
+                            <Button Content="⏱" Command="{Binding OpenTimeRangeFilterCommand}" CommandParameter="{Binding RelativeSource={RelativeSource Self}}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgCard}" ToolTip="Filter by Time Range" FontSize="16" Padding="8,4" Margin="5,0,0,0"/>
+                            <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="10,4"/>
+                            <CheckBox Content="APPLY FILTER OUT" IsChecked="{Binding IsFilterOutActive}" ToolTip="Uncheck to reveal hidden logs" VerticalAlignment="Center" Margin="10,0,15,0" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/>
+                            <CheckBox Content="APPLY FILTER" IsChecked="{Binding IsFilterActive}" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/>
+                            <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="10,4"/>
+
+                            <Button Command="{Binding FilterAppErrorsCommand}" Background="{DynamicResource DangerColor}" Foreground="White" Margin="10,0,0,0" ToolTip="Show Errors Only (Newest First)">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ModernBtn}">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="1">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="🐞" Margin="0,0,6,0"/>
+                                    <TextBlock Text="SHOW ERRORS ONLY" FontWeight="Bold"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Border Background="{DynamicResource BgCard}" CornerRadius="8" Padding="4" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Visibility="{Binding IsPLCTabSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton GroupName="ViewMode" Content="TEXT" IsChecked="{Binding IsVisualMode, Converter={StaticResource InverseBooleanConverter}}" Style="{StaticResource ViewModeRadioButton}"/>
+                                    <RadioButton GroupName="ViewMode" Content="VISUAL" IsChecked="{Binding IsVisualMode}" Style="{StaticResource ViewModeRadioButton}" Margin="4,0,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Left panel show button (appears at left edge when panel is hidden) - click to show -->
+            <Border Grid.Column="2" Width="20" HorizontalAlignment="Left" VerticalAlignment="Center"
+                    Height="40" CornerRadius="0,4,4,0"
+                    Cursor="Hand" Opacity="0"
+                    Visibility="{Binding IsLeftPanelVisible, Converter={StaticResource InverseBoolToVisibilityConverter}}"
+                    MouseLeftButtonDown="LeftPanelShowButton_Click"
+                    MouseEnter="PanelShowButton_MouseEnter"
+                    MouseLeave="PanelShowButton_MouseLeave"
+                    x:Name="LeftPanelShowButton"
+                    ToolTip="Click to show left panel">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <TextBlock Text="▶" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
+                           x:Name="LeftPanelShowArrow">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsMouseOver, ElementName=LeftPanelShowButton}" Value="True">
+                                    <Setter Property="Foreground" Value="White"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Border>
+
+            <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent" ShowsPreview="True"
+                          Visibility="{Binding IsRightPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+            <!-- Right Panel with hover toggle button -->
+            <Grid Grid.Column="4" Visibility="{Binding IsRightPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Border Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1,0,0,0" Padding="15">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" MinHeight="80"/>
+                        <RowDefinition Height="5"/>
+                        <RowDefinition Height="*" MinHeight="80"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- BOTTOM SECTION: Saved Configurations -->
+                    <DockPanel Grid.Row="2">
+                        <TextBlock Text="SAVED CONFIGURATIONS" Foreground="{DynamicResource TextSecondary}" FontWeight="Bold" FontSize="11" Margin="0,0,0,15" DockPanel.Dock="Top"/>
+                        <Grid DockPanel.Dock="Bottom" VerticalAlignment="Bottom" Margin="0,15,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10" Visibility="{Binding IsConfigMenuOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="Black" Opacity="0.2" BlurRadius="10" ShadowDepth="2"/>
+                                </Border.Effect>
+                                <StackPanel>
+                                    <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                                        <TextBlock Text="Actions" FontWeight="Bold" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" FontSize="11"/>
+                                    </DockPanel>
+                                    <Button Command="{Binding SaveConfigCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource SuccessColor}" Foreground="White" Margin="0,0,0,5">
+                                        <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                            <TextBlock Text="💾 Save Current"/>
+                                        </Viewbox>
+                                    </Button>
+                                    <Button Command="{Binding LoadConfigCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5">
+                                        <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                            <TextBlock Text="📂 Load Selected"/>
+                                        </Viewbox>
+                                    </Button>
+                                    <Button Command="{Binding ShowConfigsFolderCommand}" Style="{DynamicResource ModernBtn}" Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,5" ToolTip="Open the folder where saved filters are stored">
+                                        <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                            <TextBlock Text="📁 Show Folder"/>
+                                        </Viewbox>
+                                    </Button>
+                                    <Button Command="{Binding RemoveConfigCommand}" Style="{DynamicResource ModernBtn}" Background="Transparent" BorderBrush="{DynamicResource DangerColor}" Foreground="{DynamicResource DangerColor}" BorderThickness="1">
+                                        <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                            <TextBlock Text="🗑 Delete Selected"/>
+                                        </Viewbox>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                            <Button Grid.Row="1" Command="{Binding ToggleConfigMenuCommand}" Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" HorizontalAlignment="Left" Width="40" Height="40" ToolTip="Show Actions">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="20">
+                                            <Border.Effect>
+                                                <DropShadowEffect Color="Black" Opacity="0.15" BlurRadius="5" ShadowDepth="2"/>
+                                            </Border.Effect>
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="border" Property="Background" Value="{DynamicResource BgCardHover}"/>
+                                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
+                                            </Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                                <Grid>
+                                    <TextBlock Text="••" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-8,0,0">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsConfigMenuOpen}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="✕" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsConfigMenuOpen}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+                            </Button>
+                        </Grid>
+                        <ListView ItemsSource="{Binding SavedConfigs}" SelectedItem="{Binding SelectedConfig, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" HorizontalContentAlignment="Stretch">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,4" Background="Transparent">
+                                        <Grid.InputBindings>
+                                            <MouseBinding Gesture="LeftDoubleClick" Command="{Binding DataContext.ApplyConfigCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                        </Grid.InputBindings>
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListViewItem">
+                                                <Border Name="Border" Padding="8" CornerRadius="4" Background="Transparent">
+                                                    <ContentPresenter/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="Border" Property="Background" Value="{DynamicResource PrimaryGlow}"/>
+                                                        <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
+                                                        <Setter TargetName="Border" Property="BorderThickness" Value="1"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Border" Property="Background" Value="#15888888"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListView.ItemContainerStyle>
+                        </ListView>
+                    </DockPanel>
+
+                    <!-- Draggable Splitter between filters and configs -->
+                    <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                                  Background="{DynamicResource BorderColor}" Cursor="SizeNS" ResizeBehavior="PreviousAndNext"/>
+
+                    <!-- TOP SECTION: Active Filters Display -->
+                    <DockPanel Grid.Row="0">
+                        <TextBlock Text="ACTIVE FILTERS" Foreground="{DynamicResource TextSecondary}" FontWeight="Bold" FontSize="11" Margin="0,5,0,8" DockPanel.Dock="Top"/>
+                        <!-- No filters message -->
+                        <TextBlock Text="No active filters" Foreground="{DynamicResource TextSecondary}" FontSize="11" FontStyle="Italic" Margin="0,5,0,0" DockPanel.Dock="Top">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasActiveFilters}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <!-- Active filters list with scrolling -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding ActiveFilters}">
+                                <ItemsControl.Style>
+                                    <Style TargetType="ItemsControl">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasActiveFilters}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ItemsControl.Style>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,2" Padding="6,4" CornerRadius="4" Background="{DynamicResource BgCard}" Cursor="Hand"
+                                                ToolTip="Double-click to remove" Tag="{Binding Key}"
+                                                MouseLeftButtonDown="ActiveFilterItem_MouseLeftButtonDown">
+                                            <DockPanel>
+                                                <Border DockPanel.Dock="Left" CornerRadius="3" Padding="4,1" Margin="0,0,6,0" VerticalAlignment="Center">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Category}" Value="FILTER OUT">
+                                                                    <Setter Property="Background" Value="{DynamicResource DangerColor}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Category}" Value="SEARCH">
+                                                                    <Setter Property="Background" Value="{DynamicResource WarningColor}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Category}" Value="TIME RANGE">
+                                                                    <Setter Property="Background" Value="#8B5CF6"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Category}" Value="THREAD">
+                                                                    <Setter Property="Background" Value="#06B6D4"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Category}" Value="LOGGER">
+                                                                    <Setter Property="Background" Value="#10B981"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Category}" Value="METHOD">
+                                                                    <Setter Property="Background" Value="#F59E0B"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Category}" Value="RANGE">
+                                                                    <Setter Property="Background" Value="#EC4899"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Category}" Value="COLORING">
+                                                                    <Setter Property="Background" Value="#8B5CF6"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Category}" Value="PLC LOGGER">
+                                                                    <Setter Property="Background" Value="#0EA5E9"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Category}" Value="PLC FILTER OUT">
+                                                                    <Setter Property="Background" Value="#EF4444"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Text="{Binding Category}" Foreground="White" FontSize="9" FontWeight="Bold"/>
+                                                </Border>
+                                                <!-- Color swatch for COLORING items -->
+                                                <Border DockPanel.Dock="Right" Width="16" Height="16" CornerRadius="3" Margin="6,0,0,0" VerticalAlignment="Center"
+                                                        Background="{Binding ColorBrush}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Category}" Value="COLORING">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                </Border>
+                                                <TextBlock Text="{Binding Description}" Foreground="{DynamicResource TextPrimary}" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center" ToolTip="{Binding Description}"/>
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Grid>
+            </Border>
+                <!-- Right panel hide button (appears on hover at left edge of right panel) - double-click to hide -->
+                <Border x:Name="RightPanelHideButton" Width="16" HorizontalAlignment="Left" VerticalAlignment="Center"
+                        Height="36" CornerRadius="4"
+                        Background="Transparent" Cursor="Hand"
+                        MouseLeftButtonDown="RightPanelHideButton_Click"
+                        ToolTip="Click to hide panel">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Opacity" Value="0"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource BgCardHover}"/>
+                                    <Setter Property="Opacity" Value="1"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="▶" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondary}"/>
+                </Border>
+            </Grid>
+
+            <!-- Right panel show button - overlays right edge of Column 2 (main content), same pattern as left show button -->
+            <Border Grid.Column="2" Width="20" HorizontalAlignment="Right" VerticalAlignment="Center"
+                    Height="40" CornerRadius="4,0,0,4"
+                    Cursor="Hand" Opacity="0"
+                    Visibility="{Binding IsRightPanelVisible, Converter={StaticResource InverseBoolToVisibilityConverter}}"
+                    MouseLeftButtonDown="RightPanelShowButton_Click"
+                    MouseEnter="PanelShowButton_MouseEnter"
+                    MouseLeave="PanelShowButton_MouseLeave"
+                    x:Name="RightPanelShowButton"
+                    ToolTip="Click to show right panel">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <TextBlock Text="◀" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"
+                           x:Name="RightPanelShowArrow">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsMouseOver, ElementName=RightPanelShowButton}" Value="True">
+                                    <Setter Property="Foreground" Value="White"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Border>
+
+        </Grid>
+
+        <!-- LOG DETAILS PANEL (Row 2) - Pinned or Auto-Hide -->
+        <Border Grid.Row="2" x:Name="LogDetailsPanel" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <!-- Show on PLC tab (0) and APP tab (1) -->
+                        <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="0">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="1">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Grid>
+                <!-- Auto-hide label (visible when NOT pinned) -->
+                <Border x:Name="LogDetailsAutoHideLabel" Background="{DynamicResource BgPanel}" Height="22" Cursor="Hand"
+                        MouseEnter="LogDetailsLabel_MouseEnter">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsLogDetailsPinned}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock Text="▲ LOG DETAILS" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Full details panel (visible when pinned OR when auto-hide popup is open) -->
+                <Border x:Name="LogDetailsContent" Background="{DynamicResource BgDark}" Padding="10,5">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsLogDetailsPinned}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Header with Pin button -->
+                        <DockPanel Grid.Row="0" Margin="0,0,0,4">
+                            <TextBlock Text="LOG DETAILS" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                                <Button Command="{Binding ToggleLogDetailsPinCommand}" Width="22" Height="22" Cursor="Hand" ToolTip="Pin / Auto-Hide"
+                                        Background="Transparent" BorderThickness="0">
+                                    <TextBlock FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="📌"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsLogDetailsPinned}" Value="False">
+                                                        <Setter Property="Text" Value="📌"/>
+                                                        <Setter Property="Opacity" Value="0.4"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsLogDetailsPinned}" Value="True">
+                                                        <Setter Property="Text" Value="📌"/>
+                                                        <Setter Property="Opacity" Value="1.0"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Button>
+                                <Button x:Name="LogDetailsCloseBtn" Click="LogDetailsClose_Click" Width="22" Height="22" Cursor="Hand" ToolTip="Close"
+                                        Background="Transparent" BorderThickness="0">
+                                    <TextBlock Text="✕" FontSize="12" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                </Button>
+                            </StackPanel>
+                        </DockPanel>
+
+                        <!-- Row 1: Time, Thread, Level, Logger fields -->
+                        <Grid Grid.Row="1" Margin="0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="170"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="140"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Time" Foreground="{DynamicResource TextSecondary}" FontSize="11" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBox Grid.Column="1" Text="{Binding SelectedLog.Date, StringFormat='yyyy-MM-dd HH:mm:ss.ffffff', Mode=OneWay}" IsReadOnly="True" FontFamily="{DynamicResource ContentFontFamily}" FontSize="11" Background="{DynamicResource BgPanel}" Foreground="{DynamicResource TextPrimary}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="4,2" VerticalContentAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="Thread" Foreground="{DynamicResource TextSecondary}" FontSize="11" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                            <TextBox Grid.Column="3" Text="{Binding SelectedLog.ThreadName, Mode=OneWay}" IsReadOnly="True" FontFamily="{DynamicResource ContentFontFamily}" FontSize="11" Background="{DynamicResource BgPanel}" Foreground="{DynamicResource TextPrimary}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="4,2" VerticalContentAlignment="Center"/>
+                            <TextBlock Grid.Column="4" Text="Level" Foreground="{DynamicResource TextSecondary}" FontSize="11" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                            <TextBox Grid.Column="5" Text="{Binding SelectedLog.Level, Mode=OneWay}" IsReadOnly="True" FontFamily="{DynamicResource ContentFontFamily}" FontSize="11" Background="{DynamicResource BgPanel}" Foreground="{DynamicResource TextPrimary}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="4,2" VerticalContentAlignment="Center"/>
+                            <TextBlock Grid.Column="6" Text="Logger" Foreground="{DynamicResource TextSecondary}" FontSize="11" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                            <TextBox Grid.Column="7" Text="{Binding SelectedLog.Logger, Mode=OneWay}" IsReadOnly="True" FontFamily="{DynamicResource ContentFontFamily}" FontSize="11" Background="{DynamicResource BgPanel}" Foreground="{DynamicResource TextPrimary}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="4,2" VerticalContentAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Row 2: Message + Exception -->
+                        <Grid Grid.Row="2" Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <ComboBox Grid.Column="0" x:Name="LogDetailsFieldSelector" SelectedIndex="0" Width="80" FontSize="11" VerticalAlignment="Top" Margin="0,0,5,0"
+                                      Background="{DynamicResource BgPanel}" Foreground="{DynamicResource TextPrimary}" BorderBrush="{DynamicResource BorderColor}"
+                                      SelectionChanged="LogDetailsFieldSelector_Changed">
+                                <ComboBoxItem Content="Message"/>
+                                <ComboBoxItem Content="Exception"/>
+                                <ComboBoxItem Content="Data"/>
+                                <ComboBoxItem Content="Method"/>
+                                <ComboBoxItem Content="Pattern"/>
+                            </ComboBox>
+                            <TextBox Grid.Column="1" x:Name="LogDetailsFieldContent" IsReadOnly="True" FontFamily="{DynamicResource ContentFontFamily}" FontSize="11"
+                                     Background="{DynamicResource BgPanel}" Foreground="{DynamicResource TextPrimary}"
+                                     BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="4,2"
+                                     TextWrapping="Wrap" AcceptsReturn="True"
+                                     VerticalScrollBarVisibility="Auto" MaxHeight="120" MinHeight="40"/>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+
+        <controls:StatusBarControl Grid.Row="3" DataContext="{Binding}">
+            <controls:StatusBarControl.Style>
+                <Style TargetType="controls:StatusBarControl">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <!-- Hide status bar when Charts tab is selected (index 10) -->
+                        <DataTrigger Binding="{Binding SelectedIndex, ElementName=MainTabs}" Value="10">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </controls:StatusBarControl.Style>
+        </controls:StatusBarControl>
+
+        <Grid Grid.RowSpan="4" Background="#CC000000" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}" Panel.ZIndex="999">
+            <Border Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource PrimaryColor}" BorderThickness="0" CornerRadius="30" HorizontalAlignment="Center" VerticalAlignment="Center" Width="450" Height="300">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="80" ShadowDepth="0" Opacity="0.9" Color="{Binding Color, Source={StaticResource PrimaryColor}}"/>
+                </Border.Effect>
+                <Grid Margin="30">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="140"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0" Width="140" Height="140" VerticalAlignment="Top" HorizontalAlignment="Center">
+                        <Ellipse StrokeThickness="6" Width="120" Height="120" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <Ellipse.Effect>
+                                <DropShadowEffect Color="{Binding Color, Source={StaticResource AnimColor1}}" BlurRadius="25" ShadowDepth="0" Opacity="1"/>
+                            </Ellipse.Effect>
+                            <Ellipse.Stroke>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="{Binding Color, Source={StaticResource AnimColor1}}" Offset="0"/>
+                                    <GradientStop Color="Transparent" Offset="0.8"/>
+                                </LinearGradientBrush>
+                            </Ellipse.Stroke>
+                            <Ellipse.RenderTransform>
+                                <RotateTransform Angle="0" CenterX="60" CenterY="60"/>
+                            </Ellipse.RenderTransform>
+                            <Ellipse.Triggers>
+                                <EventTrigger RoutedEvent="Loaded">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)" From="0" To="360" Duration="0:0:1.5" RepeatBehavior="Forever"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                            </Ellipse.Triggers>
+                        </Ellipse>
+                        <Ellipse StrokeThickness="4" Width="90" Height="90" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <Ellipse.Effect>
+                                <DropShadowEffect Color="{Binding Color, Source={StaticResource AnimColor2}}" BlurRadius="20" ShadowDepth="0" Opacity="1"/>
+                            </Ellipse.Effect>
+                            <Ellipse.Stroke>
+                                <LinearGradientBrush StartPoint="1,0" EndPoint="0,1">
+                                    <GradientStop Color="{Binding Color, Source={StaticResource AnimColor2}}" Offset="0"/>
+                                    <GradientStop Color="Transparent" Offset="0.8"/>
+                                </LinearGradientBrush>
+                            </Ellipse.Stroke>
+                            <Ellipse.RenderTransform>
+                                <RotateTransform Angle="360" CenterX="45" CenterY="45"/>
+                            </Ellipse.RenderTransform>
+                            <Ellipse.Triggers>
+                                <EventTrigger RoutedEvent="Loaded">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)" From="360" To="0" Duration="0:0:2" RepeatBehavior="Forever"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                            </Ellipse.Triggers>
+                        </Ellipse>
+                        <Ellipse Width="60" Height="60" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <Ellipse.Fill>
+                                <RadialGradientBrush>
+                                    <GradientStop Color="{Binding Color, Source={StaticResource AnimColor3}}" Offset="0"/>
+                                    <GradientStop Color="Transparent" Offset="1"/>
+                                </RadialGradientBrush>
+                            </Ellipse.Fill>
+                            <Ellipse.Effect>
+                                <DropShadowEffect Color="{Binding Color, Source={StaticResource AnimColor3}}" BlurRadius="30" ShadowDepth="0" Opacity="0.8"/>
+                            </Ellipse.Effect>
+                            <Ellipse.RenderTransform>
+                                <ScaleTransform ScaleX="1" ScaleY="1" CenterX="30" CenterY="30"/>
+                            </Ellipse.RenderTransform>
+                            <Ellipse.Triggers>
+                                <EventTrigger RoutedEvent="Loaded">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" From="0.7" To="1.2" Duration="0:0:1.2" RepeatBehavior="Forever" AutoReverse="True"/>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" From="0.7" To="1.2" Duration="0:0:1.2" RepeatBehavior="Forever" AutoReverse="True"/>
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.3" To="0.8" Duration="0:0:1.2" RepeatBehavior="Forever" AutoReverse="True"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                            </Ellipse.Triggers>
+                        </Ellipse>
+                        <TextBlock Text="{Binding CurrentProgress, StringFormat='{}{0:0}%'}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource AnimText}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock.Effect>
+                                <DropShadowEffect Color="{Binding Color, Source={StaticResource AnimText}}" BlurRadius="15" ShadowDepth="0" Opacity="0.7"/>
+                            </TextBlock.Effect>
+                        </TextBlock>
+                    </Grid>
+                    <TextBlock Grid.Row="1" Text="{Binding StatusMessage}" FontSize="16" Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Top" TextAlignment="Center" TextWrapping="Wrap" Margin="0,10,0,0" MaxHeight="80"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>   

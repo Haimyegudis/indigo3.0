@@ -1,0 +1,499 @@
+﻿<Application x:Class="IndiLogs_3._0.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:IndiLogs_3._0"
+             xmlns:converters="clr-namespace:IndiLogs_3._0.Converters">
+    <!-- ✅ הסרנו את StartupUri="MainWindow.xaml" כדי למנוע כפילות -->
+    <Application.Resources>
+        <FontFamily x:Key="ContentFontFamily">Consolas, JetBrains Mono, Cascadia Code, Segoe UI</FontFamily>
+        <FontFamily x:Key="UIFontFamily">Segoe UI Variable Display, Segoe UI</FontFamily>
+        <FontWeight x:Key="ContentFontWeight">Normal</FontWeight>
+
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+        <converters:AnnotationTextBrushConverter x:Key="AnnotationTextBrushConverter"/>
+        <converters:EnumBoolConverter x:Key="EnumBoolConverter"/>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
+
+
+        <SolidColorBrush x:Key="BgDark" Color="#0D1B2A"/>
+        <SolidColorBrush x:Key="BgPanel" Color="#1B2838"/>
+        <SolidColorBrush x:Key="BgCard" Color="#1E3A5F"/>
+        <SolidColorBrush x:Key="BgCardHover" Color="#274472"/>
+
+        <SolidColorBrush x:Key="SidebarBg" Color="#F3F4F6"/>
+        <SolidColorBrush x:Key="SidebarText" Color="#1F2937"/>
+        <SolidColorBrush x:Key="SidebarBorder" Color="#E5E7EB"/>
+
+        <SolidColorBrush x:Key="TextPrimary" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="TextSecondary" Color="#B4B4B9"/>
+        <SolidColorBrush x:Key="BorderColor" Color="#2D4A6F"/>
+
+        <SolidColorBrush x:Key="PrimaryColor" Color="#3B82F6"/>
+        <SolidColorBrush x:Key="PrimaryHover" Color="#60A5FA"/>
+        <SolidColorBrush x:Key="PrimaryGlow" Color="#203B82F6"/>
+
+        <SolidColorBrush x:Key="DangerColor" Color="#EF4444"/>
+        <SolidColorBrush x:Key="WarningColor" Color="#F59E0B"/>
+        <SolidColorBrush x:Key="SuccessColor" Color="#10B981"/>
+
+        <SolidColorBrush x:Key="AnimColor1" Color="#00FFFF"/>
+        <SolidColorBrush x:Key="AnimColor2" Color="#FF00FF"/>
+        <SolidColorBrush x:Key="AnimColor3" Color="#FFFF00"/>
+        <SolidColorBrush x:Key="AnimText" Color="#FFFFFF"/>
+
+        <!-- Diff Comparison Colors -->
+        <SolidColorBrush x:Key="DiffAddedBg" Color="#90EE90"/>      <!-- Light Green -->
+        <SolidColorBrush x:Key="DiffRemovedBg" Color="#F08080"/>    <!-- Light Coral -->
+        <SolidColorBrush x:Key="DiffRowDifferent" Color="#2A1515"/> <!-- Dark red tint for row bg -->
+
+        <!-- Delta Indicator Colors -->
+        <SolidColorBrush x:Key="DeltaSync" Color="#10B981"/>        <!-- Green: <100ms -->
+        <SolidColorBrush x:Key="DeltaSmall" Color="#F59E0B"/>       <!-- Yellow: 100-1000ms -->
+        <SolidColorBrush x:Key="DeltaLarge" Color="#EF4444"/>       <!-- Red: >1000ms -->
+
+        <!-- Gap Indicator -->
+        <SolidColorBrush x:Key="GapIndicatorBg" Color="#1B3554"/>
+        <SolidColorBrush x:Key="GapIndicatorFg" Color="#6B8CAE"/>
+
+        <!-- Theme-aware hover overlays -->
+        <SolidColorBrush x:Key="RowHoverBg" Color="#1AFFFFFF"/>
+        <SolidColorBrush x:Key="TabHoverBg" Color="#10888888"/>
+
+        <!-- Scrollbar thumb colors (updated by ApplyTheme) -->
+        <SolidColorBrush x:Key="ScrollThumb" Color="#686868"/>
+        <SolidColorBrush x:Key="ScrollThumbHover" Color="#8C8C8C"/>
+        <SolidColorBrush x:Key="ScrollThumbDrag" Color="#ADADAD"/>
+        <SolidColorBrush x:Key="ScrollThumbH" Color="#5A5A5A"/>
+        <SolidColorBrush x:Key="ScrollThumbHoverH" Color="#7A7A7A"/>
+        <SolidColorBrush x:Key="ScrollThumbDragH" Color="#9A9A9A"/>
+
+        <!-- Row selection / highlight colors (updated by ApplyTheme) -->
+        <SolidColorBrush x:Key="RowSelectedBg" Color="#FFFACD"/>
+        <SolidColorBrush x:Key="RowMarkedBg" Color="#90EE90"/>
+        <SolidColorBrush x:Key="RowErrorFg" Color="#FF6B6B"/>
+
+        <!-- Scrollbar style:
+             Vertical  – Windows-style: visible dark track rail, flat rectangular thumb (CornerRadius=2),
+                         wide enough to click easily. CornerRadius=2 avoids the pill/half-circle look.
+             Horizontal – slim and elegant: 8px tall, thin pill-shaped thumb, barely visible. -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Opacity" Value="0.9"/>
+            <Style.Triggers>
+
+                <!-- VERTICAL – Windows-style rectangular thumb on a visible track rail -->
+                <Trigger Property="Orientation" Value="Vertical">
+                    <Setter Property="Width" Value="16"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ScrollBar">
+                                <!-- Transparent track - only the thumb is coloured -->
+                                <Grid x:Name="GridRoot" Width="16" Background="Transparent">
+                                    <Track x:Name="PART_Track" IsDirectionReversed="true" Focusable="false">
+                                        <Track.DecreaseRepeatButton>
+                                            <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="false"/>
+                                        </Track.DecreaseRepeatButton>
+                                        <Track.IncreaseRepeatButton>
+                                            <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="false"/>
+                                        </Track.IncreaseRepeatButton>
+                                        <Track.Thumb>
+                                            <Thumb>
+                                                <Thumb.Style>
+                                                    <Style TargetType="Thumb">
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="Thumb">
+                                                                    <!-- CornerRadius=2: slightly rounded rectangle, NOT a pill.
+                                                                         Margin="3,0" → thumb is 10px wide, filling most of the 16px track.
+                                                                         MinHeight=40: always tall enough to grab. -->
+                                                                    <Border x:Name="ThumbBorder" Background="{DynamicResource ScrollThumb}" CornerRadius="2" Margin="3,0" MinHeight="40"/>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                            <Setter TargetName="ThumbBorder" Property="Background" Value="{DynamicResource ScrollThumbHover}"/>
+                                                                        </Trigger>
+                                                                        <Trigger Property="IsDragging" Value="True">
+                                                                            <Setter TargetName="ThumbBorder" Property="Background" Value="{DynamicResource ScrollThumbDrag}"/>
+                                                                        </Trigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </Style>
+                                                </Thumb.Style>
+                                            </Thumb>
+                                        </Track.Thumb>
+                                    </Track>
+                                </Grid>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+
+                <!-- HORIZONTAL – slim and elegant: 8px total height, thin pill thumb -->
+                <Trigger Property="Orientation" Value="Horizontal">
+                    <Setter Property="Height" Value="8"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ScrollBar">
+                                <Grid x:Name="GridRoot" Height="8" Background="Transparent">
+                                    <Track x:Name="PART_Track" Focusable="false">
+                                        <Track.DecreaseRepeatButton>
+                                            <RepeatButton Command="ScrollBar.PageLeftCommand" Opacity="0" Focusable="false"/>
+                                        </Track.DecreaseRepeatButton>
+                                        <Track.IncreaseRepeatButton>
+                                            <RepeatButton Command="ScrollBar.PageRightCommand" Opacity="0" Focusable="false"/>
+                                        </Track.IncreaseRepeatButton>
+                                        <Track.Thumb>
+                                            <Thumb>
+                                                <Thumb.Style>
+                                                    <Style TargetType="Thumb">
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="Thumb">
+                                                                    <!-- Margin="0,2" → thumb is 4px tall. CornerRadius=2 gives a flat
+                                                                         rounded-end bar. Very slim and elegant. MinWidth=40 for grabbing. -->
+                                                                    <Border x:Name="ThumbBorder" Background="{DynamicResource ScrollThumbH}" CornerRadius="2" Margin="0,2" MinWidth="40"/>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                            <Setter TargetName="ThumbBorder" Property="Background" Value="{DynamicResource ScrollThumbHoverH}"/>
+                                                                        </Trigger>
+                                                                        <Trigger Property="IsDragging" Value="True">
+                                                                            <Setter TargetName="ThumbBorder" Property="Background" Value="{DynamicResource ScrollThumbDragH}"/>
+                                                                        </Trigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </Style>
+                                                </Thumb.Style>
+                                            </Thumb>
+                                        </Track.Thumb>
+                                    </Track>
+                                </Grid>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1">
+                                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" 
+                                              PanningMode="HorizontalOnly" CanContentScroll="True" 
+                                              HorizontalAlignment="Left" VerticalAlignment="Center"
+                                              Padding="0,0,0,0" Margin="0">
+                                    <StackPanel IsItemsHost="True" Orientation="Horizontal" Background="Transparent"/>
+                                </ScrollViewer>
+                            </Border>
+                            <ContentPresenter Grid.Row="1" ContentSource="SelectedContent"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ModernBtn" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource BgCard}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontFamily" Value="{StaticResource UIFontFamily}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="8" 
+                                BorderThickness="1" BorderBrush="{DynamicResource BorderColor}">
+                            <Border.Effect>
+                                <DropShadowEffect Color="Black" Opacity="0.15" BlurRadius="5" ShadowDepth="2"/>
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource BgCardHover}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
+                                <Setter TargetName="border" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="{Binding Color, Source={StaticResource PrimaryColor}}" Opacity="0.3" BlurRadius="8" ShadowDepth="0"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter TargetName="border" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="Black" Opacity="0.1" BlurRadius="2" ShadowDepth="1"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PrimaryBtn" TargetType="Button" BasedOn="{StaticResource ModernBtn}">
+            <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="8">
+                            <Border.Effect>
+                                <DropShadowEffect Color="{Binding Color, Source={StaticResource PrimaryColor}}" Opacity="0.4" BlurRadius="6" ShadowDepth="2"/>
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryHover}"/>
+                                <Setter TargetName="border" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="{Binding Color, Source={StaticResource PrimaryHover}}" Opacity="0.6" BlurRadius="12" ShadowDepth="0"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="LogRowStyle" TargetType="DataGridRow">
+            <Setter Property="Background" Value="{Binding RowBackground}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="Margin" Value="0,1"/>
+            <Setter Property="ToolTipService.InitialShowDelay" Value="1500"/>
+            <Setter Property="ToolTipService.ShowDuration" Value="30000"/>
+            <Setter Property="ToolTip">
+                <Setter.Value>
+                    <ToolTip Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource PrimaryColor}" Foreground="{DynamicResource TextPrimary}">
+                        <StackPanel MaxWidth="600">
+                            <TextBlock Text="{Binding Date}" FontWeight="Bold" Margin="0,0,0,5" Foreground="{DynamicResource PrimaryColor}"/>
+                            <TextBlock Text="{Binding ThreadName}" Foreground="{DynamicResource TextSecondary}" Margin="0,0,0,5"/>
+                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontFamily="{StaticResource ContentFontFamily}"/>
+                        </StackPanel>
+                    </ToolTip>
+                </Setter.Value>
+            </Setter>
+
+            <Style.Triggers>
+                <!-- Hover רק כשלא נבחר ואין צבע מותאם או סימון -->
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
+                        <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsSelected}" Value="False"/>
+                        <Condition Binding="{Binding IsMarked}" Value="False"/>
+                        <Condition Binding="{Binding HasAnnotation}" Value="False"/>
+                        <Condition Binding="{Binding CustomColor}" Value="{x:Null}"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Background" Value="{DynamicResource RowHoverBg}"/>
+                </MultiDataTrigger>
+
+                <!-- בחירה - צהוב בהיר עם טקסט שחור -->
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource RowSelectedBg}"/>
+                    <Setter Property="Foreground" Value="Black"/>
+                    <Setter Property="BorderBrush" Value="Transparent"/>
+                </Trigger>
+
+                <!-- ✅ שורה מסומנת ונבחרת - ירוק בהיר מיידי עם טקסט שחור (עדיפות גבוהה ביותר) -->
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsSelected}" Value="True"/>
+                        <Condition Binding="{Binding IsMarked}" Value="True"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Background" Value="{DynamicResource RowMarkedBg}"/>
+                    <Setter Property="Foreground" Value="Black"/>
+                </MultiDataTrigger>
+
+                <!-- Current marked row during navigation - light purple with black text -->
+                <DataTrigger Binding="{Binding IsCurrentMarked}" Value="True">
+                    <Setter Property="Background" Value="#C8AAFF"/>
+                    <Setter Property="Foreground" Value="Black"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="{DynamicResource BgCard}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="RowBackground" Value="{DynamicResource BgCard}"/>
+            <Setter Property="AlternatingRowBackground" Value="{DynamicResource BgCardHover}"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderColor}"/>
+            <Setter Property="VerticalGridLinesBrush" Value="Transparent"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="RowHeight" Value="28"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="BorderThickness" Value="0,0,0,2"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+            <Setter Property="FontFamily" Value="{StaticResource UIFontFamily}"/>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Foreground" Value="Black"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Selectable text style: read-only TextBox that looks like a TextBlock -->
+        <Style x:Key="SelectableTextBlockStyle" TargetType="TextBox">
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="IsReadOnlyCaretVisible" Value="False"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="FontFamily" Value="{DynamicResource ContentFontFamily}"/>
+            <Setter Property="CaretBrush" Value="Transparent"/>
+            <Setter Property="ContextMenu" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden"
+                                      Padding="{TemplateBinding Padding}"
+                                      Background="{TemplateBinding Background}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TabItem">
+            <Setter Property="FontFamily" Value="{StaticResource UIFontFamily}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,0,0,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Grid>
+                            <Border x:Name="Border" Padding="8,5" BorderThickness="0" Background="Transparent" CornerRadius="3,3,0,0">
+                                <ContentPresenter x:Name="ContentSite" VerticalAlignment="Center" HorizontalAlignment="Center" ContentSource="Header"/>
+                            </Border>
+                            <Border x:Name="Indicator" Height="2" Background="{DynamicResource PrimaryColor}" VerticalAlignment="Bottom" Margin="3,0" Opacity="0"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Indicator" Property="Opacity" Value="1"/>
+                                <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource TabHoverBg}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource UIFontFamily}"/>
+        </Style>
+
+        <Style x:Key="ViewModeRadioButton" TargetType="RadioButton">
+            <Setter Property="FontFamily" Value="{StaticResource UIFontFamily}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="border"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12,6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource BgCardHover}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsChecked" Value="True"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryHover}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Chart Styles -->
+        <Style x:Key="ChartCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Margin" Value="5"/>
+        </Style>
+
+        <Style x:Key="ChartListBoxStyle" TargetType="ListBox">
+            <Setter Property="Background" Value="{DynamicResource BgDark}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        </Style>
+
+        <Style x:Key="ChartToolbarButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernBtn}">
+            <Setter Property="MinWidth" Value="30"/>
+            <Setter Property="Padding" Value="8,4"/>
+        </Style>
+
+    </Application.Resources>
+</Application>

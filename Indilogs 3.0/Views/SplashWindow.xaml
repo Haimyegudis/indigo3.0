@@ -1,0 +1,192 @@
+<Window x:Class="IndiLogs_3._0.Views.SplashWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        Background="#0D1117"
+        WindowStartupLocation="CenterScreen"
+        Width="560" Height="340"
+        ShowInTaskbar="False"
+        Topmost="True"
+        IsHitTestVisible="False">
+
+    <Window.Resources>
+        <DropShadowEffect x:Key="GlowEffect" BlurRadius="20" Color="#5588CCFF" ShadowDepth="0" Opacity="0.9"/>
+        <DropShadowEffect x:Key="TextGlow"   BlurRadius="28" Color="#AA66AAFF" ShadowDepth="0" Opacity="1.0"/>
+        <CubicEase x:Key="EaseOut" EasingMode="EaseOut"/>
+    </Window.Resources>
+
+    <!-- All reveal + ring animations driven by XAML Storyboard (guaranteed to fire) -->
+    <Window.Triggers>
+        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+            <BeginStoryboard>
+                <Storyboard>
+                    <!-- Icon: pop in at 120 ms -->
+                    <DoubleAnimation Storyboard.TargetName="IconText" Storyboard.TargetProperty="Opacity"
+                                     From="0" To="1" Duration="0:0:0.45" BeginTime="0:0:0.12"/>
+                    <DoubleAnimation Storyboard.TargetName="IconScale" Storyboard.TargetProperty="ScaleX"
+                                     From="0.3" To="1" Duration="0:0:0.5" BeginTime="0:0:0.12">
+                        <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.4"/></DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                    <DoubleAnimation Storyboard.TargetName="IconScale" Storyboard.TargetProperty="ScaleY"
+                                     From="0.3" To="1" Duration="0:0:0.5" BeginTime="0:0:0.12">
+                        <DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.4"/></DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+
+                    <!-- Title: slide up + fade at 300 ms -->
+                    <DoubleAnimation Storyboard.TargetName="TitleText" Storyboard.TargetProperty="Opacity"
+                                     From="0" To="1" Duration="0:0:0.45" BeginTime="0:0:0.3"/>
+                    <DoubleAnimation Storyboard.TargetName="TitleTranslate" Storyboard.TargetProperty="Y"
+                                     From="18" To="0" Duration="0:0:0.45" BeginTime="0:0:0.3">
+                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+
+                    <!-- Version: slide up + fade at 460 ms -->
+                    <DoubleAnimation Storyboard.TargetName="VersionText" Storyboard.TargetProperty="Opacity"
+                                     From="0" To="1" Duration="0:0:0.45" BeginTime="0:0:0.46"/>
+                    <DoubleAnimation Storyboard.TargetName="VersionTranslate" Storyboard.TargetProperty="Y"
+                                     From="12" To="0" Duration="0:0:0.45" BeginTime="0:0:0.46">
+                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+
+                    <!-- Tagline at 600 ms -->
+                    <DoubleAnimation Storyboard.TargetName="TagText" Storyboard.TargetProperty="Opacity"
+                                     From="0" To="1" Duration="0:0:0.5" BeginTime="0:0:0.6"/>
+
+                    <!-- Dots at 680 ms -->
+                    <DoubleAnimation Storyboard.TargetName="DotsPanel" Storyboard.TargetProperty="Opacity"
+                                     From="0" To="1" Duration="0:0:0.4" BeginTime="0:0:0.68"/>
+
+                    <!-- Ring 1: cyan burst at 300 ms -->
+                    <DoubleAnimation Storyboard.TargetName="BurstRing" Storyboard.TargetProperty="Opacity"
+                                     From="0.9" To="0" Duration="0:0:0.65" BeginTime="0:0:0.3"/>
+                    <DoubleAnimation Storyboard.TargetName="RingScale" Storyboard.TargetProperty="ScaleX"
+                                     From="0.3" To="8" Duration="0:0:0.65" BeginTime="0:0:0.3">
+                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                    <DoubleAnimation Storyboard.TargetName="RingScale" Storyboard.TargetProperty="ScaleY"
+                                     From="0.3" To="8" Duration="0:0:0.65" BeginTime="0:0:0.3">
+                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+
+                    <!-- Ring 2: purple burst at 430 ms -->
+                    <DoubleAnimation Storyboard.TargetName="BurstRing2" Storyboard.TargetProperty="Opacity"
+                                     From="0.8" To="0" Duration="0:0:0.75" BeginTime="0:0:0.43"/>
+                    <DoubleAnimation Storyboard.TargetName="RingScale2" Storyboard.TargetProperty="ScaleX"
+                                     From="0.3" To="7" Duration="0:0:0.75" BeginTime="0:0:0.43">
+                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                    <DoubleAnimation Storyboard.TargetName="RingScale2" Storyboard.TargetProperty="ScaleY"
+                                     From="0.3" To="7" Duration="0:0:0.75" BeginTime="0:0:0.43">
+                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                </Storyboard>
+            </BeginStoryboard>
+        </EventTrigger>
+    </Window.Triggers>
+
+    <!-- Root – fades out at the end via code -->
+    <Border x:Name="RootBorder" Opacity="1">
+        <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#FF0D1117" Offset="0"/>
+                <GradientStop Color="#FF161B22" Offset="0.5"/>
+                <GradientStop Color="#FF0D1117" Offset="1"/>
+            </LinearGradientBrush>
+        </Border.Background>
+
+        <Grid>
+            <!-- Particle canvas -->
+            <Canvas x:Name="ParticleCanvas" ClipToBounds="False"/>
+
+            <!-- Ring 1 – cyan -->
+            <Ellipse x:Name="BurstRing"
+                     Width="60" Height="60"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                     Stroke="#FF00D2FF" StrokeThickness="4"
+                     Opacity="0">
+                <Ellipse.RenderTransform>
+                    <ScaleTransform x:Name="RingScale" CenterX="30" CenterY="30"/>
+                </Ellipse.RenderTransform>
+            </Ellipse>
+
+            <!-- Ring 2 – purple -->
+            <Ellipse x:Name="BurstRing2"
+                     Width="60" Height="60"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                     Stroke="#FFAA66FF" StrokeThickness="2"
+                     Opacity="0">
+                <Ellipse.RenderTransform>
+                    <ScaleTransform x:Name="RingScale2" CenterX="30" CenterY="30"/>
+                </Ellipse.RenderTransform>
+            </Ellipse>
+
+            <!-- Center content -->
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+
+                <TextBlock x:Name="IconText"
+                           Text="⬡"
+                           FontSize="48"
+                           HorizontalAlignment="Center"
+                           Foreground="#FF4FC3F7"
+                           Effect="{StaticResource GlowEffect}"
+                           Opacity="0"
+                           Margin="0,0,0,8">
+                    <TextBlock.RenderTransform>
+                        <ScaleTransform x:Name="IconScale" ScaleX="0.4" ScaleY="0.4" CenterX="24" CenterY="24"/>
+                    </TextBlock.RenderTransform>
+                </TextBlock>
+
+                <TextBlock x:Name="TitleText"
+                           Text="IndiLogs"
+                           FontSize="46"
+                           FontWeight="Bold"
+
+                           HorizontalAlignment="Center"
+                           Foreground="White"
+                           Effect="{StaticResource TextGlow}"
+                           Opacity="0"
+                           Margin="0,0,0,2">
+                    <TextBlock.RenderTransform>
+                        <TranslateTransform x:Name="TitleTranslate" Y="18"/>
+                    </TextBlock.RenderTransform>
+                </TextBlock>
+
+                <TextBlock x:Name="VersionText"
+                           Text="3.0"
+                           FontSize="24"
+                           FontWeight="Light"
+
+                           HorizontalAlignment="Center"
+                           Foreground="#FF4FC3F7"
+                           Effect="{StaticResource GlowEffect}"
+                           Opacity="0"
+                           Margin="0,0,0,20">
+                    <TextBlock.RenderTransform>
+                        <TranslateTransform x:Name="VersionTranslate" Y="12"/>
+                    </TextBlock.RenderTransform>
+                </TextBlock>
+
+                <TextBlock x:Name="TagText"
+                           Text="Log Analysis Platform"
+                           FontSize="12"
+
+                           HorizontalAlignment="Center"
+                           Foreground="#88AAAACC"
+                           Opacity="0"/>
+            </StackPanel>
+
+            <!-- Bottom loading dots -->
+            <StackPanel x:Name="DotsPanel"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,0,22"
+                        Opacity="0">
+                <Ellipse x:Name="Dot1" Width="7" Height="7" Fill="#FF4FC3F7" Margin="5,0" Opacity="0.3"/>
+                <Ellipse x:Name="Dot2" Width="7" Height="7" Fill="#FF4FC3F7" Margin="5,0" Opacity="0.3"/>
+                <Ellipse x:Name="Dot3" Width="7" Height="7" Fill="#FF4FC3F7" Margin="5,0" Opacity="0.3"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

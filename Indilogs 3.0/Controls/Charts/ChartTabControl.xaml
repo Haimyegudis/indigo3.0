@@ -1,0 +1,249 @@
+<UserControl x:Class="IndiLogs_3._0.Controls.Charts.ChartTabControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:charts="clr-namespace:IndiLogs_3._0.Controls.Charts"
+             xmlns:converters="clr-namespace:IndiLogs_3._0.Converters"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="1000"
+             Background="{DynamicResource BgDark}">
+    <UserControl.Resources>
+        <converters:SKColorToBrushConverter x:Key="SKColorToBrushConverter"/>
+        <converters:BoolToSelectionBrushConverter x:Key="BoolToSelectionBrushConverter"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>      <!-- Toolbar -->
+            <RowDefinition Height="50"/>        <!-- State Timeline -->
+            <RowDefinition Height="Auto"/>      <!-- Navigation Slider -->
+            <RowDefinition Height="*"/>         <!-- Charts Area -->
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="SignalListColumn" Width="220"/>     <!-- Signal List -->
+            <ColumnDefinition x:Name="SplitterColumn" Width="Auto"/>    <!-- Splitter -->
+            <ColumnDefinition Width="*"/>       <!-- Charts -->
+        </Grid.ColumnDefinitions>
+
+        <!-- Toolbar - spans all columns -->
+        <charts:ChartToolbar x:Name="Toolbar" Grid.Row="0" Grid.ColumnSpan="3"/>
+
+        <!-- State Timeline - spans all columns -->
+        <charts:ChartStateTimeline x:Name="StateTimeline" Grid.Row="1" Grid.ColumnSpan="3" Margin="0,2"/>
+
+        <!-- Navigation Slider - spans all columns -->
+        <Border Grid.Row="2" Grid.ColumnSpan="3" Background="{DynamicResource BgPanel}"
+                BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1" Padding="10,5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Button x:Name="NavLeftButton" Content="◀" Grid.Column="0" Width="30"
+                        Style="{DynamicResource ModernBtn}" Click="NavLeftButton_Click"
+                        ToolTip="Move view left"/>
+
+                <Slider x:Name="NavSlider" Grid.Column="1" Margin="10,0"
+                        Minimum="0" Maximum="100" Value="0"
+                        ValueChanged="NavSlider_ValueChanged"
+                        VerticalAlignment="Center"/>
+
+                <Button x:Name="NavRightButton" Content="▶" Grid.Column="2" Width="30"
+                        Style="{DynamicResource ModernBtn}" Click="NavRightButton_Click"
+                        ToolTip="Move view right"/>
+            </Grid>
+        </Border>
+
+        <!-- Signal List - Left panel -->
+        <charts:ChartSignalList x:Name="SignalList" Grid.Row="3" Grid.Column="0"/>
+
+        <!-- Splitter -->
+        <GridSplitter Grid.Row="3" Grid.Column="1" Width="5"
+                      HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                      Background="{DynamicResource BorderColor}" Cursor="SizeWE"/>
+
+        <!-- Charts ScrollViewer -->
+        <ScrollViewer x:Name="ChartsScrollViewer" Grid.Row="3" Grid.Column="2"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Background="{DynamicResource BgDark}">
+            <ItemsControl x:Name="ChartsContainer">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Vertical"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{DynamicResource BgPanel}"
+                                BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToSelectionBrushConverter}}"
+                                BorderThickness="2" CornerRadius="6" Margin="5"
+                                Padding="0"
+                                MouseLeftButtonDown="ChartBorder_MouseLeftButtonDown"
+                                Tag="{Binding}"
+                                Visibility="{Binding IsNotDetached, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>  <!-- Header -->
+                                    <RowDefinition Height="*"/>     <!-- Chart/Gantt/Thread -->
+                                    <RowDefinition Height="Auto"/>  <!-- Resize gripper -->
+                                </Grid.RowDefinitions>
+
+                                <!-- Chart Header with Legend -->
+                                <Border Grid.Row="0" Background="{DynamicResource BgCard}"
+                                        CornerRadius="6,6,0,0" Padding="5">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Title Row -->
+                                        <Grid Grid.Row="0">
+                                            <TextBlock Text="{Binding Title}"
+                                                       Foreground="{DynamicResource TextPrimary}"
+                                                       FontWeight="SemiBold" FontSize="12"
+                                                       VerticalAlignment="Center" Margin="5,0"/>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                <Button Height="20" Padding="4,1"
+                                                        Style="{DynamicResource ModernBtn}"
+                                                        Tag="{Binding}"
+                                                        Click="DetachChartButton_Click"
+                                                        ToolTip="Detach to floating window"
+                                                        Foreground="{DynamicResource TextSecondary}"
+                                                        Margin="0,0,2,0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                                                   VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                        <TextBlock Text="Detach" FontSize="10" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Height="20" Padding="4,1"
+                                                        Style="{DynamicResource ModernBtn}"
+                                                        Tag="{Binding}"
+                                                        Click="RemoveChartButton_Click"
+                                                        ToolTip="Remove this chart"
+                                                        Foreground="{DynamicResource TextSecondary}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                                                   VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                        <TextBlock Text="Close" FontSize="10" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <!-- Legend Row with Signal Checkboxes (only for Signal view) -->
+                                        <ItemsControl Grid.Row="1" ItemsSource="{Binding Series}" Margin="0,3,0,0"
+                                                      Visibility="{Binding IsSignalView, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel Orientation="Horizontal"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{DynamicResource BgPanel}"
+                                                            CornerRadius="3" Margin="2" Padding="4,2"
+                                                            Tag="{Binding}"
+                                                            MouseLeftButtonDown="LegendItem_MouseDoubleClick"
+                                                            Cursor="Hand"
+                                                            ToolTip="Double-click to remove signal">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <CheckBox IsChecked="{Binding IsVisible, Mode=TwoWay}"
+                                                                      VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                            <Rectangle Width="16" Height="3"
+                                                                       VerticalAlignment="Center" Margin="0,0,4,0">
+                                                                <Rectangle.Fill>
+                                                                    <SolidColorBrush Color="{Binding Color, Converter={StaticResource SKColorToBrushConverter}}"/>
+                                                                </Rectangle.Fill>
+                                                            </Rectangle>
+                                                            <TextBlock Text="{Binding Name}" FontFamily="{DynamicResource ContentFontFamily}" FontSize="10"
+                                                                       Foreground="{DynamicResource TextSecondary}"
+                                                                       VerticalAlignment="Center" Margin="0,0,4,0"
+                                                                       MaxWidth="120" TextTrimming="CharacterEllipsis"/>
+                                                            <Button Content="{Binding AxisDisplay}" Width="18" Height="16"
+                                                                    FontSize="9" Padding="0" Margin="0,0,4,0"
+                                                                    Style="{DynamicResource ModernBtn}"
+                                                                    Tag="{Binding}"
+                                                                    Click="ToggleAxisButton_Click"
+                                                                    ToolTip="Toggle Left/Right Y-Axis"/>
+                                                            <TextBlock Text="{Binding CurrentValueDisplay}"
+                                                                       FontFamily="{DynamicResource ContentFontFamily}" FontSize="10" FontWeight="Bold"
+                                                                       Foreground="{DynamicResource TextPrimary}"
+                                                                       VerticalAlignment="Center" MinWidth="50"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Signal Chart View (visible when ViewType = Signal) -->
+                                <charts:ChartGraphView x:Name="GraphView" Grid.Row="1"
+                                                       Height="{Binding ChartHeight}"
+                                                       Tag="{Binding}"
+                                                       Visibility="{Binding IsSignalView, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                                <!-- Gantt View (visible when ViewType = Gantt) -->
+                                <charts:ChartGanttView x:Name="GanttView" Grid.Row="1"
+                                                       Height="{Binding ChartHeight}"
+                                                       Tag="{Binding}"
+                                                       Visibility="{Binding IsGanttView, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                                <!-- Thread View (visible when ViewType = Thread) -->
+                                <charts:ChartThreadView x:Name="ThreadView" Grid.Row="1"
+                                                        Height="{Binding ChartHeight}"
+                                                        Tag="{Binding}"
+                                                        Visibility="{Binding IsThreadView, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                                <!-- Resize Gripper -->
+                                <Thumb Grid.Row="2" Height="8" Cursor="SizeNS"
+                                       DragDelta="ChartResizeThumb_DragDelta"
+                                       Tag="{Binding}">
+                                    <Thumb.Template>
+                                        <ControlTemplate>
+                                            <Border Background="{DynamicResource BgCard}"
+                                                    CornerRadius="0,0,6,6">
+                                                <Rectangle Width="40" Height="4"
+                                                           Fill="{DynamicResource BorderColor}"
+                                                           RadiusX="2" RadiusY="2"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Empty State Message -->
+        <TextBlock x:Name="EmptyStateMessage" Grid.Row="3" Grid.Column="2"
+                   Text="No CSV loaded. Click 'Load CSV' to open a data file, or double-click signals to add charts."
+                   Foreground="{DynamicResource TextSecondary}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   FontSize="14" TextWrapping="Wrap" Margin="40"
+                   Visibility="Visible"/>
+
+        <!-- Loading Overlay -->
+        <Border x:Name="LoadingOverlay" Grid.Row="0" Grid.RowSpan="4" Grid.ColumnSpan="3"
+                Background="{DynamicResource BgPanel}" Opacity="0.95" Visibility="Collapsed" Panel.ZIndex="100">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ProgressBar x:Name="LoadingProgress" Width="300" Height="6" IsIndeterminate="True"
+                             Foreground="{DynamicResource PrimaryColor}" Background="{DynamicResource BgCard}" BorderThickness="0"/>
+                <TextBlock x:Name="LoadingText" Text="Loading chart data..."
+                           Foreground="{DynamicResource TextPrimary}" FontSize="14" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" Margin="0,12,0,0"/>
+                <TextBlock x:Name="LoadingDetail" Text="Building signals and timestamps"
+                           Foreground="{DynamicResource TextSecondary}" FontSize="11"
+                           HorizontalAlignment="Center" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

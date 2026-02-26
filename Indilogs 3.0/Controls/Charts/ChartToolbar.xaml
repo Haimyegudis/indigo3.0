@@ -1,0 +1,197 @@
+<UserControl x:Class="IndiLogs_3._0.Controls.Charts.ChartToolbar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="32" d:DesignWidth="900"
+             Background="{DynamicResource BgPanel}">
+    <UserControl.Resources>
+        <!-- Compact Modern Button Style -->
+        <Style x:Key="CompactToolbarBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="Margin" Value="1,0"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource BgCardHover}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Icon Button Style -->
+        <Style x:Key="IconToolbarBtn" BasedOn="{StaticResource CompactToolbarBtn}" TargetType="Button">
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- Primary Button Style -->
+        <Style x:Key="PrimaryToolbarBtn" BasedOn="{StaticResource CompactToolbarBtn}" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource PrimaryColor}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
+        </Style>
+
+        <!-- Toggle Button Style -->
+        <Style x:Key="ToggleToolbarBtn" TargetType="ToggleButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="Margin" Value="1,0"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource BgCardHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="6,3">
+        <DockPanel LastChildFill="True">
+
+            <!-- ══ LEFT: Open / Export / Signals ══ -->
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+
+                <Button x:Name="TogglePanelButton" Click="TogglePanelButton_Click"
+                        Style="{StaticResource CompactToolbarBtn}" ToolTip="Toggle signal panel" Margin="0,0,2,0">
+                    <TextBlock x:Name="TogglePanelIcon" Text="&#xE90D;" FontFamily="Segoe MDL2 Assets" FontSize="13"/>
+                </Button>
+
+                <Button x:Name="LoadCsvButton" Click="LoadCsvButton_Click"
+                        Style="{StaticResource PrimaryToolbarBtn}" ToolTip="Load CSV file" Margin="2,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE8B5;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                   VerticalAlignment="Center" Margin="0,0,4,0"/>
+                        <TextBlock Text="Load CSV" FontSize="11" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="ExportCsvButton" Click="ExportCsvButton_Click"
+                        Style="{StaticResource CompactToolbarBtn}" ToolTip="Export parsed data to CSV" Margin="2,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE9F9;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                   VerticalAlignment="Center" Margin="0,0,4,0"/>
+                        <TextBlock Text="Export" FontSize="11" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+            </StackPanel>
+
+            <!-- ══ CENTER: Functional controls ══ -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+
+                <!-- Playback -->
+                <Button x:Name="PlayButton" Content="▶" Click="PlayButton_Click"
+                        Style="{StaticResource IconToolbarBtn}" ToolTip="Play/Pause (Space)" Margin="2,0"/>
+                <Button x:Name="StopButton" Content="■" Click="StopButton_Click"
+                        Style="{StaticResource IconToolbarBtn}" ToolTip="Stop" Margin="2,0"/>
+                <ComboBox x:Name="SpeedCombo" Width="55" Height="22" Margin="4,0" FontSize="10"
+                          Background="{DynamicResource BgCard}" Foreground="{DynamicResource TextPrimary}"
+                          SelectedIndex="1" SelectionChanged="SpeedCombo_SelectionChanged" ToolTip="Playback speed">
+                    <ComboBoxItem Content="x0.5"/>
+                    <ComboBoxItem Content="x1"/>
+                    <ComboBoxItem Content="x10"/>
+                    <ComboBoxItem Content="x50"/>
+                </ComboBox>
+
+                <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="6,2"/>
+
+                <!-- Chart Management -->
+                <Button x:Name="AddChartButton" Content="+" Click="AddChartButton_Click"
+                        Style="{StaticResource IconToolbarBtn}" FontWeight="Bold" ToolTip="Add chart" Margin="2,0"/>
+                <Button x:Name="RemoveChartButton" Content="−" Click="RemoveChartButton_Click"
+                        Style="{StaticResource IconToolbarBtn}" FontWeight="Bold" ToolTip="Remove chart" Margin="2,0"/>
+
+                <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="6,2"/>
+
+                <!-- View Options -->
+                <CheckBox x:Name="ShowStatesCheckBox" Content="States" IsChecked="True"
+                          Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center"
+                          Margin="4,0" FontSize="11" Checked="ShowStatesCheckBox_Changed" Unchecked="ShowStatesCheckBox_Changed"
+                          ToolTip="Show state backgrounds"/>
+
+                <CheckBox x:Name="SmoothCheckBox" Content="Smooth" IsChecked="False"
+                          Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center"
+                          Margin="6,0,4,0" FontSize="11" Checked="SmoothCheckBox_Changed" Unchecked="SmoothCheckBox_Changed"
+                          ToolTip="Noise reduction (Moving Average smoothing)"/>
+
+                <Slider x:Name="SmoothWindowSlider" Width="80" Minimum="3" Maximum="51"
+                        Value="10" IsSnapToTickEnabled="True" TickFrequency="2"
+                        VerticalAlignment="Center" Margin="2,0"
+                        ValueChanged="SmoothWindowSlider_ValueChanged"
+                        IsEnabled="{Binding IsChecked, ElementName=SmoothCheckBox}"
+                        ToolTip="Smoothing window size"/>
+                <TextBlock x:Name="SmoothWindowLabel" Text="10" FontSize="10"
+                           Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center"
+                           Margin="2,0,4,0" MinWidth="16"/>
+
+                <Button x:Name="ZoomFitButton" Content="Fit" Click="ZoomFitButton_Click"
+                        Style="{StaticResource CompactToolbarBtn}" ToolTip="Fit all data in view" Margin="2,0"/>
+
+                <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="6,2"/>
+
+                <!-- Reference Line -->
+                <Button x:Name="AddRefLineButton" Click="AddRefLineButton_Click"
+                        Style="{StaticResource CompactToolbarBtn}" ToolTip="Add reference line" Margin="2,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="📏" FontSize="11" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                        <TextBlock Text="Line" FontSize="11" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Rectangle Width="1" Fill="{DynamicResource BorderColor}" Margin="6,2"/>
+
+                <!-- Layout -->
+                <ToggleButton x:Name="GridLayoutToggle" Content="⊞"
+                              Style="{StaticResource ToggleToolbarBtn}" Width="26" Height="22"
+                              Click="GridLayoutToggle_Click" ToolTip="Toggle grid/stack layout" Margin="2,0"/>
+
+            </StackPanel>
+
+        </DockPanel>
+    </Border>
+</UserControl>

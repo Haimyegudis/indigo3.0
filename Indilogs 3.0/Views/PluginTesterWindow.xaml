@@ -1,0 +1,314 @@
+<Window x:Class="IndiLogs_3._0.Views.PluginTesterWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Plugin Manager"
+        Width="840" Height="680"
+        MinWidth="640" MinHeight="500"
+        WindowStyle="SingleBorderWindow"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="True"
+        Background="{DynamicResource BgDark}">
+
+    <Window.Resources>
+        <Style x:Key="StatCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource BgCard}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style x:Key="StatLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+        </Style>
+        <Style x:Key="StatValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="Margin" Value="0,2,0,0"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="42"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- ── Title bar ── -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource BgPanel}"
+                BorderBrush="{DynamicResource BorderColor}"
+                BorderThickness="0,0,0,1">
+            <Grid Margin="14,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="🧩" FontSize="15" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Plugin Manager"
+                               FontWeight="SemiBold" FontSize="14"
+                               Foreground="{DynamicResource TextPrimary}"
+                               VerticalAlignment="Center"/>
+                    <TextBlock x:Name="PluginCountBadge"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextSecondary}"
+                               VerticalAlignment="Center"
+                               Margin="10,0,0,0"/>
+                </StackPanel>
+                <Button x:Name="CloseBtn"
+                        HorizontalAlignment="Right"
+                        Click="CloseBtn_Click"
+                        Width="28" Height="28"
+                        ToolTip="Close"
+                        Style="{DynamicResource ModernBtn}">
+                    <TextBlock Text="✕" FontSize="12" Foreground="{DynamicResource TextSecondary}"/>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- ── Body ── -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="230" MinWidth="180"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ═══ LEFT — Plugin list ═══ -->
+            <DockPanel Grid.Column="0"
+                       Background="{DynamicResource BgPanel}"
+                       LastChildFill="True">
+
+                <!-- Buttons -->
+                <Border DockPanel.Dock="Top"
+                        BorderBrush="{DynamicResource BorderColor}"
+                        BorderThickness="0,0,0,1"
+                        Padding="10,10">
+                    <StackPanel>
+                        <TextBlock Text="PLUGINS"
+                                   FontSize="10" FontWeight="Bold"
+                                   Foreground="{DynamicResource TextSecondary}"
+                                   Margin="0,0,0,8"/>
+                        <Button x:Name="ReloadBtn"
+                                Content="↺  Reload All"
+                                Click="ReloadBtn_Click"
+                                Height="28" FontSize="11"
+                                Style="{DynamicResource ModernBtn}"
+                                Margin="0,0,0,5"
+                                ToolTip="Re-scan the Plugins folder and reload all plugins"/>
+                        <Button x:Name="LoadDllBtn"
+                                Content="＋  Load DLL..."
+                                Click="LoadDllBtn_Click"
+                                Height="28" FontSize="11"
+                                Style="{DynamicResource ModernBtn}"
+                                Margin="0,0,0,5"
+                                ToolTip="Load a plugin DLL file manually (for testing without installing)"/>
+                        <Button x:Name="OpenFolderBtn"
+                                Content="📁  Open Plugins Folder"
+                                Click="OpenFolderBtn_Click"
+                                Height="28" FontSize="11"
+                                Style="{DynamicResource ModernBtn}"
+                                ToolTip="Open the Plugins folder in Windows Explorer"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Plugin cards list -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              Margin="0,4,0,0">
+                    <StackPanel x:Name="PluginListPanel" Margin="8,0,8,8"/>
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- Splitter -->
+            <GridSplitter Grid.Column="1"
+                          Width="5"
+                          HorizontalAlignment="Stretch"
+                          Background="{DynamicResource BorderColor}"
+                          ResizeBehavior="PreviousAndNext"/>
+
+            <!-- ═══ RIGHT — Test panel ═══ -->
+            <Grid Grid.Column="2" Margin="14,12,14,10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>  <!-- File -->
+                    <RowDefinition Height="Auto"/>  <!-- Plugin selection -->
+                    <RowDefinition Height="Auto"/>  <!-- Run button -->
+                    <RowDefinition Height="Auto"/>  <!-- Separator -->
+                    <RowDefinition Height="Auto"/>  <!-- Stats -->
+                    <RowDefinition Height="*"/>     <!-- DataGrid -->
+                    <RowDefinition Height="Auto"/>  <!-- Column hint -->
+                    <RowDefinition Height="80"/>    <!-- Errors -->
+                </Grid.RowDefinitions>
+
+                <!-- TEST FILE -->
+                <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                    <TextBlock Text="TEST FILE"
+                               FontSize="10" FontWeight="Bold"
+                               Foreground="{DynamicResource TextSecondary}"
+                               Margin="0,0,0,5"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="34"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="FilePathBox"
+                                 Grid.Column="0"
+                                 Height="30" FontSize="12"
+                                 Background="{DynamicResource BgCard}"
+                                 Foreground="{DynamicResource TextPrimary}"
+                                 BorderBrush="{DynamicResource BorderColor}"
+                                 BorderThickness="1"
+                                 Padding="8,4"
+                                 VerticalContentAlignment="Center"/>
+                        <Button Grid.Column="1"
+                                Content="📂" FontSize="14"
+                                Click="BrowseFileBtn_Click"
+                                Style="{DynamicResource ModernBtn}"
+                                Height="30" Margin="4,0,0,0"
+                                ToolTip="Browse for test log file"/>
+                    </Grid>
+                </StackPanel>
+
+                <!-- PLUGIN SELECTION -->
+                <StackPanel Grid.Row="1" Margin="0,0,0,12">
+                    <TextBlock Text="PLUGIN"
+                               FontSize="10" FontWeight="Bold"
+                               Foreground="{DynamicResource TextSecondary}"
+                               Margin="0,0,0,6"/>
+                    <RadioButton x:Name="AutoDetectRadio"
+                                 Content="Auto-detect (try all loaded plugins)"
+                                 IsChecked="True"
+                                 Foreground="{DynamicResource TextPrimary}"
+                                 FontSize="12" Margin="0,0,0,6"/>
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="SelectPluginRadio"
+                                     Content="Use specific:  "
+                                     Foreground="{DynamicResource TextPrimary}"
+                                     FontSize="12"
+                                     VerticalAlignment="Center"/>
+                        <ComboBox x:Name="PluginComboBox"
+                                  MinWidth="210" Height="28" FontSize="11"
+                                  Background="{DynamicResource BgCard}"
+                                  Foreground="{DynamicResource TextPrimary}"
+                                  BorderBrush="{DynamicResource BorderColor}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- RUN BUTTON -->
+                <Button Grid.Row="2"
+                        x:Name="RunTestBtn"
+                        Click="RunTestBtn_Click"
+                        Height="34" FontSize="13" FontWeight="SemiBold"
+                        Style="{DynamicResource PrimaryBtn}"
+                        Margin="0,0,0,12">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="▶  Run Test" FontSize="13"/>
+                    </StackPanel>
+                </Button>
+
+                <Separator Grid.Row="3"
+                           Background="{DynamicResource BorderColor}"
+                           Margin="0,0,0,10"/>
+
+                <!-- STATS ROW -->
+                <Grid Grid.Row="4" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Style="{StaticResource StatCard}" Margin="0,0,4,0">
+                        <StackPanel>
+                            <TextBlock Text="CanHandle" Style="{StaticResource StatLabel}"/>
+                            <TextBlock x:Name="CanHandleLabel" Text="—" Style="{StaticResource StatValue}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="1" Style="{StaticResource StatCard}" Margin="4,0,4,0">
+                        <StackPanel>
+                            <TextBlock Text="Entries" Style="{StaticResource StatLabel}"/>
+                            <TextBlock x:Name="EntriesLabel" Text="—" Style="{StaticResource StatValue}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Style="{StaticResource StatCard}" Margin="4,0,4,0">
+                        <StackPanel>
+                            <TextBlock Text="Parse Time" Style="{StaticResource StatLabel}"/>
+                            <TextBlock x:Name="TimeLabel" Text="—" Style="{StaticResource StatValue}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="3" Style="{StaticResource StatCard}" Margin="4,0,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Columns" Style="{StaticResource StatLabel}"/>
+                            <TextBlock x:Name="ColsLabel" Text="—" Style="{StaticResource StatValue}"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- RESULTS DATAGRID — fills remaining space -->
+                <DataGrid x:Name="ResultsGrid"
+                          Grid.Row="5"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          HeadersVisibility="Column"
+                          GridLinesVisibility="Horizontal"
+                          RowBackground="{DynamicResource BgCard}"
+                          AlternatingRowBackground="{DynamicResource BgPanel}"
+                          Background="{DynamicResource BgDark}"
+                          BorderBrush="{DynamicResource BorderColor}"
+                          BorderThickness="1"
+                          Foreground="{DynamicResource TextPrimary}"
+                          FontSize="11"
+                          ColumnHeaderHeight="28"
+                          RowHeight="22"
+                          Margin="0,0,0,6"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Auto"
+                          CanUserResizeRows="False"
+                          SelectionMode="Single">
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="FontSize" Value="11"/>
+                            <Setter Property="Padding" Value="6,0"/>
+                            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+                </DataGrid>
+
+                <!-- Column hint -->
+                <TextBlock Grid.Row="6"
+                           x:Name="ColumnHintLabel"
+                           Text=""
+                           FontSize="10"
+                           Foreground="{DynamicResource TextSecondary}"
+                           Margin="0,0,0,4"
+                           TextTrimming="CharacterEllipsis"/>
+
+                <!-- ERRORS -->
+                <Border Grid.Row="7"
+                        Background="{DynamicResource BgCard}"
+                        CornerRadius="4" Padding="8,6"
+                        BorderBrush="{DynamicResource BorderColor}"
+                        BorderThickness="1">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top"
+                                   Text="ERRORS / WARNINGS"
+                                   FontSize="10" FontWeight="Bold"
+                                   Foreground="{DynamicResource TextSecondary}"
+                                   Margin="0,0,0,4"/>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <TextBlock x:Name="ErrorsBox"
+                                       Text="(none)"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextSecondary}"
+                                       TextWrapping="Wrap"/>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

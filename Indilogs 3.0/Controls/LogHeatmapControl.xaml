@@ -1,0 +1,24 @@
+<UserControl x:Class="IndiLogs_3._0.Controls.LogHeatmapControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="12"
+             Background="Transparent"
+             Cursor="Hand"
+             ToolTipService.InitialShowDelay="200"
+             ToolTipService.ShowDuration="10000">
+
+    <UserControl.ToolTip>
+        <ToolTip x:Name="HoverTooltip"
+                 Background="{DynamicResource BgCard}"
+                 BorderBrush="{DynamicResource PrimaryColor}"
+                 Foreground="{DynamicResource TextPrimary}"
+                 Padding="8,4">
+            <StackPanel>
+                <TextBlock x:Name="TooltipText" FontSize="11"/>
+            </StackPanel>
+        </ToolTip>
+    </UserControl.ToolTip>
+</UserControl>

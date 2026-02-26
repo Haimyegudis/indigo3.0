@@ -1,0 +1,802 @@
+<Window x:Class="IndiLogs_3._0.Views.HelpWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="IndiLogs 3.0 - User Guide" Height="800" Width="1000"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource BgDark}">
+
+    <Window.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style TargetType="Run">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+        <Style x:Key="HeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}"/>
+            <Setter Property="Margin" Value="0,16,0,6"/>
+        </Style>
+        <Style x:Key="SubHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="Margin" Value="0,10,0,4"/>
+        </Style>
+        <Style x:Key="CodeStyle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Background" Value="{DynamicResource BgCard}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SuccessColor}"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Margin" Value="10,2,0,2"/>
+        </Style>
+        <Style x:Key="SectionDivider" TargetType="Separator">
+            <Setter Property="Background" Value="{DynamicResource BorderColor}"/>
+            <Setter Property="Margin" Value="0,10,0,5"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- TITLE BAR -->
+        <Border Grid.Row="0" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1" Padding="16,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="IndiLogs 3.0 — User Guide" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" Margin="0"/>
+                    <TextBlock Text="Complete reference for all features and tools" FontSize="12" Foreground="{DynamicResource TextSecondary}" Margin="0,2,0,0"/>
+                </StackPanel>
+                <!-- Search box -->
+                <Border Grid.Column="1" Background="{DynamicResource BgCard}" CornerRadius="14" Padding="8,4" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🔍" VerticalAlignment="Center" Margin="2,0,5,0" Foreground="{DynamicResource TextSecondary}" FontSize="12"/>
+                        <TextBox x:Name="HelpSearchBox" Width="200" Background="Transparent" BorderThickness="0"
+                                 Foreground="{DynamicResource TextPrimary}" CaretBrush="{DynamicResource PrimaryColor}"
+                                 VerticalContentAlignment="Center" FontSize="12"
+                                 TextChanged="HelpSearchBox_TextChanged">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
+                        <TextBlock x:Name="SearchPlaceholder" Text="Search help..." FontSize="12" Foreground="{DynamicResource TextSecondary}"
+                                   VerticalAlignment="Center" IsHitTestVisible="False" Margin="-200,0,0,0" Opacity="0.5"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- MAIN CONTENT: Left TOC + Right Content -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT: Table of Contents -->
+            <Border Grid.Column="0" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,1,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="8,8">
+                        <ListBox x:Name="TocList" Background="Transparent" BorderThickness="0" SelectionChanged="TocList_SelectionChanged"
+                                 Foreground="{DynamicResource TextPrimary}" FontSize="12">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="10,6"/>
+                                    <Setter Property="Margin" Value="0,1"/>
+                                    <Setter Property="Cursor" Value="Hand"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BgCard}"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PrimaryColor}"/>
+                                                        <Setter Property="Foreground" Value="White"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBoxItem Content="🚀  Getting Started" Tag="0"/>
+                            <ListBoxItem Content="📋  Log Tabs Overview" Tag="1"/>
+                            <ListBoxItem Content="🔍  Search &amp; Navigation" Tag="2"/>
+                            <ListBoxItem Content="🔧  Filtering" Tag="3"/>
+                            <ListBoxItem Content="🎨  Coloring" Tag="4"/>
+                            <ListBoxItem Content="📌  Marking &amp; Annotations" Tag="5"/>
+                            <ListBoxItem Content="📊  Analysis Tools" Tag="6"/>
+                            <ListBoxItem Content="📈  Charts" Tag="7"/>
+                            <ListBoxItem Content="🖨  CPR Analysis" Tag="8"/>
+                            <ListBoxItem Content="⚙  Cases &amp; Configurations" Tag="9"/>
+                            <ListBoxItem Content="📤  Export &amp; Reports" Tag="10"/>
+                            <ListBoxItem Content="🔗  External Tools" Tag="11"/>
+                            <ListBoxItem Content="⌨  Keyboard Shortcuts" Tag="12"/>
+                        </ListBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- RIGHT: Help Content -->
+            <ScrollViewer Grid.Column="1" x:Name="ContentScroller" VerticalScrollBarVisibility="Auto" Padding="20,10">
+                <StackPanel x:Name="ContentPanel" Margin="0,0,10,0">
+
+                    <!-- ═══════════════════════════════════════ -->
+                    <!-- SECTION 0: Getting Started -->
+                    <!-- ═══════════════════════════════════════ -->
+                    <TextBlock x:Name="Section0" Text="Getting Started" Style="{StaticResource HeaderStyle}" FontSize="20"/>
+                    <Separator Style="{StaticResource SectionDivider}"/>
+
+                    <TextBlock Text="Loading Files" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Click the <Run>📂 OPEN</Run> button in the top toolbar to browse for log files.<LineBreak/>
+                        • <Run>Drag &amp; Drop</Run> any log file directly onto the window to load it instantly.<LineBreak/>
+                        • Supported formats: PLC logs, APP logs, ZIP archives containing logs.<LineBreak/>
+                        • When a file is loaded, all tabs are populated automatically.
+                    </TextBlock>
+
+                    <TextBlock Text="Window Layout" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        The main window is divided into three panels:<LineBreak/>
+                        • <Run>Left Panel:</Run> Session explorer, actions menu, logger tree, and saved configurations.<LineBreak/>
+                        • <Run>Center Panel:</Run> Tab control with all log views and analysis tabs.<LineBreak/>
+                        • <Run>Right Panel:</Run> Configuration panel with saved filter sets.<LineBreak/>
+                        • Use the splitter bars between panels to resize. Toggle panels on/off for more space.
+                    </TextBlock>
+
+                    <TextBlock Text="Live Monitoring" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Drag &amp; drop an <Run>actively writing</Run> log file to start live monitoring.<LineBreak/>
+                        • <Run>▶ RESUME:</Run> Resume auto-scrolling and live fetching.<LineBreak/>
+                        • <Run>⏸ PAUSE:</Run> Temporarily stop fetching new data.<LineBreak/>
+                        • <Run>⊘ CLEAR:</Run> Clear the buffer and restart fresh.<LineBreak/>
+                        • The file is polled every 3 seconds for new content.
+                    </TextBlock>
+
+                    <!-- ═══════════════════════════════════════ -->
+                    <!-- SECTION 1: Log Tabs Overview -->
+                    <!-- ═══════════════════════════════════════ -->
+                    <TextBlock x:Name="Section1" Text="Log Tabs Overview" Style="{StaticResource HeaderStyle}" FontSize="20" Margin="0,30,0,6"/>
+                    <Separator Style="{StaticResource SectionDivider}"/>
+
+                    <TextBlock Text="PLC LOGS" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • The main view showing <Run>all PLC logs</Run> from the loaded session.<LineBreak/>
+                        • Columns: Level, Timestamp, Logger, Thread, Method, Message, Pattern, Data, Exception.<LineBreak/>
+                        • Heatmap bar on the right edge shows error density and state transitions at a glance.<LineBreak/>
+                        • Click any tick on the heatmap to jump directly to that position.
+                    </TextBlock>
+
+                    <TextBlock Text="APP" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Displays <Run>application-level logs</Run> (AppDev logs).<LineBreak/>
+                        • Same column layout as PLC with heatmap scrollbar for error overview.<LineBreak/>
+                        • Use the <Run>🐞 SHOW ERRORS ONLY</Run> button (bottom bar) to filter for errors sorted newest-first.<LineBreak/>
+                        • Supports annotations, marking, and all context menu actions.
+                    </TextBlock>
+
+                    <TextBlock Text="EVENTS" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Shows system <Run>events</Run> loaded from event CSV files (event-history, pressEvents).<LineBreak/>
+                        • Displays <Run>all original CSV columns</Run> exactly as they appear in the source file — like opening in Excel.<LineBreak/>
+                        • Supports sorting by any column, reordering, and resizing columns.<LineBreak/>
+                        • Works with both binary APP and APPDEV ZIP formats.
+                    </TextBlock>
+
+                    <TextBlock Text="SCREENSHOTS" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Displays captured <Run>screenshots</Run> from the log session.<LineBreak/>
+                        • Scroll through images with zoom support (mouse wheel).<LineBreak/>
+                        • Pan images by clicking and dragging.
+                    </TextBlock>
+
+                    <TextBlock Text="CONFIG" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Shows the raw <Run>press configuration</Run> file contents from the loaded session.<LineBreak/>
+                        • Read-only view for reference during analysis.
+                    </TextBlock>
+
+                    <TextBlock Text="DB &amp; CONFIG / TERMINALS" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Browse <Run>database schema</Run>: tables, columns, and their types.<LineBreak/>
+                        • <Run>Browse Table Data:</Run> Double-click a table to view its data.<LineBreak/>
+                        • <Run>Copy Table/Column Name:</Run> Right-click for quick copy options.<LineBreak/>
+                        • Switch between database view and configuration file view using the dropdown.<LineBreak/>
+                        • For <Run>binary APP logs</Run>: shows TERMINALS mode with all TXT/LOG files from the TerminalLogs folder.<LineBreak/>
+                        • Terminal CSV files display as sortable DataGrid; text files display as monospace text viewer.<LineBreak/>
+                        • Full-text <Run>search</Run> works across all terminal file types.
+                    </TextBlock>
+
+                    <TextBlock Text="TERMINALS" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Appears inside the <Run>DB &amp; CONFIG</Run> tab when binary APP logs are loaded.<LineBreak/>
+                        • Displays all <Run>TXT and LOG files</Run> from the TerminalLogs folder in the ZIP.<LineBreak/>
+                        • Select a file from the dropdown to view its content.<LineBreak/>
+                        • CSV files are displayed in a <Run>DataGrid</Run> with sortable columns.<LineBreak/>
+                        • Text files are shown in a monospace text viewer.<LineBreak/>
+                        • <Run>Search:</Run> Use the search box to filter content — works for both CSV and text files.
+                    </TextBlock>
+
+                    <TextBlock Text="SETUP INFO" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Displays <Run>system setup information</Run> from the loaded session.<LineBreak/>
+                        • Read-only view of machine and environment details.<LineBreak/>
+                        • Hidden when binary APP logs are loaded (no setup info available).
+                    </TextBlock>
+
+                    <TextBlock Text="GLOBALS" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Displays <Run>XML configuration files</Run> from the DataManagement\eCommon\Globals folder in the ZIP.<LineBreak/>
+                        • Select a file from the dropdown to view its parameters.<LineBreak/>
+                        • Shows columns: <Run>Name, Value, Default, IsRelevant</Run>.<LineBreak/>
+                        • Use the search box to filter entries by name or value.<LineBreak/>
+                        • Only visible when Globals XML files are found in the loaded ZIP.
+                    </TextBlock>
+
+                    <TextBlock Text="SYSTAB" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Displays <Run>systab parameters</Run> from DiagnosticsLogs folder (binary APP ZIPs only).<LineBreak/>
+                        • Parses 4 registry-format files: systab_saved, systab_default, systab_minimum, systab_maximum.<LineBreak/>
+                        • Left panel: <Run>Topic tree</Run> — organized by Topic and Station|Index.<LineBreak/>
+                        • Right panel: <Run>Parameter table</Run> with columns: Parameter, Saved, Default, Minimum, Maximum.<LineBreak/>
+                        • Rows where <Run>Saved differs from Default</Run> are highlighted in yellow.<LineBreak/>
+                        • <Run>*</Run> marker in the tree indicates topics with differences.<LineBreak/>
+                        • <Run>Diffs Only</Run> checkbox: Show only parameters where Saved ≠ Default.<LineBreak/>
+                        • Search box filters parameters by any column value.
+                    </TextBlock>
+
+                    <TextBlock Text="CHARTS" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Visual charting tab — see the <Run>Charts</Run> section below for full details.
+                    </TextBlock>
+
+                    <TextBlock Text="CPR" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Color Print Registration analysis — see the <Run>CPR Analysis</Run> section below for full details.
+                    </TextBlock>
+
+                    <TextBlock Text="Heatmap Scrollbar" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Available on the <Run>PLC LOGS</Run> and <Run>APP</Run> tabs, on the right edge of the grid.<LineBreak/>
+                        • <Run>Red ticks:</Run> Error or event entries.<LineBreak/>
+                        • <Run>Light blue ticks:</Run> State transitions (PlcMngr → markers).<LineBreak/>
+                        • Click any tick to immediately scroll to that log entry.<LineBreak/>
+                        • Provides a bird's-eye view of the entire log session at a glance.
+                    </TextBlock>
+
+                    <TextBlock Text="Tab Detach" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Each tab header has a <Run>◈ detach button</Run> to pop the tab into a floating window.<LineBreak/>
+                        • Useful for dual-monitor setups: keep PLC on one screen, APP on another.
+                    </TextBlock>
+
+                    <!-- ═══════════════════════════════════════ -->
+                    <!-- SECTION 2: Search & Navigation -->
+                    <!-- ═══════════════════════════════════════ -->
+                    <TextBlock x:Name="Section2" Text="Search &amp; Navigation" Style="{StaticResource HeaderStyle}" FontSize="20" Margin="0,30,0,6"/>
+                    <Separator Style="{StaticResource SectionDivider}"/>
+
+                    <TextBlock Text="Quick Search (Ctrl+F)" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Press <Run>Ctrl+F</Run> to open the search bar (top-right pill-shaped overlay).<LineBreak/>
+                        • Type at least <Run>2 characters</Run> to start filtering.<LineBreak/>
+                        • Smart delay (0.5s) prevents lag while typing.<LineBreak/>
+                        • Matching rows are highlighted in the <Run>PLC LOGS</Run> tab.<LineBreak/>
+                        • Matching text is <Run>highlighted in yellow</Run> in the message column.<LineBreak/>
+                        • Invalid syntax is shown in red with a tooltip explaining the error.<LineBreak/>
+                        • Press <Run>Esc</Run> to close the search panel.
+                    </TextBlock>
+
+                    <TextBlock Text="SYNC Button (Time Synchronization)" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Click the <Run>🔗 SYNC</Run> button in the top toolbar to enable time-synchronized scrolling.<LineBreak/>
+                        • When enabled (button turns blue), scrolling in PLC will store the corresponding time in APP, and vice versa.<LineBreak/>
+                        • Switch to the target tab to see it automatically scroll to the matching timestamp.<LineBreak/>
+                        • A status message shows the synced time and accuracy (e.g., "±0.3s").<LineBreak/>
+                        • Matches are found within a 60-second tolerance window.
+                    </TextBlock>
+
+                    <TextBlock Text="Global Grep" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Click <Run>🔍 Global Grep</Run> in the actions menu for cross-session search.<LineBreak/>
+                        • Search across multiple loaded sessions or external files (ZIP, directories).<LineBreak/>
+                        • Supports regex and boolean operators (AND/OR/NOT).<LineBreak/>
+                        • Field-specific search: Message, Exception, Method, Data.<LineBreak/>
+                        • Click results to navigate directly to matching logs.
+                    </TextBlock>
+
+                    <!-- ═══════════════════════════════════════ -->
+                    <!-- SECTION 3: Filtering -->
+                    <!-- ═══════════════════════════════════════ -->
+                    <TextBlock x:Name="Section3" Text="Filtering" Style="{StaticResource HeaderStyle}" FontSize="20" Margin="0,30,0,6"/>
+                    <Separator Style="{StaticResource SectionDivider}"/>
+
+                    <TextBlock Text="Quick Filter" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • <Run>Filter (Checkbox):</Run> Toggles positive filtering — show only matching rows.<LineBreak/>
+                        • <Run>Filter Out (Checkbox):</Run> Toggles negative filtering — hide matching rows.<LineBreak/>
+                        • <Run>Ctrl+Z:</Run> Undo the last filter-out action.
+                    </TextBlock>
+
+                    <TextBlock Text="Advanced Filter Editor" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        Click <Run>🔍 Filter...</Run> to open the Advanced Filter Editor:
+                    </TextBlock>
+                    <TextBlock>
+                        • Build complex filter logic using a <Run>tree structure</Run> with nested groups.<LineBreak/>
+                        • Combine conditions with <Run>AND / OR / NOT</Run> operators.<LineBreak/>
+                        • Supported fields: Message, Level, ThreadName, Logger, Method, Pattern, Data, Exception.<LineBreak/>
+                        • Operators: Contains, Equals, Begins With, Ends With, <Run>Regex</Run>.
+                    </TextBlock>
+
+                    <TextBlock Text="Thread Filtering" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • <Run>Header Filter (▼):</Run> Click the dropdown in the Thread column header for multi-select filtering.<LineBreak/>
+                        • <Run>Right-Click → Filter Out (Thread):</Run> Hides all logs from the selected thread.<LineBreak/>
+                        • Use the 'Clear' button to reset thread filters.
+                    </TextBlock>
+
+                    <TextBlock Text="Message Filtering" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • <Run>Right-Click → Filter Out (Message):</Run> Hides rows matching a specific text string.<LineBreak/>
+                        • Useful for hiding repetitive or irrelevant log messages.
+                    </TextBlock>
+
+                    <TextBlock Text="Time Focus Filter" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • <Run>Right-click</Run> any log entry → <Run>Time Focus Filter</Run>.<LineBreak/>
+                        • Shows ALL logs (from all threads) within ±N seconds/minutes of the selected line.<LineBreak/>
+                        • Configure the time range in Settings.<LineBreak/>
+                        • Status bar shows: "Focus Time: ±Xs | X logs shown".
+                    </TextBlock>
+
+                    <TextBlock Text="Logger Tree (PLC &amp; APP)" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • The <Run>LOGGERS</Run> panel in the left sidebar shows a hierarchical tree of loggers.<LineBreak/>
+                        • The tree <Run>automatically switches</Run> based on the selected tab:<LineBreak/>
+                        •   — <Run>PLC LOGS</Run> tab → shows <Run>PLC LOGGERS</Run> tree.<LineBreak/>
+                        •   — <Run>APP</Run> tab → shows <Run>APP LOGGERS</Run> tree.<LineBreak/>
+                        • Right-click options: Show This, Hide This, Show Only This, Show/Hide With Children, Show All.<LineBreak/>
+                        • <Run>Green checkmark ✓</Run> = active (visible) logger.<LineBreak/>
+                        • <Run>Red X ✗</Run> = hidden logger.<LineBreak/>
+                        • PLC logger filters affect PLC LOGS tab independently from APP logger filters.
+                    </TextBlock>
+
+                    <TextBlock Text="Active Filters Panel" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • The <Run>ACTIVE FILTERS</Run> bar appears at the top of the grid when any filter is active.<LineBreak/>
+                        • Shows all currently active filters with their category and description:<LineBreak/>
+                        •   — <Run>LOGGER:</Run> Logger tree show/hide filters (APP).<LineBreak/>
+                        •   — <Run>PLC LOGGER:</Run> Logger tree show/hide filters (PLC).<LineBreak/>
+                        •   — <Run>THREAD:</Run> Thread-based column filters.<LineBreak/>
+                        •   — <Run>FILTER OUT:</Run> Negative filters (hidden messages/threads).<LineBreak/>
+                        •   — <Run>TIME FOCUS:</Run> Time range focus filter.<LineBreak/>
+                        •   — <Run>ADVANCED:</Run> Filters from the Advanced Filter Editor.<LineBreak/>
+                        • The panel helps you keep track of what filters are applied and why certain logs may be hidden.
+                    </TextBlock>
+
+                    <TextBlock Text="Show Errors Only" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • The <Run>🐞 SHOW ERRORS ONLY</Run> button appears in the bottom bar when the APP tab is selected.<LineBreak/>
+                        • Filters to show only error-level entries, sorted newest first.
+                    </TextBlock>
+
+                    <!-- ═══════════════════════════════════════ -->
+                    <!-- SECTION 4: Coloring -->
+                    <!-- ═══════════════════════════════════════ -->
+                    <TextBlock x:Name="Section4" Text="Coloring" Style="{StaticResource HeaderStyle}" FontSize="20" Margin="0,30,0,6"/>
+                    <Separator Style="{StaticResource SectionDivider}"/>
+
+                    <TextBlock Text="Custom Coloring Rules" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        Click <Run>🎨 Color...</Run> to define highlighting rules for log entries:
+                    </TextBlock>
+                    <TextBlock>
+                        • <Run>Field:</Run> Message, Thread, Level, Logger.<LineBreak/>
+                        • <Run>Operator:</Run> Contains, Equals, Starts With, Ends With, Regex.<LineBreak/>
+                        • <Run>Value:</Run> The text or pattern to match.<LineBreak/>
+                        • <Run>Color:</Run> Pick a highlight color for matching rows.
+                    </TextBlock>
+
+                    <TextBlock Text="Default Colors" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        Built-in coloring is applied automatically:<LineBreak/>
+                        • <Run>Errors:</Run> Red<LineBreak/>
+                        • <Run>PlcMngr state transitions (→):</Run> Light Blue<LineBreak/>
+                        • <Run>MechInit:</Run> Orange<LineBreak/>
+                        • <Run>GetReady:</Run> Light Green<LineBreak/>
+                        • <Run>Print:</Run> Green
+                    </TextBlock>
+
+                    <TextBlock Text="Regex Examples" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock Style="{StaticResource CodeStyle}" Text="Error.*timeout"/>
+                    <TextBlock Style="{StaticResource CodeStyle}" Text="State: (Init|Ready|Running)"/>
+                    <TextBlock Style="{StaticResource CodeStyle}" Text="ID:\s*\d+"/>
+
+                    <!-- ═══════════════════════════════════════ -->
+                    <!-- SECTION 5: Marking & Annotations -->
+                    <!-- ═══════════════════════════════════════ -->
+                    <TextBlock x:Name="Section5" Text="Marking &amp; Annotations" Style="{StaticResource HeaderStyle}" FontSize="20" Margin="0,30,0,6"/>
+                    <Separator Style="{StaticResource SectionDivider}"/>
+
+                    <TextBlock Text="Marking Rows" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • <Run>Spacebar:</Run> Select any row and press Space to mark/unmark it.<LineBreak/>
+                        • Marked rows are highlighted in <Run>purple</Run>.<LineBreak/>
+                        • Use the <Run>⬆ / ⬇</Run> buttons in the top toolbar to jump between marked lines.
+                    </TextBlock>
+
+                    <TextBlock Text="Marked Lines Window" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Click the <Run>📌 Marked Lines</Run> button to open a summary window of all marked entries.<LineBreak/>
+                        • Displays Time, Thread, and Message of each marked line.<LineBreak/>
+                        • <Run>Double-Click:</Run> Jumps to the specific line in the main log view.<LineBreak/>
+                        • <Run>Ctrl+C:</Run> Copies selected lines to clipboard with clean formatting.<LineBreak/>
+                        • <Run>Ctrl+A:</Run> Selects all marked lines.
+                    </TextBlock>
+
+                    <TextBlock Text="Annotations" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Right-click any log entry → <Run>✏️ Add/Edit Annotation</Run> to attach a note.<LineBreak/>
+                        • Annotated rows are highlighted in <Run>yellow</Run>.<LineBreak/>
+                        • Right-click → <Run>🗑 Delete Annotation</Run> to remove a note.<LineBreak/>
+                        • Click the <Run>💬</Run> button in the toolbar to show/hide all annotation popups.<LineBreak/>
+                        • Annotations are saved with cases using "soft linking" (matched by timestamp/logger/thread).
+                    </TextBlock>
+
+                    <!-- ═══════════════════════════════════════ -->
+                    <!-- SECTION 6: Analysis Tools -->
+                    <!-- ═══════════════════════════════════════ -->
+                    <TextBlock x:Name="Section6" Text="Analysis Tools" Style="{StaticResource HeaderStyle}" FontSize="20" Margin="0,30,0,6"/>
+                    <Separator Style="{StaticResource SectionDivider}"/>
+
+                    <TextBlock Text="Stats Window" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        Click <Run>📊 Stats</Run> to open statistical analysis:
+                    </TextBlock>
+                    <TextBlock>
+                        • <Run>Error Histogram:</Run> Top 10 most common errors.<LineBreak/>
+                        • <Run>Thread Load:</Run> Log distribution by thread.<LineBreak/>
+                        • <Run>Time Gaps:</Run> Identifies gaps of 2+ seconds in the log timeline.<LineBreak/>
+                        • <Run>Logger Distribution:</Run> Top 15 loggers by activity.<LineBreak/>
+                        • <Run>Timeline Chart:</Run> Error density over time.<LineBreak/>
+                        • Click chart elements to apply the corresponding filter.
+                    </TextBlock>
+
+                    <TextBlock Text="States Window" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        Click <Run>States</Run> to view PLC state machine transitions:
+                    </TextBlock>
+                    <TextBlock>
+                        • Shows state transitions in chronological order.<LineBreak/>
+                        • Displays the transition title (From → To).<LineBreak/>
+                        • Calculates the duration of each state.<LineBreak/>
+                        • Useful for understanding system workflow and timing.
+                    </TextBlock>
+
+                    <TextBlock Text="Failures Analysis" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        Click <Run>Failures</Run> to analyze critical failure events:
+                    </TextBlock>
+                    <TextBlock>
+                        • Identifies critical failure patterns in the log.<LineBreak/>
+                        • Finds the last state transition before each failure.<LineBreak/>
+                        • Calculates duration from state entry to failure.<LineBreak/>
+                        • Collects all errors within the failure window for root-cause analysis.
+                    </TextBlock>
+
+                    <TextBlock Text="Print Analysis" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        Click <Run>🖨 Print Analysis</Run> (visible when APP tab is selected):
+                    </TextBlock>
+                    <TextBlock>
+                        • Parses stripe descriptor JSON data from log entries.<LineBreak/>
+                        • Filterable data grid with search and column configuration.<LineBreak/>
+                        • Statistics tracking for print quality metrics.
+                    </TextBlock>
+
+                    <TextBlock Text="Compare Window" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        Click <Run>Compare</Run> to open the side-by-side log comparison tool:
+                    </TextBlock>
+                    <TextBlock>
+                        • Select source types for left and right panes (PLC, APP, by Thread, etc.).<LineBreak/>
+                        • <Run>Show Diffs:</Run> Highlights differences at the character level (green = added, red = removed).<LineBreak/>
+                        • <Run>Ignore Pattern:</Run> Use regex to exclude dynamic content (numbers, GUIDs, timestamps).<LineBreak/>
+                        • <Run>Sync ON:</Run> Synchronized scrolling based on timestamp matching.<LineBreak/>
+                        • <Run>Delta Display:</Run> Shows time difference — green (&lt;100ms), yellow (&lt;1s), red (&gt;1s).<LineBreak/>
+                        • Double-click or press Enter to jump to a log in the main window.
+                    </TextBlock>
+
+                    <!-- ═══════════════════════════════════════ -->
+                    <!-- SECTION 7: Charts -->
+                    <!-- ═══════════════════════════════════════ -->
+                    <TextBlock x:Name="Section7" Text="Charts" Style="{StaticResource HeaderStyle}" FontSize="20" Margin="0,30,0,6"/>
+                    <Separator Style="{StaticResource SectionDivider}"/>
+
+                    <TextBlock Text="Charts Tab" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        The CHARTS tab provides multiple visualization types:
+                    </TextBlock>
+                    <TextBlock>
+                        • <Run>Signal Chart:</Run> Line/graph visualization of numerical signals over time.<LineBreak/>
+                        • <Run>Gantt View:</Run> Timeline visualization of events and durations.<LineBreak/>
+                        • <Run>Thread View:</Run> Thread activity visualization across time.<LineBreak/>
+                        • <Run>State Timeline:</Run> Overview of state transitions and durations.
+                    </TextBlock>
+
+                    <TextBlock Text="Chart Controls" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • <Run>Signal List Panel:</Run> Toggle visibility of individual series using checkboxes.<LineBreak/>
+                        • <Run>Y-Axis Assignment:</Run> Assign each series to Left or Right Y-axis.<LineBreak/>
+                        • <Run>Current Value:</Run> Shows live value for each signal at the cursor position.<LineBreak/>
+                        • <Run>Resize:</Run> Drag the chart height thumb to adjust each chart's size.<LineBreak/>
+                        • <Run>Detach:</Run> Pop a chart into its own floating window for multi-monitor use.<LineBreak/>
+                        • <Run>Navigation Slider:</Run> Pan horizontally through the time range.<LineBreak/>
+                        • <Run>Reference Lines:</Run> Add reference markers for key thresholds.
+                    </TextBlock>
+
+                    <!-- ═══════════════════════════════════════ -->
+                    <!-- SECTION 8: CPR Analysis -->
+                    <!-- ═══════════════════════════════════════ -->
+                    <TextBlock x:Name="Section8" Text="CPR Analysis" Style="{StaticResource HeaderStyle}" FontSize="20" Margin="0,30,0,6"/>
+                    <Separator Style="{StaticResource SectionDivider}"/>
+
+                    <TextBlock Text="Loading CPR Data" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Click <Run>Choose File</Run> to load a CPR CSV data file.<LineBreak/>
+                        • Supported formats: CSV (comma, semicolon, or tab delimited), TXT.<LineBreak/>
+                        • After loading, filters (Press Number, Calibration Time, Revolution, Iteration, Cycles, Columns) are auto-populated.
+                    </TextBlock>
+
+                    <TextBlock Text="Graph Types" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        Select a graph type from the left panel:
+                    </TextBlock>
+                    <TextBlock>
+                        • <Run>Colors:</Run> Color registration data per station pair across cycles.<LineBreak/>
+                        • <Run>Columns:</Run> Column-based analysis of registration data.<LineBreak/>
+                        • <Run>Blanket Cycles:</Run> Specific blanket cycle analysis (enter cycle numbers).<LineBreak/>
+                        • <Run>X Scaling:</Run> Cross-process scaling analysis.<LineBreak/>
+                        • <Run>DFT:</Run> Discrete Fourier Transform — shows frequency domain with reference lines (ITM, ASiD, T1, Stir, CR).<LineBreak/>
+                        • <Run>Histogram:</Run> Statistical distribution of registration values.<LineBreak/>
+                        • <Run>Revolutions:</Run> Revolution type analysis (One Only, First of Many, Last of Many).<LineBreak/>
+                        • <Run>Missing Data:</Run> Identifies gaps and missing data points.<LineBreak/>
+                        • <Run>Skew:</Run> Skew analysis across stations.<LineBreak/>
+                        • <Run>Skew Along Bracket:</Run> Skew analysis along the bracket direction.
+                    </TextBlock>
+
+                    <TextBlock Text="Filters &amp; Options" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • <Run>Revolution:</Run> Filter by revolution type.<LineBreak/>
+                        • <Run>Iteration:</Run> Select specific iteration number.<LineBreak/>
+                        • <Run>Cycle Range:</Run> Set from/to cycle range.<LineBreak/>
+                        • <Run>Column Range:</Run> Set from/to column range.<LineBreak/>
+                        • <Run>Remove DC:</Run> Remove DC offset from signals.<LineBreak/>
+                        • <Run>Auto Y Axis:</Run> Automatically scale Y axis (or set manual range).<LineBreak/>
+                        • <Run>Smoothing:</Run> Apply signal smoothing.<LineBreak/>
+                        • <Run>Y/X CPR:</Run> Toggle between Y and X axis registration data.<LineBreak/>
+                        • <Run>Bow Degree:</Run> Set bow polynomial degree.
+                    </TextBlock>
+
+                    <TextBlock Text="Station Pairs" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Configure up to <Run>6 station pairs</Run> (Test/Ref) in the right panel.<LineBreak/>
+                        • <Run>Set All Ref:</Run> Use the "Set" button to assign the same reference station to all pairs.<LineBreak/>
+                        • Each pair computes: Test station minus Reference station.
+                    </TextBlock>
+
+                    <TextBlock Text="Compare Mode" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Click <Run>Compare</Run> to load a second CPR file for side-by-side analysis.<LineBreak/>
+                        • Both charts share the same zoom and settings.<LineBreak/>
+                        • Statistics tables show File 1 and File 2 data side by side.<LineBreak/>
+                        • Click <Run>✕</Run> to remove the comparison.
+                    </TextBlock>
+
+                    <TextBlock Text="Statistics &amp; Export" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Bottom panel shows <Run>95th/99th percentile</Run> stats per station and <Run>offset/skew</Run> data.<LineBreak/>
+                        • Click <Run>Export Plot</Run> to save the current chart.<LineBreak/>
+                        • Click <Run>Detach</Run> to pop the chart into a floating window.
+                    </TextBlock>
+
+                    <!-- ═══════════════════════════════════════ -->
+                    <!-- SECTION 9: Cases & Configurations -->
+                    <!-- ═══════════════════════════════════════ -->
+                    <TextBlock x:Name="Section9" Text="Cases &amp; Configurations" Style="{StaticResource HeaderStyle}" FontSize="20" Margin="0,30,0,6"/>
+                    <Separator Style="{StaticResource SectionDivider}"/>
+
+                    <TextBlock Text="Case Management" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        Save and restore complete investigation sessions as <Run>.indi-case</Run> files:
+                    </TextBlock>
+                    <TextBlock>
+                        • <Run>Save Case:</Run> Saves current investigation state — metadata, file references, filters, coloring, annotations, view state.<LineBreak/>
+                        • <Run>Load Case:</Run> Restores a previously saved case with all its settings.<LineBreak/>
+                        • Case metadata includes author, date, and description fields.
+                    </TextBlock>
+
+                    <TextBlock Text="Saving Filter Configurations" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        The <Run>SAVED CONFIGURATIONS</Run> panel (right sidebar) manages reusable filter sets:
+                    </TextBlock>
+                    <TextBlock>
+                        • <Run>Save:</Run> Saves current Coloring Rules + Advanced Filters to a named JSON configuration.<LineBreak/>
+                        • <Run>Apply:</Run> Double-click a config to apply it immediately.<LineBreak/>
+                        • <Run>Delete:</Run> Remove a saved configuration.<LineBreak/>
+                        • Configs are stored in: <Run>%AppData%\IndiLogs\Configs\</Run>
+                    </TextBlock>
+
+                    <!-- ═══════════════════════════════════════ -->
+                    <!-- SECTION 10: Export & Reports -->
+                    <!-- ═══════════════════════════════════════ -->
+                    <TextBlock x:Name="Section10" Text="Export &amp; Reports" Style="{StaticResource HeaderStyle}" FontSize="20" Margin="0,30,0,6"/>
+                    <Separator Style="{StaticResource SectionDivider}"/>
+
+                    <TextBlock Text="Export CSV" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        Click <Run>📊 Export CSV</Run> in the actions menu:
+                    </TextBlock>
+                    <TextBlock>
+                        • Exports parsed log data to a structured CSV file.<LineBreak/>
+                        • Default filename: <Run>{fileName}_CombinedData.csv</Run><LineBreak/>
+                        • Runs in a non-modal window — you can continue working while exporting.<LineBreak/>
+                        • Progress bar with cancellation support.<LineBreak/>
+                        • Configurable columns and export presets.
+                    </TextBlock>
+
+                    <TextBlock Text="Reports" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        Click <Run>⚙ Reports</Run> in the actions menu:
+                    </TextBlock>
+                    <TextBlock>
+                        • Generates analysis reports with various metrics.<LineBreak/>
+                        • Opens in a dedicated report window for review.
+                    </TextBlock>
+
+                    <!-- ═══════════════════════════════════════ -->
+                    <!-- SECTION 11: External Tools -->
+                    <!-- ═══════════════════════════════════════ -->
+                    <TextBlock x:Name="Section11" Text="External Tools" Style="{StaticResource HeaderStyle}" FontSize="20" Margin="0,30,0,6"/>
+                    <Separator Style="{StaticResource SectionDivider}"/>
+
+                    <TextBlock Text="JIRA" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Click the <Run>JIRA icon</Run> in the top-right toolbar to open the HP JIRA Dashboard.<LineBreak/>
+                        • Quick link for creating or reviewing JIRA tickets related to your investigation.
+                    </TextBlock>
+
+                    <TextBlock Text="Kibana" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Click the <Run>Kibana icon</Run> in the top-right toolbar to open Kibana logs.<LineBreak/>
+                        • Useful for cross-referencing server-side logs with local analysis.
+                    </TextBlock>
+
+                    <TextBlock Text="Email (Outlook)" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Click the <Run>Outlook icon</Run> in the top-right toolbar to compose an email.<LineBreak/>
+                        • Use for sharing investigation findings or reporting issues.
+                    </TextBlock>
+
+                    <TextBlock Text="IoRecorder Viewer" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • Available via <Run>📈 Graph</Run> button in the actions menu.<LineBreak/>
+                        • Opens the external IoRecorderViewer.exe tool for advanced signal graphing.
+                    </TextBlock>
+
+                    <!-- ═══════════════════════════════════════ -->
+                    <!-- SECTION 12: Keyboard Shortcuts -->
+                    <!-- ═══════════════════════════════════════ -->
+                    <TextBlock x:Name="Section12" Text="Keyboard Shortcuts" Style="{StaticResource HeaderStyle}" FontSize="20" Margin="0,30,0,6"/>
+                    <Separator Style="{StaticResource SectionDivider}"/>
+
+                    <TextBlock Text="General" Style="{StaticResource SubHeaderStyle}"/>
+                    <Grid Margin="10,0,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource CodeStyle}" Text="Ctrl + F" Margin="0,2"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="Open / close search panel" VerticalAlignment="Center" Margin="10,0,0,0"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource CodeStyle}" Text="Esc" Margin="0,2"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="Close search panel" VerticalAlignment="Center" Margin="10,0,0,0"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource CodeStyle}" Text="Spacebar" Margin="0,2"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="Mark / unmark selected row" VerticalAlignment="Center" Margin="10,0,0,0"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource CodeStyle}" Text="Ctrl + Z" Margin="0,2"/>
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="Undo last filter-out action" VerticalAlignment="Center" Margin="10,0,0,0"/>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource CodeStyle}" Text="Ctrl + +" Margin="0,2"/>
+                        <TextBlock Grid.Row="4" Grid.Column="1" Text="Zoom in (increase font size)" VerticalAlignment="Center" Margin="10,0,0,0"/>
+
+                        <TextBlock Grid.Row="5" Grid.Column="0" Style="{StaticResource CodeStyle}" Text="Ctrl + -" Margin="0,2"/>
+                        <TextBlock Grid.Row="5" Grid.Column="1" Text="Zoom out (decrease font size)" VerticalAlignment="Center" Margin="10,0,0,0"/>
+
+                        <TextBlock Grid.Row="6" Grid.Column="0" Style="{StaticResource CodeStyle}" Text="F1" Margin="0,2"/>
+                        <TextBlock Grid.Row="6" Grid.Column="1" Text="Open this Help window" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                    </Grid>
+
+                    <TextBlock Text="In Compare Window" Style="{StaticResource SubHeaderStyle}"/>
+                    <Grid Margin="10,0,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource CodeStyle}" Text="Double-Click" Margin="0,2"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="Jump to selected log in main window" VerticalAlignment="Center" Margin="10,0,0,0"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource CodeStyle}" Text="Enter" Margin="0,2"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="Jump to selected log in main window" VerticalAlignment="Center" Margin="10,0,0,0"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource CodeStyle}" Text="Spacebar" Margin="0,2"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="Mark / unmark selected log" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                    </Grid>
+
+                    <TextBlock Text="Context Menu (Right-Click)" Style="{StaticResource SubHeaderStyle}"/>
+                    <TextBlock>
+                        • <Run>Time Focus Filter</Run> — Show logs within ±N seconds of this entry.<LineBreak/>
+                        • <Run>Filter Out (Thread)</Run> — Hide all logs from this thread.<LineBreak/>
+                        • <Run>Filter Out (Message)</Run> — Hide logs containing this message.<LineBreak/>
+                        • <Run>✏️ Add/Edit Annotation</Run> — Attach a note to this log entry.<LineBreak/>
+                        • <Run>🗑 Delete Annotation</Run> — Remove the note from this entry.<LineBreak/>
+                        • <Run>Copy to Clipboard</Run> — Copy the log entry text.
+                    </TextBlock>
+
+                    <!-- Bottom padding -->
+                    <TextBlock Margin="0,30,0,0"/>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- BOTTOM BAR -->
+        <Border Grid.Row="2" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" Padding="16,8">
+            <DockPanel>
+                <Button Content="Close" Click="Close_Click" Style="{DynamicResource ModernBtn}" DockPanel.Dock="Right" Width="100"/>
+                <TextBlock x:Name="SearchResultsText" Text="" FontSize="11" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>
