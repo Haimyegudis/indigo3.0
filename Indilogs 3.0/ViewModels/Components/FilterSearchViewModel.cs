@@ -343,8 +343,8 @@ namespace IndiLogs_3._0.ViewModels.Components
         {
             var items = new List<ActiveFilterItem>();
             int tab = _parent?.SelectedTabIndex ?? 0;
-            bool isAppTab = (tab == 2);
-            bool isPLCTab = (tab == 0 || tab == 1);
+            bool isAppTab = (tab == AppConstants.TAB_APP);
+            bool isPLCTab = (tab == AppConstants.TAB_PLC || tab == AppConstants.TAB_PLC_FILTERED);
 
             if (isAppTab)
             {
@@ -416,17 +416,6 @@ namespace IndiLogs_3._0.ViewModels.Components
                         items.Add(new ActiveFilterItem { Category = "FILTER OUT", Description = $"Prefix: {h}", IsActive = true, Key = $"TREE_HIDE_PREFIX:{h}" });
                 }
 
-                // PLC tree filters
-                if (_plcTreeShowOnlyPrefix != null)
-                    items.Add(new ActiveFilterItem { Category = "PLC LOGGER", Description = $"Show prefix: {_plcTreeShowOnlyPrefix}", IsActive = true, Key = "PLC_TREE_SHOW_ONLY_PREFIX" });
-                if (_plcTreeShowOnlyLogger != null)
-                    items.Add(new ActiveFilterItem { Category = "PLC LOGGER", Description = $"Show only: {_plcTreeShowOnlyLogger}", IsActive = true, Key = "PLC_TREE_SHOW_ONLY_LOGGER" });
-                if (_plcTreeHiddenLoggers.Count > 0)
-                    foreach (var h in _plcTreeHiddenLoggers)
-                        items.Add(new ActiveFilterItem { Category = "PLC FILTER OUT", Description = $"Logger: {h}", IsActive = true, Key = $"PLC_TREE_HIDE_LOGGER:{h}" });
-                if (_plcTreeHiddenPrefixes.Count > 0)
-                    foreach (var h in _plcTreeHiddenPrefixes)
-                        items.Add(new ActiveFilterItem { Category = "PLC FILTER OUT", Description = $"Prefix: {h}", IsActive = true, Key = $"PLC_TREE_HIDE_PREFIX:{h}" });
             }
             else if (isPLCTab)
             {
@@ -461,6 +450,18 @@ namespace IndiLogs_3._0.ViewModels.Components
                         items.Add(new ActiveFilterItem { Category = "FILTER OUT", Description = desc, IsActive = true, Key = $"NEGATIVE:{nf}" });
                     }
                 }
+
+                // PLC tree filters (logger tree)
+                if (_plcTreeShowOnlyPrefix != null)
+                    items.Add(new ActiveFilterItem { Category = "PLC LOGGER", Description = $"Show prefix: {_plcTreeShowOnlyPrefix}", IsActive = true, Key = "PLC_TREE_SHOW_ONLY_PREFIX" });
+                if (_plcTreeShowOnlyLogger != null)
+                    items.Add(new ActiveFilterItem { Category = "PLC LOGGER", Description = $"Show only: {_plcTreeShowOnlyLogger}", IsActive = true, Key = "PLC_TREE_SHOW_ONLY_LOGGER" });
+                if (_plcTreeHiddenLoggers.Count > 0)
+                    foreach (var h in _plcTreeHiddenLoggers)
+                        items.Add(new ActiveFilterItem { Category = "PLC FILTER OUT", Description = $"Logger: {h}", IsActive = true, Key = $"PLC_TREE_HIDE_LOGGER:{h}" });
+                if (_plcTreeHiddenPrefixes.Count > 0)
+                    foreach (var h in _plcTreeHiddenPrefixes)
+                        items.Add(new ActiveFilterItem { Category = "PLC FILTER OUT", Description = $"Prefix: {h}", IsActive = true, Key = $"PLC_TREE_HIDE_PREFIX:{h}" });
             }
 
             // === SHARED FILTERS (all log tabs) ===
@@ -1326,7 +1327,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         if (int.TryParse(key.Substring(9), out int colorIdx))
                         {
                             int tab = _parent?.SelectedTabIndex ?? 0;
-                            bool isApp = (tab == 2);
+                            bool isApp = (tab == AppConstants.TAB_APP);
                             var rules = isApp ? _parent?.CaseVM?.AppColoringRules : _parent?.CaseVM?.MainColoringRules;
                             if (rules != null && colorIdx >= 0 && colorIdx < rules.Count)
                             {
@@ -1341,7 +1342,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         if (int.TryParse(key.Substring(17), out int colorIdx))
                         {
                             int tab = _parent?.SelectedTabIndex ?? 0;
-                            bool isApp = (tab == 2);
+                            bool isApp = (tab == AppConstants.TAB_APP);
                             var rules = isApp ? _parent?.ColoringService?.UserDefaultAppRules : _parent?.ColoringService?.UserDefaultMainRules;
                             if (rules != null && colorIdx >= 0 && colorIdx < rules.Count)
                             {
