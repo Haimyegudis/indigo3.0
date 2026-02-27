@@ -139,23 +139,34 @@ namespace IndiLogs_3._0.Controls.Charts
                 });
             }
 
-            // Add Thread items (group by thread name)
-            var threadGroups = package.ThreadMessages
-                .GroupBy(m => m.ThreadName)
-                .OrderBy(g => g.Key);
-
-            foreach (var group in threadGroups)
+            // Add Thread items — pre-group with dictionary (avoids LINQ overhead on 100K+ messages)
+            if (package.ThreadMessages != null && package.ThreadMessages.Count > 0)
             {
-                _allItems.Add(new SignalListItem
+                var threadDict = new Dictionary<string, List<ThreadMessageData>>(StringComparer.OrdinalIgnoreCase);
+                foreach (var msg in package.ThreadMessages)
                 {
-                    FullName = group.Key,
-                    DisplayName = $"{group.Key} ({group.Count()} msgs)",
-                    TypeIcon = "T",
-                    TypeColor = ThreadColor,
-                    Category = SignalItemCategory.Thread,
-                    ThreadName = group.Key,
-                    ThreadMessages = group.ToList()
-                });
+                    if (string.IsNullOrEmpty(msg.ThreadName)) continue;
+                    if (!threadDict.TryGetValue(msg.ThreadName, out var list))
+                    {
+                        list = new List<ThreadMessageData>();
+                        threadDict[msg.ThreadName] = list;
+                    }
+                    list.Add(msg);
+                }
+
+                foreach (var kvp in threadDict.OrderBy(k => k.Key))
+                {
+                    _allItems.Add(new SignalListItem
+                    {
+                        FullName = kvp.Key,
+                        DisplayName = $"{kvp.Key} ({kvp.Value.Count} msgs)",
+                        TypeIcon = "T",
+                        TypeColor = ThreadColor,
+                        Category = SignalItemCategory.Thread,
+                        ThreadName = kvp.Key,
+                        ThreadMessages = kvp.Value
+                    });
+                }
             }
 
             // Add Events item if events exist

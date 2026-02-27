@@ -100,8 +100,12 @@ namespace IndiLogs_3._0.Services.Charts
         public ChartDataPackage BuildDataPackage(
             IEnumerable<LogEntry> logs,
             ExportPreset preset,
-            string sessionName)
+            string sessionName,
+            IProgress<(double pct, string msg)> progress = null)
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            AppLogger.Info($"[ChartBuild] Starting BuildDataPackage for '{sessionName}'");
+
             var package = new ChartDataPackage
             {
                 SessionName = sessionName,
@@ -113,64 +117,197 @@ namespace IndiLogs_3._0.Services.Charts
                 Events = new List<EventMarkerData>()
             };
 
-            // Group logs by timestamp for time series extraction
-            var sortedLogs = logs.OrderBy(l => l.Date).ToList();
-            if (!sortedLogs.Any()) return package;
+            progress?.Report((2, "Preparing log data..."));
 
-            // Extract timestamps
-            package.TimeStamps = sortedLogs.Select(l => l.Date).Distinct().ToList();
-            int dataLength = package.TimeStamps.Count;
-
-            // Create time index lookup for fast access
-            var timeIndexLookup = new Dictionary<DateTime, int>();
-            for (int i = 0; i < package.TimeStamps.Count; i++)
+            // Logs are already sorted by Date from loading — skip redundant OrderBy
+            var sortedLogs = logs as List<LogEntry> ?? logs.ToList();
+            if (sortedLogs.Count == 0)
             {
-                if (!timeIndexLookup.ContainsKey(package.TimeStamps[i]))
-                    timeIndexLookup[package.TimeStamps[i]] = i;
+                AppLogger.Info("[ChartBuild] No logs — returning empty package");
+                return package;
             }
 
-            // Parse IO signals
-            if (preset.SelectedIOComponents?.Any() == true)
+            AppLogger.Info($"[ChartBuild] {sortedLogs.Count:N0} logs, range: {sortedLogs[0].Date:O} → {sortedLogs[sortedLogs.Count - 1].Date:O}");
+
+            // ── Determine what we need ──────────────────────────────────────
+            bool wantIO = preset.SelectedIOComponents?.Count > 0;
+            bool wantAxis = preset.SelectedAxisComponents?.Count > 0;
+            bool wantCHStep = preset.SelectedCHSteps?.Count > 0;
+            bool wantThreads = preset.SelectedThreads?.Count > 0;
+            bool wantState = preset.IncludeMachineState;
+            bool wantEvents = preset.IncludeEvents;
+
+            HashSet<string> threadSet = wantThreads
+                ? new HashSet<string>(preset.SelectedThreads, StringComparer.OrdinalIgnoreCase)
+                : null;
+
+            progress?.Report((5, "Classifying logs (single pass)..."));
+
+            // ── SINGLE-PASS CLASSIFICATION ──────────────────────────────────
+            // Instead of 6 separate full scans (30M+ iterations), classify all
+            // logs into pre-filtered lists in ONE pass (~5M iterations total).
+            var ioLogs = wantIO ? new List<LogEntry>(sortedLogs.Count / 20) : null;
+            var axisLogs = wantAxis ? new List<LogEntry>(sortedLogs.Count / 20) : null;
+            var chStepLogs = wantCHStep ? new List<LogEntry>(sortedLogs.Count / 20) : null;
+            var threadLogs = wantThreads ? new List<LogEntry>() : null;
+            var eventLogs = wantEvents ? new List<LogEntry>() : null;
+            var s6StateLogs = wantState ? new List<LogEntry>() : null;
+            var s4StateLogs = wantState ? new List<LogEntry>() : null;
+
+            // Build unique timestamps inline (sorted input → adjacent dupes)
+            var timestamps = new List<DateTime>(sortedLogs.Count / 2);
+            DateTime lastTs = DateTime.MinValue;
+
+            int total = sortedLogs.Count;
+            for (int i = 0; i < total; i++)
             {
-                var ioSignals = ParseIOSignals(sortedLogs, preset.SelectedIOComponents, dataLength, timeIndexLookup);
+                var log = sortedLogs[i];
+
+                // Track unique timestamps (sorted → dupes are adjacent)
+                if (log.Date != lastTs)
+                {
+                    timestamps.Add(log.Date);
+                    lastTs = log.Date;
+                }
+
+                // Classify by message first char
+                string msg = log.Message;
+                if (!string.IsNullOrEmpty(msg))
+                {
+                    char fc = msg[0];
+                    if (fc == 'I' || fc == 'i')
+                    {
+                        if (wantIO && (msg.StartsWith("IO_Mon:", StringComparison.OrdinalIgnoreCase) ||
+                                       msg.StartsWith("IO:", StringComparison.OrdinalIgnoreCase)))
+                            ioLogs.Add(log);
+                    }
+                    else if (fc == 'A' || fc == 'a')
+                    {
+                        if (wantAxis && (msg.StartsWith("AxisMon:", StringComparison.OrdinalIgnoreCase) ||
+                                         msg.StartsWith("AxM:", StringComparison.OrdinalIgnoreCase)))
+                            axisLogs.Add(log);
+                    }
+                    else if (fc == 'C' || fc == 'c')
+                    {
+                        if (wantCHStep && msg.StartsWith("CHStep:", StringComparison.OrdinalIgnoreCase))
+                            chStepLogs.Add(log);
+                    }
+                    else if (wantState && (fc == 'P' || fc == 'p'))
+                    {
+                        if (msg.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) && msg.Contains("->"))
+                        {
+                            if (log.ThreadName != null && log.ThreadName.Equals("Manager", StringComparison.OrdinalIgnoreCase))
+                                s6StateLogs.Add(log);
+                        }
+                    }
+
+                    // S4-5 state fallback: "==== STATE" anywhere in message
+                    if (wantState && msg.Contains("==== STATE"))
+                        s4StateLogs?.Add(log);
+                }
+
+                // Events by ThreadName
+                if (wantEvents && !string.IsNullOrEmpty(msg) &&
+                    string.Equals(log.ThreadName, "Events", StringComparison.OrdinalIgnoreCase))
+                    eventLogs.Add(log);
+
+                // Thread messages
+                if (wantThreads && !string.IsNullOrEmpty(log.ThreadName) && threadSet.Contains(log.ThreadName))
+                    threadLogs.Add(log);
+
+                // Report progress every ~64K entries
+                if ((i & 0xFFFF) == 0)
+                {
+                    double pct = 5.0 + ((double)i / total) * 10.0; // 5% → 15%
+                    progress?.Report((pct, $"Classifying logs... {i:N0} / {total:N0}"));
+                }
+            }
+
+            package.TimeStamps = timestamps;
+            int dataLength = timestamps.Count;
+
+            AppLogger.Info($"[ChartBuild] Classification done in {sw.Elapsed.TotalSeconds:F1}s: " +
+                           $"{dataLength:N0} unique timestamps, " +
+                           $"IO={ioLogs?.Count ?? 0}, Axis={axisLogs?.Count ?? 0}, CHStep={chStepLogs?.Count ?? 0}, " +
+                           $"Threads={threadLogs?.Count ?? 0}, Events={eventLogs?.Count ?? 0}, " +
+                           $"S6State={s6StateLogs?.Count ?? 0}, S4State={s4StateLogs?.Count ?? 0}");
+
+            progress?.Report((16, $"Building time index ({dataLength:N0} timestamps)..."));
+
+            // Build time index lookup
+            var timeIndexLookup = new Dictionary<DateTime, int>(dataLength);
+            for (int i = 0; i < timestamps.Count; i++)
+            {
+                if (!timeIndexLookup.ContainsKey(timestamps[i]))
+                    timeIndexLookup[timestamps[i]] = i;
+            }
+
+            // ── Parse each type using PRE-FILTERED lists ────────────────────
+            if (wantIO)
+            {
+                progress?.Report((20, $"Parsing {preset.SelectedIOComponents.Count} IO signals from {ioLogs.Count:N0} msgs..."));
+                AppLogger.Info($"[ChartBuild] Parsing IO: {preset.SelectedIOComponents.Count} selected from {ioLogs.Count:N0} classified msgs");
+                var ioSignals = ParseIOSignals(ioLogs, preset.SelectedIOComponents, dataLength, timeIndexLookup);
                 package.Signals.AddRange(ioSignals);
+                AppLogger.Info($"[ChartBuild] IO result: {ioSignals.Count} signals");
             }
 
-            // Parse Axis signals
-            if (preset.SelectedAxisComponents?.Any() == true)
+            if (wantAxis)
             {
-                var axisSignals = ParseAxisSignals(sortedLogs, preset.SelectedAxisComponents, dataLength, timeIndexLookup);
+                progress?.Report((38, $"Parsing {preset.SelectedAxisComponents.Count} Axis signals from {axisLogs.Count:N0} msgs..."));
+                AppLogger.Info($"[ChartBuild] Parsing Axis: {preset.SelectedAxisComponents.Count} selected from {axisLogs.Count:N0} classified msgs");
+                var axisSignals = ParseAxisSignals(axisLogs, preset.SelectedAxisComponents, dataLength, timeIndexLookup);
                 package.Signals.AddRange(axisSignals);
+                AppLogger.Info($"[ChartBuild] Axis result: {axisSignals.Count} signals");
             }
 
-            // Parse CHStep states (for Gantt visualization)
-            if (preset.SelectedCHSteps?.Any() == true)
+            if (wantCHStep)
             {
-                var states = ParseCHStepStates(sortedLogs, preset.SelectedCHSteps, timeIndexLookup);
+                progress?.Report((55, $"Parsing {preset.SelectedCHSteps.Count} CHStep states from {chStepLogs.Count:N0} msgs..."));
+                AppLogger.Info($"[ChartBuild] Parsing CHStep: {preset.SelectedCHSteps.Count} selected from {chStepLogs.Count:N0} classified msgs");
+                var states = ParseCHStepStates(chStepLogs, preset.SelectedCHSteps, timeIndexLookup);
                 package.States.AddRange(states);
+                AppLogger.Info($"[ChartBuild] CHStep result: {states.Count} state tracks");
             }
 
-            // Parse Thread messages
-            if (preset.SelectedThreads?.Any() == true)
+            if (wantThreads)
             {
-                var messages = ParseThreadMessages(sortedLogs, preset.SelectedThreads, timeIndexLookup);
+                progress?.Report((68, $"Parsing {preset.SelectedThreads.Count} threads from {threadLogs.Count:N0} msgs..."));
+                AppLogger.Info($"[ChartBuild] Parsing Threads: {preset.SelectedThreads.Count} selected from {threadLogs.Count:N0} classified msgs");
+                var messages = ParseThreadMessages(threadLogs, preset.SelectedThreads, timeIndexLookup);
                 package.ThreadMessages.AddRange(messages);
+                AppLogger.Info($"[ChartBuild] Thread result: {messages.Count} messages");
             }
 
-            // Add Machine State if requested
-            if (preset.IncludeMachineState)
+            if (wantState)
             {
-                var machineStates = ParseMachineState(sortedLogs, dataLength, timeIndexLookup);
+                progress?.Report((80, "Parsing machine state..."));
+                AppLogger.Info("[ChartBuild] Parsing Machine State");
+                var machineStates = ParseMachineState(s6StateLogs, s4StateLogs, dataLength, timeIndexLookup);
                 if (machineStates != null)
+                {
                     package.States.Add(machineStates);
+                    AppLogger.Info($"[ChartBuild] Machine State: {machineStates.Intervals.Count} intervals");
+                }
+                else
+                {
+                    AppLogger.Info("[ChartBuild] Machine State: no transitions found");
+                }
             }
 
-            // Parse Events if requested
-            if (preset.IncludeEvents)
+            if (wantEvents)
             {
-                var events = ParseEvents(sortedLogs, timeIndexLookup);
+                progress?.Report((90, $"Parsing events from {eventLogs.Count:N0} msgs..."));
+                AppLogger.Info("[ChartBuild] Parsing Events");
+                var events = ParseEvents(eventLogs, timeIndexLookup);
                 package.Events.AddRange(events);
+                AppLogger.Info($"[ChartBuild] Events: {events.Count} markers");
             }
+
+            sw.Stop();
+            var summary = $"{package.Signals.Count} signals, {package.States.Count} states, {package.Events.Count} events, {package.ThreadMessages.Count} msgs";
+            progress?.Report((100, $"Done — {summary} ({sw.Elapsed.TotalSeconds:F1}s)"));
+            AppLogger.Info($"[ChartBuild] Complete: {summary} — {sw.Elapsed.TotalSeconds:F1}s");
 
             return package;
         }
@@ -183,15 +320,22 @@ namespace IndiLogs_3._0.Services.Charts
         {
             var signals = new Dictionary<string, SignalData>();
             var selectedSet = new HashSet<string>(selectedComponents, StringComparer.OrdinalIgnoreCase);
+            AppLogger.Info($"[ChartBuild] ParseIOSignals: {selectedSet.Count} selected keys: {string.Join(", ", selectedSet.Take(10))}");
+            int ioMatchCount = 0;
 
             foreach (var log in logs)
             {
                 if (string.IsNullOrEmpty(log.Message)) continue;
 
+                // Fast first-char filter — skip messages that cannot be IO
+                char fc = log.Message[0];
+                if (fc != 'I' && fc != 'i') continue;
+
                 // Handle both IO_Mon: (current) and IO: (optimized) patterns
                 bool isIoMon = log.Message.StartsWith("IO_Mon:", StringComparison.OrdinalIgnoreCase);
                 bool isIoOpt = !isIoMon && log.Message.StartsWith("IO:", StringComparison.OrdinalIgnoreCase);
                 if (!isIoMon && !isIoOpt) continue;
+                ioMatchCount++;
 
                 try
                 {
@@ -275,10 +419,39 @@ namespace IndiLogs_3._0.Services.Charts
                 }
             }
 
+            // Log raw data point counts BEFORE forward-fill
+            foreach (var signal in signals.Values.Take(5))
+            {
+                int rawPoints = 0;
+                for (int j = 0; j < signal.Data.Length; j++)
+                    if (!double.IsNaN(signal.Data[j])) rawPoints++;
+                AppLogger.Info($"[ChartBuild] IO Signal '{signal.Name}': {rawPoints} raw data points / {signal.Data.Length} total slots (before fill)");
+            }
+
             // Forward-fill NaN values
             foreach (var signal in signals.Values)
             {
                 ForwardFillNaN(signal.Data);
+            }
+
+            AppLogger.Info($"[ChartBuild] ParseIOSignals: {logs.Count:N0} logs scanned, {ioMatchCount} IO messages found, {signals.Count} signals created");
+
+            // Diagnostic: log value stats per signal to debug "constant values" issue
+            foreach (var signal in signals.Values.Take(5))
+            {
+                int nonNanAfter = 0;
+                double min = double.MaxValue, max = double.MinValue;
+                // Count actual data points BEFORE forward-fill
+                for (int j = 0; j < signal.Data.Length; j++)
+                {
+                    if (!double.IsNaN(signal.Data[j]))
+                    {
+                        nonNanAfter++;
+                        if (signal.Data[j] < min) min = signal.Data[j];
+                        if (signal.Data[j] > max) max = signal.Data[j];
+                    }
+                }
+                AppLogger.Info($"[ChartBuild] IO Signal '{signal.Name}': {nonNanAfter}/{signal.Data.Length} non-NaN (after fill), range [{min:G6}..{max:G6}]");
             }
 
             return signals.Values.ToList();
@@ -292,15 +465,21 @@ namespace IndiLogs_3._0.Services.Charts
         {
             var signals = new Dictionary<string, SignalData>();
             var selectedSet = new HashSet<string>(selectedComponents, StringComparer.OrdinalIgnoreCase);
+            int axisMatchCount = 0;
 
             foreach (var log in logs)
             {
                 if (string.IsNullOrEmpty(log.Message)) continue;
 
+                // Fast first-char filter — skip messages that cannot be Axis
+                char fc = log.Message[0];
+                if (fc != 'A' && fc != 'a') continue;
+
                 // Handle both AxisMon: (current) and AxM: (optimized) patterns
                 bool isAxisMon = log.Message.StartsWith("AxisMon:", StringComparison.OrdinalIgnoreCase);
                 bool isAxM = !isAxisMon && log.Message.StartsWith("AxM:", StringComparison.OrdinalIgnoreCase);
                 if (!isAxisMon && !isAxM) continue;
+                axisMatchCount++;
 
                 try
                 {
@@ -377,9 +556,37 @@ namespace IndiLogs_3._0.Services.Charts
                 }
             }
 
+            // Log raw data point counts BEFORE forward-fill
+            foreach (var signal in signals.Values.Take(5))
+            {
+                int rawPoints = 0;
+                for (int j = 0; j < signal.Data.Length; j++)
+                    if (!double.IsNaN(signal.Data[j])) rawPoints++;
+                AppLogger.Info($"[ChartBuild] Axis Signal '{signal.Name}': {rawPoints} raw data points / {signal.Data.Length} total slots (before fill)");
+            }
+
             foreach (var signal in signals.Values)
             {
                 ForwardFillNaN(signal.Data);
+            }
+
+            AppLogger.Info($"[ChartBuild] ParseAxisSignals: {logs.Count:N0} logs scanned, {axisMatchCount} Axis messages found, {signals.Count} signals created");
+
+            // Diagnostic: log value stats per signal to debug "constant values" issue
+            foreach (var signal in signals.Values.Take(5))
+            {
+                int nonNanCount = 0;
+                double min = double.MaxValue, max = double.MinValue;
+                for (int j = 0; j < signal.Data.Length; j++)
+                {
+                    if (!double.IsNaN(signal.Data[j]))
+                    {
+                        nonNanCount++;
+                        if (signal.Data[j] < min) min = signal.Data[j];
+                        if (signal.Data[j] > max) max = signal.Data[j];
+                    }
+                }
+                AppLogger.Info($"[ChartBuild] Axis Signal '{signal.Name}': {nonNanCount}/{signal.Data.Length} non-NaN (after fill), range [{min:G6}..{max:G6}]");
             }
 
             return signals.Values.ToList();
@@ -396,6 +603,10 @@ namespace IndiLogs_3._0.Services.Charts
             foreach (var log in logs)
             {
                 if (string.IsNullOrEmpty(log.Message)) continue;
+
+                // Fast first-char filter
+                char fc = log.Message[0];
+                if (fc != 'C' && fc != 'c') continue;
                 if (!log.Message.StartsWith("CHStep:", StringComparison.OrdinalIgnoreCase)) continue;
 
                 try
@@ -527,8 +738,14 @@ namespace IndiLogs_3._0.Services.Charts
                 System.Text.RegularExpressions.RegexOptions.Compiled,
                 AppConstants.RegexTimeout);
 
+        /// <summary>
+        /// Parses machine state from pre-filtered log lists (no full-scan needed).
+        /// S6 transitions: PlcMngr: STATE1 -> STATE2 (already filtered during classification).
+        /// S4-5 fallback: ==== STATE_XXX - Enter (already filtered during classification).
+        /// </summary>
         private StateData ParseMachineState(
-            List<LogEntry> logs,
+            List<LogEntry> s6TransitionLogs,
+            List<LogEntry> s4StateLogs,
             int dataLength,
             Dictionary<DateTime, int> timeIndexLookup)
         {
@@ -539,21 +756,13 @@ namespace IndiLogs_3._0.Services.Charts
                 Intervals = new List<StateInterval>()
             };
 
-            // ── S6: PlcMngr: STATE1 -> STATE2 ──
-            var transitionLogs = logs.Where(l => l.ThreadName != null &&
-                                                 l.ThreadName.Equals("Manager", StringComparison.OrdinalIgnoreCase) &&
-                                                 l.Message != null &&
-                                                 l.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) &&
-                                                 l.Message.Contains("->"))
-                                     .OrderBy(l => l.Date)
-                                     .ToList();
-
-            if (transitionLogs.Count > 0)
+            // ── S6 path: pre-filtered PlcMngr transitions with -> ──
+            if (s6TransitionLogs != null && s6TransitionLogs.Count > 0)
             {
-                // S6 path — original logic
-                for (int i = 0; i < transitionLogs.Count; i++)
+                // Already in chronological order from single-pass classification
+                for (int i = 0; i < s6TransitionLogs.Count; i++)
                 {
-                    var currentLog = transitionLogs[i];
+                    var currentLog = s6TransitionLogs[i];
                     var parts = currentLog.Message.Split(new[] { "->" }, StringSplitOptions.None);
                     if (parts.Length < 2) continue;
 
@@ -564,9 +773,9 @@ namespace IndiLogs_3._0.Services.Charts
                         continue;
 
                     int endIdx;
-                    if (i < transitionLogs.Count - 1)
+                    if (i < s6TransitionLogs.Count - 1)
                     {
-                        if (timeIndexLookup.TryGetValue(transitionLogs[i + 1].Date, out int nextIdx))
+                        if (timeIndexLookup.TryGetValue(s6TransitionLogs[i + 1].Date, out int nextIdx))
                             endIdx = nextIdx - 1;
                         else
                             endIdx = startIdx;
@@ -585,19 +794,16 @@ namespace IndiLogs_3._0.Services.Charts
                     });
                 }
             }
-            else
-            {
-                // ── S4-5 fallback: STATE_XXX - Enter/Exit ====== ──
-                var s4Logs = logs.Where(l => l.Message != null && l.Message.Contains("==== STATE"))
-                                .OrderBy(l => l.Date)
-                                .ToList();
 
+            // ── S4-5 fallback if no S6 transitions found ──
+            if (stateData.Intervals.Count == 0 && s4StateLogs != null && s4StateLogs.Count > 0)
+            {
                 // Use only "Enter" logs as transition points (like S6's "-> STATE")
                 var enterLogs = new List<(LogEntry Log, string StateName)>();
-                foreach (var log in s4Logs)
+                foreach (var log in s4StateLogs)
                 {
                     var match = _s4StateRegex.Match(log.Message);
-                    if (match.Success && match.Groups[2].Value.Equals("Enter", System.StringComparison.OrdinalIgnoreCase))
+                    if (match.Success && match.Groups[2].Value.Equals("Enter", StringComparison.OrdinalIgnoreCase))
                     {
                         enterLogs.Add((log, match.Groups[1].Value.ToUpperInvariant()));
                     }

@@ -242,7 +242,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
         /// <summary>
         /// Loads data directly from memory without file I/O.
-        /// Heavy work (timestamp formatting, time mapping) runs on a background thread.
+        /// Heavy work runs on background threads; UI thread only does final assignments.
         /// </summary>
         public async Task LoadInMemoryData(ChartDataPackage dataPackage)
         {
@@ -253,13 +253,12 @@ namespace IndiLogs_3._0.Controls.Charts
             LoadingText.Text = "Loading chart data...";
             LoadingDetail.Text = $"Processing {dataPackage.Signals?.Count ?? 0} signals";
 
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+
             try
             {
                 _currentDataPackage = dataPackage;
                 _inMemoryDataLoaded = true;
-
-                // Use SetDataPackage for full support of CHSTEP and Thread items
-                SignalList.SetDataPackage(dataPackage);
 
                 // Set total data length
                 _totalDataLength = dataPackage.TimeStamps.Count;
@@ -268,25 +267,46 @@ namespace IndiLogs_3._0.Controls.Charts
                     _totalDataLength = dataPackage.Signals.Max(s => s.Data?.Length ?? 0);
                 }
 
-                LoadingDetail.Text = $"Formatting {_totalDataLength:N0} timestamps...";
+                LoadingDetail.Text = $"Building time index for {_totalDataLength:N0} points...";
 
-                // Build time mapping on background thread to avoid UI freeze
-                if (dataPackage.TimeStamps.Any())
+                // ── Run ALL heavy work on background threads in parallel ──
+                var stamps = dataPackage.TimeStamps;
+                string[] timeArr = null;
+                List<GapRegion> gapRegions = null;
+
+                await System.Threading.Tasks.Task.Run(() =>
                 {
-                    var stamps = dataPackage.TimeStamps;
-                    var timeArr = await System.Threading.Tasks.Task.Run(() =>
+                    // 1) Build time mapping directly from DateTimes — no string parsing needed!
+                    //    Old code: format→string→TryParse→DateTime (wasteful round-trip for 40K+ items)
+                    _syncService.BuildTimeMappingFromDateTimes(stamps);
+
+                    // 2) Format timestamps to strings (for display only) — parallel
+                    if (stamps.Count > 0)
                     {
-                        var arr = new string[stamps.Count];
+                        timeArr = new string[stamps.Count];
                         System.Threading.Tasks.Parallel.For(0, stamps.Count,
                             new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
-                            i => { arr[i] = stamps[i].ToString("yyyy-MM-dd HH:mm:ss.ffffff"); });
-                        return arr;
-                    });
-                    _timeData = timeArr;
+                            i => { timeArr[i] = stamps[i].ToString("yyyy-MM-dd HH:mm:ss.ffffff"); });
+                    }
 
-                    // Build time mapping on background thread (includes sort)
-                    await System.Threading.Tasks.Task.Run(() => _syncService.BuildTimeMapping(_timeData));
-                }
+                    // 3) Compute time gap regions (suppressed for IO terminal data)
+                    gapRegions = dataPackage.SuppressGapDetection
+                        ? new List<GapRegion>()
+                        : ComputeTimeGapRegions(stamps);
+                });
+
+                _timeData = timeArr;
+                _timeGapRegions = gapRegions ?? new List<GapRegion>();
+
+                var bgMs = sw.ElapsedMilliseconds;
+                AppLogger.Info($"[ChartLoad] Background work done in {bgMs}ms (time mapping + format + gaps)");
+
+                LoadingDetail.Text = "Populating signal list...";
+
+                // ── UI-thread work — kept minimal ──
+
+                // Populate signal list (with virtualization, ~1900 items is fast)
+                SignalList.SetDataPackage(dataPackage);
 
                 // Extract global states from state data (MachineState for timeline)
                 _globalStates.Clear();
@@ -317,27 +337,25 @@ namespace IndiLogs_3._0.Controls.Charts
                 // Store event markers for display on charts
                 _eventMarkers = dataPackage.Events ?? new List<EventMarkerData>();
 
-                // Compute time gap regions on background thread (suppressed for IO terminal data)
-                _timeGapRegions = dataPackage.SuppressGapDetection
-                    ? new List<GapRegion>()
-                    : await System.Threading.Tasks.Task.Run(() => ComputeTimeGapRegions(dataPackage.TimeStamps));
-
                 // Update empty state message
                 EmptyStateMessage.Visibility = Visibility.Collapsed;
 
-                // Clear existing charts - user will add signals manually
+                // Clear existing charts
                 _charts.Clear();
 
                 // Ensure theme is current before creating charts
                 SyncThemeFromSettings();
 
-                // Add an empty chart ready for user to add signals
+                // Add an empty chart — user selects signals manually from the list
                 AddNewChart();
 
                 // Update slider
                 NavSlider.Maximum = _totalDataLength > 0 ? _totalDataLength - 1 : 100;
 
                 RefreshChartViews();
+
+                sw.Stop();
+                AppLogger.Info($"[ChartLoad] Total LoadInMemoryData: {sw.ElapsedMilliseconds}ms (bg={bgMs}ms, UI={sw.ElapsedMilliseconds - bgMs}ms)");
             }
             catch (Exception ex)
             {

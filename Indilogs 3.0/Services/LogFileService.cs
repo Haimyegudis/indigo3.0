@@ -83,6 +83,7 @@ namespace IndiLogs_3._0.Services
         {
             return await Task.Run(() =>
             {
+                var loadSw = System.Diagnostics.Stopwatch.StartNew();
                 // יצירת Pool אחד לכל הסשן
                 var stringPool = new StringPool();
 
@@ -495,6 +496,14 @@ namespace IndiLogs_3._0.Services
                                     }
                                 }
 
+                                // --- Determine what the outer ZIP already provides ---
+                                bool outerHasMainLog = filesToProcess.Any(f => f.Type == FileType.MainLog);
+                                bool outerHasAppLogs = filesToProcess.Any(f => f.Type == FileType.AppDevLog || f.Type == FileType.AppBinaryLog);
+                                if (outerHasMainLog)
+                                    AppLogger.Info("[Load] Outer ZIP has PLC logs — will skip PLC logs from nested ZIPs to avoid date mixing");
+                                if (outerHasAppLogs)
+                                    AppLogger.Info("[Load] Outer ZIP has APP logs — will skip APP logs from nested ZIPs to avoid date mixing");
+
                                 // --- Nested ZIP processing: extract and classify entries from inner ZIPs ---
                                 foreach (var (innerStream, innerZipName) in innerZipStreams)
                                 {
@@ -648,27 +657,40 @@ namespace IndiLogs_3._0.Services
                                                     continue;
                                                 }
 
-                                                // Main PLC logs
+                                                // Main PLC logs — SKIP if outer ZIP already has PLC logs (avoid date mixing)
                                                 var innerData = new ZipEntryData { Name = innerEntry.Name };
                                                 bool innerShouldProcess = false;
 
                                                 if (innerEntry.Name.IndexOf("engineGroupA.file", StringComparison.OrdinalIgnoreCase) >= 0 &&
                                                     !innerEntry.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
                                                 {
+                                                    if (outerHasMainLog)
+                                                    {
+                                                        AppLogger.Info($"[Load] Skipping inner ZIP PLC log: {innerEntry.Name} (outer ZIP already has PLC logs)");
+                                                        continue;
+                                                    }
                                                     innerData.Type = FileType.MainLog;
                                                     innerShouldProcess = true;
                                                 }
-                                                // APP dev logs
+                                                // APP dev logs — SKIP if outer ZIP already has APP logs
                                                 else if ((innerEntry.Name.IndexOf("APPDEV", StringComparison.OrdinalIgnoreCase) >= 0 ||
                                                           innerEntry.Name.IndexOf("PRESS.HOST.APP", StringComparison.OrdinalIgnoreCase) >= 0) &&
                                                          (innerLower.Contains("indigologs/logger files") || innerLower.Contains("indigologs\\logger files")))
                                                 {
+                                                    if (outerHasAppLogs)
+                                                    {
+                                                        continue; // Skip — outer ZIP's APP logs take priority
+                                                    }
                                                     innerData.Type = FileType.AppDevLog;
                                                     innerShouldProcess = true;
                                                 }
-                                                // APP binary logs
+                                                // APP binary logs — SKIP if outer ZIP already has APP logs
                                                 else if (IsNumericAppFile(innerEntry.Name))
                                                 {
+                                                    if (outerHasAppLogs)
+                                                    {
+                                                        continue; // Skip — outer ZIP's APP logs take priority
+                                                    }
                                                     innerData.Type = FileType.AppBinaryLog;
                                                     innerShouldProcess = true;
                                                     hasBinaryAppLogs = true;
@@ -747,6 +769,7 @@ namespace IndiLogs_3._0.Services
                                 }
                                 // --- End nested ZIP processing ---
 
+                                AppLogger.Info($"[Load] ZIP extraction: {filesToProcess.Count} files to parse, {loadSw.Elapsed.TotalSeconds:F1}s elapsed");
                                 int totalFiles = filesToProcess.Count;
                                 int processedCount = 0;
 
@@ -764,12 +787,16 @@ namespace IndiLogs_3._0.Services
                                     {
                                         using (item.Stream)
                                         {
+                                            var fileSw = System.Diagnostics.Stopwatch.StartNew();
+                                            long streamLen = item.Stream.CanSeek ? item.Stream.Length : -1;
+
                                             if (item.Type == FileType.MainLog)
                                             {
                                                 var result = ParseLogStream(item.Stream, stringPool);
                                                 localLogLists.Add(result.AllLogs);
                                                 if (result.Transitions.Count > 0) localTransLists.Add(result.Transitions);
                                                 if (result.Failures.Count > 0) localFailLists.Add(result.Failures);
+                                                AppLogger.Info($"[Load] PLC  {item.Name}: {result.AllLogs.Count:N0} entries, {streamLen / 1048576.0:F1}MB, {fileSw.Elapsed.TotalSeconds:F1}s");
                                             }
                                             else if (item.Type == FileType.AppBinaryLog)
                                             {
@@ -777,11 +804,13 @@ namespace IndiLogs_3._0.Services
                                                 foreach (var log in result.AllLogs)
                                                     log.ProcessName = stringPool.Intern("APP");
                                                 if (result.AllLogs.Count > 0) localAppLists.Add(result.AllLogs);
+                                                AppLogger.Info($"[Load] BIN  {item.Name}: {result.AllLogs.Count:N0} entries, {streamLen / 1048576.0:F1}MB, {fileSw.Elapsed.TotalSeconds:F1}s");
                                             }
                                             else if (item.Type == FileType.AppDevLog)
                                             {
                                                 var logs = ParseAppDevLogStream(item.Stream, stringPool);
                                                 if (logs.Count > 0) localAppLists.Add(logs);
+                                                AppLogger.Info($"[Load] APP  {item.Name}: {logs.Count:N0} entries, {streamLen / 1048576.0:F1}MB, {fileSw.Elapsed.TotalSeconds:F1}s");
                                             }
                                             else if (item.Type == FileType.EventsCsv)
                                             {
@@ -832,6 +861,7 @@ namespace IndiLogs_3._0.Services
                                 });
 
                                 // Merge
+                                AppLogger.Info($"[Load] Parallel parsing done: {loadSw.Elapsed.TotalSeconds:F1}s elapsed");
                                 progress?.Report((85, "Merging results..."));
                                 int totalLogCount = 0;
                                 foreach (var l in localLogLists) totalLogCount += l.Count;
@@ -1123,6 +1153,7 @@ namespace IndiLogs_3._0.Services
                     if (!eventsBag.IsEmpty) { foreach (var l in eventsBag) mergedEvts.Add(l); }
 
                     // מיון סופי — in-place sort + all 5 sorts in parallel for maximum throughput
+                    AppLogger.Info($"[Load] Pre-sort: PLC={mergedLogs.Count:N0}, APP={mergedApps.Count:N0}, Trans={mergedTrans.Count:N0}, Events={mergedEvts.Count:N0} — {loadSw.Elapsed.TotalSeconds:F1}s elapsed");
                     progress?.Report((90, $"Sorting {mergedLogs.Count:N0} logs..."));
 
                     Comparison<LogEntry> dateComparer = (a, b) => a.Date.CompareTo(b.Date);
@@ -1138,6 +1169,7 @@ namespace IndiLogs_3._0.Services
                         () => mergedEvts.Sort(eventComparer)
                     );
 
+                    AppLogger.Info($"[Load] Sort done — {loadSw.Elapsed.TotalSeconds:F1}s elapsed");
                     session.Logs = mergedLogs;
                     session.AppDevLogs = mergedApps;
                     session.StateTransitions = mergedTrans;
@@ -1152,6 +1184,8 @@ namespace IndiLogs_3._0.Services
                     }
                     session.Screenshots = screenshotsBag.ToList();
 
+                    loadSw.Stop();
+                    AppLogger.Info($"[Load] TOTAL: {loadSw.Elapsed.TotalSeconds:F1}s — PLC={mergedLogs.Count:N0}, APP={mergedApps.Count:N0}");
                     progress?.Report((100, "Done"));
                 }
                 catch (Exception ex)
@@ -1449,24 +1483,28 @@ namespace IndiLogs_3._0.Services
         private List<LogEntry> ParseAppDevLogStream(Stream stream, StringPool pool = null)
         {
             pool = pool ?? new StringPool();
-            var list = new List<LogEntry>();
+            // Pre-allocate based on ~1KB per entry
+            int estimatedEntries = stream.CanSeek ? (int)Math.Min(stream.Length / 1024, 500000) : 10000;
+            var list = new List<LogEntry>(estimatedEntries);
             try
             {
-                if (stream.Position != 0) stream.Position = 0;
-                using (var reader = new StreamReader(stream, Encoding.UTF8))
+                if (stream.CanSeek && stream.Position != 0) stream.Position = 0;
+                // 64KB reader buffer — much better throughput for large files (default is 1KB)
+                using (var reader = new StreamReader(stream, Encoding.UTF8, true, 65536))
                 {
                     string line;
-                    StringBuilder buffer = new StringBuilder();
+                    var buffer = new StringBuilder(4096);
 
                     while ((line = reader.ReadLine()) != null)
                     {
-                        if (line == "!!![V2]") continue;
+                        if (line.Length == 7 && line == "!!![V2]") continue;
 
-                        if (_dateStartPattern.IsMatch(line))
+                        // Inline date check — replaces _dateStartPattern.IsMatch(line) regex
+                        if (IsDateStart(line))
                         {
                             if (buffer.Length > 0)
                             {
-                                var logEntry = ProcessAppDevBuffer(buffer.ToString(), pool);
+                                var logEntry = ProcessAppDevBufferFast(buffer.ToString(), pool);
                                 if (logEntry != null) list.Add(logEntry);
                                 buffer.Clear();
                             }
@@ -1476,7 +1514,7 @@ namespace IndiLogs_3._0.Services
 
                     if (buffer.Length > 0)
                     {
-                        var logEntry = ProcessAppDevBuffer(buffer.ToString(), pool);
+                        var logEntry = ProcessAppDevBufferFast(buffer.ToString(), pool);
                         if (logEntry != null) list.Add(logEntry);
                     }
                 }
@@ -1488,67 +1526,189 @@ namespace IndiLogs_3._0.Services
             return list;
         }
 
-        private LogEntry ProcessAppDevBuffer(string rawText, StringPool pool)
+        /// <summary>Fast inline check: "YYYY-MM-DD HH:MM:SS,ddd" — replaces _dateStartPattern regex.</summary>
+        private static bool IsDateStart(string line)
         {
-            // נסה קודם את הפורמט הישן עם \x1e
-            var match = _appDevRegex.Match(rawText);
+            if (line.Length < 23) return false;
+            return line[4] == '-' && line[7] == '-' && line[10] == ' '
+                && line[13] == ':' && line[16] == ':' && line[19] == ','
+                && (uint)(line[0] - '0') <= 9 && (uint)(line[5] - '0') <= 9
+                && (uint)(line[8] - '0') <= 9 && (uint)(line[11] - '0') <= 9;
+        }
 
-            // אם לא הצליח, נסה את הפורמט החדש עם |
-            if (!match.Success)
+        /// <summary>Fast manual timestamp parse: "YYYY-MM-DD HH:MM:SS,ddddddd" — avoids DateTime.TryParse overhead.</summary>
+        private static DateTime ParseTimestampFast(string ts)
+        {
+            // ts is at least 23 chars (checked by IsDateStart)
+            int year = (ts[0] - '0') * 1000 + (ts[1] - '0') * 100 + (ts[2] - '0') * 10 + (ts[3] - '0');
+            int month = (ts[5] - '0') * 10 + (ts[6] - '0');
+            int day = (ts[8] - '0') * 10 + (ts[9] - '0');
+            int hour = (ts[11] - '0') * 10 + (ts[12] - '0');
+            int minute = (ts[14] - '0') * 10 + (ts[15] - '0');
+            int second = (ts[17] - '0') * 10 + (ts[18] - '0');
+
+            // Fractional: parse 3-7 digits after comma at position 20
+            long ticks = 0;
+            int digits = 0;
+            for (int i = 20; i < ts.Length && (uint)(ts[i] - '0') <= 9; i++)
             {
-                match = _appDevRegexPipe.Match(rawText);
+                ticks = ticks * 10 + (ts[i] - '0');
+                digits++;
+            }
+            // Normalize to 100ns ticks: 3 digits=ms→*10000, 7 digits=ticks directly
+            switch (digits)
+            {
+                case 3: ticks *= 10000; break;
+                case 4: ticks *= 1000; break;
+                case 5: ticks *= 100; break;
+                case 6: ticks *= 10; break;
+                case 7: break;
+                default: ticks = 0; break;
             }
 
-            if (!match.Success) return null;
-
-            string timestampStr = match.Groups["Timestamp"].Value;
-            // Replace comma with period so TryParse handles variable fractional digits (3-7)
-            string normalizedTs = timestampStr.Replace(',', '.');
-            if (!DateTime.TryParse(normalizedTs,
-                System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.None, out DateTime date))
+            try
             {
-                DateTime.TryParse(timestampStr, out date);
+                return new DateTime(year, month, day, hour, minute, second).AddTicks(ticks);
             }
-
-            string message = match.Groups["Message"].Success ? match.Groups["Message"].Value.Trim() : "";
-            string exception = match.Groups["Exception"].Success ? match.Groups["Exception"].Value.Trim() : "";
-            string data = match.Groups["Data"].Success ? match.Groups["Data"].Value.Trim() : "";
-            string pattern = match.Groups["Pattern"].Success ? match.Groups["Pattern"].Value.Trim() : "";
-            string location = match.Groups["Location"].Success ? match.Groups["Location"].Value.Trim() : "";
-
-            // בפורמט החדש, ה-Direction (-->/<--) יכול לשמש כחלק מההודעה
-            string direction = match.Groups["Direction"].Success ? match.Groups["Direction"].Value.Trim() : "";
-
-            // בפורמט החדש, אם אין Message נפרד, נשתמש ב-Direction + Data כהודעה
-            if (string.IsNullOrEmpty(message) && !string.IsNullOrEmpty(direction))
+            catch
             {
-                message = direction;
-                if (!string.IsNullOrEmpty(data))
+                return DateTime.MinValue;
+            }
+        }
+
+        /// <summary>
+        /// Fast manual parser replacing regex for AppDev log entries.
+        /// Old format: fields separated by \x1e (record separator).
+        /// New format: pipe-separated multi-line — falls back to regex only if needed.
+        /// </summary>
+        private LogEntry ProcessAppDevBufferFast(string rawText, StringPool pool)
+        {
+            // ── Old format: \x1e separated ──
+            // Fields: Timestamp\x1eThread\x1eRootIFlowId\x1eIFlowId\x1eIFlowName\x1ePattern\x1eContext\x1e"Level Logger"\x1eLocation\x1eMessage\x1eException\x1eData
+            int firstSep = rawText.IndexOf('\x1e');
+            if (firstSep > 0)
+            {
+                var parts = rawText.Split('\x1e');
+                if (parts.Length < 10) return null;
+
+                DateTime date = ParseTimestampFast(parts[0].Trim());
+                if (date == DateTime.MinValue) return null;
+
+                // [7] = "Level Logger" — split on first space
+                string levelLogger = parts[7];
+                string level = "INFO";
+                string logger = "";
+                int spaceIdx = levelLogger.IndexOf(' ');
+                if (spaceIdx > 0)
                 {
-                    // אם ה-Data הוא JSON, נשמור אותו בשדה Data
-                    if (!data.TrimStart().StartsWith("{") && !data.TrimStart().StartsWith("["))
+                    level = levelLogger.Substring(0, spaceIdx).ToUpper();
+                    logger = levelLogger.Substring(spaceIdx + 1).Trim();
+                }
+
+                string message = parts[9].Trim();
+                string exception = parts.Length > 10 ? parts[10].Trim() : "";
+                string data = parts.Length > 11 ? parts[11].Trim() : "";
+                string pattern = parts[5].Trim();
+                string location = parts[8].Trim();
+
+                return new LogEntry
+                {
+                    Date = date,
+                    ThreadName = pool.Intern(parts[1]),
+                    Level = pool.Intern(level),
+                    Logger = pool.Intern(logger),
+                    Message = message,
+                    ProcessName = pool.Intern("APP"),
+                    Method = pool.Intern(location),
+                    Pattern = string.IsNullOrEmpty(pattern) ? null : pattern,
+                    Data = string.IsNullOrEmpty(data) ? null : data,
+                    Exception = string.IsNullOrEmpty(exception) ? null : exception
+                };
+            }
+
+            // ── New format: pipe-separated multi-line ──
+            // First line: Timestamp |Thread| |Root| |Flow| |Name| |Pattern| |Context| LEVEL Logger
+            // Second line: |Method|
+            // Remaining lines until ||: Message
+            int firstNl = rawText.IndexOf('\n');
+            if (firstNl < 0) return null;
+
+            string firstLine = firstNl > 0 && rawText[firstNl - 1] == '\r'
+                ? rawText.Substring(0, firstNl - 1) : rawText.Substring(0, firstNl);
+
+            int firstPipe = firstLine.IndexOf('|');
+            if (firstPipe < 0) return null;
+
+            DateTime pipeDate = ParseTimestampFast(firstLine.Substring(0, firstPipe).Trim());
+            if (pipeDate == DateTime.MinValue) return null;
+
+            // Extract |Field| groups
+            var pipeFields = new List<string>(8);
+            int pos = firstPipe;
+            while (pos < firstLine.Length && firstLine[pos] == '|')
+            {
+                int endPipe = firstLine.IndexOf('|', pos + 1);
+                if (endPipe < 0) break;
+                pipeFields.Add(firstLine.Substring(pos + 1, endPipe - pos - 1));
+                pos = endPipe + 1;
+                while (pos < firstLine.Length && firstLine[pos] == ' ') pos++;
+            }
+
+            if (pipeFields.Count < 6) return null;
+
+            string pThread = pipeFields[0];
+            string pPattern = pipeFields.Count > 4 ? pipeFields[4] : "";
+
+            // Remainder is "LEVEL  Logger"
+            string pLevelLogger = pos < firstLine.Length ? firstLine.Substring(pos).Trim() : "";
+            string pLevel = "INFO";
+            string pLogger = "";
+            int pSpIdx = pLevelLogger.IndexOf(' ');
+            if (pSpIdx > 0)
+            {
+                pLevel = pLevelLogger.Substring(0, pSpIdx).Trim().ToUpper();
+                pLogger = pLevelLogger.Substring(pSpIdx).Trim();
+            }
+
+            // Second line: |Method|
+            string pLocation = "";
+            int secondStart = firstNl + 1;
+            if (secondStart < rawText.Length)
+            {
+                int secondNl = rawText.IndexOf('\n', secondStart);
+                if (secondNl > secondStart)
+                {
+                    string secondLine = rawText[secondNl - 1] == '\r'
+                        ? rawText.Substring(secondStart, secondNl - secondStart - 1)
+                        : rawText.Substring(secondStart, secondNl - secondStart);
+                    if (secondLine.Length > 2 && secondLine[0] == '|' && secondLine[secondLine.Length - 1] == '|')
+                        pLocation = secondLine.Substring(1, secondLine.Length - 2);
+
+                    // Message: everything after second line until trailing ||
+                    int msgStart = secondNl + 1;
+                    if (msgStart < rawText.Length)
                     {
-                        message = $"{direction} {data}";
-                        data = "";
+                        int terminator = rawText.LastIndexOf("||");
+                        string pMessage = terminator > msgStart
+                            ? rawText.Substring(msgStart, terminator - msgStart).Trim()
+                            : rawText.Substring(msgStart).Trim();
+
+                        return new LogEntry
+                        {
+                            Date = pipeDate,
+                            ThreadName = pool.Intern(pThread),
+                            Level = pool.Intern(pLevel),
+                            Logger = pool.Intern(pLogger),
+                            Message = pMessage,
+                            ProcessName = pool.Intern("APP"),
+                            Method = pool.Intern(pLocation),
+                            Pattern = string.IsNullOrEmpty(pPattern) ? null : pPattern
+                        };
                     }
                 }
             }
 
-            return new LogEntry
-            {
-                Date = date,
-                // Only intern repetitive fields, not unique content (Message, Data, Exception)
-                ThreadName = pool.Intern(match.Groups["Thread"].Value),
-                Level = pool.Intern(match.Groups["Level"].Value.ToUpper()),
-                Logger = pool.Intern(match.Groups["Logger"].Value.Trim()),
-                Message = message,
-                ProcessName = pool.Intern("APP"),
-                Method = pool.Intern(location),
-                Pattern = string.IsNullOrEmpty(pattern) ? null : pattern,
-                Data = string.IsNullOrEmpty(data) ? null : data,
-                Exception = string.IsNullOrEmpty(exception) ? null : exception
-            };
+            return null;
         }
 
         private List<string> SplitCsvLine(string line)

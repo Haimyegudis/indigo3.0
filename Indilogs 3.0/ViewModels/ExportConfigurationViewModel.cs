@@ -391,10 +391,13 @@ namespace IndiLogs_3._0.ViewModels
 
             // Show loading indicator
             IsLoading = true;
+            LoadingProgress = 0;
             LoadingMessage = "Scanning logs for components...";
 
             await Task.Run(() =>
             {
+                AppLogger.Info($"[ComponentScan] Scanning PLC logs: {_sessionData.Logs.Count:N0}");
+
                 // Use ConcurrentDictionary for thread-safe parallel processing
                 var ioComponents = new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase);
                 var axisComponents = new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase);
@@ -415,10 +418,11 @@ namespace IndiLogs_3._0.ViewModels
                     int current = System.Threading.Interlocked.Increment(ref processedLogs);
                     if (current % 10000 == 0)
                     {
-                        double progress = (double)current / totalLogs * 100;
+                        double pct = (double)current / totalLogs * 100;
                         Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                         {
-                            LoadingMessage = $"Scanning logs... {progress:F1}% ({current:N0} / {totalLogs:N0})";
+                            LoadingProgress = pct;
+                            LoadingMessage = $"Scanning logs... {pct:F1}% ({current:N0} / {totalLogs:N0})";
                         }));
                     }
 
@@ -604,6 +608,12 @@ namespace IndiLogs_3._0.ViewModels
                         threads.TryAdd(log.ThreadName, 0);
                     }
                 });
+
+                AppLogger.Info($"[ComponentScan] Found: {ioComponents.Count} IO, {axisComponents.Count} Axis, {chStepComponents.Count} CHStep, {threads.Count} Threads");
+                if (ioComponents.Count > 0)
+                    AppLogger.Info($"[ComponentScan] IO samples: {string.Join(", ", ioComponents.Keys.Take(5))}");
+                if (axisComponents.Count > 0)
+                    AppLogger.Info($"[ComponentScan] Axis samples: {string.Join(", ", axisComponents.Keys.Take(5))}");
 
                 // Build lists (not yet added to ObservableCollection)
                 Application.Current.Dispatcher.BeginInvoke(new Action(() =>
@@ -954,6 +964,7 @@ namespace IndiLogs_3._0.ViewModels
                 else
                 {
                     // ── S6 standard: build from session logs ─────────────────
+                    LoadingProgress = 0;
                     LoadingMessage = "Building chart data...";
                     var preset = new ExportPreset
                     {
@@ -971,13 +982,21 @@ namespace IndiLogs_3._0.ViewModels
                             .Select(x => x.Name).ToList()
                     };
 
+                    var progress = new Progress<(double pct, string msg)>(p =>
+                    {
+                        LoadingProgress = p.pct;
+                        LoadingMessage = p.msg;
+                        OnPropertyChanged(nameof(IsProgressVisible));
+                    });
+
                     var transferService = ChartDataTransferService.Instance;
                     await Task.Run(() =>
                     {
                         dataPackage = transferService.BuildDataPackage(
                             _sessionData.Logs,
                             preset,
-                            _sessionData.FileName ?? "Session");
+                            _sessionData.FileName ?? "Session",
+                            progress);
                     });
                 }
 

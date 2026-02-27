@@ -48,6 +48,33 @@ namespace IndiLogs_3._0.Services.Charts
         }
 
         /// <summary>
+        /// Build time mapping directly from pre-sorted DateTime list.
+        /// Skips string parsing and sorting — O(n) with no allocations beyond the map.
+        /// </summary>
+        public void BuildTimeMappingFromDateTimes(List<DateTime> timestamps)
+        {
+            _timeMap.Clear();
+
+            if (timestamps == null || timestamps.Count == 0)
+            {
+                _indexToTimeMap = new Dictionary<int, DateTime>();
+                return;
+            }
+
+            _timeMap = new List<(DateTime, int)>(timestamps.Count);
+            _indexToTimeMap = new Dictionary<int, DateTime>(timestamps.Count);
+
+            for (int i = 0; i < timestamps.Count; i++)
+            {
+                var ts = timestamps[i];
+                _timeMap.Add((ts, i));
+                _indexToTimeMap[i] = ts;
+            }
+
+            // Already sorted — caller guarantees chronological order
+        }
+
+        /// <summary>
         /// Build time mapping from log entries
         /// </summary>
         public void BuildTimeMappingFromLogs(IList<LogEntry> logs)
