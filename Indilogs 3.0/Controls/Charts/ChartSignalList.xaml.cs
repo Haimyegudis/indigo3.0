@@ -223,10 +223,11 @@ namespace IndiLogs_3._0.Controls.Charts
             }
             else
             {
-                // Default for unknown categories
-                item.Category = SignalItemCategory.All;
-                item.TypeIcon = "S";
-                item.TypeColor = DefaultColor;
+                // S4-5 IoTerminal: device names (e.g. "BIM[0]", "ECM") classify as IO
+                // since all IoTerminal CSV signals are IO data
+                item.Category = SignalItemCategory.IO;
+                item.TypeIcon = "I";
+                item.TypeColor = IOColor;
             }
 
             return item;

@@ -1882,7 +1882,19 @@ namespace IndiLogs_3._0.ViewModels
         {
             try
             {
-            if (SelectedSession == null || SelectedSession.Logs == null || !SelectedSession.Logs.Any())
+            if (SelectedSession == null)
+            {
+                MessageBox.Show("No logs loaded.", "Info");
+                return;
+            }
+
+            // S4-5 (binary APP): allow export even without parsed PLC logs — IO data comes from CSV
+            bool hasLogs = SelectedSession.Logs != null && SelectedSession.Logs.Any();
+            bool hasIoCsv = SelectedSession.HasBinaryAppLogs &&
+                            ((SelectedSession.TerminalCsvBytes != null && SelectedSession.TerminalCsvBytes.Keys.Any(k => k.StartsWith("Io-", StringComparison.OrdinalIgnoreCase))) ||
+                             (SelectedSession.TerminalLogFiles != null && SelectedSession.TerminalLogFiles.Keys.Any(k => k.StartsWith("Io-", StringComparison.OrdinalIgnoreCase))));
+
+            if (!hasLogs && !hasIoCsv)
             {
                 MessageBox.Show("No logs loaded.", "Info");
                 return;

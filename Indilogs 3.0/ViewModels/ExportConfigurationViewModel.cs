@@ -1102,8 +1102,8 @@ namespace IndiLogs_3._0.ViewModels
                     .All(v => v == 0.0 || v == 1.0);
                 signals.Add(new SignalData
                 {
-                    Name = name,
-                    Category = cat,
+                    Name = $"{cat}-{name}",
+                    Category = "IO",
                     SignalType = isDigital ? SignalType.Digital : SignalType.Analog,
                     Data = kvp.Value
                 });
