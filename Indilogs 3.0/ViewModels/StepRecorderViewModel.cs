@@ -300,7 +300,7 @@ namespace IndiLogs_3._0.ViewModels
             var bmp = CurrentFrame?.Bitmap;
             if (bmp == null) return;
             try { Clipboard.SetImage(bmp); }
-            catch { /* clipboard may be locked */ }
+            catch (Exception ex) { AppLogger.Warn($"Clipboard copy failed (may be locked): {ex.Message}"); }
         }
 
         // ─── Open in Explorer ─────────────────────────────────────────────────

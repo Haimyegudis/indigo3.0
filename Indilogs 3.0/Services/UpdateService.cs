@@ -218,9 +218,10 @@ namespace IndiLogs_3._0.Services
             try
             {
                 // Step 1: Verify Authenticode digital signature with chain validation
-                var cert = System.Security.Cryptography.X509Certificates.X509Certificate2.CreateFromSignedFile(installerPath);
-                if (cert != null)
+                var rawCert = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(installerPath);
+                if (rawCert != null)
                 {
+                    var cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(rawCert);
                     // Validate the certificate chains to a trusted root
                     using (var chain = new System.Security.Cryptography.X509Certificates.X509Chain())
                     {

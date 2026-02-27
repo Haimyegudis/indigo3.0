@@ -15,7 +15,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -100,7 +99,7 @@ namespace IndiLogs_3._0.ViewModels
         // Case File & Annotations
         public Dictionary<LogEntry, LogAnnotation> LogAnnotations => CaseVM?.LogAnnotations;
 
-        private const int UI_UPDATE_BATCH_SIZE = 500;
+        private const int UI_UPDATE_BATCH_SIZE = AppConstants.UiUpdateBatchSize;
         private readonly object _collectionLock = new object();
 
         // Collections
@@ -2222,9 +2221,34 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         private bool IsDefaultLog(LogEntry l) => FilterVM?.IsDefaultLog(l) ?? false;
-        private void OpenUrl(string url) { try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); } catch { } }
+        private void OpenUrl(string url) { try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); } catch (Exception ex) { AppLogger.Error($"OpenUrl failed for '{url}'", ex); } }
         private void OpenOutlook(object obj) { try { Process.Start("outlook.exe", "/c ipm.note"); } catch { OpenUrl("mailto:"); } }
-        private void OpenKibana(object obj) { }
+        /// <summary>
+        /// Opens Kibana in the default browser, pre-filling the machine name from the loaded ZIP.
+        /// </summary>
+        private void OpenKibana(object obj)
+        {
+            string zipPath = SelectedSession?.FilePath ?? string.Empty;
+            string machineName = string.Empty;
+
+            if (!string.IsNullOrEmpty(zipPath))
+            {
+                string fileName = Path.GetFileNameWithoutExtension(zipPath);
+                int underscoreIdx = fileName.IndexOf('_');
+                machineName = underscoreIdx > 0 ? fileName.Substring(0, underscoreIdx) : fileName;
+            }
+
+            if (string.IsNullOrEmpty(machineName))
+            {
+                OpenUrl("http://localhost/");
+                return;
+            }
+
+            string escapedMachineName = Uri.EscapeDataString(machineName);
+            string nextParam = Uri.EscapeDataString($"/{escapedMachineName}/app/home");
+            string url = $"http://localhost/{escapedMachineName}/login?next={nextParam}";
+            OpenUrl(url);
+        }
 
         private void CopyTableName(object parameter)
         {

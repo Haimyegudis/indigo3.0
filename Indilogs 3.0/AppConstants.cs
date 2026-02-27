@@ -37,6 +37,11 @@ namespace IndiLogs_3._0
         /// </summary>
         public const string SystabExtension = ".txt";
 
+        /// <summary>
+        /// Batch size for UI update operations (e.g. ObservableRangeCollection batching).
+        /// </summary>
+        public const int UiUpdateBatchSize = 500;
+
         // ── Tab Indices ─────────────────────────────────────────────
         // Must match the order of TabItems in MainWindow.xaml
         public const int TAB_PLC = 0;

@@ -650,6 +650,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             LoadSelectedFileContent();
         }
 
+        /// <summary>
+        /// Populates the configuration files list from the current session (config, DB, and terminal files).
+        /// </summary>
         public void LoadConfigurationFiles()
         {
             ConfigurationFiles.Clear();
@@ -694,6 +697,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        /// <summary>
+        /// Clears all configuration file data including DB tree, CSV view, and search state.
+        /// </summary>
         public void ClearConfigurationFiles()
         {
             ConfigurationFiles.Clear();

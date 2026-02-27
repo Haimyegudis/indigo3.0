@@ -115,6 +115,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             LiveClearCommand = new RelayCommand(LiveClear);
         }
 
+        /// <summary>
+        /// Starts live monitoring of a log file, polling for new entries on a timer.
+        /// </summary>
         public void StartLiveMonitoring(string path)
         {
             // 1. Cleanup old session
@@ -164,6 +167,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             Task.Run(() => PollingLoop(_liveCts.Token));
         }
 
+        /// <summary>
+        /// Stops live monitoring, cancels polling, and disposes cached resources.
+        /// </summary>
         public void StopLiveMonitoring()
         {
             // Cancel ongoing operations
@@ -281,6 +287,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             return true;
         }
 
+        /// <summary>
+        /// Incrementally reads new bytes from the live file, parses new log entries, and updates the UI.
+        /// </summary>
         public async Task RefreshLogsOptimized()
         {
             if (_isRefreshActive) return;
@@ -464,6 +473,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        /// <summary>
+        /// Main polling loop that periodically calls RefreshLogsOptimized until cancelled.
+        /// </summary>
         public async Task PollingLoop(CancellationToken token)
         {
             while (!token.IsCancellationRequested)
@@ -553,6 +565,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             _sessionVM.StatusMessage = $"Auto-refresh active ({_liveLogsCollection.Count:N0} logs loaded, watching for new data...)";
         }
 
+        /// <summary>
+        /// Stops live monitoring and releases all resources.
+        /// </summary>
         public void Cleanup()
         {
             StopLiveMonitoring();

@@ -28,7 +28,9 @@ namespace IndiLogs_3._0.ViewModels.Components
         private ConfigExplorerViewModel _configVM;
         private LiveMonitoringViewModel _liveVM;
 
-        // Main data collections
+        /// <summary>
+        /// Current PLC/main log entries bound to the UI DataGrid.
+        /// </summary>
         private IEnumerable<LogEntry> _logs;
         public IEnumerable<LogEntry> Logs
         {
@@ -42,6 +44,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        /// <summary>
+        /// Complete unfiltered cache of all PLC/main log entries for the current session.
+        /// </summary>
         private IList<LogEntry> _allLogsCache;
         public IList<LogEntry> AllLogsCache
         {
@@ -54,6 +59,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        /// <summary>
+        /// Complete unfiltered cache of all APP developer log entries for the current session.
+        /// </summary>
         private IList<LogEntry> _allAppLogsCache;
         public IList<LogEntry> AllAppLogsCache
         {
@@ -66,6 +74,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        /// <summary>
+        /// PLC event entries extracted from the loaded session.
+        /// </summary>
         private ObservableCollection<EventEntry> _events;
         public ObservableCollection<EventEntry> Events
         {
@@ -78,7 +89,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        // Cache for all events (before time filtering)
+        /// <summary>
+        /// Complete cache of all event entries before any time filtering is applied.
+        /// </summary>
         private List<EventEntry> _allEvents;
         public List<EventEntry> AllEvents
         {
@@ -90,6 +103,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        /// <summary>
+        /// Screenshots extracted from the loaded ZIP session file.
+        /// </summary>
         private ObservableCollection<BitmapImage> _screenshots;
         public ObservableCollection<BitmapImage> Screenshots
         {
@@ -114,6 +130,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        /// <summary>
+        /// All loaded log sessions available for switching between.
+        /// </summary>
         private ObservableCollection<LogSessionData> _loadedSessions;
         public ObservableCollection<LogSessionData> LoadedSessions
         {
@@ -126,6 +145,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        /// <summary>
+        /// Currently active log session; setting triggers session switch and data reload.
+        /// </summary>
         private LogSessionData _selectedSession;
         public LogSessionData SelectedSession
         {
@@ -209,7 +231,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             RemoveSessionCommand = new RelayCommand(RemoveSession);
         }
 
-        // Set dependent ViewModels after construction (circular dependency resolution)
+        /// <summary>
+        /// Injects dependent ViewModels after construction to resolve circular dependencies.
+        /// </summary>
         public void SetDependencies(FilterSearchViewModel filterVM, CaseManagementViewModel caseVM,
             ConfigExplorerViewModel configVM, LiveMonitoringViewModel liveVM)
         {
@@ -319,6 +343,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             catch (Exception ex) { AppLogger.Error("LoadFile failed", ex); }
         }
 
+        /// <summary>
+        /// Loads and processes log files into a new session, applying colors and updating the UI.
+        /// </summary>
         public async Task ProcessFiles(string[] filePaths, Action<LogSessionData> onLoadComplete = null)
         {
             bool isWatchableFile = false; // Track if we should start auto-refresh after loading

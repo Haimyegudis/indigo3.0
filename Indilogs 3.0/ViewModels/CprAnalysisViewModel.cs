@@ -11,6 +11,10 @@ using IndiLogs_3._0.Services.Cpr;
 
 namespace IndiLogs_3._0.ViewModels
 {
+    /// <summary>
+    /// ViewModel for CPR (Cycle Performance Report) analysis — loads station timing data,
+    /// calculates cycle statistics, and provides filtering/export capabilities.
+    /// </summary>
     public class CprAnalysisViewModel : ViewModelBase
     {
         private readonly CprDataService _dataService = new CprDataService();

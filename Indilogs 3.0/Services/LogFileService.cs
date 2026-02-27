@@ -1,12 +1,10 @@
-﻿using DocumentFormat.OpenXml.ExtendedProperties;
-using Indigo.Infra.ICL.Core.Logging;
+﻿using Indigo.Infra.ICL.Core.Logging;
 using IndiLogs.PluginAPI;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services.Interfaces;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;

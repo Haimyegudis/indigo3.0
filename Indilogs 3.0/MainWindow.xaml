@@ -1214,7 +1214,7 @@
                                 </StackPanel>
                             </DataTemplate>
                         </TabItem.HeaderTemplate>
-                        <cpr:CprAnalysisControl x:Name="CprTab" DataContext="{Binding CprVM}" Loaded="CprTab_Loaded"/>
+                        <cpr:CprAnalysisControl x:Name="CprTab" DataContext="{Binding CprVM}"/>
                     </TabItem>
 
                     <TabItem Header="STEP RECORDER"

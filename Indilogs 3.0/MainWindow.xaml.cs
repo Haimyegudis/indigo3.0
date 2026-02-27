@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Net.NetworkInformation;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -1301,22 +1300,10 @@ namespace IndiLogs_3._0
         {
             if (DataContext is MainViewModel vm)
             {
-                // Find the log entry closest to this time
-                var closestLog = vm.FilteredLogs?
-                    .OrderBy(l => Math.Abs((l.Date - time).TotalMilliseconds))
-                    .FirstOrDefault();
-
-                if (closestLog != null)
-                {
-                    // Scroll to the log and select it
-                    MapsToLogRow(closestLog);
-                }
+                // Delegate to VM which uses O(log N) binary search instead of O(N log N) OrderBy
+                vm.NavigateToLogTime(time);
             }
         }
 
-        private void CprTab_Loaded(object sender, RoutedEventArgs e)
-        {
-
-        }
     }
 }

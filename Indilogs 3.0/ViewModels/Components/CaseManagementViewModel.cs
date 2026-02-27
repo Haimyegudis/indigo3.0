@@ -1,4 +1,3 @@
-using DocumentFormat.OpenXml.Spreadsheet;
 using IndiLogs_3._0;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
@@ -34,17 +33,35 @@ namespace IndiLogs_3._0.ViewModels.Components
         private string _currentCaseFilePath = null;
         private bool _isLoadingCase = false;
 
-        // Coloring rules
+        /// <summary>
+        /// Custom coloring rules applied to PLC/main log entries.
+        /// </summary>
         public List<ColoringCondition> MainColoringRules { get; set; } = new List<ColoringCondition>();
+
+        /// <summary>
+        /// Custom coloring rules applied to APP log entries.
+        /// </summary>
         public List<ColoringCondition> AppColoringRules { get; set; } = new List<ColoringCondition>();
 
-        // Annotations
+        /// <summary>
+        /// Maps log entries to their annotations for lookup and persistence.
+        /// </summary>
         private Dictionary<LogEntry, LogAnnotation> _logAnnotations = new Dictionary<LogEntry, LogAnnotation>();
         public Dictionary<LogEntry, LogAnnotation> LogAnnotations => _logAnnotations;
 
-        // Marked logs management
+        /// <summary>
+        /// Collection of user-marked PLC/main log entries.
+        /// </summary>
         public ObservableCollection<LogEntry> MarkedLogs { get; set; }
+
+        /// <summary>
+        /// Collection of user-marked APP log entries.
+        /// </summary>
         public ObservableCollection<LogEntry> MarkedAppLogs { get; set; }
+
+        /// <summary>
+        /// Saved filter/coloring configurations that can be loaded by the user.
+        /// </summary>
         public ObservableCollection<SavedConfiguration> SavedConfigs { get; set; }
 
         // Marked log windows
@@ -517,6 +534,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        /// <summary>
+        /// Applies a saved configuration (filters and coloring rules) to the current session.
+        /// </summary>
         public async Task ApplyConfiguration(SavedConfiguration c)
         {
             try
@@ -1146,6 +1166,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        /// <summary>
+        /// Indicates whether a case file is currently being loaded (prevents filter resets during load).
+        /// </summary>
         public bool IsLoadingCase => _isLoadingCase;
 
         private async Task OpenColoringWindow(object obj)

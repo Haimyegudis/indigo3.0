@@ -20,6 +20,9 @@ using Microsoft.Win32;
 
 namespace IndiLogs_3._0.ViewModels
 {
+    /// <summary>
+    /// ViewModel for the Different Logs tab -- loads and displays non-standard log files via plugins.
+    /// </summary>
     public class DifferentLogsViewModel : ViewModelBase
     {
         // ── Built-in field names that bind directly on LogEntry ───

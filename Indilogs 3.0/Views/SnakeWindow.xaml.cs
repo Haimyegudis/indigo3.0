@@ -271,7 +271,7 @@ namespace IndiLogs_3._0.Views
             {
                 List<int> scores = new List<int>();
                 if (File.Exists(_scoreFile))
-                    scores = JsonConvert.DeserializeObject<List<int>>(File.ReadAllText(_scoreFile), new JsonSerializerSettings { MaxDepth = 8 }) ?? new List<int>();
+                    scores = JsonConvert.DeserializeObject<List<int>>(File.ReadAllText(_scoreFile), new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth }) ?? new List<int>();
 
                 scores.Add(_score);
                 scores = scores.OrderByDescending(s => s).Take(3).ToList(); // שמירת טופ 3
@@ -289,7 +289,7 @@ namespace IndiLogs_3._0.Views
             {
                 if (File.Exists(_scoreFile))
                 {
-                    var scores = JsonConvert.DeserializeObject<List<int>>(File.ReadAllText(_scoreFile), new JsonSerializerSettings { MaxDepth = 8 });
+                    var scores = JsonConvert.DeserializeObject<List<int>>(File.ReadAllText(_scoreFile), new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth });
                     HighScoresText.Text = string.Join("\n", scores.Select((s, i) => $"#{i + 1} : {s}"));
                 }
             }

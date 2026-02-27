@@ -13,7 +13,9 @@ using System.Windows.Threading;
 
 namespace IndiLogs_3._0.ViewModels.Components
 {
-    // Debug helper class to track who clears a list
+    /// <summary>
+    /// Debug helper list that tracks clearing operations for diagnostics.
+    /// </summary>
     public class TrackedList<T> : List<T>, IList<T>
     {
         private readonly string _name;
@@ -32,12 +34,17 @@ namespace IndiLogs_3._0.ViewModels.Components
         }
     }
 
+    /// <summary>
+    /// Manages log filtering, searching, and logger tree operations for PLC and APP log views.
+    /// </summary>
     public class FilterSearchViewModel : ViewModelBase
     {
         private readonly MainViewModel _parent;
         private readonly LogSessionViewModel _sessionVM;
 
-        // User-configurable default PLC filter (replaces hardcoded IsDefaultLog)
+        /// <summary>
+        /// User-configurable default PLC filter applied when no explicit filters are active.
+        /// </summary>
         private FilterNode _defaultPlcFilter;
         public FilterNode DefaultPlcFilter
         {
@@ -77,7 +84,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        // --- Collections ---
+        /// <summary>
+        /// Filtered PLC/main log entries displayed in the FILTERED tab.
+        /// </summary>
         private ObservableRangeCollection<LogEntry> _filteredLogs;
         public ObservableRangeCollection<LogEntry> FilteredLogs
         {
@@ -90,6 +99,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        /// <summary>
+        /// Filtered APP developer log entries displayed in the APP tab.
+        /// </summary>
         private ObservableRangeCollection<LogEntry> _appDevLogsFiltered;
         public ObservableRangeCollection<LogEntry> AppDevLogsFiltered
         {
@@ -102,6 +114,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        /// <summary>
+        /// Hierarchical tree of APP logger names for tree-based filtering.
+        /// </summary>
         private ObservableCollection<LoggerNode> _loggerTreeRoot;
         public ObservableCollection<LoggerNode> LoggerTreeRoot
         {
@@ -114,6 +129,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        /// <summary>
+        /// Hierarchical tree of PLC logger names for tree-based filtering.
+        /// </summary>
         private ObservableCollection<LoggerNode> _plcLoggerTreeRoot = new ObservableCollection<LoggerNode>();
         public ObservableCollection<LoggerNode> PlcLoggerTreeRoot
         {
@@ -138,7 +156,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        // --- Filter Roots ---
+        /// <summary>
+        /// Root node of the advanced filter tree for PLC/main logs.
+        /// </summary>
         private FilterNode _mainFilterRoot;
         public FilterNode MainFilterRoot
         {
@@ -151,6 +171,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        /// <summary>
+        /// Root node of the advanced filter tree for APP logs.
+        /// </summary>
         private FilterNode _appFilterRoot;
         public FilterNode AppFilterRoot
         {
@@ -158,6 +181,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             set { _appFilterRoot = value; OnPropertyChanged(); _parent?.NotifyPropertyChanged(nameof(_parent.AppFilterRoot)); }
         }
 
+        /// <summary>
+        /// Root node of a saved/persisted filter tree for restoring filter state.
+        /// </summary>
         private FilterNode _savedFilterRoot;
         public FilterNode SavedFilterRoot
         {
@@ -740,6 +766,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        /// <summary>
+        /// Builds the hierarchical APP logger tree from the provided log entries.
+        /// </summary>
         public void BuildLoggerTree(IEnumerable<LogEntry> logs)
         {
             if (logs == null || !logs.Any())
@@ -765,6 +794,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             LoggerTreeRoot = new ObservableCollection<LoggerNode>(rootNode.Children);
         }
 
+        /// <summary>
+        /// Builds the hierarchical PLC logger tree from the provided log entries.
+        /// </summary>
         public void BuildPlcLoggerTree(IEnumerable<LogEntry> logs)
         {
             if (logs == null || !logs.Any())
@@ -810,6 +842,9 @@ namespace IndiLogs_3._0.ViewModels.Components
         }
 
 
+        /// <summary>
+        /// Applies all active filters (thread, logger, advanced, search, negative) to APP logs and updates AppDevLogsFiltered.
+        /// </summary>
         public void ApplyAppLogsFilter()
         {
             // הגנה מפני קריסה אם המטמון ריק
@@ -966,6 +1001,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             return false;
         }
 
+        /// <summary>
+        /// Recursively evaluates a filter tree node against a log entry, returning true if the entry matches.
+        /// </summary>
         public bool EvaluateFilterNode(LogEntry log, FilterNode node)
         {
             if (node == null) return true;
@@ -1005,7 +1043,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 if (op == "Regex")
                 {
                     try { return System.Text.RegularExpressions.Regex.IsMatch(val, criteria, System.Text.RegularExpressions.RegexOptions.IgnoreCase, TimeSpan.FromSeconds(2)); }
-                    catch { return false; }
+                    catch (Exception ex) { AppLogger.Warn($"Invalid regex pattern '{criteria}': {ex.Message}"); return false; }
                 }
                 return val.IndexOf(criteria, StringComparison.OrdinalIgnoreCase) >= 0;
             }
@@ -1039,12 +1077,18 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        /// <summary>
+        /// Returns true if the log entry matches the default PLC filter (used when no explicit filters are active).
+        /// </summary>
         public bool IsDefaultLog(LogEntry l)
         {
             var filter = _defaultPlcFilter ?? DefaultConfigurationService.GetFactoryPlcFilter();
             return EvaluateFilterNode(l, filter);
         }
 
+        /// <summary>
+        /// Resets all filter state including advanced filters, thread/logger filters, search, and tree filters.
+        /// </summary>
         public void ClearFilters()
         {
             _mainFilterRoot = null;
@@ -1347,6 +1391,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             _parent?.NotifyPropertyChanged(nameof(_parent.HasActiveFilters));
         }
 
+        /// <summary>
+        /// Re-applies all filters on both PLC and APP logs and refreshes the active filters display.
+        /// </summary>
         public void ToggleFilterView(bool show)
         {
             ApplyMainLogsFilter();
@@ -1355,6 +1402,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             _parent?.NotifyPropertyChanged(nameof(_parent.HasActiveFilters));
         }
 
+        /// <summary>
+        /// Clears all APP logger tree filter state (hidden loggers, show-only selections).
+        /// </summary>
         public void ResetTreeFilters()
         {
             _treeHiddenLoggers.Clear();
@@ -2323,6 +2373,9 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
+        /// <summary>
+        /// Clears all PLC logger tree filter state (hidden loggers, show-only selections).
+        /// </summary>
         public void ResetPlcTreeFilters()
         {
             _plcTreeHiddenLoggers.Clear();
@@ -2534,6 +2587,9 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         // INotifyPropertyChanged inherited from ViewModelBase
 
+    /// <summary>
+    /// Applies all active filters (advanced, thread, search, negative, time range) to PLC/main logs and updates FilteredLogs.
+    /// </summary>
     public void ApplyMainLogsFilter()
         {
             if (_parent.IsLiveMode) return;
