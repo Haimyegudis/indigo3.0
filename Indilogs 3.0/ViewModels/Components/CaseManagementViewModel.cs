@@ -974,13 +974,24 @@ namespace IndiLogs_3._0.ViewModels.Components
         }
 
         /// <summary>
+        /// Returns the correct log collection for the currently selected tab.
+        /// </summary>
+        private IEnumerable<LogEntry> GetActiveLogCollection()
+        {
+            if (_parent.SelectedTabIndex == AppConstants.TAB_APP)
+                return _parent.AppDevLogsFiltered ?? Enumerable.Empty<LogEntry>();
+            return _parent.Logs ?? Enumerable.Empty<LogEntry>();
+        }
+
+        /// <summary>
         /// Navigate to the next marked log entry
         /// </summary>
         private void GoToNextMarked(object obj)
         {
-            if (!_parent.Logs.Any()) return;
+            var logs = GetActiveLogCollection();
+            if (!logs.Any()) return;
 
-            var list = _parent.Logs.ToList();
+            var list = logs.ToList();
             int current = _parent.SelectedLog != null ? list.IndexOf(_parent.SelectedLog) : -1;
             var next = list.Skip(current + 1).FirstOrDefault(l => l.IsMarked) ?? list.FirstOrDefault(l => l.IsMarked);
 
@@ -999,9 +1010,10 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// </summary>
         private void GoToPrevMarked(object obj)
         {
-            if (!_parent.Logs.Any()) return;
+            var logs = GetActiveLogCollection();
+            if (!logs.Any()) return;
 
-            var list = _parent.Logs.ToList();
+            var list = logs.ToList();
             int current = _parent.SelectedLog != null ? list.IndexOf(_parent.SelectedLog) : list.Count;
             var prev = list.Take(current).LastOrDefault(l => l.IsMarked) ?? list.LastOrDefault(l => l.IsMarked);
 
@@ -1218,9 +1230,9 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        // Colors already applied by ColoringService which sets CustomColor property
-                        // CustomColor setter already triggers OnPropertyChanged(nameof(RowBackground))
-                        // No additional manual refresh needed - WPF handles the rest
+                        // Notify Active Filters panel so coloring labels appear
+                        _parent.NotifyPropertyChanged(nameof(_parent.ActiveFilters));
+                        _parent.NotifyPropertyChanged(nameof(_parent.HasActiveFilters));
                     });
 
                     _sessionVM.IsBusy = false;

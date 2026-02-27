@@ -8,8 +8,9 @@
     <Border Background="{DynamicResource PrimaryColor}" Padding="10,0">
         <Grid>
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="{Binding Logs.Count, StringFormat='Logs: {0:N0}'}" Foreground="White" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,20,0"/>
-                <TextBlock Text="{Binding Events.Count, StringFormat='Events: {0:N0}'}" Foreground="White" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding Logs.Count, StringFormat='PLC: {0:N0}', FallbackValue='PLC: 0'}" Foreground="White" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,20,0"/>
+                <TextBlock Text="{Binding AppDevLogsFiltered.Count, StringFormat='APP: {0:N0}', FallbackValue='APP: 0'}" Foreground="White" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,20,0"/>
+                <TextBlock Text="{Binding Events.Count, StringFormat='Events: {0:N0}', FallbackValue='Events: 0'}" Foreground="White" VerticalAlignment="Center" FontWeight="SemiBold"/>
             </StackPanel>
             <TextBlock Text="{Binding StatusMessage}" Foreground="White" HorizontalAlignment="Right" VerticalAlignment="Center" Opacity="0.9"/>
         </Grid>

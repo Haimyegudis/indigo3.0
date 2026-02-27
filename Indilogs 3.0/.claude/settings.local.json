@@ -112,7 +112,20 @@
       "Bash(grep:*)",
       "Bash(while read file)",
       "Bash(do grep -q \"AutomationProperties\" \"$file\")",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(perl -0777 -ne:*)",
+      "Bash(fi)",
+      "Bash(git reset:*)",
+      "Bash(while read f)",
+      "Bash(do if ! grep -q \"Debug\\\\.\\\\|Stopwatch\\\\|Process\\\\.\\\\|Trace\\\\.\" \"$f\")",
+      "Bash(then basename \"$f\")",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe\" \"Indilogs 3.0/IndiLogs 3.0.csproj\" /t:Build /p:Configuration=Release /v:minimal)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Professional\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"Indilogs 3.0/Indilogs 3.0.csproj\" /t:Build /p:Configuration=Release /v:m)",
+      "Bash(\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Professional\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\" \"IndiLogs 3.0.csproj\" /p:Configuration=Release /verbosity:minimal)",
+      "Bash(do grep -l \"White\\\\|PrimaryColor\" \"$f\")"
     ]
   }
 }

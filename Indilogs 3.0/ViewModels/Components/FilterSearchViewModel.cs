@@ -911,29 +911,33 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     // Show only this specific logger (prefix match to include children)
                     string showLogger = _treeShowOnlyLogger;
+                    string showLoggerDot = showLogger + "."; // Pre-allocate once
                     query = query.Where(l => l.Logger != null &&
                         (l.Logger.Equals(showLogger, StringComparison.OrdinalIgnoreCase) ||
-                         l.Logger.StartsWith(showLogger + ".", StringComparison.OrdinalIgnoreCase)));
+                         l.Logger.StartsWith(showLoggerDot, StringComparison.OrdinalIgnoreCase)));
                 }
                 else if (_treeShowOnlyPrefix != null)
                 {
                     string showPrefix = _treeShowOnlyPrefix;
+                    string showPrefixDot = showPrefix + "."; // Pre-allocate once
                     query = query.Where(l => l.Logger != null &&
                         (l.Logger.Equals(showPrefix, StringComparison.OrdinalIgnoreCase) ||
-                         l.Logger.StartsWith(showPrefix + ".", StringComparison.OrdinalIgnoreCase)));
+                         l.Logger.StartsWith(showPrefixDot, StringComparison.OrdinalIgnoreCase)));
                 }
                 else if (_treeHiddenLoggers.Count > 0 || _treeHiddenPrefixes.Count > 0)
                 {
                     // Copy to local variables for thread safety with PLINQ
                     var hiddenLoggers = new HashSet<string>(_treeHiddenLoggers, StringComparer.OrdinalIgnoreCase);
-                    var hiddenPrefixes = _treeHiddenPrefixes.ToList();
+                    // Pre-append "." to each prefix once instead of allocating per-log
+                    var hiddenPrefixDots = _treeHiddenPrefixes.Select(p => p + ".").ToArray();
+                    var hiddenPrefixExact = _treeHiddenPrefixes.ToArray();
                     query = query.Where(l =>
                     {
                         if (l.Logger == null) return true;
                         if (hiddenLoggers.Contains(l.Logger)) return false;
-                        foreach (var prefix in hiddenPrefixes)
-                            if (l.Logger.Equals(prefix, StringComparison.OrdinalIgnoreCase) ||
-                                l.Logger.StartsWith(prefix + ".", StringComparison.OrdinalIgnoreCase))
+                        for (int i = 0; i < hiddenPrefixExact.Length; i++)
+                            if (l.Logger.Equals(hiddenPrefixExact[i], StringComparison.OrdinalIgnoreCase) ||
+                                l.Logger.StartsWith(hiddenPrefixDots[i], StringComparison.OrdinalIgnoreCase))
                                 return false;
                         return true;
                     });
@@ -2699,22 +2703,25 @@ namespace IndiLogs_3._0.ViewModels.Components
                 else if (_plcTreeShowOnlyPrefix != null)
                 {
                     string showPrefix = _plcTreeShowOnlyPrefix;
+                    string showPrefixDot = showPrefix + "."; // Pre-allocate once
                     currentLogs = currentLogs.Where(l => l.Logger != null &&
                         (l.Logger.Equals(showPrefix, StringComparison.OrdinalIgnoreCase) ||
-                         l.Logger.StartsWith(showPrefix + ".", StringComparison.OrdinalIgnoreCase)));
+                         l.Logger.StartsWith(showPrefixDot, StringComparison.OrdinalIgnoreCase)));
                 }
                 else if (_plcTreeHiddenLoggers.Count > 0 || _plcTreeHiddenPrefixes.Count > 0)
                 {
                     var hiddenLoggers = new HashSet<string>(_plcTreeHiddenLoggers, StringComparer.OrdinalIgnoreCase);
-                    var hiddenPrefixes = _plcTreeHiddenPrefixes.ToList();
+                    // Pre-append "." to each prefix once instead of allocating per-log
+                    var hiddenPrefixDots = _plcTreeHiddenPrefixes.Select(p => p + ".").ToArray();
+                    var hiddenPrefixExact = _plcTreeHiddenPrefixes.ToArray();
                     currentLogs = currentLogs.Where(l =>
                     {
                         if (l.Logger == null) return true;
                         if (hiddenLoggers.Contains(l.Logger)) return false;
-                        for (int i = 0; i < hiddenPrefixes.Count; i++)
+                        for (int i = 0; i < hiddenPrefixExact.Length; i++)
                         {
-                            if (l.Logger.Equals(hiddenPrefixes[i], StringComparison.OrdinalIgnoreCase) ||
-                                l.Logger.StartsWith(hiddenPrefixes[i] + ".", StringComparison.OrdinalIgnoreCase))
+                            if (l.Logger.Equals(hiddenPrefixExact[i], StringComparison.OrdinalIgnoreCase) ||
+                                l.Logger.StartsWith(hiddenPrefixDots[i], StringComparison.OrdinalIgnoreCase))
                                 return false;
                         }
                         return true;
@@ -2722,7 +2729,8 @@ namespace IndiLogs_3._0.ViewModels.Components
                 }
             }
 
-            var logsList = currentLogs.ToList();
+            // Parallel materialization of filter chain (mirrors ApplyAppLogsFilter's PLINQ approach)
+            var logsList = currentLogs.AsParallel().AsOrdered().ToList();
 
             // עדכון ה-PLC Logs Tab
             if (_sessionVM != null)
@@ -2746,15 +2754,14 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                 if (!IsGlobalTimeRangeActive)
                 {
-                    // מצב ניקוי: מציגים את כל האירועים ממוינים
-                    eventsToShow = _sessionVM.AllEvents.OrderBy(e => e.Time).ToList();
+                    // מצב ניקוי: מציגים את כל האירועים (already sorted during load)
+                    eventsToShow = _sessionVM.AllEvents.ToList();
                 }
                 else
                 {
-                    // מצב סינון: לוקחים רק את האירועים בטווח
+                    // מצב סינון: לוקחים רק את האירועים בטווח (already sorted, Where preserves order)
                     eventsToShow = _sessionVM.AllEvents
                         .Where(e => e.Time >= GlobalTimeRangeStart.Value && e.Time <= GlobalTimeRangeEnd.Value)
-                        .OrderBy(e => e.Time)
                         .ToList();
                 }
 

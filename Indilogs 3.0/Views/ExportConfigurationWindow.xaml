@@ -475,18 +475,25 @@
                     VerticalAlignment="Center"
                     MinWidth="300">
                 <StackPanel>
-                    <TextBlock Text="⏳ Loading Components..." 
-                               FontSize="18" 
-                               FontWeight="Bold" 
+                    <TextBlock Text="⏳ Loading Components..."
+                               FontSize="18"
+                               FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimary}"
                                HorizontalAlignment="Center"
                                Margin="0,0,0,10"/>
-                    <TextBlock Text="{Binding LoadingMessage}" 
-                               FontSize="14" 
+                    <TextBlock Text="{Binding LoadingMessage}"
+                               FontSize="14"
                                Foreground="{DynamicResource TextSecondary}"
                                HorizontalAlignment="Center"
                                TextWrapping="Wrap"
-                               TextAlignment="Center"/>
+                               TextAlignment="Center"
+                               Margin="0,0,0,10"/>
+                    <ProgressBar Value="{Binding LoadingProgress}"
+                                 Minimum="0" Maximum="100"
+                                 Height="6"
+                                 Foreground="{DynamicResource PrimaryColor}"
+                                 Background="{DynamicResource BgDark}"
+                                 Visibility="{Binding IsProgressVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                 </StackPanel>
             </Border>
         </Grid>

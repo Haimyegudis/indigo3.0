@@ -126,11 +126,15 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         {
             long totalBytes = stream.CanSeek ? stream.Length : 0;
 
+            // Sanitize the stream to replace null bytes and other invalid XML chars
+            // (corrupted log files may contain 0x00 which crashes XmlReader)
+            var sanitized = new XmlSanitizingStream(stream);
+
             // Wrap in a root element so XmlReader can parse a series of events
             // Some log4net files are NOT well-formed XML at the top level
             var wrapped = new ConcatStream(
                 new MemoryStream(Encoding.UTF8.GetBytes("<root xmlns:log4net=\"log4net\" xmlns:log4j=\"log4j\">")),
-                stream,
+                sanitized,
                 new MemoryStream(Encoding.UTF8.GetBytes("</root>")));
 
             var settings = new XmlReaderSettings
@@ -272,6 +276,46 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         }
 
         // ── Helper: concatenate streams ───────────────────────────────────────
+        /// <summary>
+        /// Wraps a stream and replaces null bytes (0x00) and other invalid XML 1.0 characters
+        /// with spaces to prevent XmlReader from crashing on corrupted log files.
+        /// </summary>
+        private class XmlSanitizingStream : Stream
+        {
+            private readonly Stream _inner;
+            public XmlSanitizingStream(Stream inner) { _inner = inner; }
+
+            public override bool CanRead  => _inner.CanRead;
+            public override bool CanSeek  => _inner.CanSeek;
+            public override bool CanWrite => false;
+            public override long Length   => _inner.Length;
+            public override long Position { get => _inner.Position; set => _inner.Position = value; }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                int n = _inner.Read(buffer, offset, count);
+                for (int i = offset; i < offset + n; i++)
+                {
+                    byte b = buffer[i];
+                    // Replace invalid XML 1.0 chars: 0x00-0x08, 0x0B, 0x0C, 0x0E-0x1F
+                    if (b < 0x20 && b != 0x09 && b != 0x0A && b != 0x0D)
+                        buffer[i] = 0x20; // space
+                }
+                return n;
+            }
+
+            public override void Flush() => _inner.Flush();
+            public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
+            public override void SetLength(long value) => _inner.SetLength(value);
+            public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing) _inner.Dispose();
+                base.Dispose(disposing);
+            }
+        }
+
         private class ConcatStream : Stream
         {
             private readonly Stream[] _streams;

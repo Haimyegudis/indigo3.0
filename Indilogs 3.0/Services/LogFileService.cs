@@ -995,6 +995,7 @@ namespace IndiLogs_3._0.Services
                         var nzLocalFails = new ConcurrentBag<List<LogEntry>>();
                         var nzLocalApps = new ConcurrentBag<List<LogEntry>>();
                         var nzLocalEvts = new ConcurrentBag<List<EventEntry>>();
+                        var nzErrors = new ConcurrentBag<string>(); // Collect errors instead of blocking UI
 
                         Parallel.ForEach(nonZipFiles, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, item =>
                         {
@@ -1048,12 +1049,8 @@ namespace IndiLogs_3._0.Services
                             }
                             catch (Exception ex)
                             {
-                                System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
-                                {
-                                    System.Windows.MessageBox.Show(
-                                        $"Error processing {item.Name}: {ex.GetType().Name}: {ex.Message}",
-                                        "File Processing Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                                });
+                                // Collect errors non-blocking instead of Dispatcher.Invoke which stalls parallel threads
+                                nzErrors.Add($"{item.Name}: {ex.GetType().Name}: {ex.Message}");
                             }
                             finally
                             {
@@ -1065,6 +1062,16 @@ namespace IndiLogs_3._0.Services
                                 }
                             }
                         });
+
+                        // Show collected errors after parallel loop completes (non-blocking during parsing)
+                        if (!nzErrors.IsEmpty)
+                        {
+                            string allErrors = string.Join("\n", nzErrors);
+                            System.Windows.Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
+                                System.Windows.MessageBox.Show(
+                                    $"Errors processing {nzErrors.Count} file(s):\n\n{allErrors}",
+                                    "File Processing Errors", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning)));
+                        }
 
                         foreach (var l in nzLocalLogs) mergedLogs.AddRange(l);
                         foreach (var l in nzLocalTrans) mergedTrans.AddRange(l);
@@ -1149,12 +1156,11 @@ namespace IndiLogs_3._0.Services
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
-                    {
+                    AppLogger.Error("Fatal error during file loading", ex);
+                    System.Windows.Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
                         System.Windows.MessageBox.Show(
                             $"Fatal error during file loading:\n\n{ex.GetType().Name}: {ex.Message}\n\nStack trace:\n{ex.StackTrace}",
-                            "Loading Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                    });
+                            "Loading Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)));
                 }
 
                 return session;
@@ -1430,12 +1436,12 @@ namespace IndiLogs_3._0.Services
             }
             catch (Exception ex)
             {
-                System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
-                {
+                // Use non-blocking BeginInvoke to avoid stalling parallel worker threads
+                AppLogger.Error("Error parsing log stream", ex);
+                System.Windows.Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
                     System.Windows.MessageBox.Show(
                         $"Error parsing log stream: {ex.GetType().Name}: {ex.Message}",
-                        "Parse Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                });
+                        "Parse Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning)));
             }
             return (allLogs, transitions, failures);
         }

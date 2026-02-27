@@ -464,11 +464,16 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                         TimeSpan? syncOffset = null;
 
-                        // Pre-filter PLC Events logs once to avoid re-scanning on every APP candidate
+                        // Pre-filter PLC Events logs once (already sorted by date from loading)
                         var plcEventLogs = newSession.Logs
                             .Where(l => string.Equals(l.ThreadName, plcThread, StringComparison.OrdinalIgnoreCase)
                                         && l.Message != null)
-                            .ToList(); // still in ascending date order
+                            .ToList();
+
+                        // Pre-extract PLC dates array for binary search — O(N) once
+                        var plcDates = new DateTime[plcEventLogs.Count];
+                        for (int pi = 0; pi < plcEventLogs.Count; pi++)
+                            plcDates[pi] = plcEventLogs[pi].Date;
 
                         // Iterate APP logs in chronological order (earliest = most reliable anchor)
                         foreach (var appLog in newSession.AppDevLogs)
@@ -478,44 +483,47 @@ namespace IndiLogs_3._0.ViewModels.Components
                             if (appLog.Message == null || !appLog.Message.StartsWith(appPrefix, StringComparison.OrdinalIgnoreCase))
                                 continue;
 
-                            // Extract event ID – everything after the prefix up to the first comma (or end)
                             var afterPrefix = appLog.Message.Substring(appPrefix.Length).TrimStart();
                             var commaIdx    = afterPrefix.IndexOf(',');
                             var eventId     = (commaIdx >= 0 ? afterPrefix.Substring(0, commaIdx) : afterPrefix).Trim();
                             if (string.IsNullOrEmpty(eventId)) continue;
 
-                            // Skip noisy/repeated events that are unreliable sync anchors
                             if (string.Equals(eventId, "PLC_FAILURE_STATE_CHANGE", StringComparison.OrdinalIgnoreCase))
                                 continue;
 
                             var sendPrefix    = "Send event "    + eventId;
                             var enqueuePrefix = "Enqueue event " + eventId;
 
-                            // Among all PLC Events logs that carry this event name, prefer "Enqueue event"
-                            // over "Send event" (Enqueue is the original posting, Send is a downstream
-                            // dispatch). Within the same message-type preference, pick the closest in time.
+                            // Binary search to find the nearest PLC log by time — O(log N) instead of O(N)
+                            int idx = Array.BinarySearch(plcDates, appLog.Date);
+                            if (idx < 0) idx = ~idx; // insertion point
+
                             LogEntry bestEnqueueLog = null;
                             LogEntry bestSendLog    = null;
                             double   bestEnqueueDiff = double.MaxValue;
                             double   bestSendDiff    = double.MaxValue;
 
-                            foreach (var plcLog in plcEventLogs)
+                            // Scan outward from binary search point (only nearby entries within maxDiffMin)
+                            for (int dir = -1; dir <= 1; dir += 2) // -1 = left, +1 = right
                             {
-                                var diffMin = Math.Abs((appLog.Date - plcLog.Date).TotalMinutes);
-                                if (diffMin > maxDiffMin)
-                                    continue;
+                                int start = dir < 0 ? idx - 1 : idx;
+                                for (int j = start; j >= 0 && j < plcEventLogs.Count; j += dir)
+                                {
+                                    var diffMin = Math.Abs((appLog.Date - plcDates[j]).TotalMinutes);
+                                    if (diffMin > maxDiffMin) break; // sorted → no closer matches further out
 
-                                if (plcLog.Message.StartsWith(enqueuePrefix, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    if (diffMin < bestEnqueueDiff) { bestEnqueueDiff = diffMin; bestEnqueueLog = plcLog; }
-                                }
-                                else if (plcLog.Message.StartsWith(sendPrefix, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    if (diffMin < bestSendDiff) { bestSendDiff = diffMin; bestSendLog = plcLog; }
+                                    var plcLog = plcEventLogs[j];
+                                    if (plcLog.Message.StartsWith(enqueuePrefix, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        if (diffMin < bestEnqueueDiff) { bestEnqueueDiff = diffMin; bestEnqueueLog = plcLog; }
+                                    }
+                                    else if (plcLog.Message.StartsWith(sendPrefix, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        if (diffMin < bestSendDiff) { bestSendDiff = diffMin; bestSendLog = plcLog; }
+                                    }
                                 }
                             }
 
-                            // Prefer Enqueue; fall back to Send only if no Enqueue match exists
                             var bestPlcLog = bestEnqueueLog ?? bestSendLog;
 
                             if (bestPlcLog != null)
