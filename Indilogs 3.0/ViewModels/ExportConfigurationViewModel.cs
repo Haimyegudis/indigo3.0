@@ -178,6 +178,11 @@ namespace IndiLogs_3._0.ViewModels
 
         public bool IsProgressVisible => IsLoading && LoadingProgress > 0;
 
+        // ── Per-signal progress tracking ──
+        private ObservableCollection<SignalProgressItem> _signalProgressItems = new ObservableCollection<SignalProgressItem>();
+        public ObservableCollection<SignalProgressItem> SignalProgressItems => _signalProgressItems;
+        public bool HasSignalProgress => _signalProgressItems.Count > 0;
+
         public IEnumerable<SelectableItem> FilteredIOComponents =>
             _cachedIOFiltered != null ? (IEnumerable<SelectableItem>)_cachedIOFiltered : IOComponents;
         public IEnumerable<SelectableItem> FilteredAxisComponents =>
@@ -989,6 +994,30 @@ namespace IndiLogs_3._0.ViewModels
                         OnPropertyChanged(nameof(IsProgressVisible));
                     });
 
+                    // Per-signal progress: marshal updates to UI thread
+                    _signalProgressItems.Clear();
+                    OnPropertyChanged(nameof(HasSignalProgress));
+                    var signalLookup = new ConcurrentDictionary<string, SignalProgressItem>();
+                    var dispatcher = Dispatcher.CurrentDispatcher;
+                    var signalProgress = new Progress<(string signal, string status)>(p =>
+                    {
+                        dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            if (p.status == "parsing")
+                            {
+                                var item = new SignalProgressItem { Name = p.signal, Status = "parsing" };
+                                signalLookup[p.signal] = item;
+                                _signalProgressItems.Add(item);
+                                if (_signalProgressItems.Count == 1)
+                                    OnPropertyChanged(nameof(HasSignalProgress));
+                            }
+                            else if (p.status == "done" && signalLookup.TryGetValue(p.signal, out var existing))
+                            {
+                                existing.Status = "done";
+                            }
+                        }));
+                    });
+
                     var transferService = ChartDataTransferService.Instance;
                     await Task.Run(() =>
                     {
@@ -996,8 +1025,12 @@ namespace IndiLogs_3._0.ViewModels
                             _sessionData.Logs,
                             preset,
                             _sessionData.FileName ?? "Session",
-                            progress);
+                            progress,
+                            signalProgress);
                     });
+
+                    _signalProgressItems.Clear();
+                    OnPropertyChanged(nameof(HasSignalProgress));
                 }
 
                 IsLoading = false;
@@ -1295,5 +1328,40 @@ namespace IndiLogs_3._0.ViewModels
             }
             base.Dispose(disposing);
         }
+    }
+
+    /// <summary>
+    /// Represents a single signal's parsing status in the per-signal progress list.
+    /// </summary>
+    public class SignalProgressItem : INotifyPropertyChanged
+    {
+        public string Name { get; set; }
+
+        private string _status = "pending";
+        public string Status
+        {
+            get => _status;
+            set
+            {
+                _status = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Status)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(StatusIcon)));
+            }
+        }
+
+        public string StatusIcon
+        {
+            get
+            {
+                switch (_status)
+                {
+                    case "done": return "\u2714";      // ✔
+                    case "parsing": return "\u23F3";    // ⏳
+                    default: return "\u2022";           // •
+                }
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
     }
 }

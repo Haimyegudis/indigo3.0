@@ -101,7 +101,8 @@ namespace IndiLogs_3._0.Services.Charts
             IEnumerable<LogEntry> logs,
             ExportPreset preset,
             string sessionName,
-            IProgress<(double pct, string msg)> progress = null)
+            IProgress<(double pct, string msg)> progress = null,
+            IProgress<(string signal, string status)> signalProgress = null)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
             AppLogger.Info($"[ChartBuild] Starting BuildDataPackage for '{sessionName}'");
@@ -242,23 +243,38 @@ namespace IndiLogs_3._0.Services.Charts
                     timeIndexLookup[timestamps[i]] = i;
             }
 
-            // ── Parse each type using PRE-FILTERED lists ────────────────────
-            if (wantIO)
-            {
-                progress?.Report((20, $"Parsing {preset.SelectedIOComponents.Count} IO signals from {ioLogs.Count:N0} msgs..."));
-                AppLogger.Info($"[ChartBuild] Parsing IO: {preset.SelectedIOComponents.Count} selected from {ioLogs.Count:N0} classified msgs");
-                var ioSignals = ParseIOSignals(ioLogs, preset.SelectedIOComponents, dataLength, timeIndexLookup);
-                package.Signals.AddRange(ioSignals);
-                AppLogger.Info($"[ChartBuild] IO result: {ioSignals.Count} signals");
-            }
+            // ── Parse IO + Axis in PARALLEL (independent data, independent lists) ──
+            List<SignalData> ioSignals = null;
+            List<SignalData> axisSignals = null;
 
-            if (wantAxis)
+            if (wantIO || wantAxis)
             {
-                progress?.Report((38, $"Parsing {preset.SelectedAxisComponents.Count} Axis signals from {axisLogs.Count:N0} msgs..."));
-                AppLogger.Info($"[ChartBuild] Parsing Axis: {preset.SelectedAxisComponents.Count} selected from {axisLogs.Count:N0} classified msgs");
-                var axisSignals = ParseAxisSignals(axisLogs, preset.SelectedAxisComponents, dataLength, timeIndexLookup);
-                package.Signals.AddRange(axisSignals);
-                AppLogger.Info($"[ChartBuild] Axis result: {axisSignals.Count} signals");
+                progress?.Report((20, $"Parsing {(wantIO ? preset.SelectedIOComponents.Count : 0)} IO + {(wantAxis ? preset.SelectedAxisComponents.Count : 0)} Axis signals..."));
+                AppLogger.Info($"[ChartBuild] Parallel IO+Axis: IO={ioLogs?.Count ?? 0:N0} msgs, Axis={axisLogs?.Count ?? 0:N0} msgs");
+
+                System.Threading.Tasks.Parallel.Invoke(
+                    () =>
+                    {
+                        if (wantIO)
+                            ioSignals = ParseIOSignals(ioLogs, preset.SelectedIOComponents, dataLength, timeIndexLookup, signalProgress);
+                    },
+                    () =>
+                    {
+                        if (wantAxis)
+                            axisSignals = ParseAxisSignals(axisLogs, preset.SelectedAxisComponents, dataLength, timeIndexLookup, signalProgress);
+                    }
+                );
+
+                if (ioSignals != null)
+                {
+                    package.Signals.AddRange(ioSignals);
+                    AppLogger.Info($"[ChartBuild] IO result: {ioSignals.Count} signals");
+                }
+                if (axisSignals != null)
+                {
+                    package.Signals.AddRange(axisSignals);
+                    AppLogger.Info($"[ChartBuild] Axis result: {axisSignals.Count} signals");
+                }
             }
 
             if (wantCHStep)
@@ -316,22 +332,25 @@ namespace IndiLogs_3._0.Services.Charts
             List<LogEntry> logs,
             List<string> selectedComponents,
             int dataLength,
-            Dictionary<DateTime, int> timeIndexLookup)
+            Dictionary<DateTime, int> timeIndexLookup,
+            IProgress<(string signal, string status)> signalProgress = null)
         {
             var signals = new Dictionary<string, SignalData>();
             var selectedSet = new HashSet<string>(selectedComponents, StringComparer.OrdinalIgnoreCase);
-            AppLogger.Info($"[ChartBuild] ParseIOSignals: {selectedSet.Count} selected keys: {string.Join(", ", selectedSet.Take(10))}");
+            AppLogger.Info($"[ChartBuild] ParseIOSignals: {selectedSet.Count} selected keys");
             int ioMatchCount = 0;
+
+            // NaN template: allocate once, Array.Copy for each new signal (fast memcpy)
+            var nanTemplate = new double[dataLength];
+            for (int j = 0; j < dataLength; j++) nanTemplate[j] = double.NaN;
 
             foreach (var log in logs)
             {
                 if (string.IsNullOrEmpty(log.Message)) continue;
 
-                // Fast first-char filter — skip messages that cannot be IO
                 char fc = log.Message[0];
                 if (fc != 'I' && fc != 'i') continue;
 
-                // Handle both IO_Mon: (current) and IO: (optimized) patterns
                 bool isIoMon = log.Message.StartsWith("IO_Mon:", StringComparison.OrdinalIgnoreCase);
                 bool isIoOpt = !isIoMon && log.Message.StartsWith("IO:", StringComparison.OrdinalIgnoreCase);
                 if (!isIoMon && !isIoOpt) continue;
@@ -347,8 +366,6 @@ namespace IndiLogs_3._0.Services.Charts
                     if (parts.Length < 2) continue;
 
                     string subsystem = parts[0].Trim();
-
-                    // For optimized IO: pattern, only parts[1] has data (parts[2] may be eIoStatus)
                     int dataEnd = isIoOpt ? Math.Min(2, parts.Length) : parts.Length;
 
                     for (int i = 1; i < dataEnd; i++)
@@ -359,10 +376,8 @@ namespace IndiLogs_3._0.Services.Charts
                         string symbolName = parts[i].Substring(0, eqIndex).Trim();
                         string valueStr = parts[i].Substring(eqIndex + 1).Trim();
 
-                        // Skip "New Status" lines (IO_Mon status change log)
                         if (valueStr.StartsWith("New Status", StringComparison.OrdinalIgnoreCase)) continue;
 
-                        // Get the component name for selection check
                         string componentName;
                         string paramName;
                         if (symbolName.EndsWith("_MotTemp", StringComparison.OrdinalIgnoreCase))
@@ -381,11 +396,9 @@ namespace IndiLogs_3._0.Services.Charts
                             paramName = "Value";
                         }
 
-                        // Check if this component is selected
                         string selectionKey = $"{subsystem}|{componentName}";
                         if (!selectedSet.Contains(selectionKey)) continue;
 
-                        // Parse value
                         string cleanValue = valueStr.Split(' ')[0];
                         if (!double.TryParse(cleanValue, out double value)) continue;
 
@@ -402,9 +415,9 @@ namespace IndiLogs_3._0.Services.Charts
                                 SignalType = SignalType.Analog,
                                 Data = new double[dataLength]
                             };
-                            for (int j = 0; j < dataLength; j++)
-                                signal.Data[j] = double.NaN;
+                            Array.Copy(nanTemplate, signal.Data, dataLength); // fast memcpy instead of loop
                             signals[signalKey] = signal;
+                            signalProgress?.Report((displayName, "parsing"));
                         }
 
                         if (timeIndexLookup.TryGetValue(log.Date, out int idx))
@@ -419,63 +432,43 @@ namespace IndiLogs_3._0.Services.Charts
                 }
             }
 
-            // Log raw data point counts BEFORE forward-fill
-            foreach (var signal in signals.Values.Take(5))
-            {
-                int rawPoints = 0;
-                for (int j = 0; j < signal.Data.Length; j++)
-                    if (!double.IsNaN(signal.Data[j])) rawPoints++;
-                AppLogger.Info($"[ChartBuild] IO Signal '{signal.Name}': {rawPoints} raw data points / {signal.Data.Length} total slots (before fill)");
-            }
-
-            // Forward-fill NaN values
-            foreach (var signal in signals.Values)
-            {
-                ForwardFillNaN(signal.Data);
-            }
-
-            AppLogger.Info($"[ChartBuild] ParseIOSignals: {logs.Count:N0} logs scanned, {ioMatchCount} IO messages found, {signals.Count} signals created");
-
-            // Diagnostic: log value stats per signal to debug "constant values" issue
-            foreach (var signal in signals.Values.Take(5))
-            {
-                int nonNanAfter = 0;
-                double min = double.MaxValue, max = double.MinValue;
-                // Count actual data points BEFORE forward-fill
-                for (int j = 0; j < signal.Data.Length; j++)
+            // Parallel forward-fill — each signal is independent
+            var signalValues = signals.Values.ToList();
+            System.Threading.Tasks.Parallel.ForEach(signalValues,
+                new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                signal =>
                 {
-                    if (!double.IsNaN(signal.Data[j]))
-                    {
-                        nonNanAfter++;
-                        if (signal.Data[j] < min) min = signal.Data[j];
-                        if (signal.Data[j] > max) max = signal.Data[j];
-                    }
-                }
-                AppLogger.Info($"[ChartBuild] IO Signal '{signal.Name}': {nonNanAfter}/{signal.Data.Length} non-NaN (after fill), range [{min:G6}..{max:G6}]");
-            }
+                    ForwardFillNaN(signal.Data);
+                    signalProgress?.Report((signal.Name, "done"));
+                });
 
-            return signals.Values.ToList();
+            AppLogger.Info($"[ChartBuild] ParseIOSignals: {logs.Count:N0} logs, {ioMatchCount} matches, {signals.Count} signals");
+
+            return signalValues;
         }
 
         private List<SignalData> ParseAxisSignals(
             List<LogEntry> logs,
             List<string> selectedComponents,
             int dataLength,
-            Dictionary<DateTime, int> timeIndexLookup)
+            Dictionary<DateTime, int> timeIndexLookup,
+            IProgress<(string signal, string status)> signalProgress = null)
         {
             var signals = new Dictionary<string, SignalData>();
             var selectedSet = new HashSet<string>(selectedComponents, StringComparer.OrdinalIgnoreCase);
             int axisMatchCount = 0;
 
+            // NaN template: allocate once, Array.Copy for each new signal
+            var nanTemplate = new double[dataLength];
+            for (int j = 0; j < dataLength; j++) nanTemplate[j] = double.NaN;
+
             foreach (var log in logs)
             {
                 if (string.IsNullOrEmpty(log.Message)) continue;
 
-                // Fast first-char filter — skip messages that cannot be Axis
                 char fc = log.Message[0];
                 if (fc != 'A' && fc != 'a') continue;
 
-                // Handle both AxisMon: (current) and AxM: (optimized) patterns
                 bool isAxisMon = log.Message.StartsWith("AxisMon:", StringComparison.OrdinalIgnoreCase);
                 bool isAxM = !isAxisMon && log.Message.StartsWith("AxM:", StringComparison.OrdinalIgnoreCase);
                 if (!isAxisMon && !isAxM) continue;
@@ -509,7 +502,6 @@ namespace IndiLogs_3._0.Services.Charts
                             paramName = rawPart.Substring(0, eqIndex).Trim();
                             valueStr = rawPart.Substring(eqIndex + 1).Trim();
 
-                            // Normalize optimized names: LagE -> LagErr, Trg -> Trigger
                             if (paramName.Equals("LagE", StringComparison.OrdinalIgnoreCase))
                                 paramName = "LagErr";
                             else if (paramName.Equals("Trg", StringComparison.OrdinalIgnoreCase))
@@ -517,7 +509,6 @@ namespace IndiLogs_3._0.Services.Charts
                         }
                         else if (isAxM && i == parts.Length - 1)
                         {
-                            // Last part without '=' in AxM is the trigger value
                             paramName = "Trigger";
                             valueStr = rawPart;
                         }
@@ -539,9 +530,9 @@ namespace IndiLogs_3._0.Services.Charts
                                 SignalType = SignalType.Analog,
                                 Data = new double[dataLength]
                             };
-                            for (int j = 0; j < dataLength; j++)
-                                signal.Data[j] = double.NaN;
+                            Array.Copy(nanTemplate, signal.Data, dataLength); // fast memcpy
                             signals[signalKey] = signal;
+                            signalProgress?.Report(($"{motor}_{paramName}", "parsing"));
                         }
 
                         if (timeIndexLookup.TryGetValue(log.Date, out int idx))
@@ -556,40 +547,19 @@ namespace IndiLogs_3._0.Services.Charts
                 }
             }
 
-            // Log raw data point counts BEFORE forward-fill
-            foreach (var signal in signals.Values.Take(5))
-            {
-                int rawPoints = 0;
-                for (int j = 0; j < signal.Data.Length; j++)
-                    if (!double.IsNaN(signal.Data[j])) rawPoints++;
-                AppLogger.Info($"[ChartBuild] Axis Signal '{signal.Name}': {rawPoints} raw data points / {signal.Data.Length} total slots (before fill)");
-            }
-
-            foreach (var signal in signals.Values)
-            {
-                ForwardFillNaN(signal.Data);
-            }
-
-            AppLogger.Info($"[ChartBuild] ParseAxisSignals: {logs.Count:N0} logs scanned, {axisMatchCount} Axis messages found, {signals.Count} signals created");
-
-            // Diagnostic: log value stats per signal to debug "constant values" issue
-            foreach (var signal in signals.Values.Take(5))
-            {
-                int nonNanCount = 0;
-                double min = double.MaxValue, max = double.MinValue;
-                for (int j = 0; j < signal.Data.Length; j++)
+            // Parallel forward-fill — each signal is independent
+            var signalValues = signals.Values.ToList();
+            System.Threading.Tasks.Parallel.ForEach(signalValues,
+                new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                signal =>
                 {
-                    if (!double.IsNaN(signal.Data[j]))
-                    {
-                        nonNanCount++;
-                        if (signal.Data[j] < min) min = signal.Data[j];
-                        if (signal.Data[j] > max) max = signal.Data[j];
-                    }
-                }
-                AppLogger.Info($"[ChartBuild] Axis Signal '{signal.Name}': {nonNanCount}/{signal.Data.Length} non-NaN (after fill), range [{min:G6}..{max:G6}]");
-            }
+                    ForwardFillNaN(signal.Data);
+                    signalProgress?.Report((signal.Name, "done"));
+                });
 
-            return signals.Values.ToList();
+            AppLogger.Info($"[ChartBuild] ParseAxisSignals: {logs.Count:N0} logs, {axisMatchCount} matches, {signals.Count} signals");
+
+            return signalValues;
         }
 
         private List<StateData> ParseCHStepStates(

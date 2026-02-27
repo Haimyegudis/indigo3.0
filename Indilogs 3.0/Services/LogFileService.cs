@@ -155,7 +155,7 @@ namespace IndiLogs_3._0.Services
                             using (var archive = new ZipArchive(fs, ZipArchiveMode.Read))
                             {
                                 var filesToProcess = new List<ZipEntryData>();
-                                var innerZipStreams = new List<(MemoryStream Stream, string Name)>(); // Nested ZIP support
+                                var innerZipEntryNames = new List<string>(); // Deferred nested ZIP — don't extract until needed
 
                                 foreach (var entry in archive.Entries)
                                 {
@@ -441,15 +441,10 @@ namespace IndiLogs_3._0.Services
                                         }
                                         continue;
                                     }
-                                    // 8b. Nested ZIP — extract inner ZIP for recursive processing
+                                    // 8b. Nested ZIP — record name for deferred extraction (saves 400MB+ RAM)
                                     else if (entry.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
                                     {
-                                        try
-                                        {
-                                            var innerMs = CopyToMemory(entry);
-                                            innerZipStreams.Add((innerMs, entry.FullName));
-                                        }
-                                        catch (Exception ex) { AppLogger.Error("Extracting nested ZIP failed", ex); }
+                                        innerZipEntryNames.Add(entry.FullName);
                                         continue;
                                     }
                                     else
@@ -504,12 +499,15 @@ namespace IndiLogs_3._0.Services
                                 if (outerHasAppLogs)
                                     AppLogger.Info("[Load] Outer ZIP has APP logs — will skip APP logs from nested ZIPs to avoid date mixing");
 
-                                // --- Nested ZIP processing: extract and classify entries from inner ZIPs ---
-                                foreach (var (innerStream, innerZipName) in innerZipStreams)
+                                // --- Nested ZIP processing: extract one-at-a-time from the open archive ---
+                                // Deferred extraction saves 400MB+ RAM — only one inner ZIP in memory at a time
+                                foreach (var innerZipName in innerZipEntryNames)
                                 {
                                     try
                                     {
-                                        innerStream.Position = 0;
+                                        var outerEntry = archive.GetEntry(innerZipName);
+                                        if (outerEntry == null) continue;
+                                        using (var innerStream = CopyToMemory(outerEntry))
                                         using (var innerArchive = new ZipArchive(innerStream, ZipArchiveMode.Read, leaveOpen: false))
                                         {
                                             foreach (var innerEntry in innerArchive.Entries)
@@ -860,7 +858,7 @@ namespace IndiLogs_3._0.Services
                                     }
                                 });
 
-                                // Merge
+                                // Merge — then release intermediate bags to reduce GC pressure
                                 AppLogger.Info($"[Load] Parallel parsing done: {loadSw.Elapsed.TotalSeconds:F1}s elapsed");
                                 progress?.Report((85, "Merging results..."));
                                 int totalLogCount = 0;
@@ -877,6 +875,14 @@ namespace IndiLogs_3._0.Services
                                 foreach (var l in localAppLists) mergedApps.AddRange(l);
 
                                 foreach (var l in localEvtLists) mergedEvts.AddRange(l);
+
+                                // Release intermediate bags — their lists are merged, no longer needed
+                                // This frees references to the per-file List<LogEntry> objects for GC
+                                localLogLists = null;
+                                localTransLists = null;
+                                localFailLists = null;
+                                localAppLists = null;
+                                localEvtLists = null;
                             }
                         }
                         else

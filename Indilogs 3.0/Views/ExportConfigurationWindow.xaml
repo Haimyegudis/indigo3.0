@@ -494,6 +494,37 @@
                                  Foreground="{DynamicResource PrimaryColor}"
                                  Background="{DynamicResource BgDark}"
                                  Visibility="{Binding IsProgressVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                    <!-- Per-signal progress list (scrollable, max 5 visible) -->
+                    <Border Margin="0,8,0,0" MaxHeight="130"
+                            Visibility="{Binding HasSignalProgress, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding SignalProgressItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="16"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding StatusIcon}"
+                                                       FontSize="10"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Name}"
+                                                       FontSize="10"
+                                                       Foreground="{DynamicResource TextSecondary}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"
+                                                       Margin="4,0,0,0"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
                 </StackPanel>
             </Border>
         </Grid>
