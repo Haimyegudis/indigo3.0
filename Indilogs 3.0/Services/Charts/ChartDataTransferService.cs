@@ -378,23 +378,18 @@ namespace IndiLogs_3._0.Services.Charts
 
                         if (valueStr.StartsWith("New Status", StringComparison.OrdinalIgnoreCase)) continue;
 
+                        // Strip subsystem prefix from symbol name if present
+                        string cleanSymbol = symbolName;
+                        if (cleanSymbol.StartsWith(subsystem, StringComparison.OrdinalIgnoreCase))
+                            cleanSymbol = cleanSymbol.Substring(subsystem.Length).TrimStart('_', ' ');
+
                         string componentName;
-                        string paramName;
-                        if (symbolName.EndsWith("_MotTemp", StringComparison.OrdinalIgnoreCase))
-                        {
-                            componentName = symbolName.Substring(0, symbolName.Length - 8);
-                            paramName = "MotTemp";
-                        }
-                        else if (symbolName.EndsWith("_DrvTemp", StringComparison.OrdinalIgnoreCase))
-                        {
-                            componentName = symbolName.Substring(0, symbolName.Length - 8);
-                            paramName = "DrvTemp";
-                        }
+                        if (cleanSymbol.EndsWith("_MotTemp", StringComparison.OrdinalIgnoreCase))
+                            componentName = cleanSymbol.Substring(0, cleanSymbol.Length - 8);
+                        else if (cleanSymbol.EndsWith("_DrvTemp", StringComparison.OrdinalIgnoreCase))
+                            componentName = cleanSymbol.Substring(0, cleanSymbol.Length - 8);
                         else
-                        {
-                            componentName = symbolName;
-                            paramName = "Value";
-                        }
+                            componentName = cleanSymbol;
 
                         string selectionKey = $"{subsystem}|{componentName}";
                         if (!selectedSet.Contains(selectionKey)) continue;
@@ -402,11 +397,11 @@ namespace IndiLogs_3._0.Services.Charts
                         string cleanValue = valueStr.Split(' ')[0];
                         if (!double.TryParse(cleanValue, out double value)) continue;
 
-                        string signalKey = $"{subsystem}|{symbolName}";
+                        string signalKey = $"{subsystem}|{cleanSymbol}";
 
                         if (!signals.TryGetValue(signalKey, out var signal))
                         {
-                            string displayName = $"{subsystem}-{componentName}-{paramName}";
+                            string displayName = cleanSymbol;
 
                             signal = new SignalData
                             {
@@ -523,16 +518,17 @@ namespace IndiLogs_3._0.Services.Charts
 
                         if (!signals.TryGetValue(signalKey, out var signal))
                         {
+                            string displayName = $"{subsystem}_{motor}_{paramName}";
                             signal = new SignalData
                             {
-                                Name = $"{motor}_{paramName}",
+                                Name = displayName,
                                 Category = "Axis",
                                 SignalType = SignalType.Analog,
                                 Data = new double[dataLength]
                             };
                             Array.Copy(nanTemplate, signal.Data, dataLength); // fast memcpy
                             signals[signalKey] = signal;
-                            signalProgress?.Report(($"{motor}_{paramName}", "parsing"));
+                            signalProgress?.Report((displayName, "parsing"));
                         }
 
                         if (timeIndexLookup.TryGetValue(log.Date, out int idx))

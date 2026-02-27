@@ -151,7 +151,7 @@ namespace IndiLogs_3._0.Services
 
                         if (extension == ".zip")
                         {
-                            using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 262144))
+                            using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4194304))
                             using (var archive = new ZipArchive(fs, ZipArchiveMode.Read))
                             {
                                 var filesToProcess = new List<ZipEntryData>();
@@ -486,7 +486,8 @@ namespace IndiLogs_3._0.Services
 
                                     if (shouldProcess)
                                     {
-                                        entryData.Stream = CopyToMemory(entry);
+                                        // Defer extraction — pipeline will CopyToMemory while parsing runs
+                                        entryData.EntryFullName = entry.FullName;
                                         filesToProcess.Add(entryData);
                                     }
                                 }
@@ -767,11 +768,13 @@ namespace IndiLogs_3._0.Services
                                 }
                                 // --- End nested ZIP processing ---
 
-                                AppLogger.Info($"[Load] ZIP extraction: {filesToProcess.Count} files to parse, {loadSw.Elapsed.TotalSeconds:F1}s elapsed");
+                                AppLogger.Info($"[Load] ZIP scan done: {filesToProcess.Count} files to parse, {loadSw.Elapsed.TotalSeconds:F1}s elapsed");
                                 int totalFiles = filesToProcess.Count;
                                 int processedCount = 0;
 
-                                // עיבוד מקבילי
+                                // Pipeline: overlap extraction (sequential, archive-safe) with parsing (parallel).
+                                // Deferred items (EntryFullName set, Stream null) are extracted by the producer
+                                // on this thread while consumers parse previously extracted files.
                                 var localLogLists = new ConcurrentBag<List<LogEntry>>();
                                 var localTransLists = new ConcurrentBag<List<LogEntry>>();
                                 var localFailLists = new ConcurrentBag<List<LogEntry>>();
@@ -779,72 +782,78 @@ namespace IndiLogs_3._0.Services
                                 var localEvtLists = new ConcurrentBag<List<EventEntry>>();
                                 var csvLock = new object();
 
-                                Parallel.ForEach(filesToProcess, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, item =>
-                                {
-                                    try
-                                    {
-                                        using (item.Stream)
-                                        {
-                                            var fileSw = System.Diagnostics.Stopwatch.StartNew();
-                                            long streamLen = item.Stream.CanSeek ? item.Stream.Length : -1;
+                                var pipeline = new BlockingCollection<ZipEntryData>(boundedCapacity: 4);
 
-                                            if (item.Type == FileType.MainLog)
+                                // Consumer: parallel parsing of MemoryStreams (no archive access)
+                                var parseTask = Task.Run(() =>
+                                {
+                                    Parallel.ForEach(pipeline.GetConsumingEnumerable(),
+                                        new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                                        item =>
+                                    {
+                                        try
+                                        {
+                                            using (item.Stream)
                                             {
-                                                var result = ParseLogStream(item.Stream, stringPool);
-                                                localLogLists.Add(result.AllLogs);
-                                                if (result.Transitions.Count > 0) localTransLists.Add(result.Transitions);
-                                                if (result.Failures.Count > 0) localFailLists.Add(result.Failures);
-                                                AppLogger.Info($"[Load] PLC  {item.Name}: {result.AllLogs.Count:N0} entries, {streamLen / 1048576.0:F1}MB, {fileSw.Elapsed.TotalSeconds:F1}s");
-                                            }
-                                            else if (item.Type == FileType.AppBinaryLog)
-                                            {
-                                                var result = ParseLogStream(item.Stream, stringPool);
-                                                foreach (var log in result.AllLogs)
-                                                    log.ProcessName = stringPool.Intern("APP");
-                                                if (result.AllLogs.Count > 0) localAppLists.Add(result.AllLogs);
-                                                AppLogger.Info($"[Load] BIN  {item.Name}: {result.AllLogs.Count:N0} entries, {streamLen / 1048576.0:F1}MB, {fileSw.Elapsed.TotalSeconds:F1}s");
-                                            }
-                                            else if (item.Type == FileType.AppDevLog)
-                                            {
-                                                var logs = ParseAppDevLogStream(item.Stream, stringPool);
-                                                if (logs.Count > 0) localAppLists.Add(logs);
-                                                AppLogger.Info($"[Load] APP  {item.Name}: {logs.Count:N0} entries, {streamLen / 1048576.0:F1}MB, {fileSw.Elapsed.TotalSeconds:F1}s");
-                                            }
-                                            else if (item.Type == FileType.EventsCsv)
-                                            {
-                                                // Save raw CSV content for full-column display
-                                                item.Stream.Position = 0;
-                                                using (var sr = new StreamReader(item.Stream, Encoding.UTF8, true, 1024, true))
+                                                var fileSw = System.Diagnostics.Stopwatch.StartNew();
+                                                long streamLen = item.Stream.CanSeek ? item.Stream.Length : -1;
+
+                                                if (item.Type == FileType.MainLog)
                                                 {
-                                                    string rawCsv = sr.ReadToEnd();
-                                                    lock (csvLock)
-                                                    {
-                                                        if (string.IsNullOrEmpty(session.EventsCsvRawContent))
-                                                            session.EventsCsvRawContent = rawCsv;
-                                                    }
+                                                    var result = ParseLogStream(item.Stream, stringPool);
+                                                    localLogLists.Add(result.AllLogs);
+                                                    if (result.Transitions.Count > 0) localTransLists.Add(result.Transitions);
+                                                    if (result.Failures.Count > 0) localFailLists.Add(result.Failures);
+                                                    AppLogger.Info($"[Load] PLC  {item.Name}: {result.AllLogs.Count:N0} entries, {streamLen / 1048576.0:F1}MB, {fileSw.Elapsed.TotalSeconds:F1}s");
                                                 }
-                                                item.Stream.Position = 0;
-                                                var evts = ParseEventsCsv(item.Stream);
-                                                if (evts.Count > 0) localEvtLists.Add(evts);
-                                            }
-                                            else if (item.Type == FileType.Plugin && item.Plugin != null)
-                                            {
-                                                // Plugin-parsed ZIP entry
-                                                item.Stream.Position = 0;
-                                                var plcLogs = new List<LogEntry>();
-                                                var appLogs = new List<LogEntry>();
-                                                DispatchPluginResults(item.Plugin, item.Stream, item.Context, stringPool, plcLogs, appLogs);
-                                                if (plcLogs.Count > 0) localLogLists.Add(plcLogs);
-                                                if (appLogs.Count > 0) localAppLists.Add(appLogs);
+                                                else if (item.Type == FileType.AppBinaryLog)
+                                                {
+                                                    var result = ParseLogStream(item.Stream, stringPool);
+                                                    foreach (var log in result.AllLogs)
+                                                        log.ProcessName = stringPool.Intern("APP");
+                                                    if (result.AllLogs.Count > 0) localAppLists.Add(result.AllLogs);
+                                                    AppLogger.Info($"[Load] BIN  {item.Name}: {result.AllLogs.Count:N0} entries, {streamLen / 1048576.0:F1}MB, {fileSw.Elapsed.TotalSeconds:F1}s");
+                                                }
+                                                else if (item.Type == FileType.AppDevLog)
+                                                {
+                                                    var logs = ParseAppDevLogStream(item.Stream, stringPool);
+                                                    if (logs.Count > 0) localAppLists.Add(logs);
+                                                    AppLogger.Info($"[Load] APP  {item.Name}: {logs.Count:N0} entries, {streamLen / 1048576.0:F1}MB, {fileSw.Elapsed.TotalSeconds:F1}s");
+                                                }
+                                                else if (item.Type == FileType.EventsCsv)
+                                                {
+                                                    // Save raw CSV content for full-column display
+                                                    item.Stream.Position = 0;
+                                                    using (var sr = new StreamReader(item.Stream, Encoding.UTF8, true, 1024, true))
+                                                    {
+                                                        string rawCsv = sr.ReadToEnd();
+                                                        lock (csvLock)
+                                                        {
+                                                            if (string.IsNullOrEmpty(session.EventsCsvRawContent))
+                                                                session.EventsCsvRawContent = rawCsv;
+                                                        }
+                                                    }
+                                                    item.Stream.Position = 0;
+                                                    var evts = ParseEventsCsv(item.Stream);
+                                                    if (evts.Count > 0) localEvtLists.Add(evts);
+                                                }
+                                                else if (item.Type == FileType.Plugin && item.Plugin != null)
+                                                {
+                                                    // Plugin-parsed ZIP entry
+                                                    item.Stream.Position = 0;
+                                                    var plcLogs = new List<LogEntry>();
+                                                    var appLogs = new List<LogEntry>();
+                                                    DispatchPluginResults(item.Plugin, item.Stream, item.Context, stringPool, plcLogs, appLogs);
+                                                    if (plcLogs.Count > 0) localLogLists.Add(plcLogs);
+                                                    if (appLogs.Count > 0) localAppLists.Add(appLogs);
+                                                }
                                             }
                                         }
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        AppLogger.Error("Parallel log file processing failed", ex);
-                                    }
-                                    finally
-                                    {
+                                        catch (Exception ex)
+                                        {
+                                            AppLogger.Error("Parallel log file processing failed", ex);
+                                        }
+                                        finally
                                         {
                                             int count = System.Threading.Interlocked.Increment(ref processedCount);
                                             if (count % 3 == 0)
@@ -855,8 +864,32 @@ namespace IndiLogs_3._0.Services
                                                 progress?.Report((Math.Min(99, totalP), $"Parsing files: {count}/{totalFiles}"));
                                             }
                                         }
-                                    }
+                                    });
                                 });
+
+                                // Producer: extract deferred items from archive (this thread has exclusive access).
+                                // Pre-extracted items (nested ZIP, plugins) are fed directly.
+                                foreach (var item in filesToProcess)
+                                {
+                                    if (item.Stream == null && !string.IsNullOrEmpty(item.EntryFullName))
+                                    {
+                                        try
+                                        {
+                                            var entry = archive.GetEntry(item.EntryFullName);
+                                            if (entry != null)
+                                                item.Stream = CopyToMemory(entry);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            AppLogger.Error($"Deferred extraction failed: {item.EntryFullName}", ex);
+                                            continue;
+                                        }
+                                    }
+                                    if (item.Stream != null)
+                                        pipeline.Add(item);
+                                }
+                                pipeline.CompleteAdding();
+                                parseTask.Wait();
 
                                 // Merge — then release intermediate bags to reduce GC pressure
                                 AppLogger.Info($"[Load] Parallel parsing done: {loadSw.Elapsed.TotalSeconds:F1}s elapsed");
@@ -1160,20 +1193,38 @@ namespace IndiLogs_3._0.Services
 
                     // מיון סופי — in-place sort + all 5 sorts in parallel for maximum throughput
                     AppLogger.Info($"[Load] Pre-sort: PLC={mergedLogs.Count:N0}, APP={mergedApps.Count:N0}, Trans={mergedTrans.Count:N0}, Events={mergedEvts.Count:N0} — {loadSw.Elapsed.TotalSeconds:F1}s elapsed");
-                    progress?.Report((90, $"Sorting {mergedLogs.Count:N0} logs..."));
+                    progress?.Report((88, $"Preparing sort ({mergedLogs.Count:N0} + {mergedApps.Count:N0} entries)..."));
 
-                    Comparison<LogEntry> dateComparer = (a, b) => a.Date.CompareTo(b.Date);
-                    Comparison<EventEntry> eventComparer = (a, b) => a.Time.CompareTo(b.Time);
+                    // Force full GC before sorting to clear garbage. On 20GB+ heaps,
+                    // Gen2 collections during sort cause multi-second pauses (30s total).
+                    // Clearing garbage first + suppressing Gen2 during sort fixes this.
+                    GC.Collect(2, GCCollectionMode.Forced, true, true);
+                    GC.WaitForPendingFinalizers();
 
-                    // In-place List.Sort (IntroSort) — avoids allocating duplicate lists
-                    // Parallel.Invoke uses the thread pool efficiently without extra Task overhead
-                    Parallel.Invoke(
-                        () => mergedLogs.Sort(dateComparer),
-                        () => mergedApps.Sort(dateComparer),
-                        () => mergedTrans.Sort(dateComparer),
-                        () => mergedFails.Sort(dateComparer),
-                        () => mergedEvts.Sort(eventComparer)
-                    );
+                    var previousLatency = System.Runtime.GCSettings.LatencyMode;
+                    try
+                    {
+                        System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.SustainedLowLatency;
+
+                        progress?.Report((90, $"Sorting {mergedLogs.Count:N0} logs..."));
+
+                        Comparison<LogEntry> dateComparer = (a, b) => a.Date.CompareTo(b.Date);
+                        Comparison<EventEntry> eventComparer = (a, b) => a.Time.CompareTo(b.Time);
+
+                        // In-place List.Sort (IntroSort) — avoids allocating duplicate lists
+                        // Parallel.Invoke uses the thread pool efficiently without extra Task overhead
+                        Parallel.Invoke(
+                            () => mergedLogs.Sort(dateComparer),
+                            () => mergedApps.Sort(dateComparer),
+                            () => mergedTrans.Sort(dateComparer),
+                            () => mergedFails.Sort(dateComparer),
+                            () => mergedEvts.Sort(eventComparer)
+                        );
+                    }
+                    finally
+                    {
+                        System.Runtime.GCSettings.LatencyMode = previousLatency;
+                    }
 
                     AppLogger.Info($"[Load] Sort done — {loadSw.Elapsed.TotalSeconds:F1}s elapsed");
                     session.Logs = mergedLogs;
@@ -1735,11 +1786,11 @@ namespace IndiLogs_3._0.Services
 
         private MemoryStream CopyToMemory(ZipArchiveEntry entry)
         {
-            // Pre-allocate with known size to avoid resizing, use 128KB buffer for speed
+            // Pre-allocate with known size to avoid resizing, use 1MB buffer for throughput on large entries
             var ms = new MemoryStream((int)Math.Min(entry.Length, int.MaxValue));
             using (var stream = entry.Open())
             {
-                stream.CopyTo(ms, 131072);
+                stream.CopyTo(ms, 1048576);
             }
             ms.Position = 0;
             return ms;
@@ -1811,6 +1862,7 @@ namespace IndiLogs_3._0.Services
         private class ZipEntryData
         {
             public string Name;
+            public string EntryFullName; // For deferred CopyToMemory (pipeline extraction)
             public FileType Type;
             public MemoryStream Stream;
             // Set when Type == Plugin:

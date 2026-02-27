@@ -179,8 +179,11 @@ namespace IndiLogs_3._0.ViewModels
         public bool IsProgressVisible => IsLoading && LoadingProgress > 0;
 
         // ── Per-signal progress tracking ──
-        private ObservableCollection<SignalProgressItem> _signalProgressItems = new ObservableCollection<SignalProgressItem>();
-        public ObservableCollection<SignalProgressItem> SignalProgressItems => _signalProgressItems;
+        // Uses a plain List replaced wholesale via PropertyChanged (NOT ObservableCollection).
+        // This avoids dispatcher flooding from hundreds of rapid CollectionChanged events
+        // fired by Parallel.ForEach → Progress<T> → BeginInvoke during signal parsing.
+        private List<SignalProgressItem> _signalProgressItems = new List<SignalProgressItem>();
+        public IReadOnlyList<SignalProgressItem> SignalProgressItems => _signalProgressItems;
         public bool HasSignalProgress => _signalProgressItems.Count > 0;
 
         public IEnumerable<SelectableItem> FilteredIOComponents =>
@@ -465,14 +468,19 @@ namespace IndiLogs_3._0.ViewModels
                                     if (eqIndex > 0)
                                     {
                                         string fullSymbolName = parts[i].Substring(0, eqIndex).Trim();
-                                        string componentName;
 
-                                        if (fullSymbolName.EndsWith("_MotTemp", StringComparison.OrdinalIgnoreCase))
-                                            componentName = fullSymbolName.Substring(0, fullSymbolName.Length - 8);
-                                        else if (fullSymbolName.EndsWith("_DrvTemp", StringComparison.OrdinalIgnoreCase))
-                                            componentName = fullSymbolName.Substring(0, fullSymbolName.Length - 8);
+                                        // Strip subsystem prefix from symbol name if present
+                                        string cleanSymbol = fullSymbolName;
+                                        if (cleanSymbol.StartsWith(subsystem, StringComparison.OrdinalIgnoreCase))
+                                            cleanSymbol = cleanSymbol.Substring(subsystem.Length).TrimStart('_', ' ');
+
+                                        string componentName;
+                                        if (cleanSymbol.EndsWith("_MotTemp", StringComparison.OrdinalIgnoreCase))
+                                            componentName = cleanSymbol.Substring(0, cleanSymbol.Length - 8);
+                                        else if (cleanSymbol.EndsWith("_DrvTemp", StringComparison.OrdinalIgnoreCase))
+                                            componentName = cleanSymbol.Substring(0, cleanSymbol.Length - 8);
                                         else
-                                            componentName = fullSymbolName;
+                                            componentName = cleanSymbol;
 
                                         ioComponents.TryAdd($"{subsystem}|{componentName}", 0);
                                     }
@@ -505,14 +513,19 @@ namespace IndiLogs_3._0.ViewModels
                                 if (eqIndex > 0)
                                 {
                                     string fullSymbolName = pair.Substring(0, eqIndex).Trim();
-                                    string componentName;
 
-                                    if (fullSymbolName.EndsWith("_MotTemp", StringComparison.OrdinalIgnoreCase))
-                                        componentName = fullSymbolName.Substring(0, fullSymbolName.Length - 8);
-                                    else if (fullSymbolName.EndsWith("_DrvTemp", StringComparison.OrdinalIgnoreCase))
-                                        componentName = fullSymbolName.Substring(0, fullSymbolName.Length - 8);
+                                    // Strip subsystem prefix from symbol name if present
+                                    string cleanSymbol = fullSymbolName;
+                                    if (cleanSymbol.StartsWith(subsystem, StringComparison.OrdinalIgnoreCase))
+                                        cleanSymbol = cleanSymbol.Substring(subsystem.Length).TrimStart('_', ' ');
+
+                                    string componentName;
+                                    if (cleanSymbol.EndsWith("_MotTemp", StringComparison.OrdinalIgnoreCase))
+                                        componentName = cleanSymbol.Substring(0, cleanSymbol.Length - 8);
+                                    else if (cleanSymbol.EndsWith("_DrvTemp", StringComparison.OrdinalIgnoreCase))
+                                        componentName = cleanSymbol.Substring(0, cleanSymbol.Length - 8);
                                     else
-                                        componentName = fullSymbolName;
+                                        componentName = cleanSymbol;
 
                                     ioComponents.TryAdd($"{subsystem}|{componentName}", 0);
                                 }
@@ -994,29 +1007,45 @@ namespace IndiLogs_3._0.ViewModels
                         OnPropertyChanged(nameof(IsProgressVisible));
                     });
 
-                    // Per-signal progress: marshal updates to UI thread
-                    _signalProgressItems.Clear();
+                    // Per-signal progress: accumulate on background threads, batch-update UI via timer.
+                    // Using DirectProgress (no SynchronizationContext marshaling) + ConcurrentDictionary
+                    // avoids the ObservableCollection flooding that caused InvalidOperationException.
+                    _signalProgressItems = new List<SignalProgressItem>();
+                    OnPropertyChanged(nameof(SignalProgressItems));
                     OnPropertyChanged(nameof(HasSignalProgress));
-                    var signalLookup = new ConcurrentDictionary<string, SignalProgressItem>();
-                    var dispatcher = Dispatcher.CurrentDispatcher;
-                    var signalProgress = new Progress<(string signal, string status)>(p =>
+                    var signalStatusMap = new ConcurrentDictionary<string, string>();
+
+                    // Direct progress — called on background thread, no UI marshaling
+                    IProgress<(string signal, string status)> signalProgress = new DirectProgress<(string signal, string status)>(p =>
                     {
-                        dispatcher.BeginInvoke(new Action(() =>
-                        {
-                            if (p.status == "parsing")
-                            {
-                                var item = new SignalProgressItem { Name = p.signal, Status = "parsing" };
-                                signalLookup[p.signal] = item;
-                                _signalProgressItems.Add(item);
-                                if (_signalProgressItems.Count == 1)
-                                    OnPropertyChanged(nameof(HasSignalProgress));
-                            }
-                            else if (p.status == "done" && signalLookup.TryGetValue(p.signal, out var existing))
-                            {
-                                existing.Status = "done";
-                            }
-                        }));
+                        signalStatusMap[p.signal] = p.status;
                     });
+
+                    // Timer batches UI updates every 250ms (prevents dispatcher flooding)
+                    var refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+                    refreshTimer.Tick += (s, e) =>
+                    {
+                        var snapshot = signalStatusMap.ToArray();
+                        int doneCount = 0;
+                        var list = new List<SignalProgressItem>(snapshot.Length);
+                        foreach (var kvp in snapshot)
+                        {
+                            list.Add(new SignalProgressItem { Name = kvp.Key, Status = kvp.Value });
+                            if (kvp.Value == "done") doneCount++;
+                        }
+                        // Sort: in-progress first, then done
+                        list.Sort((a, b) =>
+                        {
+                            int cmp = (a.Status == "done" ? 1 : 0).CompareTo(b.Status == "done" ? 1 : 0);
+                            return cmp != 0 ? cmp : string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
+                        });
+                        // Cap at 30 items for smooth rendering (no virtualization in ItemsControl)
+                        _signalProgressItems = list.Count > 30 ? list.GetRange(0, 30) : list;
+                        OnPropertyChanged(nameof(SignalProgressItems));
+                        OnPropertyChanged(nameof(HasSignalProgress));
+                        LoadingMessage = $"Parsing signals... {doneCount}/{snapshot.Length} done";
+                    };
+                    refreshTimer.Start();
 
                     var transferService = ChartDataTransferService.Instance;
                     await Task.Run(() =>
@@ -1029,7 +1058,9 @@ namespace IndiLogs_3._0.ViewModels
                             signalProgress);
                     });
 
-                    _signalProgressItems.Clear();
+                    refreshTimer.Stop();
+                    _signalProgressItems = new List<SignalProgressItem>();
+                    OnPropertyChanged(nameof(SignalProgressItems));
                     OnPropertyChanged(nameof(HasSignalProgress));
                 }
 
@@ -1327,6 +1358,18 @@ namespace IndiLogs_3._0.ViewModels
                 }
             }
             base.Dispose(disposing);
+        }
+
+        /// <summary>
+        /// IProgress implementation that calls handler directly on the calling thread.
+        /// Unlike Progress&lt;T&gt;, this does NOT marshal to a SynchronizationContext.
+        /// Used for background-thread accumulation without dispatcher flooding.
+        /// </summary>
+        private class DirectProgress<T> : IProgress<T>
+        {
+            private readonly Action<T> _handler;
+            public DirectProgress(Action<T> handler) => _handler = handler;
+            public void Report(T value) => _handler(value);
         }
     }
 
