@@ -88,6 +88,7 @@
     </Reference>
     <Reference Include="ReachFramework" />
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
     <Reference Include="System.Deployment" />
@@ -287,12 +288,20 @@
     <Compile Include="Models\GlobalEntry.cs" />
     <Compile Include="Models\SystabEntry.cs" />
     <Compile Include="Models\GrepResult.cs" />
+    <Compile Include="Models\Grep\SearchLocation.cs" />
+    <Compile Include="Models\Grep\SearchCriteria.cs" />
+    <Compile Include="Models\Grep\ScheduledSearch.cs" />
+    <Compile Include="Models\Grep\SearchProfile.cs" />
     <Compile Include="Models\Charts\ChartModels.cs" />
     <Compile Include="Models\Charts\ChartStateConfig.cs" />
     <Compile Include="Models\Cpr\CprModels.cs" />
     <Compile Include="Services\Analysis\UniversalStateFailureAnalyzer.cs" />
     <Compile Include="Services\CustomLiveLogReader.cs" />
     <Compile Include="Services\GlobalGrepService.cs" />
+    <Compile Include="Services\Grep\SearchLocationService.cs" />
+    <Compile Include="Services\Grep\SearchConfigService.cs" />
+    <Compile Include="Services\Grep\SearchReportService.cs" />
+    <Compile Include="Services\Grep\SearchSchedulerService.cs" />
     <Compile Include="Services\SystabParserService.cs" />
     <Compile Include="Services\AppLogger.cs" />
     <Compile Include="Services\TabTearOffManager.cs" />
@@ -442,12 +451,12 @@
     <Compile Include="Services\LogColoringService.cs" />
     <Compile Include="Services\DefaultConfigurationService.cs" />
     <Compile Include="Services\LogFileService.cs" />
+    <Compile Include="Services\StateTransitionHelper.cs" />
     <Compile Include="Services\ZipClassificationHelpers.cs" />
     <Compile Include="Services\LogParserService.cs" />
     <Compile Include="Services\FilterEditorViewModel.cs" />
     <Compile Include="Services\QueryParserService.cs" />
     <Compile Include="Services\TextFilterParser.cs" />
-    <Compile Include="Services\SearchIndexService.cs" />
     <Compile Include="Services\UpdateLogger.cs" />
     <Compile Include="Services\UpdateService.cs" />
     <Compile Include="Views\SettingsWindow.xaml.cs">
@@ -480,6 +489,7 @@
     <Compile Include="ViewModels\MainViewModel.StateAnalysis.cs" />
     <Compile Include="ViewModels\ViewModelBase.cs" />
     <Compile Include="ViewModels\RelayCommand.cs" />
+    <Compile Include="Bootstrapper.cs" />
     <Compile Include="AppConstants.cs" />
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>

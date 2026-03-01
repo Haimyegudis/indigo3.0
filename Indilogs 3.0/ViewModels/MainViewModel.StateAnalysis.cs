@@ -19,11 +19,7 @@ namespace IndiLogs_3._0.ViewModels
             var statesList = new List<StateEntry>();
             var sortedLogs = logs.OrderBy(l => l.Date).ToList();
 
-            var transitionLogs = sortedLogs.Where(l => l.ThreadName != null &&
-                                                 l.ThreadName.Equals("Manager", StringComparison.OrdinalIgnoreCase) &&
-                                                 l.Message != null &&
-                                                 l.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) &&
-                                                 l.Message.Contains("->"))
+            var transitionLogs = sortedLogs.Where(l => StateTransitionHelper.IsS6StateTransition(l))
                                      .ToList();
 
             if (transitionLogs.Count == 0) return statesList;
@@ -40,11 +36,8 @@ namespace IndiLogs_3._0.ViewModels
             for (int i = 0; i < transitionLogs.Count; i++)
             {
                 var currentLog = transitionLogs[i];
-                var parts = currentLog.Message.Split(new[] { "->" }, StringSplitOptions.None);
-                if (parts.Length < 2) continue;
-
-                string fromStateRaw = parts[0].Replace("PlcMngr:", "").Trim();
-                string toStateRaw = parts[1].Trim();
+                if (!StateTransitionHelper.TryParseTransition(currentLog.Message, out string fromStateRaw, out string toStateRaw))
+                    continue;
 
                 var entry = new StateEntry
                 {
@@ -119,8 +112,8 @@ namespace IndiLogs_3._0.ViewModels
                     IsAnalysisRunning = false;
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        if (SelectedSession == session)
-                            StatusMessage = "Background Analysis Complete.";
+                        if (SessionVM?.SelectedSession == session)
+                            SessionVM.StatusMessage = "Background Analysis Complete.";
                     });
                 }
             });

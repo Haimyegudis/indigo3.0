@@ -30,9 +30,7 @@
         <converters:ScreenshotScaleConverter x:Key="ScreenshotScaleConverter"/>
     </Window.Resources>
 
-    <Window.DataContext>
-        <vm:MainViewModel />
-    </Window.DataContext>
+    <!-- DataContext is set from code-behind via DI container (Bootstrapper.Resolve<MainViewModel>()) -->
 
     <Window.InputBindings>
         <KeyBinding Key="S" Modifiers="Ctrl" Command="{Binding OpenSnakeGameCommand}" />
@@ -86,7 +84,7 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <TextBlock Grid.Row="0" Text="OPEN SESSIONS" Foreground="{DynamicResource TextSecondary}" FontWeight="Bold" FontSize="11" Margin="15,15,0,10"/>
-                            <ListBox x:Name="SessionsListBox" Grid.Row="1" ItemsSource="{Binding LoadedSessions}" SelectedItem="{Binding SelectedSession, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Margin="5,0" AutomationProperties.Name="Open Sessions List">
+                            <ListBox x:Name="SessionsListBox" Grid.Row="1" ItemsSource="{Binding SessionVM.LoadedSessions}" SelectedItem="{Binding SessionVM.SelectedSession, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Margin="5,0" AutomationProperties.Name="Open Sessions List">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <Grid Margin="0,6">
@@ -139,7 +137,7 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
-                                <Border Grid.Row="0" Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10" Visibility="{Binding IsExplorerMenuOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Border Grid.Row="0" Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10" Visibility="{Binding ConfigVM.IsExplorerMenuOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <Border.Effect>
                                         <DropShadowEffect Color="Black" Opacity="0.2" BlurRadius="10" ShadowDepth="2"/>
                                     </Border.Effect>
@@ -230,7 +228,7 @@
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Visibility" Value="Visible"/>
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsExplorerMenuOpen}" Value="True">
+                                                        <DataTrigger Binding="{Binding ConfigVM.IsExplorerMenuOpen}" Value="True">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
@@ -242,7 +240,7 @@
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsExplorerMenuOpen}" Value="True">
+                                                        <DataTrigger Binding="{Binding ConfigVM.IsExplorerMenuOpen}" Value="True">
                                                             <Setter Property="Visibility" Value="Visible"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
@@ -362,7 +360,7 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
-                                <Border Grid.Row="0" Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10" Visibility="{Binding IsExplorerMenuOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Border Grid.Row="0" Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10" Visibility="{Binding ConfigVM.IsExplorerMenuOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <Border.Effect>
                                         <DropShadowEffect Color="Black" Opacity="0.2" BlurRadius="10" ShadowDepth="2"/>
                                     </Border.Effect>
@@ -453,7 +451,7 @@
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Visibility" Value="Visible"/>
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsExplorerMenuOpen}" Value="True">
+                                                        <DataTrigger Binding="{Binding ConfigVM.IsExplorerMenuOpen}" Value="True">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
@@ -465,7 +463,7 @@
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsExplorerMenuOpen}" Value="True">
+                                                        <DataTrigger Binding="{Binding ConfigVM.IsExplorerMenuOpen}" Value="True">
                                                             <Setter Property="Visibility" Value="Visible"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
@@ -514,7 +512,7 @@
                 </Grid.RowDefinitions>
 
                 <controls:SearchPanelControl Grid.Row="0" DataContext="{Binding}"
-                              Visibility="{Binding IsSearchPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                              Visibility="{Binding FilterVM.IsSearchPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}"/>
                 <TabControl x:Name="MainTabs" Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}" BorderThickness="0" Background="Transparent" Padding="0" SelectionChanged="TabControl_SelectionChanged" AutomationProperties.Name="Main Log Tabs"
                             Visibility="{Binding ShowMainTabs, Converter={StaticResource BoolToVisibilityConverter}}">
 
@@ -620,7 +618,7 @@
                              Visibility="{Binding HasSessionLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
                         <Grid Background="{DynamicResource BgDark}" ClipToBounds="True">
                             <ScrollViewer x:Name="ScreenshotScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" PanningMode="Both" Cursor="SizeAll" PreviewMouseLeftButtonDown="OnImageMouseLeftButtonDown" PreviewMouseLeftButtonUp="OnImageMouseLeftButtonUp" PreviewMouseMove="OnImageMouseMove" PreviewMouseWheel="OnScreenshotMouseWheel">
-                                <ItemsControl ItemsSource="{Binding Screenshots}">
+                                <ItemsControl ItemsSource="{Binding SessionVM.Screenshots}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Margin="5">
@@ -672,7 +670,7 @@
                             <Border Grid.Row="0" Background="{DynamicResource BgPanel}" Padding="10" Margin="0,0,0,5" CornerRadius="4">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Select File:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" Margin="0,0,10,0" FontWeight="Normal"/>
-                                    <ComboBox ItemsSource="{Binding ConfigurationFiles}" SelectedItem="{Binding SelectedConfigFile, Mode=TwoWay}" Width="350" Height="30" VerticalContentAlignment="Center" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="5,0">
+                                    <ComboBox ItemsSource="{Binding ConfigVM.ConfigurationFiles}" SelectedItem="{Binding ConfigVM.SelectedConfigFile, Mode=TwoWay}" Width="350" Height="30" VerticalContentAlignment="Center" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="5,0">
                                         <ComboBox.Template>
                                             <ControlTemplate TargetType="ComboBox">
                                                 <Grid>
@@ -738,11 +736,11 @@
                             <Border Grid.Row="1" Background="{DynamicResource BgPanel}" Padding="10" Margin="0,0,0,5" CornerRadius="4">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Search:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" Margin="0,0,10,0" FontWeight="Normal"/>
-                                    <TextBox Text="{Binding ConfigSearchText, UpdateSourceTrigger=PropertyChanged}" Width="350" Height="28" VerticalContentAlignment="Center" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="5,0" FontFamily="{DynamicResource ContentFontFamily}" FontSize="12"/>
+                                    <TextBox Text="{Binding ConfigVM.ConfigSearchText, UpdateSourceTrigger=PropertyChanged}" Width="350" Height="28" VerticalContentAlignment="Center" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="5,0" FontFamily="{DynamicResource ContentFontFamily}" FontSize="12"/>
                                 </StackPanel>
                             </Border>
                             <Grid Grid.Row="2">
-                                <Grid Visibility="{Binding IsDbFileSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid Visibility="{Binding ConfigVM.IsDbFileSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="*"/>
@@ -759,7 +757,7 @@
                                             <TextBlock Grid.Column="2" Text="Schema" Foreground="{DynamicResource TextSecondary}" FontWeight="SemiBold" Padding="5,8" FontSize="12"/>
                                         </Grid>
                                     </Border>
-                                    <TreeView Grid.Row="1" ItemsSource="{Binding DbTreeNodes}" Background="{DynamicResource BgDark}" BorderThickness="0" Padding="0" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
+                                    <TreeView Grid.Row="1" ItemsSource="{Binding ConfigVM.DbTreeNodes}" Background="{DynamicResource BgDark}" BorderThickness="0" Padding="0" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                                         <TreeView.Resources>
                                             <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="Transparent"/>
                                             <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="Transparent"/>
@@ -836,14 +834,14 @@
                                     </TreeView>
                                 </Grid>
                                 <!-- CSV DataGrid (for terminal CSV files) -->
-                                <DataGrid ItemsSource="{Binding CsvDataView}" AutoGenerateColumns="True" IsReadOnly="True"
+                                <DataGrid ItemsSource="{Binding ConfigVM.CsvDataView}" AutoGenerateColumns="True" IsReadOnly="True"
                                           Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextSecondary}"
                                           BorderThickness="0" GridLinesVisibility="None"
                                           RowBackground="{DynamicResource BgDark}" AlternatingRowBackground="{DynamicResource BgPanel}"
                                           HeadersVisibility="Column" CanUserSortColumns="True" CanUserReorderColumns="True"
                                           FontFamily="{DynamicResource ContentFontFamily}" FontSize="11"
                                           EnableRowVirtualization="True" EnableColumnVirtualization="True"
-                                          Visibility="{Binding IsCsvFileSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                                          Visibility="{Binding ConfigVM.IsCsvFileSelected, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <DataGrid.ColumnHeaderStyle>
                                         <Style TargetType="DataGridColumnHeader">
                                             <Setter Property="Background" Value="{DynamicResource BgPanel}"/>
@@ -870,15 +868,15 @@
                                     </DataGrid.CellStyle>
                                 </DataGrid>
                                 <!-- Text viewer (non-DB, non-CSV files) -->
-                                <TextBox Text="{Binding FilteredConfigContent, Mode=OneWay}" IsReadOnly="True" FontFamily="{DynamicResource ContentFontFamily}" FontSize="12" FontWeight="Normal" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderThickness="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" AcceptsReturn="True" Padding="10">
+                                <TextBox Text="{Binding ConfigVM.FilteredConfigContent, Mode=OneWay}" IsReadOnly="True" FontFamily="{DynamicResource ContentFontFamily}" FontSize="12" FontWeight="Normal" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderThickness="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" AcceptsReturn="True" Padding="10">
                                     <TextBox.Style>
                                         <Style TargetType="TextBox">
                                             <Setter Property="Visibility" Value="Visible"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsDbFileSelected}" Value="True">
+                                                <DataTrigger Binding="{Binding ConfigVM.IsDbFileSelected}" Value="True">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                 </DataTrigger>
-                                                <DataTrigger Binding="{Binding IsCsvFileSelected}" Value="True">
+                                                <DataTrigger Binding="{Binding ConfigVM.IsCsvFileSelected}" Value="True">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
@@ -1338,7 +1336,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <Border Grid.Row="0" Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10" Visibility="{Binding IsConfigMenuOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Border Grid.Row="0" Background="{DynamicResource BgCard}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10" Visibility="{Binding ConfigVM.IsConfigMenuOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <Border.Effect>
                                     <DropShadowEffect Color="Black" Opacity="0.2" BlurRadius="10" ShadowDepth="2"/>
                                 </Border.Effect>
@@ -1395,7 +1393,7 @@
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Visibility" Value="Visible"/>
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsConfigMenuOpen}" Value="True">
+                                                    <DataTrigger Binding="{Binding ConfigVM.IsConfigMenuOpen}" Value="True">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
@@ -1407,7 +1405,7 @@
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsConfigMenuOpen}" Value="True">
+                                                    <DataTrigger Binding="{Binding ConfigVM.IsConfigMenuOpen}" Value="True">
                                                         <Setter Property="Visibility" Value="Visible"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
@@ -1417,7 +1415,7 @@
                                 </Grid>
                             </Button>
                         </Grid>
-                        <ListView ItemsSource="{Binding SavedConfigs}" SelectedItem="{Binding SelectedConfig, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" HorizontalContentAlignment="Stretch">
+                        <ListView ItemsSource="{Binding CaseVM.SavedConfigs}" SelectedItem="{Binding CaseVM.SelectedConfig, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextPrimary}" HorizontalContentAlignment="Stretch">
                             <ListView.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Margin="0,4" Background="Transparent">
@@ -1763,7 +1761,7 @@
             </controls:StatusBarControl.Style>
         </controls:StatusBarControl>
 
-        <Grid Grid.RowSpan="4" Background="#CC000000" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}" Panel.ZIndex="999">
+        <Grid Grid.RowSpan="4" Background="#CC000000" Visibility="{Binding SessionVM.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}" Panel.ZIndex="999">
             <Border Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource PrimaryColor}" BorderThickness="0" CornerRadius="30" HorizontalAlignment="Center" VerticalAlignment="Center" Width="450" Height="300">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="80" ShadowDepth="0" Opacity="0.9" Color="{Binding Color, Source={StaticResource PrimaryColor}}"/>
@@ -1845,13 +1843,13 @@
                                 </EventTrigger>
                             </Ellipse.Triggers>
                         </Ellipse>
-                        <TextBlock Text="{Binding CurrentProgress, StringFormat='{}{0:0}%'}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource AnimText}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding SessionVM.CurrentProgress, StringFormat='{}{0:0}%'}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource AnimText}" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <TextBlock.Effect>
                                 <DropShadowEffect Color="{Binding Color, Source={StaticResource AnimText}}" BlurRadius="15" ShadowDepth="0" Opacity="0.7"/>
                             </TextBlock.Effect>
                         </TextBlock>
                     </Grid>
-                    <TextBlock Grid.Row="1" Text="{Binding StatusMessage}" FontSize="16" Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Top" TextAlignment="Center" TextWrapping="Wrap" Margin="0,10,0,0" MaxHeight="80"/>
+                    <TextBlock Grid.Row="1" Text="{Binding SessionVM.StatusMessage}" FontSize="16" Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Top" TextAlignment="Center" TextWrapping="Wrap" Margin="0,10,0,0" MaxHeight="80"/>
                 </Grid>
             </Border>
         </Grid>

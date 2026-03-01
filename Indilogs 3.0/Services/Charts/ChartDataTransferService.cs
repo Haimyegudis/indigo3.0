@@ -235,13 +235,10 @@ namespace IndiLogs_3._0.Services.Charts
 
             progress?.Report((16, $"Building time index ({dataLength:N0} timestamps)..."));
 
-            // Build time index lookup
+            // Build time index lookup (timestamps are unique and sorted, so no dupe check needed)
             var timeIndexLookup = new Dictionary<DateTime, int>(dataLength);
-            for (int i = 0; i < timestamps.Count; i++)
-            {
-                if (!timeIndexLookup.ContainsKey(timestamps[i]))
-                    timeIndexLookup[timestamps[i]] = i;
-            }
+            for (int i = 0; i < dataLength; i++)
+                timeIndexLookup[timestamps[i]] = i;
 
             // ── Parse IO + Axis in PARALLEL (independent data, independent lists) ──
             List<SignalData> ioSignals = null;
@@ -335,111 +332,236 @@ namespace IndiLogs_3._0.Services.Charts
             Dictionary<DateTime, int> timeIndexLookup,
             IProgress<(string signal, string status)> signalProgress = null)
         {
-            var signals = new Dictionary<string, SignalData>();
-            var selectedSet = new HashSet<string>(selectedComponents, StringComparer.OrdinalIgnoreCase);
-            AppLogger.Info($"[ChartBuild] ParseIOSignals: {selectedSet.Count} selected keys");
-            int ioMatchCount = 0;
-
-            // NaN template: allocate once, Array.Copy for each new signal (fast memcpy)
-            var nanTemplate = new double[dataLength];
-            for (int j = 0; j < dataLength; j++) nanTemplate[j] = double.NaN;
-
-            foreach (var log in logs)
+            // Two-level selection: subsystem → set of component names (no string concat per field)
+            var selectionBySubsystem = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var k in selectedComponents)
             {
-                if (string.IsNullOrEmpty(log.Message)) continue;
-
-                char fc = log.Message[0];
-                if (fc != 'I' && fc != 'i') continue;
-
-                bool isIoMon = log.Message.StartsWith("IO_Mon:", StringComparison.OrdinalIgnoreCase);
-                bool isIoOpt = !isIoMon && log.Message.StartsWith("IO:", StringComparison.OrdinalIgnoreCase);
-                if (!isIoMon && !isIoOpt) continue;
-                ioMatchCount++;
-
-                try
+                int sep = k.IndexOf('|');
+                if (sep > 0)
                 {
-                    int colonIndex = log.Message.IndexOf(':');
-                    if (colonIndex < 0) continue;
-
-                    string content = log.Message.Substring(colonIndex + 1);
-                    var parts = content.Split(',');
-                    if (parts.Length < 2) continue;
-
-                    string subsystem = parts[0].Trim();
-                    int dataEnd = isIoOpt ? Math.Min(2, parts.Length) : parts.Length;
-
-                    for (int i = 1; i < dataEnd; i++)
+                    string sub = k.Substring(0, sep);
+                    string comp = k.Substring(sep + 1);
+                    if (!selectionBySubsystem.TryGetValue(sub, out var set))
                     {
-                        int eqIndex = parts[i].IndexOf('=');
-                        if (eqIndex <= 0) continue;
-
-                        string symbolName = parts[i].Substring(0, eqIndex).Trim();
-                        string valueStr = parts[i].Substring(eqIndex + 1).Trim();
-
-                        if (valueStr.StartsWith("New Status", StringComparison.OrdinalIgnoreCase)) continue;
-
-                        // Strip subsystem prefix from symbol name if present
-                        string cleanSymbol = symbolName;
-                        if (cleanSymbol.StartsWith(subsystem, StringComparison.OrdinalIgnoreCase))
-                            cleanSymbol = cleanSymbol.Substring(subsystem.Length).TrimStart('_', ' ');
-
-                        string componentName;
-                        if (cleanSymbol.EndsWith("_MotTemp", StringComparison.OrdinalIgnoreCase))
-                            componentName = cleanSymbol.Substring(0, cleanSymbol.Length - 8);
-                        else if (cleanSymbol.EndsWith("_DrvTemp", StringComparison.OrdinalIgnoreCase))
-                            componentName = cleanSymbol.Substring(0, cleanSymbol.Length - 8);
-                        else
-                            componentName = cleanSymbol;
-
-                        string selectionKey = $"{subsystem}|{componentName}";
-                        if (!selectedSet.Contains(selectionKey)) continue;
-
-                        string cleanValue = valueStr.Split(' ')[0];
-                        if (!double.TryParse(cleanValue, out double value)) continue;
-
-                        string signalKey = $"{subsystem}|{cleanSymbol}";
-
-                        if (!signals.TryGetValue(signalKey, out var signal))
-                        {
-                            string displayName = cleanSymbol;
-
-                            signal = new SignalData
-                            {
-                                Name = displayName,
-                                Category = "IO",
-                                SignalType = SignalType.Analog,
-                                Data = new double[dataLength]
-                            };
-                            Array.Copy(nanTemplate, signal.Data, dataLength); // fast memcpy instead of loop
-                            signals[signalKey] = signal;
-                            signalProgress?.Report((displayName, "parsing"));
-                        }
-
-                        if (timeIndexLookup.TryGetValue(log.Date, out int idx))
-                        {
-                            signal.Data[idx] = value;
-                        }
+                        set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        selectionBySubsystem[sub] = set;
                     }
+                    set.Add(comp);
                 }
-                catch (Exception ex)
+            }
+            AppLogger.Info($"[ChartBuild] ParseIOSignals: {selectedComponents.Count} selected keys");
+
+            // Two-level signal dictionary: subsystem → (cleanSymbol → SignalData)
+            var signalsBySubsystem = new Dictionary<string, Dictionary<string, SignalData>>(StringComparer.OrdinalIgnoreCase);
+            var stringPool = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            int ioMatchCount = 0;
+            int logCount = logs.Count;
+            for (int li = 0; li < logCount; li++)
+            {
+                string msg = logs[li].Message;
+                if (string.IsNullOrEmpty(msg)) continue;
+
+                int contentStart;
+                if (msg.Length > 7 && msg[2] == '_') // IO_Mon:
+                    contentStart = 7;
+                else if (msg.Length > 3 && msg[2] == ':') // IO:
+                    contentStart = 3;
+                else
+                    continue;
+
+                ioMatchCount++;
+                bool isIoShort = contentStart == 3;
+
+                int c1 = msg.IndexOf(',', contentStart);
+                if (c1 < 0) continue;
+
+                string subsystem = InternString(stringPool, msg, contentStart, c1 - contentStart);
+
+                // Early exit: skip if subsystem not selected
+                if (!selectionBySubsystem.TryGetValue(subsystem, out var compSet)) continue;
+
+                // Get/create signal sub-dictionary for this subsystem
+                if (!signalsBySubsystem.TryGetValue(subsystem, out var subSignals))
                 {
-                    AppLogger.Error("ParseIOSignals message parsing failed", ex);
+                    subSignals = new Dictionary<string, SignalData>(StringComparer.OrdinalIgnoreCase);
+                    signalsBySubsystem[subsystem] = subSignals;
+                }
+
+                int fieldStart = c1 + 1;
+                int msgLen = msg.Length;
+
+                while (fieldStart < msgLen)
+                {
+                    int fieldEnd = msg.IndexOf(',', fieldStart);
+                    if (fieldEnd < 0) fieldEnd = msgLen;
+
+                    if (isIoShort && fieldStart != c1 + 1) break;
+
+                    int eqPos = msg.IndexOf('=', fieldStart);
+                    if (eqPos <= fieldStart || eqPos >= fieldEnd)
+                    {
+                        fieldStart = fieldEnd + 1;
+                        continue;
+                    }
+
+                    int symStart = fieldStart;
+                    int symEnd = eqPos;
+                    while (symStart < symEnd && msg[symStart] == ' ') symStart++;
+                    while (symEnd > symStart && msg[symEnd - 1] == ' ') symEnd--;
+                    if (symStart >= symEnd) { fieldStart = fieldEnd + 1; continue; }
+
+                    int valStart = eqPos + 1;
+                    while (valStart < fieldEnd && msg[valStart] == ' ') valStart++;
+
+                    // Skip "New Status" values
+                    if (fieldEnd - valStart >= 10 && msg[valStart] == 'N' &&
+                        string.Compare(msg, valStart, "New Status", 0, 10, StringComparison.OrdinalIgnoreCase) == 0)
+                    {
+                        fieldStart = fieldEnd + 1;
+                        continue;
+                    }
+
+                    int valEnd = msg.IndexOf(' ', valStart);
+                    if (valEnd < 0 || valEnd > fieldEnd) valEnd = fieldEnd;
+
+                    if (!TryParseDoubleFast(msg, valStart, valEnd - valStart, out double value))
+                    {
+                        fieldStart = fieldEnd + 1;
+                        continue;
+                    }
+
+                    // Build clean symbol name (strip subsystem prefix)
+                    int cleanStart = symStart;
+                    int cleanLen = symEnd - symStart;
+                    int subLen = subsystem.Length;
+                    if (cleanLen > subLen &&
+                        string.Compare(msg, cleanStart, subsystem, 0, subLen, StringComparison.OrdinalIgnoreCase) == 0)
+                    {
+                        cleanStart += subLen;
+                        while (cleanStart < symEnd && (msg[cleanStart] == '_' || msg[cleanStart] == ' '))
+                            cleanStart++;
+                        cleanLen = symEnd - cleanStart;
+                    }
+
+                    string cleanSymbol = InternString(stringPool, msg, cleanStart, cleanLen);
+
+                    // Determine component name (strip _MotTemp / _DrvTemp suffix)
+                    string componentName = cleanSymbol;
+                    if (cleanLen > 8)
+                    {
+                        if (cleanSymbol.EndsWith("_MotTemp", StringComparison.OrdinalIgnoreCase) ||
+                            cleanSymbol.EndsWith("_DrvTemp", StringComparison.OrdinalIgnoreCase))
+                            componentName = cleanSymbol.Substring(0, cleanLen - 8);
+                    }
+
+                    // Selection check — no string concatenation
+                    if (!compSet.Contains(componentName))
+                    {
+                        fieldStart = fieldEnd + 1;
+                        continue;
+                    }
+
+                    // Signal lookup — no string concatenation
+                    if (!subSignals.TryGetValue(cleanSymbol, out var signal))
+                    {
+                        signal = new SignalData
+                        {
+                            Name = cleanSymbol,
+                            Category = "IO",
+                            SignalType = SignalType.Analog,
+                            DataLength = dataLength,
+                            SparsePoints = new List<KeyValuePair<int, double>>()
+                        };
+                        subSignals[cleanSymbol] = signal;
+                        signalProgress?.Report((cleanSymbol, "parsing"));
+                    }
+
+                    if (timeIndexLookup.TryGetValue(logs[li].Date, out int idx))
+                    {
+                        signal.SparsePoints.Add(new KeyValuePair<int, double>(idx, value));
+                    }
+
+                    fieldStart = fieldEnd + 1;
                 }
             }
 
-            // Parallel forward-fill — each signal is independent
-            var signalValues = signals.Values.ToList();
-            System.Threading.Tasks.Parallel.ForEach(signalValues,
-                new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
-                signal =>
+            // Collect all signals from two-level dictionary
+            var allSignals = new List<SignalData>();
+            foreach (var subDict in signalsBySubsystem.Values)
+                allSignals.AddRange(subDict.Values);
+
+            AppLogger.Info($"[ChartBuild] ParseIOSignals: {logs.Count:N0} logs, {ioMatchCount} matches, {allSignals.Count} signals");
+
+            return allSignals;
+        }
+
+        /// <summary>
+        /// Interns a substring — reuses existing string instance if already seen.
+        /// Avoids millions of duplicate allocations for repeated subsystem/symbol names.
+        /// </summary>
+        private static string InternString(Dictionary<string, string> pool, string source, int start, int length)
+        {
+            string key = source.Substring(start, length).Trim();
+            if (pool.TryGetValue(key, out var existing))
+                return existing;
+            pool[key] = key;
+            return key;
+        }
+
+        /// <summary>
+        /// Fast double parser that works directly on a string range without Substring allocation.
+        /// Handles integers, decimals, and negative numbers. Falls back to double.TryParse
+        /// for scientific notation.
+        /// </summary>
+        private static bool TryParseDoubleFast(string s, int start, int length, out double result)
+        {
+            result = 0;
+            if (length <= 0) return false;
+
+            int end = start + length;
+            int i = start;
+
+            bool negative = false;
+            if (s[i] == '-') { negative = true; i++; }
+            else if (s[i] == '+') { i++; }
+
+            if (i >= end) return false;
+
+            long intPart = 0;
+            bool hasDigits = false;
+            while (i < end && s[i] >= '0' && s[i] <= '9')
+            {
+                intPart = intPart * 10 + (s[i] - '0');
+                hasDigits = true;
+                i++;
+            }
+
+            double fracPart = 0;
+            if (i < end && s[i] == '.')
+            {
+                i++;
+                double multiplier = 0.1;
+                while (i < end && s[i] >= '0' && s[i] <= '9')
                 {
-                    ForwardFillNaN(signal.Data);
-                    signalProgress?.Report((signal.Name, "done"));
-                });
+                    fracPart += (s[i] - '0') * multiplier;
+                    multiplier *= 0.1;
+                    hasDigits = true;
+                    i++;
+                }
+            }
 
-            AppLogger.Info($"[ChartBuild] ParseIOSignals: {logs.Count:N0} logs, {ioMatchCount} matches, {signals.Count} signals");
+            if (!hasDigits) return false;
 
-            return signalValues;
+            // Scientific notation fallback
+            if (i < end && (s[i] == 'e' || s[i] == 'E'))
+                return double.TryParse(s.Substring(start, length), out result);
+
+            if (i != end) return false;
+
+            result = intPart + fracPart;
+            if (negative) result = -result;
+            return true;
         }
 
         private List<SignalData> ParseAxisSignals(
@@ -449,113 +571,159 @@ namespace IndiLogs_3._0.Services.Charts
             Dictionary<DateTime, int> timeIndexLookup,
             IProgress<(string signal, string status)> signalProgress = null)
         {
-            var signals = new Dictionary<string, SignalData>();
-            var selectedSet = new HashSet<string>(selectedComponents, StringComparer.OrdinalIgnoreCase);
-            int axisMatchCount = 0;
-
-            // NaN template: allocate once, Array.Copy for each new signal
-            var nanTemplate = new double[dataLength];
-            for (int j = 0; j < dataLength; j++) nanTemplate[j] = double.NaN;
-
-            foreach (var log in logs)
+            // Two-level selection: subsystem → set of motors (no string concat per log)
+            var selectionBySubsystem = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var k in selectedComponents)
             {
-                if (string.IsNullOrEmpty(log.Message)) continue;
-
-                char fc = log.Message[0];
-                if (fc != 'A' && fc != 'a') continue;
-
-                bool isAxisMon = log.Message.StartsWith("AxisMon:", StringComparison.OrdinalIgnoreCase);
-                bool isAxM = !isAxisMon && log.Message.StartsWith("AxM:", StringComparison.OrdinalIgnoreCase);
-                if (!isAxisMon && !isAxM) continue;
-                axisMatchCount++;
-
-                try
+                int sep = k.IndexOf('|');
+                if (sep > 0)
                 {
-                    int colonIndex = log.Message.IndexOf(':');
-                    if (colonIndex < 0) continue;
-
-                    string content = log.Message.Substring(colonIndex + 1);
-                    var parts = content.Split(',');
-                    if (parts.Length < 3) continue;
-
-                    string subsystem = parts[0].Trim();
-                    string motor = parts[1].Trim();
-                    string key = $"{subsystem}|{motor}";
-
-                    if (!selectedSet.Contains(key)) continue;
-
-                    for (int i = 2; i < parts.Length; i++)
+                    string sub = k.Substring(0, sep);
+                    string motor = k.Substring(sep + 1);
+                    if (!selectionBySubsystem.TryGetValue(sub, out var set))
                     {
-                        string rawPart = parts[i].Trim();
-                        int eqIndex = rawPart.IndexOf('=');
-
-                        string paramName;
-                        string valueStr;
-
-                        if (eqIndex > 0)
-                        {
-                            paramName = rawPart.Substring(0, eqIndex).Trim();
-                            valueStr = rawPart.Substring(eqIndex + 1).Trim();
-
-                            if (paramName.Equals("LagE", StringComparison.OrdinalIgnoreCase))
-                                paramName = "LagErr";
-                            else if (paramName.Equals("Trg", StringComparison.OrdinalIgnoreCase))
-                                paramName = "Trigger";
-                        }
-                        else if (isAxM && i == parts.Length - 1)
-                        {
-                            paramName = "Trigger";
-                            valueStr = rawPart;
-                        }
-                        else
-                        {
-                            continue;
-                        }
-
-                        if (!double.TryParse(valueStr, out double value)) continue;
-
-                        string signalKey = $"{key}_{paramName}";
-
-                        if (!signals.TryGetValue(signalKey, out var signal))
-                        {
-                            string displayName = $"{subsystem}_{motor}_{paramName}";
-                            signal = new SignalData
-                            {
-                                Name = displayName,
-                                Category = "Axis",
-                                SignalType = SignalType.Analog,
-                                Data = new double[dataLength]
-                            };
-                            Array.Copy(nanTemplate, signal.Data, dataLength); // fast memcpy
-                            signals[signalKey] = signal;
-                            signalProgress?.Report((displayName, "parsing"));
-                        }
-
-                        if (timeIndexLookup.TryGetValue(log.Date, out int idx))
-                        {
-                            signal.Data[idx] = value;
-                        }
+                        set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        selectionBySubsystem[sub] = set;
                     }
-                }
-                catch (Exception ex)
-                {
-                    AppLogger.Error("ParseAxisSignals message parsing failed", ex);
+                    set.Add(motor);
                 }
             }
 
-            // Parallel forward-fill — each signal is independent
-            var signalValues = signals.Values.ToList();
-            System.Threading.Tasks.Parallel.ForEach(signalValues,
-                new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
-                signal =>
+            // Two-level signal dictionary: (subsystem|motor) → (paramName → SignalData)
+            var signalsByMotor = new Dictionary<string, Dictionary<string, SignalData>>(StringComparer.OrdinalIgnoreCase);
+            var stringPool = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            int axisMatchCount = 0;
+            int logCount = logs.Count;
+            for (int li = 0; li < logCount; li++)
+            {
+                string msg = logs[li].Message;
+                if (string.IsNullOrEmpty(msg)) continue;
+
+                int contentStart;
+                bool isAxM;
+                if (msg.Length > 8 && msg[4] == 'M' && msg[7] == ':')
                 {
-                    ForwardFillNaN(signal.Data);
-                    signalProgress?.Report((signal.Name, "done"));
-                });
+                    contentStart = 8;
+                    isAxM = false;
+                }
+                else if (msg.Length > 4 && msg[2] == 'M' && msg[3] == ':')
+                {
+                    contentStart = 4;
+                    isAxM = true;
+                }
+                else
+                    continue;
 
-            AppLogger.Info($"[ChartBuild] ParseAxisSignals: {logs.Count:N0} logs, {axisMatchCount} matches, {signals.Count} signals");
+                axisMatchCount++;
+                int msgLen = msg.Length;
 
-            return signalValues;
+                int c1 = msg.IndexOf(',', contentStart);
+                if (c1 < 0) continue;
+                string subsystem = InternString(stringPool, msg, contentStart, c1 - contentStart);
+
+                int c2 = msg.IndexOf(',', c1 + 1);
+                if (c2 < 0) continue;
+                string motor = InternString(stringPool, msg, c1 + 1, c2 - c1 - 1);
+
+                // Two-level selection check — no string concatenation
+                if (!selectionBySubsystem.TryGetValue(subsystem, out var motorSet)) continue;
+                if (!motorSet.Contains(motor)) continue;
+
+                // Motor key only built once per matching log (not per field)
+                string motorKey = subsystem + "|" + motor;
+                if (!signalsByMotor.TryGetValue(motorKey, out var paramSignals))
+                {
+                    paramSignals = new Dictionary<string, SignalData>(StringComparer.OrdinalIgnoreCase);
+                    signalsByMotor[motorKey] = paramSignals;
+                }
+
+                int fieldStart = c2 + 1;
+                while (fieldStart < msgLen)
+                {
+                    int fieldEnd = msg.IndexOf(',', fieldStart);
+                    if (fieldEnd < 0) fieldEnd = msgLen;
+
+                    int eqPos = msg.IndexOf('=', fieldStart);
+
+                    string paramName;
+                    double value;
+
+                    if (eqPos > fieldStart && eqPos < fieldEnd)
+                    {
+                        int pStart = fieldStart;
+                        int pEnd = eqPos;
+                        while (pStart < pEnd && msg[pStart] == ' ') pStart++;
+                        while (pEnd > pStart && msg[pEnd - 1] == ' ') pEnd--;
+
+                        int vStart = eqPos + 1;
+                        while (vStart < fieldEnd && msg[vStart] == ' ') vStart++;
+                        int vEnd = fieldEnd;
+                        while (vEnd > vStart && msg[vEnd - 1] == ' ') vEnd--;
+
+                        if (pStart >= pEnd || vStart >= vEnd ||
+                            !TryParseDoubleFast(msg, vStart, vEnd - vStart, out value))
+                        {
+                            fieldStart = fieldEnd + 1;
+                            continue;
+                        }
+
+                        int pLen = pEnd - pStart;
+                        if (pLen == 4 && string.Compare(msg, pStart, "LagE", 0, 4, StringComparison.OrdinalIgnoreCase) == 0)
+                            paramName = "LagErr";
+                        else if (pLen == 3 && string.Compare(msg, pStart, "Trg", 0, 3, StringComparison.OrdinalIgnoreCase) == 0)
+                            paramName = "Trigger";
+                        else
+                            paramName = InternString(stringPool, msg, pStart, pLen);
+                    }
+                    else if (isAxM && fieldEnd == msgLen)
+                    {
+                        int vStart = fieldStart;
+                        while (vStart < fieldEnd && msg[vStart] == ' ') vStart++;
+                        if (!TryParseDoubleFast(msg, vStart, fieldEnd - vStart, out value))
+                        {
+                            fieldStart = fieldEnd + 1;
+                            continue;
+                        }
+                        paramName = "Trigger";
+                    }
+                    else
+                    {
+                        fieldStart = fieldEnd + 1;
+                        continue;
+                    }
+
+                    if (!paramSignals.TryGetValue(paramName, out var signal))
+                    {
+                        string displayName = subsystem + "_" + motor + "_" + paramName;
+                        signal = new SignalData
+                        {
+                            Name = displayName,
+                            Category = "Axis",
+                            SignalType = SignalType.Analog,
+                            DataLength = dataLength,
+                            SparsePoints = new List<KeyValuePair<int, double>>()
+                        };
+                        paramSignals[paramName] = signal;
+                        signalProgress?.Report((displayName, "parsing"));
+                    }
+
+                    if (timeIndexLookup.TryGetValue(logs[li].Date, out int idx))
+                    {
+                        signal.SparsePoints.Add(new KeyValuePair<int, double>(idx, value));
+                    }
+
+                    fieldStart = fieldEnd + 1;
+                }
+            }
+
+            var allSignals = new List<SignalData>();
+            foreach (var paramDict in signalsByMotor.Values)
+                allSignals.AddRange(paramDict.Values);
+
+            AppLogger.Info($"[ChartBuild] ParseAxisSignals: {logs.Count:N0} logs, {axisMatchCount} matches, {allSignals.Count} signals");
+
+            return allSignals;
         }
 
         private List<StateData> ParseCHStepStates(
@@ -1038,7 +1206,69 @@ namespace IndiLogs_3._0.Services.Charts
         public string Name { get; set; }
         public string Category { get; set; }
         public SignalType SignalType { get; set; }
-        public double[] Data { get; set; }
+
+        /// <summary>
+        /// Total number of data points (= unique timestamp count).
+        /// For signals with Data set directly, falls back to Data.Length.
+        /// Accessing this property never triggers lazy materialization.
+        /// </summary>
+        private int _dataLength;
+        public int DataLength
+        {
+            get { return _dataLength > 0 ? _dataLength : (_data?.Length ?? 0); }
+            set { _dataLength = value; }
+        }
+
+        /// <summary>Sparse data points collected during parsing (index → value).</summary>
+        internal List<KeyValuePair<int, double>> SparsePoints { get; set; }
+
+        private double[] _data;
+
+        /// <summary>
+        /// Dense data array. Lazy-materialized from SparsePoints on first access
+        /// (avoids ~13GB upfront allocation when only a few signals are charted).
+        /// </summary>
+        public double[] Data
+        {
+            get
+            {
+                if (_data == null && SparsePoints != null)
+                    MaterializeData();
+                return _data;
+            }
+            set { _data = value; }
+        }
+
+        /// <summary>Builds the dense double[] from sparse points + forward-fill.</summary>
+        internal void MaterializeData()
+        {
+            int len = _dataLength;
+            var data = new double[len];
+            // Fill with NaN
+            for (int i = 0; i < len; i++)
+                data[i] = double.NaN;
+            // Apply sparse values
+            var sparse = SparsePoints;
+            if (sparse != null)
+            {
+                for (int i = 0; i < sparse.Count; i++)
+                {
+                    var kv = sparse[i];
+                    data[kv.Key] = kv.Value;
+                }
+            }
+            // Forward-fill
+            double lastValue = double.NaN;
+            for (int i = 0; i < len; i++)
+            {
+                if (double.IsNaN(data[i]))
+                    data[i] = lastValue;
+                else
+                    lastValue = data[i];
+            }
+            _data = data;
+            SparsePoints = null; // Release sparse data for GC
+        }
     }
 
     /// <summary>

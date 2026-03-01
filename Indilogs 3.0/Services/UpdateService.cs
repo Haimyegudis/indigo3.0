@@ -1,4 +1,5 @@
 using System;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -11,9 +12,9 @@ namespace IndiLogs_3._0.Services
 {
     public class UpdateService
     {
-        // Server paths - change these if server location changes
-        private const string VersionFileUrl = @"\\iihome.inr.rd.hpicorp.net\softwareqa$\QA-Utils\Indilogs3.0\version.txt";
-        private const string InstallerFolder = @"\\iihome.inr.rd.hpicorp.net\softwareqa$\QA-Utils\Indilogs3.0";
+        // Server paths — read from App.config appSettings so internal paths are not hardcoded in source
+        private static readonly string VersionFileUrl = ConfigurationManager.AppSettings["UpdateVersionFile"] ?? "";
+        private static readonly string InstallerFolder = ConfigurationManager.AppSettings["UpdateInstallerFolder"] ?? "";
         private const string InstallerPattern = "IndiLogs*.exe"; // Pattern to find installer
         private const string HashFileExtension = ".sha256"; // Expected hash file alongside installer
 

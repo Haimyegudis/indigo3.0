@@ -33,9 +33,8 @@ namespace IndiLogs_3._0.Services.Analysis
 
                 if (lastTransition != null)
                 {
-                    var parts = lastTransition.Message.Split(new[] { "->" }, StringSplitOptions.None);
-                    string fromState = parts[0].Replace("PlcMngr:", "").Trim();
-                    string targetState = parts.Length > 1 ? parts[1].Trim() : "Unknown";
+                    StateTransitionHelper.TryParseTransition(lastTransition.Message, out string fromState, out string targetState);
+                    if (targetState == null) targetState = "Unknown";
 
                     double duration = (failEvent.Date - lastTransition.Date).TotalSeconds;
 

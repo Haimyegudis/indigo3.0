@@ -39,8 +39,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _logs = value;
                 OnPropertyChanged();
-                // Notify parent so UI updates
-                _parent?.NotifyPropertyChanged(nameof(_parent.Logs));
             }
         }
 
@@ -55,7 +53,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _allLogsCache = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.AllLogsCache));
             }
         }
 
@@ -70,7 +67,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _allAppLogsCache = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.AllAppLogsCache));
             }
         }
 
@@ -85,7 +81,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _events = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.Events));
             }
         }
 
@@ -114,7 +109,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _screenshots = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.Screenshots));
             }
         }
 
@@ -126,7 +120,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _loadedFiles = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.LoadedFiles));
             }
         }
 
@@ -141,7 +134,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _loadedSessions = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.LoadedSessions));
             }
         }
 
@@ -161,7 +153,6 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                     _selectedSession = value;
                     OnPropertyChanged();
-                    _parent?.NotifyPropertyChanged(nameof(_parent.SelectedSession));
                     _parent?.NotifyPropertyChanged(nameof(_parent.HasSessionLoaded));
                     SwitchToSession(_selectedSession);
                 }
@@ -177,7 +168,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _currentProgress = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.CurrentProgress));
             }
         }
 
@@ -189,7 +179,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _statusMessage = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.StatusMessage));
             }
         }
 
@@ -201,7 +190,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _isBusy = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsBusy));
             }
         }
 
@@ -431,7 +419,15 @@ namespace IndiLogs_3._0.ViewModels.Components
                 await Task.WhenAll(postTasks);
 
                 LoadedSessions.Add(newSession);
-                SelectedSession = newSession;
+
+                // Bypass the SelectedSession setter to avoid SwitchToSession —
+                // ProcessFiles already does all the setup work itself.
+                // SwitchToSession is only needed when the user switches between
+                // already-loaded sessions via the combo box.
+                SaveFilterState(_selectedSession);
+                _selectedSession = newSession;
+                OnPropertyChanged(nameof(SelectedSession));
+                _parent?.NotifyPropertyChanged(nameof(_parent.HasSessionLoaded));
 
                 // Update SessionVM with ALL loaded data
                 // Share reference instead of copying to avoid doubling memory usage
@@ -543,7 +539,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                             _parent.HasTimeSyncData      = true;
                             _parent.ShowSyncedTimeColumn = true;
-                            _parent.StatusMessage = $"⏱ Time sync: offset {syncOffset.Value.TotalMilliseconds:F0}ms ({syncOffset.Value.TotalSeconds:F1}s)";
+                            StatusMessage = $"⏱ Time sync: offset {syncOffset.Value.TotalMilliseconds:F0}ms ({syncOffset.Value.TotalSeconds:F1}s)";
                         }
                     }
                 }
@@ -587,13 +583,29 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     _configVM.LoadConfigurationFiles();
                 }
+                _parent.CurrentPluginColumns = newSession.PluginColumns;
                 _parent.NotifyPropertyChanged(nameof(_parent.DbConfigTabHeader));
                 _parent.NotifyPropertyChanged(nameof(_parent.HasBinaryAppLogs));
                 _parent.LoadGlobalsFiles();
                 _parent.LoadSystabFiles();
 
-                // Update FilterVM - apply initial filters (this is the FIRST and MAIN filter application)
-                // Subsequent filter calls happen only when user changes filter settings
+                // Window title
+                if (!string.IsNullOrEmpty(newSession.VersionsInfo))
+                    _parent.WindowTitle = $"IndiLogs 3.0 - {newSession.FileName} ({newSession.VersionsInfo})";
+                else
+                    _parent.WindowTitle = $"IndiLogs 3.0 - {newSession.FileName}";
+
+                // Build logger tree panels (must happen before filter application)
+                _filterVM.BuildLoggerTree(AllAppLogsCache);
+                _filterVM.BuildPlcLoggerTree(AllLogsCache);
+
+                // Load saved configs for the dropdown
+                _caseVM.LoadSavedConfigs(newSession.HasBinaryAppLogs);
+
+                // Restore chart state (null for new sessions = clear chart)
+                _parent.ChartVM?.RestoreChartState(newSession.SavedChartState);
+
+                // Apply initial filters (this is the FIRST and ONLY filter application)
                 _filterVM.ApplyMainLogsFilter();
                 _filterVM.ApplyAppLogsFilter();
 
@@ -694,24 +706,20 @@ namespace IndiLogs_3._0.ViewModels.Components
                 if (_filterVM.FilteredLogs != null)
                 {
                     _filterVM.FilteredLogs.Clear();
-                    _parent.NotifyPropertyChanged(nameof(_parent.FilteredLogs));
                 }
 
                 if (_filterVM.AppDevLogsFiltered != null)
                 {
                     _filterVM.AppDevLogsFiltered.Clear();
-                    _parent.NotifyPropertyChanged(nameof(_parent.AppDevLogsFiltered));
                 }
 
                 if (_filterVM.LoggerTreeRoot != null)
                 {
                     _filterVM.LoggerTreeRoot.Clear();
-                    _parent.NotifyPropertyChanged(nameof(_parent.LoggerTreeRoot));
                 }
                 if (_filterVM.PlcLoggerTreeRoot != null)
                 {
                     _filterVM.PlcLoggerTreeRoot.Clear();
-                    _parent.NotifyPropertyChanged(nameof(_parent.PlcLoggerTreeRoot));
                     _parent.NotifyPropertyChanged(nameof(_parent.ActiveLoggerTree));
                 }
 
@@ -724,13 +732,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             if (_configVM != null)
             {
                 _configVM.ClearConfigurationFiles();
-                _parent.NotifyPropertyChanged(nameof(_parent.ConfigurationFiles));
-                _parent.NotifyPropertyChanged(nameof(_parent.DbTreeNodes));
-                _parent.NotifyPropertyChanged(nameof(_parent.SelectedConfigFile));
-                _parent.NotifyPropertyChanged(nameof(_parent.ConfigFileContent));
-                _parent.NotifyPropertyChanged(nameof(_parent.FilteredConfigContent));
-                _parent.NotifyPropertyChanged(nameof(_parent.ConfigSearchText));
-                _parent.NotifyPropertyChanged(nameof(_parent.IsDbFileSelected));
             }
 
             StatusMessage = "Logs cleared";
@@ -772,8 +773,6 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             // Load configuration and database files through ConfigVM
             _configVM.LoadConfigurationFiles();
-            _parent.NotifyPropertyChanged(nameof(_parent.ConfigurationFiles));
-            _parent.NotifyPropertyChanged(nameof(_parent.SelectedConfigFile));
             _parent.NotifyPropertyChanged(nameof(_parent.DbConfigTabHeader));
             _parent.NotifyPropertyChanged(nameof(_parent.HasBinaryAppLogs));
             _parent.LoadGlobalsFiles();
@@ -784,8 +783,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             Screenshots = new ObservableCollection<BitmapImage>(session.Screenshots);
 
-            _parent.MarkedLogs = session.MarkedLogs;
-            _parent.NotifyPropertyChanged(nameof(_parent.MarkedLogs));
+            _caseVM.MarkedLogs = session.MarkedLogs;
             _parent.SetupInfo = session.SetupInfo;
             _parent.PressConfig = session.PressConfiguration;
 
@@ -810,7 +808,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 if (!RestoreFilterState(session))
                 {
                     // First time opening this session — start with no filters
-                    _parent.SearchText = "";
+                    _filterVM.SearchText = "";
                     _filterVM.IsTimeFocusActive = false;
                     _filterVM.IsAppTimeFocusActive = false;
 
@@ -862,7 +860,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 IsAppTimeFocusActive = _filterVM.IsAppTimeFocusActive,
                 NegativeFilters = _filterVM.NegativeFilters.ToList(),
                 ActiveThreadFilters = _filterVM.ActiveThreadFilters.ToList(),
-                SearchText = _parent.SearchText,
+                SearchText = _filterVM.SearchText,
                 LastFilteredCache = _filterVM.LastFilteredCache,
                 LastFilteredAppCache = _filterVM.LastFilteredAppCache
             };
@@ -880,7 +878,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             var state = session?.SavedFilterState;
             if (state == null) return false;
 
-            _parent.SearchText = state.SearchText ?? "";
+            _filterVM.SearchText = state.SearchText ?? "";
             _filterVM.IsTimeFocusActive = state.IsTimeFocusActive;
             _filterVM.IsAppTimeFocusActive = state.IsAppTimeFocusActive;
 

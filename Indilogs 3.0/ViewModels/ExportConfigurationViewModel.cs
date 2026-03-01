@@ -939,8 +939,27 @@ namespace IndiLogs_3._0.ViewModels
                 }
                 else
                 {
-                    // Fallback: open with default CSV application
-                    System.Diagnostics.Process.Start(LastExportedFilePath);
+                    // Fallback: open with default application — validate path and extension first
+                    string ext = System.IO.Path.GetExtension(LastExportedFilePath);
+                    bool isSafeExtension = ext != null && (
+                        ext.Equals(".csv", StringComparison.OrdinalIgnoreCase) ||
+                        ext.Equals(".xlsx", StringComparison.OrdinalIgnoreCase) ||
+                        ext.Equals(".xls", StringComparison.OrdinalIgnoreCase) ||
+                        ext.Equals(".txt", StringComparison.OrdinalIgnoreCase));
+
+                    if (isSafeExtension && File.Exists(LastExportedFilePath))
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = LastExportedFilePath,
+                            UseShellExecute = true
+                        });
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Cannot open file: unsupported file type or file not found.\n{LastExportedFilePath}",
+                            "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
                 }
             }
             catch (Exception ex)

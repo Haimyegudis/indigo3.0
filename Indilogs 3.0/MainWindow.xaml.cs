@@ -55,6 +55,10 @@ namespace IndiLogs_3._0
         public MainWindow()
         {
             InitializeComponent();
+
+            // Resolve MainViewModel from the DI container (replaces XAML-based <vm:MainViewModel/>)
+            DataContext = Bootstrapper.Resolve<MainViewModel>();
+
             this.Loaded += MainWindow_Loaded;
 
             // Initialize WindowManager with main window
@@ -910,7 +914,7 @@ namespace IndiLogs_3._0
 
             // Identify source grid type
             string sourceType = "PLC";
-            if (gridName.Contains("App") || sourceGrid.ItemsSource == vm.AppDevLogsFiltered)
+            if (gridName.Contains("App") || sourceGrid.ItemsSource == vm.FilterVM?.AppDevLogsFiltered)
                 sourceType = "APP";
 
             // Trigger the sync
@@ -1066,6 +1070,7 @@ namespace IndiLogs_3._0
         {
             if (sender is TabControl tabControl && e.Source == tabControl)
             {
+                var tabSw = System.Diagnostics.Stopwatch.StartNew();
                 // TabControl_SelectionChanged fires SYNCHRONOUSLY as part of the user click,
                 // BEFORE WPF defers the layout/render pass for the new tab's content.
                 // This is the safest place to set _isTabSwitching because it is guaranteed to
@@ -1079,6 +1084,10 @@ namespace IndiLogs_3._0
 
                 int newTabIndex = tabControl.SelectedIndex;
                 _previousTabIndex = newTabIndex;
+
+                string[] tabNames = { "PLC", "APP", "PLC Filtered", "Charts", "Systab", "Config Explorer" };
+                string tabLabel = newTabIndex >= 0 && newTabIndex < tabNames.Length ? tabNames[newTabIndex] : $"Tab {newTabIndex}";
+                AppLogger.Info($"[Tab] Switched to tab {newTabIndex} ({tabLabel}) — {tabSw.ElapsedMilliseconds}ms");
 
                 // IMPORTANT: Don't change column widths here - they are controlled by IsLeftPanelVisible/IsRightPanelVisible
                 // Just sync with the ViewModel state to ensure columns match the panel visibility

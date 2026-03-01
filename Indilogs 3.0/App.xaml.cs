@@ -1,4 +1,5 @@
 ﻿using IndiLogs_3._0.Services;
+using IndiLogs_3._0.ViewModels;
 using IndiLogs_3._0.Views;
 using System;
 using System.Threading.Tasks;
@@ -14,7 +15,8 @@ namespace IndiLogs_3._0
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
             {
                 var ex = args.ExceptionObject as Exception;
-                MessageBox.Show($"Critical Error:\n{ex?.Message}\n\n{ex?.StackTrace}", "Error");
+                AppLogger.Error("Unhandled application exception", ex);
+                MessageBox.Show($"An unexpected error occurred. Please check the application log.\n\n{ex?.Message}", "Error");
             };
 
             // Prevent WPF from shutting down when the splash window closes
@@ -30,6 +32,9 @@ namespace IndiLogs_3._0
             splash.Closed += (_, __) => splashDone.TrySetResult(true);
             splash.Show();
             await splashDone.Task;
+
+            // Initialize DI container before creating MainWindow
+            Bootstrapper.Configure();
 
             // Splash is gone – now create and show the main window
             var mainWindow = new MainWindow();

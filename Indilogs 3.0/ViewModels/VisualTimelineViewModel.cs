@@ -1,4 +1,5 @@
 ﻿using IndiLogs_3._0.Models;
+using IndiLogs_3._0.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -133,13 +134,9 @@ namespace IndiLogs_3._0.ViewModels
                     }
 
                     // ── S6 state transitions: PlcMngr: OLD -> NEW ──
-                    if (log.ThreadName == "Manager" &&
-                        log.Message != null &&
-                        log.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) &&
-                        log.Message.Contains("->"))
+                    if (StateTransitionHelper.IsS6StateTransition(log) &&
+                        StateTransitionHelper.TryParseTransition(log.Message, out _, out string newStateName))
                     {
-                        var parts = log.Message.Split(new[] { "->" }, StringSplitOptions.None);
-                        string newStateName = parts[1].Trim();
 
                         if (currentState != null)
                         {

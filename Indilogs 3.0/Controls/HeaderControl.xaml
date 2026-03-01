@@ -92,16 +92,16 @@
 
             <!-- Right Section: Live Mode & Controls -->
             <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                <StackPanel Orientation="Horizontal" Margin="0,0,20,0" Visibility="{Binding IsLiveMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel Orientation="Horizontal" Margin="0,0,20,0" Visibility="{Binding LiveVM.IsLiveMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Border Background="{DynamicResource BgCard}" CornerRadius="6" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Padding="5">
                         <StackPanel Orientation="Horizontal">
-                            <Button Command="{Binding LivePlayCommand}" Visibility="{Binding IsPaused, Converter={StaticResource BooleanToVisibilityConverter}}" Style="{DynamicResource ModernBtn}" ToolTip="Resume Live Monitoring" Background="Transparent" Foreground="{DynamicResource SuccessColor}" Padding="5,0" AutomationProperties.Name="Resume Live Monitoring">
+                            <Button Command="{Binding LivePlayCommand}" Visibility="{Binding LiveVM.IsPaused, Converter={StaticResource BooleanToVisibilityConverter}}" Style="{DynamicResource ModernBtn}" ToolTip="Resume Live Monitoring" Background="Transparent" Foreground="{DynamicResource SuccessColor}" Padding="5,0" AutomationProperties.Name="Resume Live Monitoring">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="▶" Margin="0,0,5,0"/>
                                     <TextBlock Text="RESUME" FontWeight="Bold"/>
                                 </StackPanel>
                             </Button>
-                            <Button Command="{Binding LivePauseCommand}" Visibility="{Binding IsRunning, Converter={StaticResource BooleanToVisibilityConverter}}" Style="{DynamicResource ModernBtn}" ToolTip="Pause Live Monitoring" Background="Transparent" Foreground="{DynamicResource WarningColor}" Padding="5,0" AutomationProperties.Name="Pause Live Monitoring">
+                            <Button Command="{Binding LivePauseCommand}" Visibility="{Binding LiveVM.IsRunning, Converter={StaticResource BooleanToVisibilityConverter}}" Style="{DynamicResource ModernBtn}" ToolTip="Pause Live Monitoring" Background="Transparent" Foreground="{DynamicResource WarningColor}" Padding="5,0" AutomationProperties.Name="Pause Live Monitoring">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="⏸" Margin="0,0,5,0"/>
                                     <TextBlock Text="PAUSE" FontWeight="Bold"/>

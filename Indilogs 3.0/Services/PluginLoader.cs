@@ -36,6 +36,13 @@ namespace IndiLogs_3._0.Services
         // Maps each plugin instance to the DLL file it was loaded from
         private readonly Dictionary<ILogFilePlugin, string> _dllPaths = new Dictionary<ILogFilePlugin, string>();
 
+        // Allowed strong-name public key tokens (lowercase hex, no dashes).
+        // Add your organization's plugin signing key tokens here.
+        private static readonly HashSet<string> _allowedPublicKeyTokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            // Example: "b03f5f7f11d50a3a" — replace with your actual plugin signing key tokens
+        };
+
         // ---------------------------------------------------------------
         // IPluginLoader
         // ---------------------------------------------------------------
@@ -187,13 +194,19 @@ namespace IndiLogs_3._0.Services
 
             try
             {
-                // Check for strong name as fallback
+                // Strong name alone is NOT sufficient — any developer can create a strong-named assembly.
+                // Only accept strong-named plugins whose public key token is in the allowed whitelist.
                 var asmName = AssemblyName.GetAssemblyName(dllPath);
-                byte[] publicKey = asmName.GetPublicKeyToken();
-                if (publicKey != null && publicKey.Length > 0)
+                byte[] publicKeyToken = asmName.GetPublicKeyToken();
+                if (publicKeyToken != null && publicKeyToken.Length > 0)
                 {
-                    AppLogger.Info($"Plugin has strong name: {asmName.Name}");
-                    return true;
+                    string tokenHex = BitConverter.ToString(publicKeyToken).Replace("-", "").ToLowerInvariant();
+                    if (_allowedPublicKeyTokens.Contains(tokenHex))
+                    {
+                        AppLogger.Info($"Plugin has whitelisted strong name: {asmName.Name} (token: {tokenHex})");
+                        return true;
+                    }
+                    AppLogger.Warn($"Plugin has strong name but token '{tokenHex}' is not whitelisted: {Path.GetFileName(dllPath)}");
                 }
             }
             catch (Exception)
@@ -201,7 +214,7 @@ namespace IndiLogs_3._0.Services
                 // Cannot read assembly name
             }
 
-            AppLogger.Warn($"REJECTED unsigned plugin: {Path.GetFileName(dllPath)}");
+            AppLogger.Warn($"REJECTED unsigned/unverified plugin: {Path.GetFileName(dllPath)}");
             return false;
         }
 

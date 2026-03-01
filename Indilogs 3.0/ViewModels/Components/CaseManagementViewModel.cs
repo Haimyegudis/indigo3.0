@@ -77,7 +77,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _selectedConfig = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.SelectedConfig));
             }
         }
 
@@ -91,7 +90,6 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     _isMarkedLogsCombined = value;
                     OnPropertyChanged();
-                    _parent?.NotifyPropertyChanged(nameof(_parent.IsMarkedLogsCombined));
                     CloseAllMarkedWindows();
                 }
             }
@@ -106,7 +104,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _showAllAnnotations = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.ShowAllAnnotations));
                 UpdateAllAnnotationsVisibility();
             }
         }
@@ -474,6 +471,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             };
             if (dlg.ShowDialog() != true) return;
 
+            var configSw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 SavedConfiguration c;
@@ -515,6 +513,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 if (existing != null) SavedConfigs.Remove(existing);
 
                 SavedConfigs.Add(c);
+                AppLogger.Info($"[Config] Configuration loaded from {Path.GetFileName(dlg.FileName)} — {configSw.ElapsedMilliseconds}ms");
             }
             catch (Exception ex)
             {
@@ -539,6 +538,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// </summary>
         public async Task ApplyConfiguration(SavedConfiguration c)
         {
+            var configSw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
             if (c == null) return;
@@ -548,8 +548,8 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                _parent.SearchText = "";
-                _parent.IsSearchPanelVisible = false;
+                _filterVM.SearchText = "";
+                _filterVM.IsSearchPanelVisible = false;
                 _filterVM.NegativeFilters.Clear();
                 _filterVM.ActiveThreadFilters.Clear();
                 _filterVM.IsTimeFocusActive = false;
@@ -624,6 +624,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             _sessionVM.IsBusy = false;
             _sessionVM.StatusMessage = "Configuration loaded successfully.";
+            AppLogger.Info($"[Config] Configuration '{c.Name}' applied (filters, coloring) — {configSw.ElapsedMilliseconds}ms");
             }
             catch (Exception ex) { AppLogger.Error("ApplyConfiguration failed", ex); }
         }
@@ -652,7 +653,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         ViewState = new CaseViewState
                         {
                             ActiveFilters = _filterVM.MainFilterRoot?.DeepClone(),
-                            QuickSearchText = _parent.SearchText,
+                            QuickSearchText = _filterVM.SearchText,
                             SelectedTab = _parent.SelectedTabIndex == 0 ? "MAIN" : "APP",
                             ActiveThreadFilters = _filterVM.ActiveThreadFilters.ToList(),
                             NegativeFilters = _filterVM.NegativeFilters.ToList()
@@ -663,9 +664,9 @@ namespace IndiLogs_3._0.ViewModels.Components
                     };
 
                     // Add resources (log files)
-                    if (_parent.SelectedSession != null && !string.IsNullOrEmpty(_parent.SelectedSession.FilePath))
+                    if (_sessionVM.SelectedSession != null && !string.IsNullOrEmpty(_sessionVM.SelectedSession.FilePath))
                     {
-                        var fileInfo = new FileInfo(_parent.SelectedSession.FilePath);
+                        var fileInfo = new FileInfo(_sessionVM.SelectedSession.FilePath);
                         if (fileInfo.Exists)
                         {
                             caseFile.Resources.Add(new CaseResource
@@ -688,7 +689,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                                   $"Filters: {(_filterVM.MainFilterRoot != null ? "✓" : "✗")}\n" +
                                   $"Coloring Rules: {MainColoringRules?.Count ?? 0} (Main) + {AppColoringRules?.Count ?? 0} (App)\n" +
                                   $"Annotations: {caseFile.Annotations.Count}\n" +
-                                  $"Search: {(string.IsNullOrEmpty(_parent.SearchText) ? "✗" : "✓")}",
+                                  $"Search: {(string.IsNullOrEmpty(_filterVM.SearchText) ? "✗" : "✓")}",
                                   "Case Saved", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
@@ -776,8 +777,8 @@ namespace IndiLogs_3._0.ViewModels.Components
                         _isLoadingCase = true;
 
                         // Clear all existing sessions to start fresh
-                        _parent.LoadedSessions.Clear();
-                        _parent.SelectedSession = null;
+                        _sessionVM.LoadedSessions.Clear();
+                        _sessionVM.SelectedSession = null;
 
                         // Load the logs with callback
                         _parent.ProcessFiles(logFilesToLoad.ToArray(), session =>
@@ -883,7 +884,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             if (caseFile.ViewState != null)
             {
                 _filterVM.MainFilterRoot = caseFile.ViewState.ActiveFilters;
-                _parent.SearchText = caseFile.ViewState.QuickSearchText ?? "";
+                _filterVM.SearchText = caseFile.ViewState.QuickSearchText ?? "";
 
                 // Restore active thread filters
                 _filterVM.ActiveThreadFilters.Clear();
@@ -942,7 +943,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     $"📝 Annotations: {annotationsRestored}/{caseFile.Annotations?.Count ?? 0}\n" +
                     $"🎨 Coloring Rules: {MainColoringRules.Count} (Main) + {AppColoringRules.Count} (App)\n" +
                     $"🔍 Filters: {(_filterVM.MainFilterRoot != null && _filterVM.MainFilterRoot.Children.Count > 0 ? "Active" : "None")}\n" +
-                    $"🔎 Search: {(string.IsNullOrEmpty(_parent.SearchText) ? "None" : $"\"{_parent.SearchText}\"")}\n" +
+                    $"🔎 Search: {(string.IsNullOrEmpty(_filterVM.SearchText) ? "None" : $"\"{_filterVM.SearchText}\"")}\n" +
                     $"🧵 Thread Filters: {_filterVM.ActiveThreadFilters.Count}\n" +
                     $"🚫 Filter Out: {_filterVM.NegativeFilters.Count}",
                     "Case Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -979,8 +980,8 @@ namespace IndiLogs_3._0.ViewModels.Components
         private IEnumerable<LogEntry> GetActiveLogCollection()
         {
             if (_parent.SelectedTabIndex == AppConstants.TAB_APP)
-                return _parent.AppDevLogsFiltered ?? Enumerable.Empty<LogEntry>();
-            return _parent.Logs ?? Enumerable.Empty<LogEntry>();
+                return _filterVM.AppDevLogsFiltered ?? Enumerable.Empty<LogEntry>();
+            return _sessionVM.Logs ?? Enumerable.Empty<LogEntry>();
         }
 
         /// <summary>
@@ -1059,6 +1060,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// </summary>
         public void LoadSavedConfigs(bool hasBinaryAppLogs)
         {
+            var configSw = System.Diagnostics.Stopwatch.StartNew();
             SavedConfigs.Clear();
             string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IndiLogs3.0", "Configs");
 
@@ -1090,6 +1092,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     }
                 }
             }
+            AppLogger.Info($"[Config] {SavedConfigs.Count} saved configs loaded from disk — {configSw.ElapsedMilliseconds}ms");
         }
 
         /// <summary>

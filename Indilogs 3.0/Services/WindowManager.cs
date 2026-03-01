@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -77,6 +78,7 @@ namespace IndiLogs_3._0.Services
         public static void OpenWindow(Window childWindow, Window referenceWindow = null)
         {
             if (childWindow == null) return;
+            var winSw = Stopwatch.StartNew();
 
             // DON'T set Owner for non-modal windows - this allows free switching between windows
             // Owner would make the window stay on top of owner and block interaction
@@ -102,6 +104,7 @@ namespace IndiLogs_3._0.Services
 
             // Force window to front using aggressive approach
             BringWindowToFront(childWindow);
+            AppLogger.Info($"[Window] Opened {childWindow.GetType().Name} — {winSw.ElapsedMilliseconds}ms");
         }
 
         /// <summary>
@@ -161,6 +164,7 @@ namespace IndiLogs_3._0.Services
         public static bool? ShowDialog(Window dialogWindow, Window owner = null)
         {
             if (dialogWindow == null) return null;
+            var dlgSw = Stopwatch.StartNew();
 
             // For dialogs, we DO set owner to make them modal
             if (owner != null)
@@ -175,7 +179,9 @@ namespace IndiLogs_3._0.Services
             // Position on same screen as owner/main window
             PositionOnSameScreen(dialogWindow, owner);
 
-            return dialogWindow.ShowDialog();
+            var result = dialogWindow.ShowDialog();
+            AppLogger.Info($"[Window] ShowDialog {dialogWindow.GetType().Name} — {dlgSw.ElapsedMilliseconds}ms");
+            return result;
         }
 
         /// <summary>
@@ -362,15 +368,18 @@ namespace IndiLogs_3._0.Services
         /// </summary>
         public static T GetOrCreate<T>(Func<T> factory, Window referenceWindow = null) where T : Window
         {
+            var winSw = Stopwatch.StartNew();
             var existing = FindWindow<T>();
             if (existing != null)
             {
                 ActivateWindow(existing);
+                AppLogger.Info($"[Window] GetOrCreate<{typeof(T).Name}> reused existing — {winSw.ElapsedMilliseconds}ms");
                 return existing;
             }
 
             var newWindow = factory();
             OpenWindow(newWindow, referenceWindow);
+            AppLogger.Info($"[Window] GetOrCreate<{typeof(T).Name}> created new — {winSw.ElapsedMilliseconds}ms");
             return newWindow;
         }
 
@@ -389,5 +398,22 @@ namespace IndiLogs_3._0.Services
                 ActivateWindow(_mainWindow);
             }
         }
+    }
+
+    /// <summary>
+    /// Instance adapter that delegates to the static <see cref="WindowManager"/>.
+    /// Allows <see cref="Interfaces.IWindowManager"/> to be resolved via the Bootstrapper.
+    /// </summary>
+    internal sealed class WindowManagerAdapter : Interfaces.IWindowManager
+    {
+        public void Initialize(Window mainWindow) => WindowManager.Initialize(mainWindow);
+        public void OpenWindow(Window childWindow, Window referenceWindow = null) => WindowManager.OpenWindow(childWindow, referenceWindow);
+        public bool? ShowDialog(Window dialogWindow, Window owner = null) => WindowManager.ShowDialog(dialogWindow, owner);
+        public void ActivateWindow(Window window) => WindowManager.ActivateWindow(window);
+        public IEnumerable<Window> GetOpenWindows() => WindowManager.GetOpenWindows();
+        public T FindWindow<T>() where T : Window => WindowManager.FindWindow<T>();
+        public bool ActivateExisting<T>() where T : Window => WindowManager.ActivateExisting<T>();
+        public T GetOrCreate<T>(Func<T> factory, Window referenceWindow = null) where T : Window => WindowManager.GetOrCreate(factory, referenceWindow);
+        public void ActivateMainWindow() => WindowManager.ActivateMainWindow();
     }
 }

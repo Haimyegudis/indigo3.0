@@ -40,7 +40,6 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     _selectedConfigFile = value;
                     OnPropertyChanged();
-                    _parent?.NotifyPropertyChanged(nameof(_parent.SelectedConfigFile));
                     LoadSelectedFileContent();
                 }
             }
@@ -54,7 +53,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _configFileContent = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.ConfigFileContent));
                 // Sync FilteredConfigContent when content changes (for search to work)
                 FilteredConfigContent = value;
             }
@@ -68,7 +66,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _filteredConfigContent = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.FilteredConfigContent));
             }
         }
 
@@ -83,7 +80,6 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     _configSearchText = value;
                     OnPropertyChanged();
-                    _parent?.NotifyPropertyChanged(nameof(_parent.ConfigSearchText));
 
                     // Use debounce for DB tree filtering to avoid lag
                     if (IsDbFileSelected)
@@ -190,7 +186,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _dbTreeNodes = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.DbTreeNodes));
             }
         }
 
@@ -208,7 +203,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _isDbFileSelected = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsDbFileSelected));
             }
         }
 
@@ -220,7 +214,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _isCsvFileSelected = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsCsvFileSelected));
             }
         }
 
@@ -232,7 +225,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _csvDataView = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.CsvDataView));
             }
         }
 
@@ -245,7 +237,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _isExplorerMenuOpen = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsExplorerMenuOpen));
             }
         }
 
@@ -257,7 +248,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _isConfigMenuOpen = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsConfigMenuOpen));
             }
         }
 
@@ -269,7 +259,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _isLoggersMenuOpen = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsLoggersMenuOpen));
             }
         }
 

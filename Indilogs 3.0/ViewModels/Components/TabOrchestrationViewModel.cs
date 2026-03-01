@@ -30,7 +30,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _isTimeSyncEnabled = value;
                 OnPropertyChanged();
-                _parent.StatusMessage = value ? "🔗 Time-Sync ENABLED" : "⛓ Time-Sync DISABLED";
+                _parent.SessionVM.StatusMessage =value ? "🔗 Time-Sync ENABLED" : "⛓ Time-Sync DISABLED";
             }
         }
 
@@ -83,18 +83,18 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                 if (sourceGrid == "PLC")
                 {
-                    if (_parent.AppDevLogsFiltered != null && _parent.AppDevLogsFiltered.Count > 0)
+                    if (_parent.FilterVM?.AppDevLogsFiltered != null && _parent.FilterVM.AppDevLogsFiltered.Count > 0)
                     {
-                        targetCollection = _parent.AppDevLogsFiltered;
+                        targetCollection = _parent.FilterVM.AppDevLogsFiltered;
                         targetGrid = "APP";
                         targetTabIndex = 1;
                     }
                 }
                 else if (sourceGrid == "APP")
                 {
-                    if (_parent.AllLogsCache != null && _parent.AllLogsCache.Count > 0)
+                    if (_parent.SessionVM.AllLogsCache != null && _parent.SessionVM.AllLogsCache.Count > 0)
                     {
-                        targetCollection = _parent.AllLogsCache;
+                        targetCollection = _parent.SessionVM.AllLogsCache;
                         targetGrid = "PLC";
                         targetTabIndex = 0;
                     }
@@ -116,14 +116,14 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                         Application.Current?.Dispatcher?.Invoke(() =>
                         {
-                            _parent.StatusMessage = $"🔗 Synced to {targetGrid} @ {nearestLog.Date:HH:mm:ss.ffffff} (±{timeDiff.TotalSeconds:F1}s) - switch tab to see";
+                            _parent.SessionVM.StatusMessage =$"🔗 Synced to {targetGrid} @ {nearestLog.Date:HH:mm:ss.ffffff} (±{timeDiff.TotalSeconds:F1}s) - switch tab to see";
                         });
                     }
                     else
                     {
                         Application.Current?.Dispatcher?.Invoke(() =>
                         {
-                            _parent.StatusMessage = $"⚠ No correlated logs within 60s (closest: {timeDiff.TotalSeconds:F0}s)";
+                            _parent.SessionVM.StatusMessage =$"⚠ No correlated logs within 60s (closest: {timeDiff.TotalSeconds:F0}s)";
                         });
                     }
                 }
@@ -139,9 +139,9 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// </summary>
         public void NavigateToLogTime(DateTime time)
         {
-            if (_parent.FilteredLogs == null || _parent.FilteredLogs.Count == 0) return;
+            if (_parent.FilterVM?.FilteredLogs == null || _parent.FilterVM.FilteredLogs.Count == 0) return;
 
-            var nearestLog = FindNearestByTime(_parent.FilteredLogs, time);
+            var nearestLog = FindNearestByTime(_parent.FilterVM.FilteredLogs, time);
             if (nearestLog != null)
                 _parent.ScrollToLog(nearestLog);
         }

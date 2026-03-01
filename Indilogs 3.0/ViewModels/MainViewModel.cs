@@ -59,7 +59,6 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand ToggleAllAnnotationsCommand { get; }
         public ICommand ToggleVisualModeCommand { get; }
 
-        public ObservableCollection<LogEntry> MarkedAppLogs => CaseVM?.MarkedAppLogs;
         private readonly ILogFileService _logService;
         private readonly ILogColoringService _coloringService;
         private readonly ICsvExportService _csvService;
@@ -80,43 +79,15 @@ namespace IndiLogs_3._0.ViewModels
 
         // Caches
         private IList<LogEntry> _allLogsCache;
-        private IList<LogEntry> _allAppLogsCache;
 
         // Coloring
         private List<ColoringCondition> _savedColoringRules = new List<ColoringCondition>();
-
-        public List<ColoringCondition> MainColoringRules
-        {
-            get => CaseVM?.MainColoringRules;
-            set { if (CaseVM != null) CaseVM.MainColoringRules = value; }
-        }
-        public List<ColoringCondition> AppColoringRules
-        {
-            get => CaseVM?.AppColoringRules;
-            set { if (CaseVM != null) CaseVM.AppColoringRules = value; }
-        }
-
-        // Case File & Annotations
-        public Dictionary<LogEntry, LogAnnotation> LogAnnotations => CaseVM?.LogAnnotations;
+        // Case Management — bind XAML directly to CaseVM.* properties
 
         private const int UI_UPDATE_BATCH_SIZE = AppConstants.UiUpdateBatchSize;
         private readonly object _collectionLock = new object();
 
-        // Collections
-        public IEnumerable<LogEntry> Logs
-        {
-            get => SessionVM?.Logs;
-            set { if (SessionVM != null) SessionVM.Logs = value; OnPropertyChanged(); }
-        }
-
-        public ObservableRangeCollection<LogEntry> FilteredLogs => FilterVM?.FilteredLogs;
-        public ObservableRangeCollection<LogEntry> AppDevLogsFiltered => FilterVM?.AppDevLogsFiltered;
-        public ObservableCollection<LoggerNode> LoggerTreeRoot => FilterVM?.LoggerTreeRoot;
-        public ObservableCollection<LoggerNode> PlcLoggerTreeRoot => FilterVM?.PlcLoggerTreeRoot;
-
-        public IList<LogEntry> AllLogsCache => SessionVM?.AllLogsCache;
-        public IList<LogEntry> AllAppLogsCache => SessionVM?.AllAppLogsCache;
-        public ObservableCollection<EventEntry> Events => SessionVM?.Events;
+        // Collections — bind XAML directly to SessionVM.* / FilterVM.* properties
 
         // Full-column DataView for EVENTS tab (all CSV columns as-is)
         private System.Data.DataView _eventsDataView;
@@ -129,12 +100,12 @@ namespace IndiLogs_3._0.ViewModels
         public void LoadEventsDataView()
         {
             EventsDataView = null;
-            if (SelectedSession?.EventsCsvRawContent == null) return;
+            if (SessionVM?.SelectedSession?.EventsCsvRawContent == null) return;
 
             try
             {
                 var dt = new System.Data.DataTable();
-                var csvContent = SelectedSession.EventsCsvRawContent;
+                var csvContent = SessionVM.SelectedSession.EventsCsvRawContent;
                 var lines = csvContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
                 if (lines.Length == 0) return;
 
@@ -185,211 +156,39 @@ namespace IndiLogs_3._0.ViewModels
             return result;
         }
 
-        public ObservableCollection<BitmapImage> Screenshots => SessionVM?.Screenshots;
-        public ObservableCollection<string> LoadedFiles => SessionVM?.LoadedFiles;
-        public ObservableCollection<LogSessionData> LoadedSessions => SessionVM?.LoadedSessions;
+        // Session/Live — bind XAML directly to SessionVM.* / LiveVM.* properties
 
-        public LogSessionData SelectedSession
-        {
-            get => SessionVM?.SelectedSession;
-            set { if (SessionVM != null) SessionVM.SelectedSession = value; }
-        }
+        // Search & Filter — bind XAML directly to FilterVM.* properties
+        // Live Mode — bind XAML directly to LiveVM.* properties
 
-        public double CurrentProgress
-        {
-            get => SessionVM?.CurrentProgress ?? 0;
-            set { if (SessionVM != null) SessionVM.CurrentProgress = value; }
-        }
+        // Case Management — bind XAML directly to CaseVM.* properties
 
-        public string StatusMessage
-        {
-            get => SessionVM?.StatusMessage;
-            set { if (SessionVM != null) SessionVM.StatusMessage = value; }
-        }
-
-        public bool IsBusy
-        {
-            get => SessionVM?.IsBusy ?? false;
-            set { if (SessionVM != null) SessionVM.IsBusy = value; }
-        }
-
-        // Search & Filter Properties
-        public string SearchText
-        {
-            get => FilterVM?.SearchText;
-            set { if (FilterVM != null) FilterVM.SearchText = value; }
-        }
-
-       
-
-        public LoggerNode SelectedTreeItem => FilterVM?.SelectedTreeItem;
-        public bool IsMainFilterActive => FilterVM?.IsMainFilterActive ?? false;
-        public bool IsAppFilterActive => FilterVM?.IsAppFilterActive ?? false;
-        public bool IsMainFilterOutActive => FilterVM?.IsMainFilterOutActive ?? false;
-        public bool IsAppFilterOutActive => FilterVM?.IsAppFilterOutActive ?? false;
-        public bool IsTimeFocusActive => FilterVM?.IsTimeFocusActive ?? false;
-        public bool IsAppTimeFocusActive => FilterVM?.IsAppTimeFocusActive ?? false;
-
-        public FilterNode MainFilterRoot
-        {
-            get => FilterVM?.MainFilterRoot;
-            set { if (FilterVM != null) FilterVM.MainFilterRoot = value; }
-        }
-        public FilterNode AppFilterRoot
-        {
-            get => FilterVM?.AppFilterRoot;
-            set { if (FilterVM != null) FilterVM.AppFilterRoot = value; }
-        }
-        public FilterNode SavedFilterRoot
-        {
-            get => FilterVM?.SavedFilterRoot;
-            set { if (FilterVM != null) FilterVM.SavedFilterRoot = value; }
-        }
-        public List<string> NegativeFilters => FilterVM?.NegativeFilters;
-        public List<string> AppNegativeFilters => FilterVM?.AppNegativeFilters;
-        public List<string> ActiveThreadFilters => FilterVM?.ActiveThreadFilters;
-        public List<LogEntry> LastFilteredCache
-        {
-            get => FilterVM?.LastFilteredCache;
-            set { if (FilterVM != null) FilterVM.LastFilteredCache = value; }
-        }
-        public List<LogEntry> LastFilteredAppCache
-        {
-            get => FilterVM?.LastFilteredAppCache;
-            set { if (FilterVM != null) FilterVM.LastFilteredAppCache = value; }
-        }
-        public HashSet<string> TreeHiddenLoggers => FilterVM?.TreeHiddenLoggers;
-        public HashSet<string> TreeHiddenPrefixes => FilterVM?.TreeHiddenPrefixes;
-        public string TreeShowOnlyLogger
-        {
-            get => FilterVM?.TreeShowOnlyLogger;
-            set { if (FilterVM != null) FilterVM.TreeShowOnlyLogger = value; }
-        }
-        public string TreeShowOnlyPrefix
-        {
-            get => FilterVM?.TreeShowOnlyPrefix;
-            set { if (FilterVM != null) FilterVM.TreeShowOnlyPrefix = value; }
-        }
-        public bool IsSearchPanelVisible
-        {
-            get => FilterVM?.IsSearchPanelVisible ?? false;
-            set
-            {
-                if (FilterVM != null)
-                    FilterVM.IsSearchPanelVisible = value;
-                OnPropertyChanged();
-            }
-        }
-        // Live Mode
-        public bool IsLiveMode
-        {
-            get => LiveVM?.IsLiveMode ?? false;
-            set { if (LiveVM != null) LiveVM.IsLiveMode = value; }
-        }
-        public bool IsRunning
-        {
-            get => LiveVM?.IsRunning ?? false;
-            set { if (LiveVM != null) LiveVM.IsRunning = value; }
-        }
-        public bool IsPaused => LiveVM?.IsPaused ?? false;
-
-        // Case Management
-        public ObservableCollection<SavedConfiguration> SavedConfigs
-        {
-            get => CaseVM?.SavedConfigs;
-            set { /* Read-only collection */ }
-        }
-        public ObservableCollection<LogEntry> MarkedLogs
-        {
-            get => CaseVM?.MarkedLogs;
-            set { /* Read-only collection */ }
-        }
-        public SavedConfiguration SelectedConfig
-        {
-            get => CaseVM?.SelectedConfig;
-            set { if (CaseVM != null) CaseVM.SelectedConfig = value; }
-        }
-        public bool IsMarkedLogsCombined
-        {
-            get => CaseVM?.IsMarkedLogsCombined ?? false;
-            set { if (CaseVM != null) CaseVM.IsMarkedLogsCombined = value; }
-        }
-        public bool ShowAllAnnotations
-        {
-            get => CaseVM?.ShowAllAnnotations ?? false;
-            set { if (CaseVM != null) CaseVM.ShowAllAnnotations = value; }
-        }
-
-        // Config Explorer
-        public ObservableCollection<string> ConfigurationFiles => ConfigVM?.ConfigurationFiles;
-        public string SelectedConfigFile
-        {
-            get => ConfigVM?.SelectedConfigFile;
-            set { if (ConfigVM != null) ConfigVM.SelectedConfigFile = value; }
-        }
-        public string ConfigFileContent
-        {
-            get => ConfigVM?.ConfigFileContent;
-            set { if (ConfigVM != null) ConfigVM.ConfigFileContent = value; }
-        }
-        public string FilteredConfigContent => ConfigVM?.FilteredConfigContent;
-        public string ConfigSearchText
-        {
-            get => ConfigVM?.ConfigSearchText;
-            set { if (ConfigVM != null) ConfigVM.ConfigSearchText = value; }
-        }
-        public ObservableCollection<DbTreeNode> DbTreeNodes => ConfigVM?.DbTreeNodes;
-        public bool IsDbFileSelected
-        {
-            get => ConfigVM?.IsDbFileSelected ?? false;
-            set { if (ConfigVM != null) ConfigVM.IsDbFileSelected = value; }
-        }
-        public bool IsCsvFileSelected
-        {
-            get => ConfigVM?.IsCsvFileSelected ?? false;
-            set { if (ConfigVM != null) ConfigVM.IsCsvFileSelected = value; }
-        }
-        public System.Data.DataView CsvDataView => ConfigVM?.CsvDataView;
-        public bool IsExplorerMenuOpen
-        {
-            get => ConfigVM?.IsExplorerMenuOpen ?? false;
-            set { if (ConfigVM != null) ConfigVM.IsExplorerMenuOpen = value; }
-        }
-        public bool IsConfigMenuOpen
-        {
-            get => ConfigVM?.IsConfigMenuOpen ?? false;
-            set { if (ConfigVM != null) ConfigVM.IsConfigMenuOpen = value; }
-        }
-        public bool IsLoggersMenuOpen
-        {
-            get => ConfigVM?.IsLoggersMenuOpen ?? false;
-            set { if (ConfigVM != null) ConfigVM.IsLoggersMenuOpen = value; }
-        }
+        // Config Explorer — bind XAML directly to ConfigVM.* properties
 
         // Dynamic tab header: "TERMINALS" for binary APP logs, "DB & CONFIG" otherwise
         public string DbConfigTabHeader =>
-            SelectedSession?.HasBinaryAppLogs == true ? "TERMINALS" : "DB & CONFIG";
+            SessionVM?.SelectedSession?.HasBinaryAppLogs == true ? "TERMINALS" : "DB & CONFIG";
 
         // Dynamic tab header: "PLC-FW" for S4 (binary APP logs), "PLC LOGS" otherwise
         public string PlcTabHeader =>
-            SelectedSession?.HasBinaryAppLogs == true ? "PLC-FW" : "PLC LOGS";
+            SessionVM?.SelectedSession?.HasBinaryAppLogs == true ? "PLC-FW" : "PLC LOGS";
 
         // Hide SetupInfo tab when APP files are binary
         public bool HasBinaryAppLogs =>
-            SelectedSession?.HasBinaryAppLogs == true;
+            SessionVM?.SelectedSession?.HasBinaryAppLogs == true;
 
-        public bool HasSessionLoaded => SelectedSession != null;
+        public bool HasSessionLoaded => SessionVM?.SelectedSession != null;
 
         /// <summary>True when no ZIP session is loaded but an external file is open in Different Logs.</summary>
-        public bool HasExternalFileOnly => SelectedSession == null && DifferentLogsVM?.HasFile == true;
+        public bool HasExternalFileOnly => SessionVM?.SelectedSession == null && DifferentLogsVM?.HasFile == true;
 
         /// <summary>Controls MainTabs visibility: shown when a session is loaded OR an external file is open.</summary>
         public bool ShowMainTabs => HasSessionLoaded || HasExternalFileOnly;
 
         // Show Globals tab only when loaded from a ZIP that contains globals files
         public bool HasGlobalsFiles =>
-            SelectedSession?.GlobalsFiles != null && SelectedSession.GlobalsFiles.Count > 0 &&
-            SelectedSession.FilePath != null && SelectedSession.FilePath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
+            SessionVM?.SelectedSession?.GlobalsFiles != null && SessionVM.SelectedSession.GlobalsFiles.Count > 0 &&
+            SessionVM.SelectedSession.FilePath != null && SessionVM.SelectedSession.FilePath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
 
         // --- PANEL VISIBILITY ---
         private bool _isLeftPanelVisible = true;
@@ -575,7 +374,7 @@ namespace IndiLogs_3._0.ViewModels
 
         // Dynamic logger tree: PLC loggers for PLC tabs, APP loggers for APP tab
         public ObservableCollection<LoggerNode> ActiveLoggerTree =>
-            IsPLCTabSelected ? PlcLoggerTreeRoot : LoggerTreeRoot;
+            IsPLCTabSelected ? FilterVM?.PlcLoggerTreeRoot : FilterVM?.LoggerTreeRoot;
 
         public string LoggerTabTitle =>
             IsPLCTabSelected ? "PLC LOGGERS" : "APP LOGGERS";
@@ -677,17 +476,17 @@ namespace IndiLogs_3._0.ViewModels
 
         private void ValidateSearchSyntax()
         {
-            if (string.IsNullOrWhiteSpace(SearchText))
+            if (string.IsNullOrWhiteSpace(FilterVM?.SearchText))
             {
                 IsSearchSyntaxValid = true;
                 SearchSyntaxError = null;
                 return;
             }
 
-            if (QueryParserService.HasBooleanOperators(SearchText))
+            if (QueryParserService.HasBooleanOperators(FilterVM.SearchText))
             {
                 var parser = new QueryParserService();
-                var result = parser.Parse(SearchText, out string errorMessage);
+                var result = parser.Parse(FilterVM.SearchText, out string errorMessage);
 
                 if (result == null)
                 {
@@ -712,7 +511,7 @@ namespace IndiLogs_3._0.ViewModels
             get
             {
                 if (SelectedTabIndex == AppConstants.TAB_DIFFERENT_LOGS) return DifferentLogsVM?.IsFilterActive ?? false;
-                return SelectedTabIndex == AppConstants.TAB_APP ? IsAppFilterActive : IsMainFilterActive;
+                return SelectedTabIndex == AppConstants.TAB_APP ? (FilterVM?.IsAppFilterActive ?? false) : (FilterVM?.IsMainFilterActive ?? false);
             }
             set
             {
@@ -809,7 +608,7 @@ namespace IndiLogs_3._0.ViewModels
 
         public bool IsFilterOutActive
         {
-            get => SelectedTabIndex == AppConstants.TAB_APP ? IsAppFilterOutActive : IsMainFilterOutActive;
+            get => SelectedTabIndex == AppConstants.TAB_APP ? (FilterVM?.IsAppFilterOutActive ?? false) : (FilterVM?.IsMainFilterOutActive ?? false);
             set
             {
                 // Save the currently selected log and its scroll position BEFORE changing filter state
@@ -1013,11 +812,6 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand SetAsDefaultCommand { get; }
         public ICommand ResetDefaultsCommand { get; }
 
-        public MainViewModel()
-            : this(new LogFileService(new PluginLoader()), new LogColoringService(), new CsvExportService(), new DefaultConfigurationService())
-        {
-        }
-
         public MainViewModel(ILogFileService logService, ILogColoringService coloringService, ICsvExportService csvService, IDefaultConfigurationService defaultConfigService)
         {
             _logService = logService;
@@ -1035,7 +829,7 @@ namespace IndiLogs_3._0.ViewModels
             ChartVM = new ChartTabViewModel(this);
             CprVM = new CprAnalysisViewModel();
             DifferentLogsVM = new DifferentLogsViewModel(_logService.GetPluginLoader());
-            DifferentLogsVM.GetCurrentZipPath = () => SelectedSession?.FilePath;
+            DifferentLogsVM.GetCurrentZipPath = () => SessionVM?.SelectedSession?.FilePath;
             StepRecorderVM = new StepRecorderViewModel();
 
             // Set dependencies
@@ -1059,15 +853,13 @@ namespace IndiLogs_3._0.ViewModels
             OpenIndigoInvadersCommand = new RelayCommand(OpenIndigoInvaders);
 
             _allLogsCache = SessionVM.AllLogsCache;
-            SavedConfigs = new ObservableCollection<SavedConfiguration>();
-            MarkedLogs = new ObservableCollection<LogEntry>();
             AvailableFonts = new ObservableCollection<string>();
             if (Fonts.SystemFontFamilies != null)
                 foreach (var font in Fonts.SystemFontFamilies.OrderBy(f => f.Source)) AvailableFonts.Add(font.Source);
 
-            ToggleExplorerMenuCommand = new RelayCommand(o => IsExplorerMenuOpen = !IsExplorerMenuOpen);
-            ToggleConfigMenuCommand = new RelayCommand(o => IsConfigMenuOpen = !IsConfigMenuOpen);
-            ToggleLoggersMenuCommand = new RelayCommand(o => IsLoggersMenuOpen = !IsLoggersMenuOpen);
+            ToggleExplorerMenuCommand = new RelayCommand(o => ConfigVM.IsExplorerMenuOpen = !ConfigVM.IsExplorerMenuOpen);
+            ToggleConfigMenuCommand = new RelayCommand(o => ConfigVM.IsConfigMenuOpen = !ConfigVM.IsConfigMenuOpen);
+            ToggleLoggersMenuCommand = new RelayCommand(o => ConfigVM.IsLoggersMenuOpen = !ConfigVM.IsLoggersMenuOpen);
             ToggleTimeSyncCommand = new RelayCommand(o => IsTimeSyncEnabled = !IsTimeSyncEnabled);
             ToggleLeftPanelCommand = new RelayCommand(o => IsLeftPanelVisible = !IsLeftPanelVisible);
             ToggleRightPanelCommand = new RelayCommand(o => IsRightPanelVisible = !IsRightPanelVisible);
@@ -1080,7 +872,7 @@ namespace IndiLogs_3._0.ViewModels
             ToggleAllAnnotationsCommand = new RelayCommand(ToggleAllAnnotations);
 
             LoadCommand = SessionVM.LoadCommand;
-            ClearCommand = new RelayCommand(o => { SessionVM.ClearCommand.Execute(o); IsExplorerMenuOpen = false; });
+            ClearCommand = new RelayCommand(o => { SessionVM.ClearCommand.Execute(o); ConfigVM.IsExplorerMenuOpen = false; });
             RemoveSessionCommand = SessionVM.RemoveSessionCommand;
             MarkRowCommand = new RelayCommand(MarkRow);
             NextMarkedCommand = new RelayCommand(GoToNextMarked);
@@ -1091,12 +883,12 @@ namespace IndiLogs_3._0.ViewModels
             OpenKibanaCommand = new RelayCommand(OpenKibana);
             OpenOutlookCommand = new RelayCommand(OpenOutlook);
 
-            OpenMarkedLogsWindowCommand = new RelayCommand(o => { OpenMarkedLogsWindow(o); IsExplorerMenuOpen = false; });
-            OpenStatesWindowCommand = new RelayCommand(o => { OpenStatesWindow(o); IsExplorerMenuOpen = false; });
-            ExportParsedDataCommand = new RelayCommand(o => { _ = ExportParsedData(o); IsExplorerMenuOpen = false; });
-            RunAnalysisCommand = new RelayCommand(o => { RunAnalysis(o); IsExplorerMenuOpen = false; });
-            OpenGlobalGrepCommand = new RelayCommand(o => { OpenGlobalGrepWindow(); IsExplorerMenuOpen = false; });
-            OpenStripeAnalysisCommand = new RelayCommand(o => { _ = OpenStripeAnalysisWindow(); IsExplorerMenuOpen = false; });
+            OpenMarkedLogsWindowCommand = new RelayCommand(o => { OpenMarkedLogsWindow(o); ConfigVM.IsExplorerMenuOpen = false; });
+            OpenStatesWindowCommand = new RelayCommand(o => { OpenStatesWindow(o); ConfigVM.IsExplorerMenuOpen = false; });
+            ExportParsedDataCommand = new RelayCommand(o => { _ = ExportParsedData(o); ConfigVM.IsExplorerMenuOpen = false; });
+            RunAnalysisCommand = new RelayCommand(o => { RunAnalysis(o); ConfigVM.IsExplorerMenuOpen = false; });
+            OpenGlobalGrepCommand = new RelayCommand(o => { OpenGlobalGrepWindow(); ConfigVM.IsExplorerMenuOpen = false; });
+            OpenStripeAnalysisCommand = new RelayCommand(o => { _ = OpenStripeAnalysisWindow(); ConfigVM.IsExplorerMenuOpen = false; });
             OpenComparisonCommand = new RelayCommand(o => { OpenComparisonWindow(); }, o => SessionVM.AllLogsCache?.Count > 0 || SessionVM.AllAppLogsCache?.Count > 0);
 
             ToggleSearchCommand = FilterVM.ToggleSearchCommand;
@@ -1105,9 +897,9 @@ namespace IndiLogs_3._0.ViewModels
             OpenFilterWindowCommand = FilterVM.OpenFilterWindowCommand;
             OpenColoringWindowCommand = CaseVM.OpenColoringWindowCommand;
 
-            SaveConfigCommand = new RelayCommand(o => { SaveConfiguration(o); IsConfigMenuOpen = false; });
-            LoadConfigCommand = new RelayCommand(o => { LoadConfigurationFromFile(o); IsConfigMenuOpen = false; });
-            RemoveConfigCommand = new RelayCommand(o => { RemoveConfiguration(o); IsConfigMenuOpen = false; }, o => SelectedConfig != null);
+            SaveConfigCommand = new RelayCommand(o => { SaveConfiguration(o); ConfigVM.IsConfigMenuOpen = false; });
+            LoadConfigCommand = new RelayCommand(o => { LoadConfigurationFromFile(o); ConfigVM.IsConfigMenuOpen = false; });
+            RemoveConfigCommand = new RelayCommand(o => { RemoveConfiguration(o); ConfigVM.IsConfigMenuOpen = false; }, o => CaseVM?.SelectedConfig != null);
             ApplyConfigCommand = new RelayCommand(ApplyConfiguration);
             ShowConfigsFolderCommand = CaseVM.ShowConfigsFolderCommand;
 
@@ -1203,11 +995,11 @@ namespace IndiLogs_3._0.ViewModels
         private void InitializeVisualMode()
         {
             // Use filtered logs if time range is active, otherwise use all logs
-            var logsToUse = FilterVM.IsGlobalTimeRangeActive ? Logs : (SessionVM.AllLogsCache ?? Logs);
+            var logsToUse = FilterVM.IsGlobalTimeRangeActive ? SessionVM.Logs : (SessionVM.AllLogsCache ?? SessionVM.Logs);
             if (VisualTimelineVM != null)
             {
                 // S4-5 (binary APP): skip Events on timeline — user only needs states + errors
-                var eventsToShow = HasBinaryAppLogs ? null : Events;
+                var eventsToShow = HasBinaryAppLogs ? null : SessionVM?.Events;
                 VisualTimelineVM.LoadData(logsToUse.ToList(), eventsToShow);
             }
         }
@@ -1252,8 +1044,8 @@ namespace IndiLogs_3._0.ViewModels
                 log.IsAnnotationExpanded = newState;
             }
 
-            ShowAllAnnotations = newState;
-            StatusMessage = newState ? "All annotations expanded" : "All annotations collapsed";
+            if (CaseVM != null) CaseVM.ShowAllAnnotations = newState;
+            SessionVM.StatusMessage =newState ? "All annotations expanded" : "All annotations collapsed";
         }
 
         private void CloseAnnotation(object parameter) => CaseVM?.CloseAnnotationCommand.Execute(parameter);
@@ -1338,26 +1130,26 @@ namespace IndiLogs_3._0.ViewModels
 
         private void LiveClear(object obj)
         {
-            IsRunning = false;
+            LiveVM.IsRunning = false;
 
             Application.Current.Dispatcher.Invoke(() =>
             {
                 lock (_collectionLock)
                 {
                     if (SessionVM.AllLogsCache != null) SessionVM.AllLogsCache.Clear();
-                    FilteredLogs?.Clear();
+                    FilterVM?.FilteredLogs?.Clear();
                     SelectedLog = null;
                 }
             });
 
-            if (IsLiveMode)
+            if (LiveVM.IsLiveMode)
             {
-                IsRunning = true;
-                StatusMessage = "Cleared. Monitoring continues...";
+                LiveVM.IsRunning = true;
+                SessionVM.StatusMessage ="Cleared. Monitoring continues...";
             }
             else
             {
-                StatusMessage = "Logs cleared.";
+                SessionVM.StatusMessage ="Logs cleared.";
             }
         }
 
@@ -1386,15 +1178,13 @@ namespace IndiLogs_3._0.ViewModels
                     FilterVM.ActiveLoggerFilters?.Clear();
                     FilterVM.ActiveMethodFilters?.Clear();
 
-                    if (LoggerTreeRoot != null)
+                    if (FilterVM?.LoggerTreeRoot != null)
                     {
-                        LoggerTreeRoot.Clear();
-                        OnPropertyChanged(nameof(LoggerTreeRoot));
+                        FilterVM.LoggerTreeRoot.Clear();
                     }
-                    if (PlcLoggerTreeRoot != null)
+                    if (FilterVM?.PlcLoggerTreeRoot != null)
                     {
-                        PlcLoggerTreeRoot.Clear();
-                        OnPropertyChanged(nameof(PlcLoggerTreeRoot));
+                        FilterVM.PlcLoggerTreeRoot.Clear();
                         OnPropertyChanged(nameof(ActiveLoggerTree));
                     }
 
@@ -1402,17 +1192,10 @@ namespace IndiLogs_3._0.ViewModels
                     FilterVM.IsSearchPanelVisible = false;
                 }
 
-                Logs = new List<LogEntry>();
-                OnPropertyChanged(nameof(Logs));
+                SessionVM.Logs = new List<LogEntry>();
 
                 ConfigVM?.ClearConfigurationFiles();
-                OnPropertyChanged(nameof(ConfigurationFiles));
-                OnPropertyChanged(nameof(DbTreeNodes));
-                OnPropertyChanged(nameof(SelectedConfigFile));
-                OnPropertyChanged(nameof(ConfigFileContent));
-                OnPropertyChanged(nameof(FilteredConfigContent));
-                OnPropertyChanged(nameof(ConfigSearchText));
-                OnPropertyChanged(nameof(IsDbFileSelected));
+                // ConfigVM properties refresh automatically via their own PropertyChanged
 
                 SetupInfo = "";
                 OnPropertyChanged(nameof(SetupInfo));
@@ -1423,9 +1206,9 @@ namespace IndiLogs_3._0.ViewModels
                 WindowTitle = "IndiLogs 3.0";
                 OnPropertyChanged(nameof(WindowTitle));
 
-                CurrentProgress = 0;
+                SessionVM.CurrentProgress = 0;
                 ScreenshotZoom = 400;
-                SelectedSession = null;
+                SessionVM.SelectedSession = null;
                 SelectedLog = null;
                 IsFilterOutActive = false;
                 OnPropertyChanged(nameof(IsFilterActive));
@@ -1443,11 +1226,11 @@ namespace IndiLogs_3._0.ViewModels
                 LeftTabIndex = 0;
                 OnPropertyChanged(nameof(LeftTabIndex));
 
-                StatusMessage = "All data cleared successfully";
+                SessionVM.StatusMessage ="All data cleared successfully";
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Clear failed: {ex.Message}";
+                SessionVM.StatusMessage =$"Clear failed: {ex.Message}";
             }
         }
         private void OpenStatesWindow(object obj)
@@ -1459,13 +1242,13 @@ namespace IndiLogs_3._0.ViewModels
                 return;
             }
 
-            if (SelectedSession == null) { MessageBox.Show("No logs loaded."); return; }
+            if (SessionVM.SelectedSession == null) { MessageBox.Show("No logs loaded."); return; }
 
-            if (SelectedSession.CachedStates != null && SelectedSession.CachedStates.Count > 0)
+            if (SessionVM.SelectedSession.CachedStates != null && SessionVM.SelectedSession.CachedStates.Count > 0)
             {
                 if (_statesWindow != null && _statesWindow.IsVisible) { WindowManager.ActivateWindow(_statesWindow); return; }
 
-                _statesWindow = new StatesWindow(SelectedSession.CachedStates, this);
+                _statesWindow = new StatesWindow(SessionVM.SelectedSession.CachedStates, this);
                 _statesWindow.Closed += (s, e) => _statesWindow = null;
                 WindowManager.OpenWindow(_statesWindow);
             }
@@ -1489,7 +1272,7 @@ namespace IndiLogs_3._0.ViewModels
             FilterVM.LastFilteredCache?.Clear();
             FilterVM.LastFilteredAppCache = null;
             FilterVM.SavedFilterRoot = null;
-            SearchText = string.Empty;
+            FilterVM.SearchText = string.Empty;
             FilterVM.IsMainFilterActive = false;
             FilterVM.IsAppFilterActive = false;
             FilterVM.IsMainFilterOutActive = false;
@@ -1506,12 +1289,12 @@ namespace IndiLogs_3._0.ViewModels
 
             InitializeVisualMode();
 
-            StatusMessage = "Filter reset. Showing all data.";
+            SessionVM.StatusMessage ="Filter reset. Showing all data.";
         }
 
         private void RunAnalysis(object obj)
         {
-            if (SelectedSession == null)
+            if (SessionVM.SelectedSession == null)
             {
                 MessageBox.Show("No logs loaded.");
                 return;
@@ -1557,9 +1340,9 @@ namespace IndiLogs_3._0.ViewModels
                 return;
             }
 
-            if (SelectedSession.CachedAnalysis != null && SelectedSession.CachedAnalysis.Any())
+            if (SessionVM.SelectedSession.CachedAnalysis != null && SessionVM.SelectedSession.CachedAnalysis.Any())
             {
-                OpenAnalysisWindow(SelectedSession.CachedAnalysis);
+                OpenAnalysisWindow(SessionVM.SelectedSession.CachedAnalysis);
             }
             else
             {
@@ -1603,7 +1386,7 @@ namespace IndiLogs_3._0.ViewModels
                     // Switch to PLC tab to show filtered results
                     SelectedTabIndex = AppConstants.TAB_PLC;
 
-                    int logCount = Logs?.Count() ?? 0;
+                    int logCount = SessionVM?.Logs?.Count() ?? 0;
                     MessageBox.Show($"Filter applied: Logger = {filterValue}\n\nShowing {logCount} matching logs.",
                         "Logger Filter Applied", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -1617,7 +1400,7 @@ namespace IndiLogs_3._0.ViewModels
                     // Switch to PLC tab to show filtered results
                     SelectedTabIndex = AppConstants.TAB_PLC;
 
-                    int logCount = Logs?.Count() ?? 0;
+                    int logCount = SessionVM?.Logs?.Count() ?? 0;
                     MessageBox.Show($"Filter applied: STATE = {filterValue}\n\nShowing {logCount} matching logs.",
                         "State Filter Applied", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -1651,8 +1434,8 @@ namespace IndiLogs_3._0.ViewModels
         {
             if (obj is StateEntry state)
             {
-                IsBusy = true;
-                StatusMessage = $"Focusing state: {state.StateName}...";
+                SessionVM.IsBusy = true;
+                SessionVM.StatusMessage =$"Focusing state: {state.StateName}...";
 
                 Task.Run(() =>
                 {
@@ -1678,23 +1461,23 @@ namespace IndiLogs_3._0.ViewModels
                                 if (FilterVM.FilteredLogs.Count > 0) SelectedLog = FilterVM.FilteredLogs[0];
                             }
                             OnPropertyChanged(nameof(IsFilterActive));
-                            StatusMessage = $"State: {state.StateName} | Main: {timeSlice.Count}, Filtered: {smartFiltered.Count}";
+                            SessionVM.StatusMessage =$"State: {state.StateName} | Main: {timeSlice.Count}, Filtered: {smartFiltered.Count}";
 
                             if (IsVisualMode && VisualTimelineVM != null)
                             {
                                 // Use filtered logs if time range is active
-                                var logsForVisual = FilterVM.IsGlobalTimeRangeActive ? Logs : SessionVM.AllLogsCache.ToList();
-                                var eventsToShow = HasBinaryAppLogs ? null : Events;
+                                var logsForVisual = FilterVM.IsGlobalTimeRangeActive ? SessionVM.Logs : SessionVM.AllLogsCache.ToList();
+                                var eventsToShow = HasBinaryAppLogs ? null : SessionVM?.Events;
                                 VisualTimelineVM.LoadData(logsForVisual, eventsToShow);
                                 VisualTimelineVM.FocusOnState(state.StateName);
                             }
 
-                            IsBusy = false;
+                            SessionVM.IsBusy =false;
                         });
                     }
                     else
                     {
-                        IsBusy = false;
+                        SessionVM.IsBusy =false;
                     }
                 });
             }
@@ -1702,16 +1485,16 @@ namespace IndiLogs_3._0.ViewModels
         private void FilterAppErrors(object obj)
         {
             if (SessionVM.AllAppLogsCache == null || !SessionVM.AllAppLogsCache.Any()) return;
-            IsBusy = true;
-            StatusMessage = "Filtering App Errors...";
+            SessionVM.IsBusy = true;
+            SessionVM.StatusMessage ="Filtering App Errors...";
             Task.Run(() =>
             {
                 var errors = SessionVM.AllAppLogsCache.Where(l => l.Level != null && l.Level.Equals("Error", StringComparison.OrdinalIgnoreCase)).OrderByDescending(l => l.Date).ToList();
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     FilterVM?.AppDevLogsFiltered?.ReplaceAll(errors);
-                    IsBusy = false;
-                    StatusMessage = $"Showing {errors.Count} Errors";
+                    SessionVM.IsBusy =false;
+                    SessionVM.StatusMessage =$"Showing {errors.Count} Errors";
                     FilterVM.IsAppErrorFilterActive = true;
                     FilterVM.IsAppFilterActive = true;
                     OnPropertyChanged(nameof(IsFilterActive));
@@ -1735,7 +1518,8 @@ namespace IndiLogs_3._0.ViewModels
             FilterVM.TreeHiddenPrefixes.Clear();
             FilterVM.TreeShowOnlyLogger = null;
             FilterVM.TreeShowOnlyPrefix = null;
-            foreach (var node in LoggerTreeRoot) ResetVisualHiddenState(node);
+            if (FilterVM?.LoggerTreeRoot != null)
+                foreach (var node in FilterVM.LoggerTreeRoot) ResetVisualHiddenState(node);
         }
         private void ResetVisualHiddenState(LoggerNode node)
         {
@@ -1754,13 +1538,13 @@ namespace IndiLogs_3._0.ViewModels
         {
             try
             {
-            if (AppDevLogsFiltered == null || AppDevLogsFiltered.Count == 0) return;
-            IsBusy = true;
-            StatusMessage = "Sorting...";
+            if (FilterVM?.AppDevLogsFiltered == null || FilterVM.AppDevLogsFiltered.Count == 0) return;
+            SessionVM.IsBusy = true;
+            SessionVM.StatusMessage ="Sorting...";
             await Task.Run(() =>
             {
                 List<LogEntry> sorted = null;
-                var source = AppDevLogsFiltered.ToList();
+                var source = FilterVM.AppDevLogsFiltered.ToList();
                 switch (sortBy)
                 {
                     case "Time": sorted = ascending ? source.OrderBy(x => x.Date).ToList() : source.OrderByDescending(x => x.Date).ToList(); break;
@@ -1771,9 +1555,9 @@ namespace IndiLogs_3._0.ViewModels
                 }
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    AppDevLogsFiltered.ReplaceAll(sorted);
-                    IsBusy = false;
-                    StatusMessage = "Sorted.";
+                    FilterVM.AppDevLogsFiltered.ReplaceAll(sorted);
+                    SessionVM.IsBusy =false;
+                    SessionVM.StatusMessage ="Sorted.";
                 });
             });
             }
@@ -1844,7 +1628,7 @@ namespace IndiLogs_3._0.ViewModels
             {
                 var newRoot = win.ViewModel.RootNodes.FirstOrDefault();
                 bool hasAdvanced = newRoot != null && newRoot.Children.Count > 0;
-                IsBusy = true;
+                SessionVM.IsBusy = true;
                 await Task.Run(() =>
                 {
                     if (isAppTab) FilterVM.AppFilterRoot = newRoot;
@@ -1870,7 +1654,7 @@ namespace IndiLogs_3._0.ViewModels
                     if (isAppTab) { FilterVM.IsAppFilterActive = hasAdvanced; ApplyAppLogsFilter(); }
                     else { FilterVM.IsMainFilterActive = hasAdvanced || FilterVM.ActiveThreadFilters.Any(); UpdateMainLogsFilter(FilterVM.IsMainFilterActive); }
                     OnPropertyChanged(nameof(IsFilterActive));
-                    IsBusy = false;
+                    SessionVM.IsBusy =false;
                 });
             }
             }
@@ -1882,17 +1666,18 @@ namespace IndiLogs_3._0.ViewModels
         {
             try
             {
-            if (SelectedSession == null)
+            if (SessionVM.SelectedSession == null)
             {
                 MessageBox.Show("No logs loaded.", "Info");
                 return;
             }
 
+            var selectedSession = SessionVM.SelectedSession;
             // S4-5 (binary APP): allow export even without parsed PLC logs — IO data comes from CSV
-            bool hasLogs = SelectedSession.Logs != null && SelectedSession.Logs.Any();
-            bool hasIoCsv = SelectedSession.HasBinaryAppLogs &&
-                            ((SelectedSession.TerminalCsvBytes != null && SelectedSession.TerminalCsvBytes.Keys.Any(k => k.StartsWith("Io-", StringComparison.OrdinalIgnoreCase))) ||
-                             (SelectedSession.TerminalLogFiles != null && SelectedSession.TerminalLogFiles.Keys.Any(k => k.StartsWith("Io-", StringComparison.OrdinalIgnoreCase))));
+            bool hasLogs = selectedSession.Logs != null && selectedSession.Logs.Any();
+            bool hasIoCsv = selectedSession.HasBinaryAppLogs &&
+                            ((selectedSession.TerminalCsvBytes != null && selectedSession.TerminalCsvBytes.Keys.Any(k => k.StartsWith("Io-", StringComparison.OrdinalIgnoreCase))) ||
+                             (selectedSession.TerminalLogFiles != null && selectedSession.TerminalLogFiles.Keys.Any(k => k.StartsWith("Io-", StringComparison.OrdinalIgnoreCase))));
 
             if (!hasLogs && !hasIoCsv)
             {
@@ -1907,7 +1692,7 @@ namespace IndiLogs_3._0.ViewModels
             }
 
             _exportConfigWindow = new ExportConfigurationWindow();
-            var viewModel = new ExportConfigurationViewModel(SelectedSession, _csvService);
+            var viewModel = new ExportConfigurationViewModel(selectedSession, _csvService);
             _exportConfigWindow.DataContext = viewModel;
             _exportConfigWindow.Closed += (s, e) => _exportConfigWindow = null;
             WindowManager.OpenWindow(_exportConfigWindow);
@@ -2068,15 +1853,9 @@ namespace IndiLogs_3._0.ViewModels
         private void OpenGlobalGrepWindow()
         {
             // יצירת אוסף ריק במידה ולא נטענו סשנים, כדי לאפשר לחלון להיפתח
-            var sessions = LoadedSessions ?? new ObservableCollection<LogSessionData>();
+            var sessions = SessionVM?.LoadedSessions ?? new ObservableCollection<LogSessionData>();
 
             var viewModel = new GlobalGrepViewModel(sessions);
-
-            // אם אין קבצים טעונים, נגדיר את ברירת המחדל לחיפוש חיצוני
-            if (!sessions.Any())
-            {
-                viewModel.SearchMode = GlobalGrepViewModel.SearchModeType.ExternalFiles;
-            }
 
             var window = new GlobalGrepWindow(viewModel, NavigateToGrepResult, LoadMultipleFiles);
             WindowManager.OpenWindow(window);
@@ -2142,9 +1921,9 @@ namespace IndiLogs_3._0.ViewModels
             if (result.ReferencedLogEntry != null && result.SessionIndex >= 0)
             {
                 // Navigate to the loaded session
-                if (result.SessionIndex < LoadedSessions.Count)
+                if (result.SessionIndex < SessionVM.LoadedSessions.Count)
                 {
-                    SelectedSession = LoadedSessions[result.SessionIndex];
+                    SessionVM.SelectedSession = SessionVM.LoadedSessions[result.SessionIndex];
 
                     // Switch to the appropriate tab (0 for PLC, 1 for APP)
                     SelectedTabIndex = (result.LogType == "APP") ? 1 : 0;
@@ -2161,11 +1940,11 @@ namespace IndiLogs_3._0.ViewModels
             if (string.IsNullOrEmpty(result.FilePath)) return;
 
             // Check if the file is already loaded
-            var session = LoadedSessions.FirstOrDefault(s => s.FilePath == result.FilePath);
+            var session = SessionVM.LoadedSessions.FirstOrDefault(s => s.FilePath == result.FilePath);
 
             if (session != null)
             {
-                SelectedSession = session;
+                SessionVM.SelectedSession = session;
                 JumpByTime(result, session);
             }
             else
@@ -2175,7 +1954,7 @@ namespace IndiLogs_3._0.ViewModels
                 {
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        SelectedSession = loadedSession;
+                        SessionVM.SelectedSession = loadedSession;
                         JumpByTime(result, loadedSession);
                     });
                 });
@@ -2212,7 +1991,7 @@ namespace IndiLogs_3._0.ViewModels
             if (fileList == null || fileList.Count == 0) return;
 
             // Get list of already loaded files
-            var loadedFilePaths = LoadedSessions.Select(s => s.FilePath).ToList();
+            var loadedFilePaths = SessionVM.LoadedSessions.Select(s => s.FilePath).ToList();
 
             // Show file selection window
             var fileSelectionWindow = new Views.FileSelectionWindow(fileList, loadedFilePaths);
@@ -2240,7 +2019,7 @@ namespace IndiLogs_3._0.ViewModels
         /// </summary>
         private void OpenKibana(object obj)
         {
-            string zipPath = SelectedSession?.FilePath ?? string.Empty;
+            string zipPath = SessionVM?.SelectedSession?.FilePath ?? string.Empty;
             string machineName = string.Empty;
 
             if (!string.IsNullOrEmpty(zipPath))
@@ -2326,15 +2105,7 @@ namespace IndiLogs_3._0.ViewModels
         {
             switch (e.PropertyName)
             {
-                case nameof(SessionVM.Logs): OnPropertyChanged(nameof(Logs)); break;
-                case nameof(SessionVM.AllLogsCache): OnPropertyChanged(nameof(AllLogsCache)); break;
-                case nameof(SessionVM.AllAppLogsCache): OnPropertyChanged(nameof(AllAppLogsCache)); break;
-                case nameof(SessionVM.Events): OnPropertyChanged(nameof(Events)); break;
-                case nameof(SessionVM.Screenshots): OnPropertyChanged(nameof(Screenshots)); break;
-                case nameof(SessionVM.LoadedFiles): OnPropertyChanged(nameof(LoadedFiles)); break;
-                case nameof(SessionVM.LoadedSessions): OnPropertyChanged(nameof(LoadedSessions)); break;
                 case nameof(SessionVM.SelectedSession):
-                    OnPropertyChanged(nameof(SelectedSession));
                     OnPropertyChanged(nameof(PlcTabHeader));
                     OnPropertyChanged(nameof(HasBinaryAppLogs));
                     OnPropertyChanged(nameof(IsPrintAnalysisVisible));
@@ -2343,9 +2114,6 @@ namespace IndiLogs_3._0.ViewModels
                     OnPropertyChanged(nameof(HasExternalFileOnly));
                     _ = OnSelectedSessionChangedAsync(SessionVM.SelectedSession);
                     break;
-                case nameof(SessionVM.CurrentProgress): OnPropertyChanged(nameof(CurrentProgress)); break;
-                case nameof(SessionVM.StatusMessage): OnPropertyChanged(nameof(StatusMessage)); break;
-                case nameof(SessionVM.IsBusy): OnPropertyChanged(nameof(IsBusy)); break;
             }
         }
 
@@ -2353,26 +2121,35 @@ namespace IndiLogs_3._0.ViewModels
         {
             switch (e.PropertyName)
             {
-                case nameof(FilterVM.FilteredLogs): OnPropertyChanged(nameof(FilteredLogs)); break;
-                case nameof(FilterVM.AppDevLogsFiltered): OnPropertyChanged(nameof(AppDevLogsFiltered)); break;
-                case nameof(FilterVM.SearchText): OnPropertyChanged(nameof(SearchText)); break;
-                case nameof(FilterVM.IsSearchPanelVisible): OnPropertyChanged(nameof(IsSearchPanelVisible)); break;
-                case nameof(FilterVM.LoggerTreeRoot): OnPropertyChanged(nameof(LoggerTreeRoot)); break;
-                case nameof(FilterVM.PlcLoggerTreeRoot): OnPropertyChanged(nameof(PlcLoggerTreeRoot)); break;
-                case nameof(FilterVM.SelectedTreeItem): OnPropertyChanged(nameof(SelectedTreeItem)); break;
-                case nameof(FilterVM.IsMainFilterActive): OnPropertyChanged(nameof(IsMainFilterActive)); break;
-                case nameof(FilterVM.IsAppFilterActive): OnPropertyChanged(nameof(IsAppFilterActive)); break;
+                case nameof(FilterVM.LoggerTreeRoot):
+                case nameof(FilterVM.PlcLoggerTreeRoot):
+                    OnPropertyChanged(nameof(ActiveLoggerTree));
+                    break;
+                case nameof(FilterVM.IsMainFilterActive):
+                    OnPropertyChanged(nameof(IsFilterActive));
+                    OnPropertyChanged(nameof(ActiveFilters));
+                    OnPropertyChanged(nameof(HasActiveFilters));
+                    break;
+                case nameof(FilterVM.IsAppFilterActive):
+                    OnPropertyChanged(nameof(IsFilterActive));
+                    OnPropertyChanged(nameof(ActiveFilters));
+                    OnPropertyChanged(nameof(HasActiveFilters));
+                    break;
+                case nameof(FilterVM.IsMainFilterOutActive):
+                case nameof(FilterVM.IsAppFilterOutActive):
+                    OnPropertyChanged(nameof(IsFilterOutActive));
+                    OnPropertyChanged(nameof(ActiveFilters));
+                    OnPropertyChanged(nameof(HasActiveFilters));
+                    break;
+                case nameof(FilterVM.HasRangeStart):
+                    OnPropertyChanged(nameof(HasRangeStart));
+                    break;
             }
         }
 
         private void LiveVM_PropertyChanged(object s, PropertyChangedEventArgs e)
         {
-            switch (e.PropertyName)
-            {
-                case nameof(LiveVM.IsLiveMode): OnPropertyChanged(nameof(IsLiveMode)); break;
-                case nameof(LiveVM.IsRunning): OnPropertyChanged(nameof(IsRunning)); OnPropertyChanged(nameof(IsPaused)); break;
-                case nameof(LiveVM.IsPaused): OnPropertyChanged(nameof(IsPaused)); break;
-            }
+            // LiveVM properties (IsLiveMode, IsRunning, IsPaused) bind directly via LiveVM.* in XAML
         }
 
         private void DifferentLogsVM_PropertyChanged(object s, PropertyChangedEventArgs e)

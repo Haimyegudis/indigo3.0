@@ -25,6 +25,7 @@ namespace IndiLogs_3._0.Services
         /// </summary>
         public async Task ApplyDefaultColorsAsync(IEnumerable<LogEntry> logs, bool isAppLog)
         {
+            var colorSw = System.Diagnostics.Stopwatch.StartNew();
             var userRules = isAppLog ? UserDefaultAppRules : UserDefaultMainRules;
 
             if (userRules != null && userRules.Count > 0)
@@ -62,6 +63,7 @@ namespace IndiLogs_3._0.Services
                 // No user defaults — use factory hardcoded logic (also sets SystemDefaultColor)
                 await ApplyFactoryDefaultColorsAsync(logs, isAppLog);
             }
+            AppLogger.Info($"[Coloring] Default colors applied ({(isAppLog ? "APP" : "PLC")}) — {colorSw.ElapsedMilliseconds}ms");
         }
 
         /// <summary>
@@ -121,10 +123,7 @@ namespace IndiLogs_3._0.Services
                         log.IsErrorOrEvents = true;
                     }
                     // State transitions → light blue background in main PLC tab
-                    if (string.Equals(log.ThreadName, "Manager", StringComparison.OrdinalIgnoreCase) &&
-                        log.Message != null &&
-                        log.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) &&
-                        log.Message.Contains("->"))
+                    if (StateTransitionHelper.IsS6StateTransition(log))
                     {
                         log.CustomColor = Color.FromRgb(173, 216, 230); // Light Blue
                         log.SystemDefaultColor = Color.FromRgb(173, 216, 230);
@@ -141,6 +140,7 @@ namespace IndiLogs_3._0.Services
 
         public async Task ApplyCustomColoringAsync(IEnumerable<LogEntry> logs, List<ColoringCondition> conditions)
         {
+            var colorSw = System.Diagnostics.Stopwatch.StartNew();
             if (conditions == null || conditions.Count == 0) return;
 
             var preparedConditions = PrepareConditions(conditions);
@@ -159,6 +159,7 @@ namespace IndiLogs_3._0.Services
                     }
                 });
             });
+            AppLogger.Info($"[Coloring] Custom rules ({conditions.Count} rules) applied — {colorSw.ElapsedMilliseconds}ms");
         }
 
         // --- System Default Color Helper ---
@@ -176,10 +177,7 @@ namespace IndiLogs_3._0.Services
             if (!isAppLog)
             {
                 // PLC-only: state transitions (Manager thread + PlcMngr: prefix + arrow)
-                if (string.Equals(log.ThreadName, "Manager", StringComparison.OrdinalIgnoreCase) &&
-                    log.Message != null &&
-                    log.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) &&
-                    log.Message.Contains("->"))
+                if (StateTransitionHelper.IsS6StateTransition(log))
                 {
                     log.SystemDefaultColor = Color.FromRgb(173, 216, 230); // Light Blue
                 }

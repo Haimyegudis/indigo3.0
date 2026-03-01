@@ -1,6 +1,7 @@
 using DocumentFormat.OpenXml.Spreadsheet;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Charts;
+using IndiLogs_3._0.Services;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -187,6 +188,7 @@ namespace IndiLogs_3._0.Views
 
         private async Task CalculateStatisticsAsync()
         {
+            var statsSw = System.Diagnostics.Stopwatch.StartNew();
             int totalLogs = _plcLogs.Count + _appLogs.Count;
             if (totalLogs == 0)
             {
@@ -385,6 +387,7 @@ namespace IndiLogs_3._0.Views
             if (!string.IsNullOrEmpty(timelineInfo)) TimelineChartInfo.Text = timelineInfo;
 
             LoadingOverlay.Visibility = Visibility.Collapsed;
+            AppLogger.Info($"[Stats] Statistics calculated for {totalLogs:N0} entries — {statsSw.ElapsedMilliseconds}ms");
         }
 
         // Old CalculatePlcStatistics/CalculateAppStatistics/CalculateAdvancedAnalytics removed —

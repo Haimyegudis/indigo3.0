@@ -10,9 +10,9 @@ namespace IndiLogs_3._0.ViewModels
         // --- SYSTAB TAB ---
         // Show Systab tab only when loaded from a ZIP that contains systab files
         public bool HasSystabFiles =>
-            SelectedSession?.SystabFiles != null && SelectedSession.SystabFiles.Count > 0 &&
-            SelectedSession.FilePath != null && SelectedSession.FilePath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) &&
-            SelectedSession.HasBinaryAppLogs;
+            SessionVM?.SelectedSession?.SystabFiles != null && SessionVM.SelectedSession.SystabFiles.Count > 0 &&
+            SessionVM.SelectedSession.FilePath != null && SessionVM.SelectedSession.FilePath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) &&
+            SessionVM.SelectedSession.HasBinaryAppLogs;
 
         private ObservableCollection<SystabTopicNode> _systabTree = new ObservableCollection<SystabTopicNode>();
         public ObservableCollection<SystabTopicNode> SystabTree
@@ -142,9 +142,9 @@ namespace IndiLogs_3._0.ViewModels
             _allSystabEntries.Clear();
             SelectedSystabNode = null;
 
-            if (SelectedSession?.SystabFiles != null && SelectedSession.SystabFiles.Count > 0)
+            if (SessionVM?.SelectedSession?.SystabFiles != null && SessionVM.SelectedSession.SystabFiles.Count > 0)
             {
-                var tree = Services.SystabParserService.BuildSystabTree(SelectedSession.SystabFiles);
+                var tree = Services.SystabParserService.BuildSystabTree(SessionVM.SelectedSession.SystabFiles);
                 foreach (var node in tree)
                     SystabTree.Add(node);
             }

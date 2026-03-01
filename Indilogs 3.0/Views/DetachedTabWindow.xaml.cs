@@ -103,8 +103,8 @@ namespace IndiLogs_3._0.Views
                         // Try to infer grid name from context
                         if (grid.ItemsSource is System.Collections.IEnumerable && DataContext is MainViewModel vm)
                         {
-                            if (grid.ItemsSource == vm.Logs) gridName = "MainLogsGrid";
-                            else if (grid.ItemsSource == vm.AppDevLogsFiltered) gridName = "AppLogsGrid";
+                            if (grid.ItemsSource == vm.SessionVM?.Logs) gridName = "MainLogsGrid";
+                            else if (grid.ItemsSource == vm.FilterVM?.AppDevLogsFiltered) gridName = "AppLogsGrid";
                         }
                     }
 
@@ -201,7 +201,7 @@ namespace IndiLogs_3._0.Views
                 return;
 
             string sourceType = "PLC";
-            if (gridName.Contains("App") || sourceGrid.ItemsSource == vm.AppDevLogsFiltered)
+            if (gridName.Contains("App") || sourceGrid.ItemsSource == vm.FilterVM?.AppDevLogsFiltered)
                 sourceType = "APP";
 
             vm.RequestSyncScroll(logEntry.Date, sourceType);

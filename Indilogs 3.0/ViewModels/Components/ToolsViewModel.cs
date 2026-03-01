@@ -116,7 +116,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         {
             // Extract machine name from the loaded session's ZIP filename.
             // E.g. "manual-fp-7_logs_20240201_123456.zip" → machineName = "manual-fp-7"
-            string zipPath     = _parent.SelectedSession?.FilePath ?? string.Empty;
+            string zipPath     = _parent.SessionVM.SelectedSession?.FilePath ?? string.Empty;
             string machineName = string.Empty;
 
             if (!string.IsNullOrEmpty(zipPath))
@@ -146,7 +146,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         private void ExportParsedData(object obj)
         {
-            if (_parent.SelectedSession == null || _parent.SelectedSession.Logs == null || !_parent.SelectedSession.Logs.Any())
+            if (_parent.SessionVM.SelectedSession == null || _parent.SessionVM.SelectedSession.Logs == null || !_parent.SessionVM.SelectedSession.Logs.Any())
             {
                 MessageBox.Show("No logs loaded.", "Info");
                 return;
@@ -159,7 +159,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
 
             _exportConfigWindow = new ExportConfigurationWindow();
-            var viewModel = new ExportConfigurationViewModel(_parent.SelectedSession, _csvService);
+            var viewModel = new ExportConfigurationViewModel(_parent.SessionVM.SelectedSession, _csvService);
             _exportConfigWindow.DataContext = viewModel;
             _exportConfigWindow.Closed += (s, e) => _exportConfigWindow = null;
             _windowManager.OpenWindow(_exportConfigWindow);
@@ -167,17 +167,17 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         private void RunAnalysis(object obj)
         {
-            if (_parent.SelectedSession == null) { MessageBox.Show("No logs loaded."); return; }
+            if (_parent.SessionVM.SelectedSession == null) { MessageBox.Show("No logs loaded."); return; }
             if (_parent.IsAnalysisRunning) { MessageBox.Show("Analysis is already running..."); return; }
 
-            var session = _parent.SelectedSession;
+            var session = _parent.SessionVM.SelectedSession;
             if (session.CachedAnalysis != null && session.CachedAnalysis.Count > 0)
             {
                 OpenAnalysisWindow(session.CachedAnalysis);
             }
             else
             {
-                _parent.StatusMessage = "Starting analysis...";
+                _parent.SessionVM.StatusMessage = "Starting analysis...";
                 _parent.StartBackgroundAnalysis(session);
             }
         }
@@ -198,13 +198,13 @@ namespace IndiLogs_3._0.ViewModels.Components
                 return;
             }
 
-            if (_parent.SelectedSession == null) { MessageBox.Show("No logs loaded."); return; }
+            if (_parent.SessionVM.SelectedSession == null) { MessageBox.Show("No logs loaded."); return; }
 
-            if (_parent.SelectedSession.CachedStates != null && _parent.SelectedSession.CachedStates.Count > 0)
+            if (_parent.SessionVM.SelectedSession.CachedStates != null && _parent.SessionVM.SelectedSession.CachedStates.Count > 0)
             {
                 if (_statesWindow != null && _statesWindow.IsVisible) { _windowManager.ActivateWindow(_statesWindow); return; }
 
-                _statesWindow = new StatesWindow(_parent.SelectedSession.CachedStates, _parent);
+                _statesWindow = new StatesWindow(_parent.SessionVM.SelectedSession.CachedStates, _parent);
                 _statesWindow.Closed += (s, e) => _statesWindow = null;
                 _windowManager.OpenWindow(_statesWindow);
             }
@@ -216,7 +216,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         private void OpenGlobalGrepWindow()
         {
-            var sessions = _parent.LoadedSessions ?? new ObservableCollection<LogSessionData>();
+            var sessions = _parent.SessionVM?.LoadedSessions ?? new ObservableCollection<LogSessionData>();
             var viewModel = new GlobalGrepViewModel(sessions);
 
             if (!sessions.Any())

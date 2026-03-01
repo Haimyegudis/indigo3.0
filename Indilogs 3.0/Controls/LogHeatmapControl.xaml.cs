@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using IndiLogs_3._0.Models;
+using IndiLogs_3._0.Services;
 
 namespace IndiLogs_3._0.Controls
 {
@@ -211,10 +212,7 @@ namespace IndiLogs_3._0.Controls
                 log.Message.IndexOf("=== state", StringComparison.OrdinalIgnoreCase) >= 0)
                 return HeatmapTickType.StateTransition;
             //    b. S6: Manager thread + "PlcMngr:" + "->"
-            if (string.Equals(log.ThreadName, "Manager", StringComparison.OrdinalIgnoreCase) &&
-                log.Message != null &&
-                log.Message.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) &&
-                log.Message.Contains("->"))
+            if (StateTransitionHelper.IsS6StateTransition(log))
                 return HeatmapTickType.StateTransition;
             //    c. CustomColor is Light Blue (173, 216, 230) — from coloring service
             if (log.CustomColor.HasValue)

@@ -1,80 +1,83 @@
 using IndiLogs_3._0.Services;
-using IndiLogs_3._0.Services.Charts;
 using IndiLogs_3._0.Services.Interfaces;
 using IndiLogs_3._0.ViewModels;
-using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 
 namespace IndiLogs_3._0
 {
     /// <summary>
-    /// Configures the DI container for the application.
-    /// Centralizes all service and ViewModel registrations.
+    /// Manual composition root — wires up services and ViewModels.
+    /// No external DI container required.
     /// </summary>
     public static class Bootstrapper
     {
-        private static IServiceProvider _serviceProvider;
+        private static readonly Dictionary<Type, object> _singletons = new Dictionary<Type, object>();
+        private static bool _configured;
 
         /// <summary>
-        /// Gets the application-wide service provider.
-        /// </summary>
-        public static IServiceProvider ServiceProvider => _serviceProvider
-            ?? throw new InvalidOperationException("Bootstrapper has not been initialized. Call Configure() first.");
-
-        /// <summary>
-        /// Configures the DI container with all service and ViewModel registrations.
-        /// Should be called once during application startup.
+        /// Creates all singletons and wires up dependencies.
+        /// Call once during application startup.
         /// </summary>
         public static void Configure()
         {
-            var services = new ServiceCollection();
+            if (_configured) return;
 
-            // --- Plugin loader (must be registered BEFORE ILogFileService so it can be injected) ---
-            services.AddSingleton<IPluginLoader, PluginLoader>();
+            // --- Services ---
+            var pluginLoader = new PluginLoader();
+            Register<IPluginLoader>(pluginLoader);
 
-            // --- Singleton Services with Interfaces ---
-            services.AddSingleton<ILogFileService, LogFileService>();
-            services.AddSingleton<ILogColoringService, LogColoringService>();
-            services.AddSingleton<ICsvExportService, CsvExportService>();
-            services.AddSingleton<IUpdateService, UpdateService>();
-            services.AddSingleton<IChartDataTransferService, ChartDataTransferService>();
-            services.AddSingleton<IWindowManager, WindowManager>();
-            services.AddSingleton<ITabTearOffManager, TabTearOffManager>();
+            var logFileService = new LogFileService(pluginLoader);
+            Register<ILogFileService>(logFileService);
 
-            // Also register concrete types for backward-compat DI constructor injection
-            services.AddSingleton(sp => (LogFileService)sp.GetRequiredService<ILogFileService>());
-            services.AddSingleton(sp => (LogColoringService)sp.GetRequiredService<ILogColoringService>());
-            services.AddSingleton(sp => (CsvExportService)sp.GetRequiredService<ICsvExportService>());
-            services.AddSingleton(sp => (UpdateService)sp.GetRequiredService<IUpdateService>());
+            var coloringService = new LogColoringService();
+            Register<ILogColoringService>(coloringService);
 
-            // --- Transient Services ---
-            services.AddTransient<QueryParserService>();
-            services.AddTransient<IGlobalGrepService, GlobalGrepService>();
+            var csvService = new CsvExportService();
+            Register<ICsvExportService>(csvService);
+
+            var defaultConfigService = new DefaultConfigurationService();
+            Register<IDefaultConfigurationService>(defaultConfigService);
+
+            Register<IWindowManager>(new WindowManagerAdapter());
 
             // --- ViewModels ---
-            services.AddSingleton<MainViewModel>();
+            var mainVM = new MainViewModel(logFileService, coloringService, csvService, defaultConfigService);
+            Register<MainViewModel>(mainVM);
 
-            _serviceProvider = services.BuildServiceProvider();
+            _configured = true;
         }
 
         /// <summary>
-        /// Resolves a service from the DI container.
+        /// Resolves a registered singleton by type.
         /// </summary>
         public static T Resolve<T>() where T : class
         {
-            return ServiceProvider.GetRequiredService<T>();
+            if (!_configured)
+                throw new InvalidOperationException("Bootstrapper has not been initialized. Call Configure() first.");
+
+            if (_singletons.TryGetValue(typeof(T), out var instance))
+                return (T)instance;
+
+            throw new InvalidOperationException($"Type {typeof(T).Name} is not registered in the Bootstrapper.");
         }
 
         /// <summary>
-        /// Cleans up the DI container on application shutdown.
+        /// Cleans up all registered singletons on application shutdown.
         /// </summary>
         public static void Shutdown()
         {
-            if (_serviceProvider is IDisposable disposable)
+            foreach (var instance in _singletons.Values)
             {
-                disposable.Dispose();
+                (instance as IDisposable)?.Dispose();
             }
-            _serviceProvider = null;
+            _singletons.Clear();
+            _configured = false;
+        }
+
+        private static void Register<T>(object instance)
+        {
+            _singletons[typeof(T)] = instance;
         }
     }
 }

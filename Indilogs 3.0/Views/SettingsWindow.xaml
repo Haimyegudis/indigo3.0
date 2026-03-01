@@ -41,7 +41,7 @@
             <TextBlock Text="Behavior" FontWeight="Bold" Foreground="{DynamicResource TextSecondary}" Margin="0,0,0,5"/>
 
             <CheckBox Content="Combine Marked Windows"
-                      IsChecked="{Binding IsMarkedLogsCombined}"
+                      IsChecked="{Binding CaseVM.IsMarkedLogsCombined}"
                       Foreground="{DynamicResource TextPrimary}"
                       FontSize="12"
                       Margin="5,0,0,5"

@@ -54,6 +54,16 @@ namespace IndiLogs_3._0.Models
         /// </summary>
         public string MatchedField { get; set; }
 
+        /// <summary>
+        /// Friendly name of the search location (e.g. "Simulator 1")
+        /// </summary>
+        public string LocationName { get; set; }
+
+        /// <summary>
+        /// IP address or path of the search location
+        /// </summary>
+        public string LocationAddress { get; set; }
+
         private bool _isSelected;
         /// <summary>
         /// Whether this result is currently selected in the UI
@@ -74,7 +84,9 @@ namespace IndiLogs_3._0.Models
         /// <summary>
         /// Creates a formatted display string for the timestamp
         /// </summary>
-        public string TimestampDisplay => Timestamp?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? "N/A";
+        public string TimestampDisplay => ReferencedLogEntry?.Date.ToString("yyyy-MM-dd HH:mm:ss.ffffff")
+                                         ?? Timestamp?.ToString("yyyy-MM-dd HH:mm:ss.ffffff")
+                                         ?? "N/A";
 
         #region INotifyPropertyChanged
 

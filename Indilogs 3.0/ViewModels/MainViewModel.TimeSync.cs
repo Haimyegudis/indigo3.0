@@ -20,7 +20,7 @@ namespace IndiLogs_3._0.ViewModels
             {
                 _isTimeSyncEnabled = value;
                 OnPropertyChanged();
-                StatusMessage = value ? "\ud83d\udd17 Time-Sync ENABLED" : "\u26d3 Time-Sync DISABLED";
+                SessionVM.StatusMessage = value ? "\ud83d\udd17 Time-Sync ENABLED" : "\u26d3 Time-Sync DISABLED";
             }
         }
 
@@ -159,9 +159,9 @@ namespace IndiLogs_3._0.ViewModels
                 {
                     // PLC \u2192 APP: convert PLC time \u2192 APP clock
                     adjustedTime = targetTime.AddSeconds(TimeSyncOffsetSeconds);
-                    if (AppDevLogsFiltered != null && AppDevLogsFiltered.Count > 0)
+                    if (FilterVM?.AppDevLogsFiltered != null && FilterVM.AppDevLogsFiltered.Count > 0)
                     {
-                        targetCollection = AppDevLogsFiltered;
+                        targetCollection = FilterVM.AppDevLogsFiltered;
                         targetGrid = "APP";
                         targetTabIndex = 1;
                     }
@@ -170,9 +170,9 @@ namespace IndiLogs_3._0.ViewModels
                 {
                     // APP \u2192 PLC: convert APP time \u2192 PLC clock (reverse direction)
                     adjustedTime = targetTime.AddSeconds(-TimeSyncOffsetSeconds);
-                    if (AllLogsCache != null && AllLogsCache.Count > 0)
+                    if (SessionVM?.AllLogsCache != null && SessionVM.AllLogsCache.Count > 0)
                     {
-                        targetCollection = AllLogsCache;
+                        targetCollection = SessionVM.AllLogsCache;
                         targetGrid = "PLC";
                         targetTabIndex = 0;
                     }
@@ -199,14 +199,14 @@ namespace IndiLogs_3._0.ViewModels
 
                         Application.Current?.Dispatcher?.Invoke(() =>
                         {
-                            StatusMessage = $"\ud83d\udd17 Synced to {targetGrid} @ {nearestLog.Date:HH:mm:ss.ffffff} (\u00b1{timeDiff.TotalSeconds:F1}s) - switch tab to see";
+                            SessionVM.StatusMessage =$"\ud83d\udd17 Synced to {targetGrid} @ {nearestLog.Date:HH:mm:ss.ffffff} (\u00b1{timeDiff.TotalSeconds:F1}s) - switch tab to see";
                         });
                     }
                     else
                     {
                         Application.Current?.Dispatcher?.Invoke(() =>
                         {
-                            StatusMessage = $"\u26a0 No correlated logs within 60s (closest: {timeDiff.TotalSeconds:F0}s)";
+                            SessionVM.StatusMessage =$"\u26a0 No correlated logs within 60s (closest: {timeDiff.TotalSeconds:F0}s)";
                         });
                     }
                 }
@@ -222,13 +222,13 @@ namespace IndiLogs_3._0.ViewModels
         /// </summary>
         public void NavigateToLogTime(DateTime time)
         {
-            if (FilteredLogs == null || FilteredLogs.Count == 0) return;
+            if (FilterVM?.FilteredLogs == null || FilterVM.FilteredLogs.Count == 0) return;
 
             // Use O(log N) binary search instead of O(N log N) sort
-            int idx = BinarySearchNearest(FilteredLogs, time);
+            int idx = BinarySearchNearest(FilterVM.FilteredLogs, time);
             if (idx >= 0)
             {
-                RequestScrollToLog?.Invoke(FilteredLogs[idx]);
+                RequestScrollToLog?.Invoke(FilterVM.FilteredLogs[idx]);
             }
         }
 

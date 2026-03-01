@@ -124,6 +124,19 @@ namespace IndiLogs_3._0.Controls.Charts
 
         private void ChartTabControl_Loaded(object sender, RoutedEventArgs e)
         {
+            // Re-subscribe to events (may have been removed in Unloaded during tab switch)
+            var svc = ChartDataTransferService.Instance;
+            svc.OnDataReady -= OnInMemoryDataReady;
+            svc.OnLogTimeSelected -= OnLogTimeSelected;
+            svc.OnDataReady += OnInMemoryDataReady;
+            svc.OnLogTimeSelected += OnLogTimeSelected;
+
+            // If data was transferred while this tab was unloaded, pick it up now
+            if (svc.CurrentData != null && svc.CurrentData != _currentDataPackage)
+            {
+                _ = LoadInMemoryData(svc.CurrentData);
+            }
+
             SyncThemeFromSettings();
         }
 
@@ -234,6 +247,8 @@ namespace IndiLogs_3._0.Controls.Charts
         {
             if (dataPackage == null) return;
 
+            AppLogger.Info($"[Chart] OnInMemoryDataReady: {dataPackage.Signals?.Count ?? 0} signals, {dataPackage.TimeStamps?.Count ?? 0} timestamps, SuppressGap={dataPackage.SuppressGapDetection}");
+
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 _ = LoadInMemoryData(dataPackage);
@@ -264,7 +279,7 @@ namespace IndiLogs_3._0.Controls.Charts
                 _totalDataLength = dataPackage.TimeStamps.Count;
                 if (_totalDataLength == 0 && dataPackage.Signals.Any())
                 {
-                    _totalDataLength = dataPackage.Signals.Max(s => s.Data?.Length ?? 0);
+                    _totalDataLength = dataPackage.Signals.Max(s => s.DataLength);
                 }
 
                 LoadingDetail.Text = $"Building time index for {_totalDataLength:N0} points...";
@@ -1077,7 +1092,11 @@ namespace IndiLogs_3._0.Controls.Charts
 
         private void AddSignalToChart(string signalName)
         {
-            if (!HasData) return;
+            if (!HasData)
+            {
+                AppLogger.Warn($"[Chart] AddSignalToChart('{signalName}'): HasData=false, inMem={_inMemoryDataLoaded}, csv={_dataService?.IsLoaded}");
+                return;
+            }
 
             // Handle [Events] signal name (from CSV signal list)
             if (signalName == "[Events]")
@@ -1115,6 +1134,10 @@ namespace IndiLogs_3._0.Controls.Charts
                 if (signalData != null)
                 {
                     data = signalData.Data;
+                }
+                else
+                {
+                    AppLogger.Warn($"[Chart] Signal '{signalName}' not found in package ({_currentDataPackage.Signals?.Count ?? 0} signals). Available: {string.Join(", ", _currentDataPackage.Signals?.Take(5).Select(s => s.Name) ?? Array.Empty<string>())}...");
                 }
             }
 

@@ -595,7 +595,7 @@
             <DataGridTemplateColumn Header="Message" Width="*" MinWidth="400">
                 <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate>
-                        <controls:HighlightTextBlock Text="{Binding Message}" HighlightText="{Binding DataContext.SearchText, RelativeSource={RelativeSource AncestorType=Window}}" VerticalAlignment="Center">
+                        <controls:HighlightTextBlock Text="{Binding Message}" HighlightText="{Binding DataContext.FilterVM.SearchText, RelativeSource={RelativeSource AncestorType=Window}}" VerticalAlignment="Center">
                             <controls:HighlightTextBlock.Style>
                                 <Style TargetType="controls:HighlightTextBlock">
                                     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>

@@ -39,7 +39,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _isLiveMode = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsLiveMode));
             }
         }
 
@@ -52,7 +51,6 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _isRunning = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsPaused));
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsRunning));
             }
         }
 
@@ -65,7 +63,6 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _isPaused = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsRunning));
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsPaused));
             }
         }
 
@@ -254,7 +251,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
 
             // 2. Are there active filters? (search, trees, Threads)
-            bool hasSearch = !string.IsNullOrWhiteSpace(_parent.SearchText);
+            bool hasSearch = !string.IsNullOrWhiteSpace(_filterVM.SearchText);
             bool hasActiveFilter = _filterVM.IsMainFilterActive || hasSearch || _filterVM.ActiveThreadFilters.Any();
 
             // 3. If no filters active -> use default PLC filter (same as regular file loading)
@@ -274,7 +271,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             // Search Text
             if (hasSearch)
             {
-                if (log.Message == null || log.Message.IndexOf(_parent.SearchText, StringComparison.OrdinalIgnoreCase) < 0)
+                if (log.Message == null || log.Message.IndexOf(_filterVM.SearchText, StringComparison.OrdinalIgnoreCase) < 0)
                     return false;
             }
 

@@ -63,7 +63,6 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     _searchText = value;
                     OnPropertyChanged();
-                    _parent?.NotifyPropertyChanged(nameof(_parent.SearchText));
                     OnSearchTextChanged();
                 }
             }
@@ -79,7 +78,6 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     _isSearchPanelVisible = value;
                     OnPropertyChanged();
-                    _parent?.NotifyPropertyChanged(nameof(_parent.IsSearchPanelVisible));
                 }
             }
         }
@@ -95,7 +93,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _filteredLogs = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.FilteredLogs));
             }
         }
 
@@ -110,7 +107,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _appDevLogsFiltered = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.AppDevLogsFiltered));
             }
         }
 
@@ -125,7 +121,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _loggerTreeRoot = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.LoggerTreeRoot));
             }
         }
 
@@ -140,7 +135,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _plcLoggerTreeRoot = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.PlcLoggerTreeRoot));
             }
         }
 
@@ -152,7 +146,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _selectedTreeItem = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.SelectedTreeItem));
             }
         }
 
@@ -167,7 +160,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _mainFilterRoot = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.MainFilterRoot));
             }
         }
 
@@ -178,7 +170,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         public FilterNode AppFilterRoot
         {
             get => _appFilterRoot;
-            set { _appFilterRoot = value; OnPropertyChanged(); _parent?.NotifyPropertyChanged(nameof(_parent.AppFilterRoot)); }
+            set { _appFilterRoot = value; OnPropertyChanged(); }
         }
 
         /// <summary>
@@ -188,7 +180,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         public FilterNode SavedFilterRoot
         {
             get => _savedFilterRoot;
-            set { _savedFilterRoot = value; OnPropertyChanged(); _parent?.NotifyPropertyChanged(nameof(_parent.SavedFilterRoot)); }
+            set { _savedFilterRoot = value; OnPropertyChanged(); }
         }
 
         // --- Active Flags ---
@@ -200,8 +192,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _isMainFilterActive = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsMainFilterActive));
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsFilterActive));
             }
         }
 
@@ -220,8 +210,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _isAppFilterActive = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsAppFilterActive));
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsFilterActive));
             }
         }
 
@@ -233,10 +221,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _isMainFilterOutActive = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsMainFilterOutActive));
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsFilterOutActive));
-                _parent?.NotifyPropertyChanged(nameof(_parent.ActiveFilters));
-                _parent?.NotifyPropertyChanged(nameof(_parent.HasActiveFilters));
             }
         }
 
@@ -248,10 +232,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _isAppFilterOutActive = value;
                 OnPropertyChanged();
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsAppFilterOutActive));
-                _parent?.NotifyPropertyChanged(nameof(_parent.IsFilterOutActive));
-                _parent?.NotifyPropertyChanged(nameof(_parent.ActiveFilters));
-                _parent?.NotifyPropertyChanged(nameof(_parent.HasActiveFilters));
             }
         }
 
@@ -259,14 +239,14 @@ namespace IndiLogs_3._0.ViewModels.Components
         public bool IsTimeFocusActive
         {
             get => _isTimeFocusActive;
-            set { _isTimeFocusActive = value; OnPropertyChanged(); _parent?.NotifyPropertyChanged(nameof(_parent.IsTimeFocusActive)); }
+            set { _isTimeFocusActive = value; OnPropertyChanged(); }
         }
 
         private bool _isAppTimeFocusActive = false;
         public bool IsAppTimeFocusActive
         {
             get => _isAppTimeFocusActive;
-            set { _isAppTimeFocusActive = value; OnPropertyChanged(); _parent?.NotifyPropertyChanged(nameof(_parent.IsAppTimeFocusActive)); }
+            set { _isAppTimeFocusActive = value; OnPropertyChanged(); }
         }
 
         private DateTime? _globalTimeRangeStart = null;
@@ -655,7 +635,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         public bool HasRangeStart
         {
             get => _hasRangeStart;
-            set { _hasRangeStart = value; OnPropertyChanged(); _parent?.NotifyPropertyChanged(nameof(_parent.HasRangeStart)); }
+            set { _hasRangeStart = value; OnPropertyChanged(); }
         }
 
         public FilterSearchViewModel(MainViewModel parent, LogSessionViewModel sessionVM)
@@ -848,6 +828,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// </summary>
         public void ApplyAppLogsFilter()
         {
+            var filterSw = System.Diagnostics.Stopwatch.StartNew();
             // הגנה מפני קריסה אם המטמון ריק
             if (_sessionVM?.AllAppLogsCache == null) return;
 
@@ -986,9 +967,11 @@ namespace IndiLogs_3._0.ViewModels.Components
                 });
             }
 
-            AppDevLogsFiltered.ReplaceAll(query.ToList());
+            var filtered = query.ToList();
+            AppDevLogsFiltered.ReplaceAll(filtered);
             _parent?.NotifyPropertyChanged(nameof(_parent.ActiveFilters));
             _parent?.NotifyPropertyChanged(nameof(_parent.HasActiveFilters));
+            AppLogger.Info($"[Filter] APP filter applied: {source.Count:N0} → {filtered.Count:N0} entries — {filterSw.ElapsedMilliseconds}ms");
         }
 
         /// <summary>
@@ -2597,7 +2580,8 @@ namespace IndiLogs_3._0.ViewModels.Components
     /// </summary>
     public void ApplyMainLogsFilter()
         {
-            if (_parent.IsLiveMode) return;
+            var filterSw = System.Diagnostics.Stopwatch.StartNew();
+            if (_parent.LiveVM?.IsLiveMode == true) return;
 
             bool isActive = _isMainFilterActive;
             IEnumerable<LogEntry> currentLogs;
@@ -2743,6 +2727,8 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             _parent?.NotifyPropertyChanged(nameof(_parent.ActiveFilters));
             _parent?.NotifyPropertyChanged(nameof(_parent.HasActiveFilters));
+            int srcCount = _sessionVM?.AllLogsCache?.Count ?? 0;
+            AppLogger.Info($"[Filter] PLC filter applied: {srcCount:N0} → {logsList.Count:N0} entries — {filterSw.ElapsedMilliseconds}ms");
         }
 
         private void ApplyGlobalTimeRangeFilter()
@@ -2796,13 +2782,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _sessionVM.StatusMessage = $"Time Range Filter: PLC={plcCount}, APP={appCount}, FILTERED={filteredCount}, Events={eventsCount}";
             }
 
-            // 4. עדכון הוויזואליזציה (Visual Timeline)
-            if (_parent != null)
-            {
-                // שימוש ב-NotifyPropertyChanged כדי לוודא שה-MainViewModel מתעדכן
-                _parent.NotifyPropertyChanged(nameof(_parent.Logs));
-                _parent.NotifyPropertyChanged(nameof(_parent.Events));
-            }
+            // Visual Timeline updates via SessionVM's own PropertyChanged / CollectionChanged
         }
     }
 }

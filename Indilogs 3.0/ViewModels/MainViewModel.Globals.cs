@@ -102,9 +102,9 @@ namespace IndiLogs_3._0.ViewModels
             _globalsShowDiffsOnly = false;
             OnPropertyChanged(nameof(GlobalsShowDiffsOnly));
 
-            if (string.IsNullOrEmpty(SelectedGlobalsFile) || SelectedSession == null ||
-                SelectedSession.GlobalsFiles == null ||
-                !SelectedSession.GlobalsFiles.ContainsKey(SelectedGlobalsFile))
+            if (string.IsNullOrEmpty(SelectedGlobalsFile) || SessionVM?.SelectedSession == null ||
+                SessionVM.SelectedSession.GlobalsFiles == null ||
+                !SessionVM.SelectedSession.GlobalsFiles.ContainsKey(SelectedGlobalsFile))
             {
                 GlobalsEntries = new ObservableCollection<GlobalEntry>();
                 return;
@@ -112,7 +112,7 @@ namespace IndiLogs_3._0.ViewModels
 
             try
             {
-                string xmlContent = SelectedSession.GlobalsFiles[SelectedGlobalsFile];
+                string xmlContent = SessionVM.SelectedSession.GlobalsFiles[SelectedGlobalsFile];
                 var doc = System.Xml.Linq.XDocument.Parse(xmlContent);
                 var globals = doc.Descendants("Global");
                 foreach (var g in globals)
@@ -174,9 +174,9 @@ namespace IndiLogs_3._0.ViewModels
             _allGlobalsEntries.Clear();
             SelectedGlobalsFile = null;
 
-            if (SelectedSession?.GlobalsFiles != null)
+            if (SessionVM?.SelectedSession?.GlobalsFiles != null)
             {
-                foreach (var fileName in SelectedSession.GlobalsFiles.Keys)
+                foreach (var fileName in SessionVM.SelectedSession.GlobalsFiles.Keys)
                 {
                     GlobalsFileNames.Add(fileName);
                 }
