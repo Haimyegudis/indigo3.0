@@ -95,6 +95,15 @@ namespace IndiLogs_3._0.Services.Charts
         }
 
         /// <summary>
+        /// Release the CurrentData reference so stale data isn't picked up
+        /// when the Charts tab re-loads after a session switch.
+        /// </summary>
+        public void ClearCurrentData()
+        {
+            CurrentData = null;
+        }
+
+        /// <summary>
         /// Build chart data package from logs and export preset
         /// </summary>
         public ChartDataPackage BuildDataPackage(
@@ -1182,6 +1191,8 @@ namespace IndiLogs_3._0.Services.Charts
         public List<EventMarkerData> Events { get; set; }
         /// <summary>When true, ChartTabControl skips gap detection (used for IO terminal data).</summary>
         public bool SuppressGapDetection { get; set; }
+        /// <summary>EM_Statistics CSV content for Gantt chart display (optional, from ZIP extraction).</summary>
+        public string EmStatisticsCsvContent { get; set; }
     }
 
     /// <summary>

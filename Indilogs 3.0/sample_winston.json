@@ -1,6 +1,0 @@
-{"level":"info","message":"Server started on port 3000","timestamp":"2026-02-24T08:00:00.000Z","service":"api-server","pid":1234}
-{"level":"debug","message":"Received GET /api/users","timestamp":"2026-02-24T08:00:05.123Z","service":"api-server","method":"GET","url":"/api/users","duration":12}
-{"level":"info","message":"User login successful","timestamp":"2026-02-24T08:00:10.456Z","service":"auth","userId":"U-42","ip":"192.168.1.10"}
-{"level":"warn","message":"Rate limit approaching for user U-42","timestamp":"2026-02-24T08:01:00.789Z","service":"ratelimit","userId":"U-42","requests":95,"limit":100}
-{"level":"error","message":"Database query timeout","timestamp":"2026-02-24T08:02:00.321Z","service":"db","query":"SELECT * FROM orders","elapsed":5001,"error":"QueryTimeoutException"}
-{"level":"info","message":"Cache invalidated for region EU-WEST","timestamp":"2026-02-24T08:03:00.000Z","service":"cache","region":"EU-WEST","keys":143}

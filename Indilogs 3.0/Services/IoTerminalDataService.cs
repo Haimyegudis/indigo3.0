@@ -71,7 +71,8 @@ namespace IndiLogs_3._0.Services
             {
                 foreach (var kvp in terminalCsvBytes)
                 {
-                    string fn = kvp.Key;
+                    // Key may be prefixed (e.g. "InnerZip/TerminalLogs/Io-BIM[0].csv") for nested ZIPs
+                    string fn = System.IO.Path.GetFileName(kvp.Key);
                     if (!fn.StartsWith("Io-", StringComparison.OrdinalIgnoreCase)) continue;
                     if (!fn.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)) continue;
                     byte[] bytes = kvp.Value;
@@ -84,7 +85,7 @@ namespace IndiLogs_3._0.Services
             {
                 foreach (var kvp in terminalLogFiles)
                 {
-                    string fn = kvp.Key;
+                    string fn = System.IO.Path.GetFileName(kvp.Key);
                     if (!fn.StartsWith("Io-", StringComparison.OrdinalIgnoreCase)) continue;
                     if (!fn.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)) continue;
                     // Skip if already found in byte[] source

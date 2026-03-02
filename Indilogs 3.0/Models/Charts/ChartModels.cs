@@ -218,6 +218,11 @@ namespace IndiLogs_3._0.Models.Charts
         // For GANTT view - state data to display
         public List<StateData> GanttStates { get; set; }
 
+        // For independent-timeline Gantt charts (e.g. EM Statistics) — stores the chart's own data length
+        // and custom X-axis label callback so WireUpGanttView/RefreshChartViews use the right values
+        public int? GanttDataLength { get; set; }
+        public Func<int, string> GanttGetXAxisLabel { get; set; }
+
         // For THREAD view - messages to display
         public List<ThreadMessageData> ThreadMessages { get; set; }
         public string ThreadName { get; set; }

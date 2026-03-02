@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Grep;
 using Newtonsoft.Json;
 
@@ -22,8 +23,9 @@ namespace IndiLogs_3._0.Services.Grep
 
         private readonly GlobalGrepService _grepService;
         private readonly SearchLocationService _locationService;
+        private readonly EmailNotificationService _emailService;
         private readonly System.Timers.Timer _timer;
-        private bool _isRunning;
+        private volatile bool _isRunning;
 
         public List<ScheduledSearch> Schedules { get; private set; } = new List<ScheduledSearch>();
 
@@ -41,6 +43,7 @@ namespace IndiLogs_3._0.Services.Grep
         {
             _grepService = grepService;
             _locationService = locationService;
+            _emailService = new EmailNotificationService();
             LoadSchedules();
 
             _timer = new System.Timers.Timer(60_000); // Check every 60 seconds
@@ -88,15 +91,57 @@ namespace IndiLogs_3._0.Services.Grep
             return await ExecuteScheduledSearchAsync(schedule, ct);
         }
 
+        /// <summary>
+        /// Immediately checks all enabled schedules and runs any that are due.
+        /// Called after Add/Edit to avoid waiting for the 60-second timer.
+        /// </summary>
+        public async Task TriggerCheckAsync()
+        {
+            if (_isRunning)
+            {
+                AppLogger.Info("[Scheduler] TriggerCheck skipped — a scan is already running");
+                return;
+            }
+            _isRunning = true;
+            try
+            {
+                var now = DateTime.Now;
+                AppLogger.Info($"[Scheduler] TriggerCheck: evaluating {Schedules.Count(s => s.IsEnabled)} enabled schedule(s)");
+                foreach (var schedule in Schedules.Where(s => s.IsEnabled))
+                {
+                    if (ShouldRun(schedule, now))
+                    {
+                        await ExecuteScheduledSearchAsync(schedule, CancellationToken.None);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("[Scheduler] TriggerCheck error", ex);
+            }
+            finally
+            {
+                _isRunning = false;
+            }
+        }
+
         private async void OnTimerElapsed(object sender, ElapsedEventArgs e)
         {
-            if (_isRunning) return;
+            if (_isRunning)
+            {
+                AppLogger.Info("[Scheduler] Timer tick — skipped (scan already running)");
+                return;
+            }
             _isRunning = true;
 
             try
             {
                 var now = DateTime.Now;
-                foreach (var schedule in Schedules.Where(s => s.IsEnabled))
+                var enabled = Schedules.Where(s => s.IsEnabled).ToList();
+                if (enabled.Count > 0)
+                    AppLogger.Info($"[Scheduler] Timer tick — checking {enabled.Count} schedule(s) at {now:HH:mm:ss}");
+
+                foreach (var schedule in enabled)
                 {
                     if (ShouldRun(schedule, now))
                     {
@@ -118,31 +163,104 @@ namespace IndiLogs_3._0.Services.Grep
         {
             if (!schedule.IsEnabled) return false;
 
+            bool result;
+            string reason;
+
             switch (schedule.ScheduleType)
             {
                 case ScheduleType.Once:
-                    if (schedule.LastRunTime != null) return false;
+                    if (schedule.LastRunTime != null) { reason = "already ran"; result = false; break; }
                     if (schedule.RunDate.HasValue)
-                        return now >= schedule.RunDate.Value.Date.Add(schedule.RunTime);
-                    return now.TimeOfDay >= schedule.RunTime;
+                    {
+                        var target = schedule.RunDate.Value.Date.Add(schedule.RunTime);
+                        result = now >= target;
+                        reason = result ? "target time reached" : $"waiting for {target:yyyy-MM-dd HH:mm}";
+                    }
+                    else
+                    {
+                        result = now.TimeOfDay >= schedule.RunTime;
+                        reason = result ? "run time reached" : $"waiting for {schedule.RunTime:hh\\:mm}";
+                    }
+                    break;
 
                 case ScheduleType.Daily:
-                    // Run if RunTime has passed today and hasn't run today
-                    return now.TimeOfDay >= schedule.RunTime &&
-                           (schedule.LastRunTime == null || schedule.LastRunTime.Value.Date < now.Date);
+                    if (now.TimeOfDay < schedule.RunTime)
+                    {
+                        reason = $"waiting for {schedule.RunTime:hh\\:mm}";
+                        result = false;
+                    }
+                    else if (schedule.LastRunTime != null && schedule.LastRunTime.Value.Date >= now.Date)
+                    {
+                        reason = "already ran today";
+                        result = false;
+                    }
+                    else
+                    {
+                        reason = "daily run time reached";
+                        result = true;
+                    }
+                    break;
 
                 case ScheduleType.Weekly:
-                    return schedule.RunDays.Contains(now.DayOfWeek) &&
-                           now.TimeOfDay >= schedule.RunTime &&
-                           (schedule.LastRunTime == null || schedule.LastRunTime.Value.Date < now.Date);
+                    if (!schedule.RunDays.Contains(now.DayOfWeek))
+                    {
+                        reason = $"today ({now.DayOfWeek}) not in scheduled days";
+                        result = false;
+                    }
+                    else if (now.TimeOfDay < schedule.RunTime)
+                    {
+                        reason = $"waiting for {schedule.RunTime:hh\\:mm}";
+                        result = false;
+                    }
+                    else if (schedule.LastRunTime != null && schedule.LastRunTime.Value.Date >= now.Date)
+                    {
+                        reason = "already ran today";
+                        result = false;
+                    }
+                    else
+                    {
+                        reason = "weekly run time reached";
+                        result = true;
+                    }
+                    break;
 
                 case ScheduleType.Interval:
-                    return schedule.LastRunTime == null ||
-                           (now - schedule.LastRunTime.Value).TotalMinutes >= schedule.RepeatIntervalMinutes;
+                    if (schedule.LastRunTime == null)
+                    {
+                        // First run: respect start time if set
+                        if (schedule.RunTime.TotalSeconds > 0 && now.TimeOfDay < schedule.RunTime)
+                        {
+                            reason = $"waiting for start time {schedule.RunTime:hh\\:mm}";
+                            result = false;
+                        }
+                        else
+                        {
+                            reason = "first run (no previous execution)";
+                            result = true;
+                        }
+                    }
+                    else
+                    {
+                        double elapsed = (now - schedule.LastRunTime.Value).TotalMinutes;
+                        int interval = schedule.RepeatIntervalMinutes;
+                        result = elapsed >= interval;
+                        reason = result ? $"interval elapsed ({elapsed:F0}/{interval} min)"
+                            : $"waiting ({elapsed:F0}/{interval} min)";
+                    }
+                    break;
 
                 default:
-                    return false;
+                    reason = "unknown schedule type";
+                    result = false;
+                    break;
             }
+
+            if (result)
+                AppLogger.Info($"[Scheduler] Schedule \"{schedule.Name}\" ({schedule.ScheduleType}) → WILL RUN ({reason})");
+            else
+                AppLogger.Info($"[Scheduler] Schedule \"{schedule.Name}\" ({schedule.ScheduleType}) → SKIPPED ({reason})");
+
+            return result;
         }
 
         private async Task<string> ExecuteScheduledSearchAsync(ScheduledSearch schedule, CancellationToken ct)
@@ -150,8 +268,14 @@ namespace IndiLogs_3._0.Services.Grep
             var sw = System.Diagnostics.Stopwatch.StartNew();
             SearchStarted?.Invoke(schedule);
 
-            // --- Detailed start logging ---
+            // --- Resolve relative time ranges to absolute dates ---
             var criteria = schedule.Criteria;
+            if (criteria.FileTimeFilter != null)
+                criteria.FileTimeFilter = criteria.FileTimeFilter.Resolve();
+            if (criteria.ResultTimeFilter != null)
+                criteria.ResultTimeFilter = criteria.ResultTimeFilter.Resolve();
+
+            // --- Detailed start logging ---
             string logTypes = (criteria.SearchPLC && criteria.SearchAPP) ? "PLC + APP"
                 : criteria.SearchPLC ? "PLC only"
                 : criteria.SearchAPP ? "APP only"
@@ -161,25 +285,46 @@ namespace IndiLogs_3._0.Services.Grep
                 activeLocations = activeLocations.Where(l => criteria.LocationIds.Contains(l.Id)).ToList();
 
             AppLogger.Info($"[Scheduler] ════════════════════════════════════════════════════");
-            AppLogger.Info($"[Scheduler] SCHEDULED SEARCH STARTED: \"{schedule.Name}\"");
+            AppLogger.Info($"[Scheduler] SCHEDULED SCAN STARTED: \"{schedule.Name}\" (Mode: {schedule.ScanMode})");
             AppLogger.Info($"[Scheduler] Type: {schedule.ScheduleType}, Log types: {logTypes}");
-            AppLogger.Info($"[Scheduler] Locations: {activeLocations.Count} active");
+            // Fix locations with empty BasePath but Address containing a path
             foreach (var loc in activeLocations)
-                AppLogger.Info($"[Scheduler]   → \"{loc.Name}\" — {loc.BasePath}");
-
-            if (criteria.Groups != null && criteria.Groups.Count > 0)
             {
-                AppLogger.Info($"[Scheduler] Criteria: {criteria.Groups.Count} group(s), operator: {criteria.GroupOperator}");
-                foreach (var group in criteria.Groups)
+                if (string.IsNullOrWhiteSpace(loc.BasePath) && !string.IsNullOrWhiteSpace(loc.Address)
+                    && (loc.Address.StartsWith(@"\\") || Directory.Exists(loc.Address)))
                 {
-                    if (group.Conditions == null) continue;
-                    foreach (var cond in group.Conditions)
-                        AppLogger.Info($"[Scheduler]   Search: {cond.Field} {cond.Operator} \"{cond.Value}\"{(cond.Negate ? " (EXCLUDE)" : "")}");
+                    AppLogger.Warn($"[Scheduler] Location \"{loc.Name}\": BasePath is empty but Address contains a path — using Address as BasePath");
+                    loc.BasePath = loc.Address;
+                    _locationService.Update(loc);
                 }
             }
-            else
+
+            AppLogger.Info($"[Scheduler] ── CONFIGURATION ──");
+            AppLogger.Info($"[Scheduler]   Scan Mode:     {schedule.ScanMode}");
+            AppLogger.Info($"[Scheduler]   Schedule:      {schedule.ScheduleType} at {schedule.RunTime:hh\\:mm}");
+            AppLogger.Info($"[Scheduler]   Log Types:     {logTypes}");
+            AppLogger.Info($"[Scheduler]   Locations:     {activeLocations.Count} of {_locationService.Locations.Count} total");
+            foreach (var loc in activeLocations)
+                AppLogger.Info($"[Scheduler]     → \"{loc.Name}\" — {loc.BasePath}");
+            if (activeLocations.Count == 0)
+                AppLogger.Warn($"[Scheduler] WARNING: No locations matched! Check that locations are active and have a path set.");
+
+            if (schedule.ScanMode != ScanMode.StatisticsOnly)
             {
-                AppLogger.Warn($"[Scheduler] WARNING: No search conditions found in criteria! Schedule may have been created without a search query.");
+                if (criteria.Groups != null && criteria.Groups.Count > 0)
+                {
+                    AppLogger.Info($"[Scheduler] Criteria: {criteria.Groups.Count} group(s), operator: {criteria.GroupOperator}");
+                    foreach (var group in criteria.Groups)
+                    {
+                        if (group.Conditions == null) continue;
+                        foreach (var cond in group.Conditions)
+                            AppLogger.Info($"[Scheduler]   Search: {cond.Field} {cond.Operator} \"{cond.Value}\"{(cond.Negate ? " (EXCLUDE)" : "")}");
+                    }
+                }
+                else
+                {
+                    AppLogger.Warn($"[Scheduler] WARNING: No search conditions found in criteria!");
+                }
             }
             if (criteria.FileTimeFilter != null)
                 AppLogger.Info($"[Scheduler] File time filter: {criteria.FileTimeFilter.From?.ToString("yyyy-MM-dd HH:mm") ?? "any"} → {criteria.FileTimeFilter.To?.ToString("yyyy-MM-dd HH:mm") ?? "any"}");
@@ -194,57 +339,110 @@ namespace IndiLogs_3._0.Services.Grep
 
             try
             {
-                var results = await _grepService.SearchMultiLocationAsync(
-                    criteria,
-                    activeLocations,
-                    null, // No UI progress for scheduled runs
-                    ct);
+                List<GrepResult> results = null;
+                LogStatisticsResult stats = null;
+                bool doSearch = schedule.ScanMode == ScanMode.SearchOnly || schedule.ScanMode == ScanMode.SearchAndStatistics;
+                bool doStats = schedule.ScanMode == ScanMode.StatisticsOnly || schedule.ScanMode == ScanMode.SearchAndStatistics;
 
+                // --- Search ---
+                if (doSearch)
+                {
+                    results = await _grepService.SearchMultiLocationAsync(
+                        criteria, activeLocations, null, ct);
+                    AppLogger.Info($"[Scheduler] Search phase done: {results.Count:N0} result(s)");
+                }
+
+                // --- Statistics ---
+                if (doStats)
+                {
+                    AppLogger.Info($"[Scheduler] Starting statistics computation...");
+                    var (plcLogs, appLogs, hasBinary) = await Task.Run(() =>
+                        LogStatisticsService.ParseLogsFromLocations(activeLocations, criteria, null, ct));
+
+                    stats = LogStatisticsService.ComputeStatistics(plcLogs, appLogs, hasBinary);
+                    AppLogger.Info($"[Scheduler] Statistics computed: {stats.TotalPlcLogs:N0} PLC + {stats.TotalAppLogs:N0} APP logs, {stats.TotalPlcErrors + stats.TotalAppErrors:N0} errors");
+                }
+
+                // --- Status ---
                 schedule.LastRunTime = DateTime.Now;
-                schedule.LastRunStatus = $"OK — {results.Count:N0} results in {sw.ElapsedMilliseconds}ms";
+                int resultCount = results?.Count ?? 0;
+                string statusParts = "";
+                if (doSearch) statusParts += $"{resultCount:N0} results";
+                if (doStats) statusParts += (statusParts.Length > 0 ? ", " : "") + $"{(stats?.TotalPlcLogs ?? 0) + (stats?.TotalAppLogs ?? 0):N0} logs analyzed";
+                schedule.LastRunStatus = $"OK — {statusParts} in {sw.ElapsedMilliseconds}ms";
                 SaveSchedules();
 
-                // Save results to output directory
+                // --- Save outputs ---
                 if (!string.IsNullOrWhiteSpace(schedule.OutputDirectory))
                 {
                     Directory.CreateDirectory(schedule.OutputDirectory);
                     string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
                     string baseName = $"{schedule.Name}_{timestamp}";
 
-                    // JSON output
-                    string jsonPath = Path.Combine(schedule.OutputDirectory, baseName + ".json");
-                    File.WriteAllText(jsonPath, JsonConvert.SerializeObject(results, Formatting.Indented));
+                    // Search outputs (JSON + CSV)
+                    if (doSearch && results != null && results.Count > 0)
+                    {
+                        string jsonPath = Path.Combine(schedule.OutputDirectory, baseName + ".json");
+                        File.WriteAllText(jsonPath, JsonConvert.SerializeObject(results, Formatting.Indented));
 
-                    // CSV output
-                    string csvPath = Path.Combine(schedule.OutputDirectory, baseName + ".csv");
-                    WriteCsv(csvPath, results);
+                        string csvPath = Path.Combine(schedule.OutputDirectory, baseName + ".csv");
+                        WriteCsv(csvPath, results);
 
-                    // HTML report
+                        AppLogger.Info($"[Scheduler] Search results saved: JSON={jsonPath}, CSV={csvPath}");
+                    }
+
+                    // Statistics JSON
+                    if (doStats && stats != null)
+                    {
+                        string statsJsonPath = Path.Combine(schedule.OutputDirectory, baseName + "_stats.json");
+                        File.WriteAllText(statsJsonPath, JsonConvert.SerializeObject(stats, Formatting.Indented));
+                        AppLogger.Info($"[Scheduler] Statistics saved: {statsJsonPath}");
+                    }
+
+                    // HTML report (combined or statistics-only)
                     htmlReportPath = Path.Combine(schedule.OutputDirectory, baseName + ".html");
                     var reportParams = new SearchReportParams
                     {
-                        LocationNames = _locationService.Locations.Where(l => l.IsActive).Select(l => l.Name).ToList(),
+                        LocationNames = activeLocations.Select(l => l.Name).ToList(),
                         QueryText = null,
-                        CriteriaSummary = $"Scheduled search: {schedule.Name}",
+                        CriteriaSummary = $"Scheduled scan: {schedule.Name} ({schedule.ScanMode})",
                         SearchDuration = $"{sw.ElapsedMilliseconds:N0}ms",
-                        LogTypes = (schedule.Criteria.SearchPLC && schedule.Criteria.SearchAPP) ? "PLC + APP"
-                            : schedule.Criteria.SearchPLC ? "PLC" : schedule.Criteria.SearchAPP ? "APP" : "None"
+                        LogTypes = (criteria.SearchPLC && criteria.SearchAPP) ? "PLC + APP"
+                            : criteria.SearchPLC ? "PLC" : criteria.SearchAPP ? "APP" : "None"
                     };
-                    SearchReportService.GenerateHtmlReport(htmlReportPath, reportParams, results);
 
-                    AppLogger.Info($"[Scheduler] Results saved: JSON={jsonPath}, CSV={csvPath}, HTML={htmlReportPath}");
+                    if (doStats && !doSearch)
+                        SearchReportService.GenerateStatisticsReport(htmlReportPath, reportParams, stats);
+                    else if (doStats)
+                        SearchReportService.GenerateHtmlReport(htmlReportPath, reportParams, results ?? new List<GrepResult>(), stats);
+                    else
+                        SearchReportService.GenerateHtmlReport(htmlReportPath, reportParams, results ?? new List<GrepResult>());
+
+                    AppLogger.Info($"[Scheduler] HTML report saved: {htmlReportPath}");
                 }
 
-                AppLogger.Info($"[Scheduler] SCHEDULED SEARCH COMPLETE: \"{schedule.Name}\" — {results.Count:N0} result(s) in {sw.ElapsedMilliseconds:N0}ms");
+                AppLogger.Info($"[Scheduler] SCHEDULED SCAN COMPLETE: \"{schedule.Name}\" — {statusParts} — {sw.ElapsedMilliseconds:N0}ms");
                 AppLogger.Info($"[Scheduler] ════════════════════════════════════════════════════");
-                SearchCompleted?.Invoke(schedule, results.Count, null);
+
+                // ── Email Notification ──
+                try
+                {
+                    bool headless = System.Windows.Application.Current?.MainWindow == null;
+                    _emailService?.ProcessScanResult(schedule, results, stats, htmlReportPath, forceImmediate: headless);
+                }
+                catch (Exception emailEx)
+                {
+                    AppLogger.Error($"[Scheduler] Email notification failed for \"{schedule.Name}\": {emailEx.Message}");
+                }
+
+                SearchCompleted?.Invoke(schedule, resultCount, null);
             }
             catch (Exception ex)
             {
                 schedule.LastRunTime = DateTime.Now;
                 schedule.LastRunStatus = $"FAILED — {ex.Message}";
                 SaveSchedules();
-                AppLogger.Error($"[Scheduler] SCHEDULED SEARCH FAILED: \"{schedule.Name}\" — {ex.Message}");
+                AppLogger.Error($"[Scheduler] SCHEDULED SCAN FAILED: \"{schedule.Name}\" — {ex.Message}");
                 AppLogger.Info($"[Scheduler] ════════════════════════════════════════════════════");
                 SearchCompleted?.Invoke(schedule, 0, ex.Message);
             }
@@ -311,6 +509,7 @@ namespace IndiLogs_3._0.Services.Grep
         {
             _timer?.Stop();
             _timer?.Dispose();
+            _emailService?.Dispose();
         }
     }
 }

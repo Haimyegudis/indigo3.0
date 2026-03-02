@@ -85,6 +85,21 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
+        // EM Statistics Gantt — only visible when ZIP contained EM_Statistics CSV
+        public bool HasEmStatisticsData => !string.IsNullOrEmpty(_sessionData?.EmStatisticsCsvContent);
+
+        private bool _includeEmStatistics = true;
+        public bool IncludeEmStatistics
+        {
+            get => _includeEmStatistics;
+            set
+            {
+                _includeEmStatistics = value;
+                OnPropertyChanged(nameof(IncludeEmStatistics));
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
         private string _ioSearchText = string.Empty;
         public string IOSearchText
         {
@@ -361,12 +376,13 @@ namespace IndiLogs_3._0.ViewModels
             if (_sessionData == null) return;
 
             // ── S4-5 with Io-*.csv: load IO components from TerminalLogs ────
+            // Keys may be prefixed for nested ZIPs (e.g. "InnerZip/TerminalLogs/Io-BIM[0].csv")
             bool hasIoCsv = (_sessionData.TerminalCsvBytes != null &&
                              _sessionData.TerminalCsvBytes.Keys.Any(
-                                 k => k.StartsWith("Io-", StringComparison.OrdinalIgnoreCase))) ||
+                                 k => System.IO.Path.GetFileName(k).StartsWith("Io-", StringComparison.OrdinalIgnoreCase))) ||
                             (_sessionData.TerminalLogFiles != null &&
                              _sessionData.TerminalLogFiles.Keys.Any(
-                                 k => k.StartsWith("Io-", StringComparison.OrdinalIgnoreCase)));
+                                 k => System.IO.Path.GetFileName(k).StartsWith("Io-", StringComparison.OrdinalIgnoreCase)));
 
             if (_sessionData.HasBinaryAppLogs && hasIoCsv)
             {
@@ -719,6 +735,7 @@ namespace IndiLogs_3._0.ViewModels
         private bool CanExport()
         {
             return IncludeLogStats ||
+                   (IncludeEmStatistics && HasEmStatisticsData) ||
                    IOComponents.Any(x => x.IsSelected) ||
                    AxisComponents.Any(x => x.IsSelected) ||
                    CHStepComponents.Any(x => x.IsSelected) ||
@@ -1085,7 +1102,12 @@ namespace IndiLogs_3._0.ViewModels
 
                 IsLoading = false;
 
-                if (dataPackage == null || (dataPackage.Signals.Count == 0 && dataPackage.States.Count == 0))
+                // Attach EM Statistics CSV if checkbox is checked
+                if (IncludeEmStatistics && HasEmStatisticsData)
+                    dataPackage.EmStatisticsCsvContent = _sessionData.EmStatisticsCsvContent;
+
+                if (dataPackage == null || (dataPackage.Signals.Count == 0 && dataPackage.States.Count == 0
+                    && string.IsNullOrEmpty(dataPackage.EmStatisticsCsvContent)))
                 {
                     MessageBox.Show("No data to display. Please select at least one signal or state.",
                         "No Data", MessageBoxButton.OK, MessageBoxImage.Warning);

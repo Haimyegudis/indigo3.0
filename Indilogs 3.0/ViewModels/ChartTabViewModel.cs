@@ -73,6 +73,14 @@ namespace IndiLogs_3._0.ViewModels
             return _chartControl?.RestoreChartState(state) ?? false;
         }
 
+        /// <summary>
+        /// Creates an EM_Statistics Gantt chart from CSV content.
+        /// </summary>
+        public void AddEmStatisticsGantt(string csvContent)
+        {
+            _chartControl?.AddEmStatisticsGantt(csvContent);
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)

@@ -36,7 +36,8 @@ namespace IndiLogs_3._0.Controls.Charts
         IO,      // IO signals
         CHStep,  // CHSTEP Gantt
         Thread,  // Thread messages
-        Events   // Event markers
+        Events,  // Event markers
+        EmStats  // EM Statistics Gantt
     }
 
     public partial class ChartSignalList : UserControl
@@ -58,6 +59,7 @@ namespace IndiLogs_3._0.Controls.Charts
         private static readonly Brush CHStepColor = new SolidColorBrush(Color.FromRgb(255, 152, 0));  // Orange
         private static readonly Brush ThreadColor = new SolidColorBrush(Color.FromRgb(156, 39, 176)); // Purple
         private static readonly Brush EventsColor = new SolidColorBrush(Color.FromRgb(244, 67, 54));   // Red
+        private static readonly Brush EmStatsColor = new SolidColorBrush(Color.FromRgb(0, 150, 136)); // Teal
         private static readonly Brush DefaultColor = new SolidColorBrush(Color.FromRgb(96, 125, 139)); // Gray
 
         public ChartSignalList()
@@ -106,6 +108,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
             if (package == null)
             {
+                SetCategoryBarVisibility(false);
                 ApplyFilters();
                 return;
             }
@@ -182,8 +185,31 @@ namespace IndiLogs_3._0.Controls.Charts
                 });
             }
 
-            // S4-5 (IoTerminal): hide category tabs — only IO data exists
-            SetCategoryBarVisibility(!package.SuppressGapDetection);
+            // S4-5 (IoTerminal): show simplified category tabs (IO only, EM Stats added separately)
+            if (package.SuppressGapDetection)
+                SetSimplifiedCategoryBar();
+            else
+                SetCategoryBarVisibility(true);
+
+            ApplyFilters();
+        }
+
+        /// <summary>
+        /// Adds an EM Statistics entry to the signal list (displayed as a single item the user can double-click).
+        /// </summary>
+        public void AddEmStatisticsItems(int stateCount)
+        {
+            _allItems.Add(new SignalListItem
+            {
+                FullName = "[EM Statistics]",
+                DisplayName = $"EM Statistics ({stateCount} components)",
+                TypeIcon = "M",
+                TypeColor = EmStatsColor,
+                Category = SignalItemCategory.EmStats
+            });
+
+            // Make EM Stats category button visible
+            if (EmStatsBtn != null) EmStatsBtn.Visibility = Visibility.Visible;
 
             ApplyFilters();
         }
@@ -199,9 +225,41 @@ namespace IndiLogs_3._0.Controls.Charts
             if (border != null)
                 border.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
 
+            // Reset all buttons to visible (EM Stats stays collapsed — only shown when EM data exists)
+            if (visible)
+            {
+                if (AxisBtn != null) AxisBtn.Visibility = Visibility.Visible;
+                if (IOBtn != null) IOBtn.Visibility = Visibility.Visible;
+                if (CHStepBtn != null) CHStepBtn.Visibility = Visibility.Visible;
+                if (ThreadBtn != null) ThreadBtn.Visibility = Visibility.Visible;
+                if (EventsBtn != null) EventsBtn.Visibility = Visibility.Visible;
+                if (EmStatsBtn != null) EmStatsBtn.Visibility = Visibility.Collapsed;
+            }
+
             // Ensure AllBtn is checked so no filter is active
             if (!visible && AllBtn != null)
                 AllBtn.IsChecked = true;
+        }
+
+        /// <summary>
+        /// Shows a simplified category bar for S4-5: only ALL and IO (hides AXIS, CHSTEP, THREAD, EVENTS).
+        /// </summary>
+        private void SetSimplifiedCategoryBar()
+        {
+            var categoryBar = AllBtn?.Parent as FrameworkElement;
+            var border = categoryBar?.Parent as FrameworkElement;
+            if (border != null)
+                border.Visibility = Visibility.Visible;
+
+            // Show only ALL, IO, and EM STATS
+            if (AxisBtn != null) AxisBtn.Visibility = Visibility.Collapsed;
+            if (CHStepBtn != null) CHStepBtn.Visibility = Visibility.Collapsed;
+            if (ThreadBtn != null) ThreadBtn.Visibility = Visibility.Collapsed;
+            if (EventsBtn != null) EventsBtn.Visibility = Visibility.Collapsed;
+            if (IOBtn != null) IOBtn.Visibility = Visibility.Visible;
+            if (EmStatsBtn != null) EmStatsBtn.Visibility = Visibility.Visible;
+
+            if (AllBtn != null) AllBtn.IsChecked = true;
         }
 
         /// <summary>
@@ -336,6 +394,8 @@ namespace IndiLogs_3._0.Controls.Charts
                     categoryMatch = item.Category == SignalItemCategory.Thread;
                 else if (EventsBtn?.IsChecked == true)
                     categoryMatch = item.Category == SignalItemCategory.Events;
+                else if (EmStatsBtn?.IsChecked == true)
+                    categoryMatch = item.Category == SignalItemCategory.EmStats;
                 // AllBtn shows everything
 
                 if (!categoryMatch)

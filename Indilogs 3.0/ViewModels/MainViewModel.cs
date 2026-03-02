@@ -22,7 +22,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using System.Data.SQLite;
+using Microsoft.Data.Sqlite;
 
 namespace IndiLogs_3._0.ViewModels
 {
@@ -189,6 +189,152 @@ namespace IndiLogs_3._0.ViewModels
         public bool HasGlobalsFiles =>
             SessionVM?.SelectedSession?.GlobalsFiles != null && SessionVM.SelectedSession.GlobalsFiles.Count > 0 &&
             SessionVM.SelectedSession.FilePath != null && SessionVM.SelectedSession.FilePath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
+
+        // --- TAB SELECTION VISIBILITY (set by TabSelectionWindow dialog) ---
+        private bool _showPlcTab = true;
+        public bool ShowPlcTab { get => _showPlcTab; set { _showPlcTab = value; OnPropertyChanged(); } }
+
+        private bool _showAppTab = true;
+        public bool ShowAppTab { get => _showAppTab; set { _showAppTab = value; OnPropertyChanged(); } }
+
+        private bool _showEventsTab = true;
+        public bool ShowEventsTab { get => _showEventsTab; set { _showEventsTab = value; OnPropertyChanged(); } }
+
+        private bool _showScreenshotsTab = true;
+        public bool ShowScreenshotsTab { get => _showScreenshotsTab; set { _showScreenshotsTab = value; OnPropertyChanged(); } }
+
+        private bool _showConfigTab = true;
+        public bool ShowConfigTab { get => _showConfigTab; set { _showConfigTab = value; OnPropertyChanged(); } }
+
+        private bool _showDbConfigTab = true;
+        public bool ShowDbConfigTab { get => _showDbConfigTab; set { _showDbConfigTab = value; OnPropertyChanged(); } }
+
+        private bool _showSetupInfoTab = true;
+        public bool ShowSetupInfoTab { get => _showSetupInfoTab; set { _showSetupInfoTab = value; OnPropertyChanged(); } }
+
+        private bool _showGlobalsTab = true;
+        public bool ShowGlobalsTab { get => _showGlobalsTab; set { _showGlobalsTab = value; OnPropertyChanged(); } }
+
+        private bool _showSystabTab = true;
+        public bool ShowSystabTab { get => _showSystabTab; set { _showSystabTab = value; OnPropertyChanged(); } }
+
+        private bool _showChartsTab = true;
+        public bool ShowChartsTab { get => _showChartsTab; set { _showChartsTab = value; OnPropertyChanged(); } }
+
+        private bool _showCprTab = true;
+        public bool ShowCprTab { get => _showCprTab; set { _showCprTab = value; OnPropertyChanged(); } }
+
+        private bool _showStepRecorderTab = true;
+        public bool ShowStepRecorderTab { get => _showStepRecorderTab; set { _showStepRecorderTab = value; OnPropertyChanged(); } }
+
+        private bool _showDifferentLogsTab = true;
+        public bool ShowDifferentLogsTab { get => _showDifferentLogsTab; set { _showDifferentLogsTab = value; OnPropertyChanged(); } }
+
+        // Stores the user's tab selection to combine with data-driven visibility after load
+        private TabSelectionConfig _lastTabSelection;
+
+        /// <summary>
+        /// Applies tab visibility from the user's tab selection dialog choices.
+        /// Called before loading starts.
+        /// </summary>
+        public void ApplyTabSelection(TabSelectionConfig selection, TabSelectionConfig preScan)
+        {
+            _lastTabSelection = selection;
+
+            // Reset all to visible first
+            ShowPlcTab = true;
+            ShowAppTab = true;
+            ShowEventsTab = true;
+            ShowScreenshotsTab = true;
+            ShowConfigTab = true;
+            ShowDbConfigTab = true;
+            ShowSetupInfoTab = true;
+            ShowGlobalsTab = true;
+            ShowSystabTab = true;
+            ShowChartsTab = true;
+            ShowCprTab = true;
+            ShowStepRecorderTab = true;
+            ShowDifferentLogsTab = true;
+
+            if (selection == null) return;
+
+            ShowPlcTab = selection.LoadPlc;
+            ShowAppTab = selection.LoadApp;
+            ShowEventsTab = selection.LoadEvents;
+            ShowScreenshotsTab = selection.LoadScreenshots;
+            ShowConfigTab = selection.LoadConfiguration;
+            // DB & CONFIG / TERMINALS tab is controlled by Configuration + Terminal selection
+            ShowDbConfigTab = selection.LoadConfiguration || selection.LoadTerminalLogs || selection.LoadLrs;
+            ShowSetupInfoTab = selection.LoadSetupInfo;
+            ShowGlobalsTab = selection.LoadGlobals;
+            ShowSystabTab = selection.LoadSystab;
+            ShowChartsTab = selection.ShowCharts;
+            ShowCprTab = selection.ShowCpr;
+            ShowStepRecorderTab = selection.ShowStepRecorder;
+            ShowDifferentLogsTab = selection.ShowDifferentLogs;
+        }
+
+        /// <summary>
+        /// Re-evaluates data-driven tab visibility after session data is loaded.
+        /// Combines user selection (must have been checked) with data availability.
+        /// </summary>
+        public void UpdateTabVisibilityAfterLoad()
+        {
+            bool userAllowsGlobals = _lastTabSelection?.LoadGlobals ?? true;
+            bool userAllowsSystab = _lastTabSelection?.LoadSystab ?? true;
+            bool userAllowsSetupInfo = _lastTabSelection?.LoadSetupInfo ?? true;
+
+            ShowGlobalsTab = userAllowsGlobals && HasGlobalsFiles;
+            ShowSystabTab = userAllowsSystab && HasSystabFiles;
+            // Setup Info: hide for S4-5 (HasBinaryAppLogs) even if user checked it
+            ShowSetupInfoTab = userAllowsSetupInfo && HasSessionLoaded && !HasBinaryAppLogs;
+        }
+
+        // --- ADD BACK SKIPPED COMPONENTS ---
+
+        /// <summary>True when the current session has components that were skipped but exist in the ZIP.</summary>
+        public bool HasSkippedComponents
+        {
+            get
+            {
+                var skipped = GetSkippedComponents();
+                return skipped != null && skipped.Count > 0;
+            }
+        }
+
+        /// <summary>Returns component names that were skipped during load but exist in the ZIP.</summary>
+        public List<(string Name, string DisplayName)> GetSkippedComponents()
+        {
+            var session = SessionVM?.SelectedSession;
+            if (session?.LoadTabSelection == null || session?.PreScanConfig == null)
+                return new List<(string, string)>();
+
+            var sel = session.LoadTabSelection;
+            var pre = session.PreScanConfig;
+            var result = new List<(string Name, string DisplayName)>();
+
+            if (!sel.LoadPlc && pre.HasPlc) result.Add(("Plc", "PLC Logs"));
+            if (!sel.LoadApp && pre.HasApp) result.Add(("App", "APP Logs"));
+            if (!sel.LoadEvents && pre.HasEvents) result.Add(("Events", "Events"));
+            if (!sel.LoadScreenshots && pre.HasScreenshots) result.Add(("Screenshots", "Screenshots"));
+            if (!sel.LoadConfiguration && pre.HasConfiguration) result.Add(("Configuration", "Configuration"));
+            if (!sel.LoadTerminalLogs && pre.HasTerminalLogs) result.Add(("TerminalLogs", "Terminal Logs"));
+            if (!sel.LoadLrs && pre.HasLrs) result.Add(("Lrs", "LRS"));
+            if (!sel.LoadSetupInfo && pre.HasSetupInfo) result.Add(("SetupInfo", "Setup Info"));
+            if (!sel.LoadSystab && pre.HasSystab) result.Add(("Systab", "Systab"));
+            if (!sel.LoadGlobals && pre.HasGlobals) result.Add(("Globals", "Globals"));
+            if (pre.IsS6 && !sel.LoadManagerThread && pre.HasManagerThread) result.Add(("ManagerThread", "Manager Thread"));
+
+            // Tool tabs
+            if (!sel.ShowCharts) result.Add(("Charts", "Charts"));
+            if (!sel.ShowCpr) result.Add(("CPR", "CPR"));
+            if (!pre.IsS6 && !sel.ShowStepRecorder) result.Add(("Step Recorder", "Step Recorder"));
+            if (!sel.ShowDifferentLogs) result.Add(("Different Logs", "Different Logs"));
+
+            return result;
+        }
+
+        public ICommand AddBackComponentCommand { get; private set; }
 
         // --- PANEL VISIBILITY ---
         private bool _isLeftPanelVisible = true;
@@ -863,6 +1009,11 @@ namespace IndiLogs_3._0.ViewModels
             ToggleTimeSyncCommand = new RelayCommand(o => IsTimeSyncEnabled = !IsTimeSyncEnabled);
             ToggleLeftPanelCommand = new RelayCommand(o => IsLeftPanelVisible = !IsLeftPanelVisible);
             ToggleRightPanelCommand = new RelayCommand(o => IsRightPanelVisible = !IsRightPanelVisible);
+            AddBackComponentCommand = new RelayCommand(o =>
+            {
+                if (o is string componentName)
+                    _ = SessionVM.AddBackComponentAsync(componentName);
+            });
             BrowseTableCommand = ConfigVM.BrowseTableCommand;
             CopyTableNameCommand = new RelayCommand(CopyTableName);
 
@@ -1060,11 +1211,11 @@ namespace IndiLogs_3._0.ViewModels
                 tempDbPath = Path.Combine(Path.GetTempPath(), $"indilogs_temp_{Guid.NewGuid()}.db");
                 File.WriteAllBytes(tempDbPath, dbBytes);
 
-                using (var connection = new SQLiteConnection($"Data Source={tempDbPath};Read Only=True;"))
+                using (var connection = new SqliteConnection($"Data Source={tempDbPath};Mode=ReadOnly"))
                 {
                     connection.Open();
                     var tables = new List<string>();
-                    using (var cmd = new SQLiteCommand("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;", connection))
+                    using (var cmd = new SqliteCommand("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;", connection))
                     using (var reader = cmd.ExecuteReader())
                     {
                         while (reader.Read()) { tables.Add(reader.GetString(0)); }
@@ -1076,12 +1227,12 @@ namespace IndiLogs_3._0.ViewModels
                     foreach (var tableName in tables)
                     {
                         sb.AppendLine($"━━━ TABLE: {tableName} ━━━");
-                        using (var countCmd = new SQLiteCommand($"SELECT COUNT(*) FROM [{EscapeSqlBracketId(tableName)}]", connection))
+                        using (var countCmd = new SqliteCommand($"SELECT COUNT(*) FROM [{EscapeSqlBracketId(tableName)}]", connection))
                         {
                             var count = countCmd.ExecuteScalar();
                             sb.AppendLine($"Rows: {count}");
                         }
-                        using (var cmd = new SQLiteCommand($"SELECT * FROM [{EscapeSqlBracketId(tableName)}] LIMIT 100", connection))
+                        using (var cmd = new SqliteCommand($"SELECT * FROM [{EscapeSqlBracketId(tableName)}] LIMIT 100", connection))
                         using (var reader = cmd.ExecuteReader())
                         {
                             var columns = new List<string>();
@@ -1676,8 +1827,8 @@ namespace IndiLogs_3._0.ViewModels
             // S4-5 (binary APP): allow export even without parsed PLC logs — IO data comes from CSV
             bool hasLogs = selectedSession.Logs != null && selectedSession.Logs.Any();
             bool hasIoCsv = selectedSession.HasBinaryAppLogs &&
-                            ((selectedSession.TerminalCsvBytes != null && selectedSession.TerminalCsvBytes.Keys.Any(k => k.StartsWith("Io-", StringComparison.OrdinalIgnoreCase))) ||
-                             (selectedSession.TerminalLogFiles != null && selectedSession.TerminalLogFiles.Keys.Any(k => k.StartsWith("Io-", StringComparison.OrdinalIgnoreCase))));
+                            ((selectedSession.TerminalCsvBytes != null && selectedSession.TerminalCsvBytes.Keys.Any(k => System.IO.Path.GetFileName(k).StartsWith("Io-", StringComparison.OrdinalIgnoreCase))) ||
+                             (selectedSession.TerminalLogFiles != null && selectedSession.TerminalLogFiles.Keys.Any(k => System.IO.Path.GetFileName(k).StartsWith("Io-", StringComparison.OrdinalIgnoreCase))));
 
             if (!hasLogs && !hasIoCsv)
             {
@@ -1913,7 +2064,7 @@ namespace IndiLogs_3._0.ViewModels
             catch (Exception ex) { AppLogger.Error("OpenStripeAnalysisWindow failed", ex); }
         }
 
-        private void NavigateToGrepResult(GrepResult result)
+        internal void NavigateToGrepResult(GrepResult result)
         {
             if (result == null) return;
 
@@ -1986,7 +2137,7 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
-        private void LoadMultipleFiles(List<(string FilePath, string SessionName)> fileList)
+        internal void LoadMultipleFiles(List<(string FilePath, string SessionName)> fileList)
         {
             if (fileList == null || fileList.Count == 0) return;
 

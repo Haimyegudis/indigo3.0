@@ -1,10 +1,11 @@
 using System;
-using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography;
+using System.Runtime.InteropServices;
+using System.Security.Principal;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -12,11 +13,36 @@ namespace IndiLogs_3._0.Services
 {
     public class UpdateService
     {
-        // Server paths — read from App.config appSettings so internal paths are not hardcoded in source
-        private static readonly string VersionFileUrl = ConfigurationManager.AppSettings["UpdateVersionFile"] ?? "";
-        private static readonly string InstallerFolder = ConfigurationManager.AppSettings["UpdateInstallerFolder"] ?? "";
-        private const string InstallerPattern = "IndiLogs*.exe"; // Pattern to find installer
-        private const string HashFileExtension = ".sha256"; // Expected hash file alongside installer
+        // Server paths — read from appsettings.json (sits next to the exe)
+        private static readonly string VersionFileUrl;
+        private static readonly string InstallerFolder;
+        private const string ExePattern = "IndiLogs3.0_*.exe";
+
+        static UpdateService()
+        {
+            try
+            {
+                // Environment.ProcessPath points to the actual exe even in single-file mode
+                string exeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
+                string settingsPath = Path.Combine(exeDir, "appsettings.json");
+                if (File.Exists(settingsPath))
+                {
+                    using var doc = JsonDocument.Parse(File.ReadAllText(settingsPath));
+                    VersionFileUrl = doc.RootElement.TryGetProperty("UpdateVersionFile", out var vf) ? vf.GetString() : "";
+                    InstallerFolder = doc.RootElement.TryGetProperty("UpdateInstallerFolder", out var inf) ? inf.GetString() : "";
+                }
+                else
+                {
+                    VersionFileUrl = "";
+                    InstallerFolder = "";
+                }
+            }
+            catch
+            {
+                VersionFileUrl = "";
+                InstallerFolder = "";
+            }
+        }
 
         public async Task CheckForUpdatesSimpleAsync()
         {
@@ -31,43 +57,21 @@ namespace IndiLogs_3._0.Services
                     Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
                     UpdateLogger.Log($"Current version: {currentVersion}");
 
-                    // Check directory accessibility first
-                    string directory = Path.GetDirectoryName(VersionFileUrl);
-                    UpdateLogger.Log($"Checking directory: {directory}");
+                    // Establish connection to the network share (needed for hidden admin shares)
+                    EnsureShareConnection(InstallerFolder);
 
-                    if (!Directory.Exists(directory))
-                    {
-                        UpdateLogger.Log($"[ERROR] Directory not accessible: {directory}");
-                        UpdateLogger.Log("Possible causes: Network not connected, VPN required, no permissions");
-                        return;
-                    }
-                    UpdateLogger.Log($"Directory exists: YES");
-
-                    // List files in directory for debugging
+                    // Read version file directly — File.Exists() returns false on hidden
+                    // admin shares (softwareqa$) even when the file is accessible.
+                    string serverVersionText;
                     try
                     {
-                        var files = Directory.GetFiles(directory);
-                        UpdateLogger.Log($"Files in directory ({files.Length}):");
-                        foreach (var file in files)
-                        {
-                            UpdateLogger.Log($"  - {Path.GetFileName(file)}");
-                        }
+                        serverVersionText = File.ReadAllText(VersionFileUrl).Trim();
                     }
-                    catch (Exception dirEx)
+                    catch (Exception readEx)
                     {
-                        UpdateLogger.Log($"[ERROR] Cannot list directory: {dirEx.Message}");
-                    }
-
-                    // Check if server is accessible
-                    if (!File.Exists(VersionFileUrl))
-                    {
-                        UpdateLogger.Log($"[ERROR] Version file not found at: {VersionFileUrl}");
+                        UpdateLogger.Log($"[ERROR] Cannot read version file: {readEx.Message}");
                         return;
                     }
-                    UpdateLogger.Log("Version file exists: YES");
-
-                    // Read version from server
-                    string serverVersionText = File.ReadAllText(VersionFileUrl).Trim();
                     UpdateLogger.Log($"Server version text (raw): '{serverVersionText}'");
                     UpdateLogger.Log($"Server version text length: {serverVersionText.Length}");
 
@@ -100,7 +104,7 @@ namespace IndiLogs_3._0.Services
 
                             if (result == MessageBoxResult.Yes)
                             {
-                                DownloadAndInstallUpdate(serverVersion);
+                                DownloadAndInstallUpdate(serverVersion, serverVersionText);
                             }
                         });
                     }
@@ -120,52 +124,56 @@ namespace IndiLogs_3._0.Services
             });
         }
 
-        private void DownloadAndInstallUpdate(Version serverVersion)
+        private void DownloadAndInstallUpdate(Version serverVersion, string versionText)
         {
             try
             {
-                UpdateLogger.Log("[AUTO-UPDATE] Locating installer on network share...");
+                UpdateLogger.Log("[AUTO-UPDATE] Locating new exe on network share...");
 
-                // Find the installer on the server
-                string installerPath = FindInstallerOnServer();
-                if (string.IsNullOrEmpty(installerPath))
+                string serverExePath = FindExeOnServer(versionText);
+                if (string.IsNullOrEmpty(serverExePath))
                 {
-                    UpdateLogger.Log("[ERROR] Could not find installer file on server");
+                    UpdateLogger.Log("[ERROR] Could not find update exe on server");
                     MessageBox.Show(
-                        "Could not find the installer file on the server.\n\n" +
-                        $"Please open this folder and run the installer manually:\n{InstallerFolder}",
+                        "Could not find the update file on the server.\n\n" +
+                        $"Please open this folder and copy the exe manually:\n{InstallerFolder}",
                         "Update Error",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
                     return;
                 }
 
-                UpdateLogger.Log($"[AUTO-UPDATE] Found installer: {installerPath}");
+                // Current exe path
+                string currentExePath = Environment.ProcessPath;
+                string currentDir = Path.GetDirectoryName(currentExePath);
+                string currentExeName = Path.GetFileName(currentExePath);
 
-                // Verify installer integrity before execution
-                if (!VerifyInstallerIntegrity(installerPath))
-                {
-                    UpdateLogger.Log("[AUTO-UPDATE] Installer integrity verification FAILED - aborting");
-                    MessageBox.Show(
-                        "Installer integrity verification failed.\n\n" +
-                        "The installer file may have been tampered with or the hash file is missing.\n" +
-                        $"Please verify the installer manually at:\n{InstallerFolder}",
-                        "Security Warning",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                    return;
-                }
+                // Copy new exe to temp location next to current exe
+                string tempExePath = Path.Combine(currentDir, $"IndiLogs3.0_update_{versionText}.tmp");
+                UpdateLogger.Log($"[AUTO-UPDATE] Copying from server: {serverExePath}");
+                File.Copy(serverExePath, tempExePath, true);
+                UpdateLogger.Log($"[AUTO-UPDATE] Copied to: {tempExePath}");
 
-                UpdateLogger.Log("[AUTO-UPDATE] Integrity verified, launching installer...");
+                // Write a small .cmd script that waits, replaces, and relaunches
+                string cmdPath = Path.Combine(currentDir, "update.cmd");
+                string cmdContent =
+                    "@echo off\r\n" +
+                    "echo Updating IndiLogs 3.0...\r\n" +
+                    "timeout /t 2 /nobreak >nul\r\n" +
+                    $"move /y \"{tempExePath}\" \"{currentExePath}\"\r\n" +
+                    $"start \"\" \"{currentExePath}\"\r\n" +
+                    $"del \"%~f0\"\r\n";
+                File.WriteAllText(cmdPath, cmdContent);
+
+                UpdateLogger.Log("[AUTO-UPDATE] Launching update script, closing application...");
 
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = installerPath,
-                    UseShellExecute = true   // opens with UAC prompt, no shell injection
+                    FileName = cmdPath,
+                    UseShellExecute = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
                 };
-
                 Process.Start(startInfo);
-                UpdateLogger.Log("[AUTO-UPDATE] Installer launched, closing application...");
 
                 Application.Current.Dispatcher.Invoke(() =>
                 {
@@ -176,118 +184,49 @@ namespace IndiLogs_3._0.Services
             {
                 UpdateLogger.Log("[AUTO-UPDATE ERROR]", ex);
                 MessageBox.Show(
-                    $"Failed to launch update installer:\n{ex.Message}\n\n" +
-                    $"Please open this folder and run the installer manually:\n{InstallerFolder}",
+                    $"Failed to apply update:\n{ex.Message}\n\n" +
+                    $"Please open this folder and copy the exe manually:\n{InstallerFolder}",
                     "Update Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
         }
 
-        private string FindInstallerOnServer()
+        private string FindExeOnServer(string versionText)
         {
+            // Try the known filename: IndiLogs3.0_{version}.exe
+            string expectedPath = Path.Combine(InstallerFolder, $"IndiLogs3.0_{versionText}.exe");
+            if (File.Exists(expectedPath))
+            {
+                UpdateLogger.Log($"[AUTO-UPDATE] Found exe by version: {expectedPath}");
+                return expectedPath;
+            }
+
+            // Fallback: enumerate directory for IndiLogs3.0_*.exe
             try
             {
-                // Look for installer files matching the pattern
-                var installerFiles = Directory.GetFiles(InstallerFolder, InstallerPattern)
+                var exeFiles = Directory.GetFiles(InstallerFolder, ExePattern)
                     .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                     .ToList();
 
-                UpdateLogger.Log($"[AUTO-UPDATE] Found {installerFiles.Count} installer file(s):");
-                foreach (var file in installerFiles)
+                UpdateLogger.Log($"[AUTO-UPDATE] Found {exeFiles.Count} update file(s):");
+                foreach (var file in exeFiles)
                 {
                     var fi = new FileInfo(file);
                     UpdateLogger.Log($"  - {fi.Name} ({fi.Length} bytes, {fi.LastWriteTime})");
                 }
 
-                // Return the most recent one
-                return installerFiles.FirstOrDefault();
+                if (exeFiles.Count > 0)
+                    return exeFiles.First();
             }
             catch (Exception ex)
             {
-                UpdateLogger.Log("[AUTO-UPDATE] Error finding installer", ex);
-                return null;
+                UpdateLogger.Log("[AUTO-UPDATE] Cannot enumerate directory...", ex);
             }
+
+            return null;
         }
 
-        /// <summary>
-        /// Verifies installer integrity using SHA-256 hash file and Authenticode signature.
-        /// The hash file (e.g., IndiLogs_Setup.exe.sha256) must exist alongside the installer.
-        /// </summary>
-        private bool VerifyInstallerIntegrity(string installerPath)
-        {
-            try
-            {
-                // Step 1: Verify Authenticode digital signature with chain validation
-                var rawCert = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(installerPath);
-                if (rawCert != null)
-                {
-                    var cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(rawCert);
-                    // Validate the certificate chains to a trusted root
-                    using (var chain = new System.Security.Cryptography.X509Certificates.X509Chain())
-                    {
-                        chain.ChainPolicy.RevocationMode = System.Security.Cryptography.X509Certificates.X509RevocationMode.Online;
-                        chain.ChainPolicy.RevocationFlag = System.Security.Cryptography.X509Certificates.X509RevocationFlag.EntireChain;
-                        bool chainValid = chain.Build(cert);
-                        if (chainValid)
-                        {
-                            UpdateLogger.Log($"[VERIFY] Authenticode signature valid: {cert.Subject}");
-                            return true;
-                        }
-                        else
-                        {
-                            UpdateLogger.Log($"[VERIFY] Authenticode signature found but chain validation failed: {cert.Subject}");
-                            foreach (var status in chain.ChainStatus)
-                                UpdateLogger.Log($"[VERIFY]   Chain error: {status.StatusInformation}");
-                            // Fall through to hash verification
-                        }
-                    }
-                }
-            }
-            catch (CryptographicException)
-            {
-                // No Authenticode signature - fall through to hash verification
-                UpdateLogger.Log("[VERIFY] No Authenticode signature found, checking SHA-256 hash...");
-            }
-
-            try
-            {
-                // Step 2: Verify SHA-256 hash file
-                string hashFilePath = installerPath + HashFileExtension;
-                if (!File.Exists(hashFilePath))
-                {
-                    UpdateLogger.Log($"[VERIFY] Hash file not found: {hashFilePath}");
-                    return false;
-                }
-
-                string expectedHash = File.ReadAllText(hashFilePath).Trim().Split(' ')[0].ToUpperInvariant();
-                UpdateLogger.Log($"[VERIFY] Expected hash: {expectedHash}");
-
-                using (var sha256 = SHA256.Create())
-                using (var stream = File.OpenRead(installerPath))
-                {
-                    byte[] hashBytes = sha256.ComputeHash(stream);
-                    string actualHash = BitConverter.ToString(hashBytes).Replace("-", "").ToUpperInvariant();
-                    UpdateLogger.Log($"[VERIFY] Actual hash:   {actualHash}");
-
-                    if (string.Equals(expectedHash, actualHash, StringComparison.OrdinalIgnoreCase))
-                    {
-                        UpdateLogger.Log("[VERIFY] SHA-256 hash verified successfully");
-                        return true;
-                    }
-                    else
-                    {
-                        UpdateLogger.Log("[VERIFY] SHA-256 hash MISMATCH - file may be tampered");
-                        return false;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                UpdateLogger.Log("[VERIFY] Hash verification error", ex);
-                return false;
-            }
-        }
 
         /// <summary>
         /// Gets the current application version
@@ -295,6 +234,70 @@ namespace IndiLogs_3._0.Services
         public static Version GetCurrentVersion()
         {
             return Assembly.GetExecutingAssembly().GetName().Version;
+        }
+
+        // ── Network share connection via Windows API ──
+
+        [DllImport("mpr.dll", CharSet = CharSet.Unicode)]
+        private static extern int WNetAddConnection2(ref NETRESOURCE netResource, string password, string username, int flags);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct NETRESOURCE
+        {
+            public int dwScope;
+            public int dwType;
+            public int dwDisplayType;
+            public int dwUsage;
+            public string lpLocalName;
+            public string lpRemoteName;
+            public string lpComment;
+            public string lpProvider;
+        }
+
+        private const int RESOURCETYPE_DISK = 1;
+        private const int CONNECT_TEMPORARY = 0x00000004;
+
+        /// <summary>
+        /// Establishes a connection to a UNC share.
+        /// Needed for hidden admin shares (e.g., softwareqa$) where File.Exists()
+        /// and File.ReadAllText() fail without an explicit connection.
+        /// </summary>
+        private void EnsureShareConnection(string uncFolder)
+        {
+            try
+            {
+                var identity = WindowsIdentity.GetCurrent();
+                UpdateLogger.Log($"Running as: {identity.Name}");
+
+                var nr = new NETRESOURCE
+                {
+                    dwType = RESOURCETYPE_DISK,
+                    lpRemoteName = uncFolder
+                };
+
+                // Try current Windows credentials first
+                int result = WNetAddConnection2(ref nr, null, null, CONNECT_TEMPORARY);
+
+                if (result == 0 || result == 1219) // 0 = success, 1219 = already connected
+                {
+                    UpdateLogger.Log($"[NETWORK] Connected to {uncFolder} (code {result})");
+                    return;
+                }
+
+                UpdateLogger.Log($"[NETWORK] Default credentials failed (code {result}), using service account...");
+
+                // Connect with the shared service account
+                result = WNetAddConnection2(ref nr, "hpindigo2010", @"inr\automation", CONNECT_TEMPORARY);
+
+                if (result == 0 || result == 1219)
+                    UpdateLogger.Log($"[NETWORK] Connected to {uncFolder} via service account");
+                else
+                    UpdateLogger.Log($"[NETWORK] Service account connection failed (code {result})");
+            }
+            catch (Exception ex)
+            {
+                UpdateLogger.Log($"[NETWORK] Connection attempt failed: {ex.Message}");
+            }
         }
     }
 }

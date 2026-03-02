@@ -513,11 +513,43 @@
 
                 <controls:SearchPanelControl Grid.Row="0" DataContext="{Binding}"
                               Visibility="{Binding FilterVM.IsSearchPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                <!-- Add-back button for skipped components (positioned over the tab header area) -->
+                <Button x:Name="AddBackButton" Grid.Row="1" Content="+" FontSize="16" FontWeight="Bold"
+                        Padding="4,0" Margin="0,2,8,0"
+                        HorizontalAlignment="Right" VerticalAlignment="Top"
+                        ToolTip="Add a skipped component"
+                        Visibility="{Binding HasSkippedComponents, Converter={StaticResource BoolToVisibilityConverter}}"
+                        Foreground="{DynamicResource PrimaryColor}"
+                        Cursor="Hand" Panel.ZIndex="10" Click="AddBackButton_Click">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <TextBlock Text="{TemplateBinding Content}"
+                                                   FontSize="{TemplateBinding FontSize}"
+                                                   FontWeight="{TemplateBinding FontWeight}"
+                                                   Foreground="{TemplateBinding Foreground}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Foreground" Value="{DynamicResource PrimaryColorHover}"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <Button.ContextMenu>
+                        <ContextMenu x:Name="AddBackContextMenu"/>
+                    </Button.ContextMenu>
+                </Button>
                 <TabControl x:Name="MainTabs" Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}" BorderThickness="0" Background="Transparent" Padding="0" SelectionChanged="TabControl_SelectionChanged" AutomationProperties.Name="Main Log Tabs"
                             Visibility="{Binding ShowMainTabs, Converter={StaticResource BoolToVisibilityConverter}}">
 
                     <TabItem Header="{Binding PlcTabHeader}"
-                             Visibility="{Binding HasSessionLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                             Visibility="{Binding ShowPlcTab, Converter={StaticResource BoolToVisibilityConverter}}">
                         <TabItem.HeaderTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
@@ -544,7 +576,7 @@
                     </TabItem>
 
                     <TabItem Header="APP"
-                             Visibility="{Binding HasSessionLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                             Visibility="{Binding ShowAppTab, Converter={StaticResource BoolToVisibilityConverter}}">
                         <TabItem.HeaderTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
@@ -571,7 +603,7 @@
                     </TabItem>
 
                     <TabItem Header="EVENTS"
-                             Visibility="{Binding HasSessionLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                             Visibility="{Binding ShowEventsTab, Converter={StaticResource BoolToVisibilityConverter}}">
                         <DataGrid ItemsSource="{Binding EventsDataView}" FontSize="{Binding GridFontSize}" FontFamily="{DynamicResource ContentFontFamily}" AutoGenerateColumns="True" IsReadOnly="True" CanUserAddRows="False" VerticalScrollBarVisibility="Auto" CanUserSortColumns="True" CanUserReorderColumns="True" CanUserResizeColumns="True"
                                   Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextSecondary}" BorderThickness="0"
                                   GridLinesVisibility="None"
@@ -615,7 +647,7 @@
                     </TabItem>
 
                     <TabItem Header="SCREENSHOTS"
-                             Visibility="{Binding HasSessionLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                             Visibility="{Binding ShowScreenshotsTab, Converter={StaticResource BoolToVisibilityConverter}}">
                         <Grid Background="{DynamicResource BgDark}" ClipToBounds="True">
                             <ScrollViewer x:Name="ScreenshotScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" PanningMode="Both" Cursor="SizeAll" PreviewMouseLeftButtonDown="OnImageMouseLeftButtonDown" PreviewMouseLeftButtonUp="OnImageMouseLeftButtonUp" PreviewMouseMove="OnImageMouseMove" PreviewMouseWheel="OnScreenshotMouseWheel">
                                 <ItemsControl ItemsSource="{Binding SessionVM.Screenshots}">
@@ -655,12 +687,12 @@
                     </TabItem>
 
                     <TabItem Header="CONFIG"
-                             Visibility="{Binding HasSessionLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                             Visibility="{Binding ShowConfigTab, Converter={StaticResource BoolToVisibilityConverter}}">
                         <TextBox Text="{Binding PressConfig}" IsReadOnly="True" FontFamily="{DynamicResource ContentFontFamily}" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderThickness="0" VerticalScrollBarVisibility="Auto" Padding="10"/>
                     </TabItem>
 
                     <TabItem Header="{Binding DbConfigTabHeader}"
-                             Visibility="{Binding HasSessionLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                             Visibility="{Binding ShowDbConfigTab, Converter={StaticResource BoolToVisibilityConverter}}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
@@ -887,21 +919,12 @@
                         </Grid>
                     </TabItem>
 
-                    <TabItem Header="SETUP INFO">
-                        <TabItem.Style>
-                            <Style TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
-                                <Setter Property="Visibility" Value="{Binding HasBinaryAppLogs, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding HasSessionLoaded}" Value="False">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TabItem.Style>
+                    <TabItem Header="SETUP INFO"
+                             Visibility="{Binding ShowSetupInfoTab, Converter={StaticResource BoolToVisibilityConverter}}">
                         <TextBox Text="{Binding SetupInfo}" IsReadOnly="True" FontFamily="{DynamicResource ContentFontFamily}" Background="{DynamicResource BgDark}" Foreground="{DynamicResource TextPrimary}" BorderThickness="0" VerticalScrollBarVisibility="Auto" Padding="10"/>
                     </TabItem>
 
-                    <TabItem Header="GLOBALS" Visibility="{Binding HasGlobalsFiles, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <TabItem Header="GLOBALS" Visibility="{Binding ShowGlobalsTab, Converter={StaticResource BoolToVisibilityConverter}}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
@@ -1040,7 +1063,7 @@
                         </Grid>
                     </TabItem>
 
-                    <TabItem Header="SYSTAB" Visibility="{Binding HasSystabFiles, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <TabItem Header="SYSTAB" Visibility="{Binding ShowSystabTab, Converter={StaticResource BoolToVisibilityConverter}}">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="280"/>
@@ -1162,7 +1185,7 @@
                     </TabItem>
 
                     <TabItem Header="CHARTS"
-                             Visibility="{Binding HasSessionLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                             Visibility="{Binding ShowChartsTab, Converter={StaticResource BoolToVisibilityConverter}}">
                         <TabItem.HeaderTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
@@ -1189,7 +1212,7 @@
                     </TabItem>
 
                     <TabItem Header="CPR"
-                             Visibility="{Binding HasSessionLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                             Visibility="{Binding ShowCprTab, Converter={StaticResource BoolToVisibilityConverter}}">
                         <TabItem.HeaderTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
@@ -1216,11 +1239,12 @@
                     </TabItem>
 
                     <TabItem Header="STEP RECORDER"
-                             Visibility="{Binding StepRecorderVM.HasIsr, Converter={StaticResource BoolToVisibilityConverter}}">
+                             Visibility="{Binding ShowStepRecorderTab, Converter={StaticResource BoolToVisibilityConverter}}">
                         <controls:StepRecorderTabControl DataContext="{Binding StepRecorderVM}"/>
                     </TabItem>
 
-                    <TabItem Header="DIFFERENT LOGS">
+                    <TabItem Header="DIFFERENT LOGS"
+                             Visibility="{Binding ShowDifferentLogsTab, Converter={StaticResource BoolToVisibilityConverter}}">
                         <controls:DifferentLogsTabControl DataContext="{Binding DifferentLogsVM}"/>
                     </TabItem>
                 </TabControl>

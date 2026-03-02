@@ -36,9 +36,41 @@ namespace IndiLogs_3._0.Models.Grep
         public List<DayOfWeek> RunDays { get; set; } = new List<DayOfWeek>();
 
         /// <summary>
-        /// Repeat interval in minutes (for Interval schedule).
+        /// Repeat interval value (unit determined by IntervalUnit).
         /// </summary>
-        public int RepeatIntervalMinutes { get; set; } = 60;
+        public int RepeatIntervalValue { get; set; } = 1;
+
+        /// <summary>
+        /// Unit for the repeat interval.
+        /// </summary>
+        public IntervalUnit IntervalUnit { get; set; } = IntervalUnit.Hours;
+
+        /// <summary>
+        /// Interval in minutes. Getter computes from RepeatIntervalValue + IntervalUnit.
+        /// Setter handles backward compat: old JSON had only RepeatIntervalMinutes.
+        /// </summary>
+        public int RepeatIntervalMinutes
+        {
+            get
+            {
+                switch (IntervalUnit)
+                {
+                    case IntervalUnit.Hours: return RepeatIntervalValue * 60;
+                    case IntervalUnit.Days: return RepeatIntervalValue * 1440;
+                    default: return RepeatIntervalValue;
+                }
+            }
+            set
+            {
+                // Only apply if RepeatIntervalValue hasn't been explicitly set (backward compat)
+                if (RepeatIntervalValue <= 1 && IntervalUnit == IntervalUnit.Hours && value != 60)
+                {
+                    if (value >= 1440 && value % 1440 == 0) { RepeatIntervalValue = value / 1440; IntervalUnit = IntervalUnit.Days; }
+                    else if (value >= 60 && value % 60 == 0) { RepeatIntervalValue = value / 60; IntervalUnit = IntervalUnit.Hours; }
+                    else { RepeatIntervalValue = value; IntervalUnit = IntervalUnit.Minutes; }
+                }
+            }
+        }
 
         public bool IsEnabled { get; set; } = true;
 
@@ -46,6 +78,16 @@ namespace IndiLogs_3._0.Models.Grep
         /// Directory where results are saved as JSON/CSV.
         /// </summary>
         public string OutputDirectory { get; set; }
+
+        /// <summary>
+        /// What the scheduled scan does: search only, statistics only, or both.
+        /// </summary>
+        public ScanMode ScanMode { get; set; } = ScanMode.SearchOnly;
+
+        /// <summary>
+        /// Email notification configuration. Null or IsEnabled=false means no email.
+        /// </summary>
+        public EmailNotificationConfig EmailConfig { get; set; }
 
         public DateTime? LastRunTime { get; set; }
         public string LastRunStatus { get; set; }
@@ -77,8 +119,15 @@ namespace IndiLogs_3._0.Models.Grep
                     : Criteria.SearchAPP ? " [APP]"
                     : " [None]";
 
+                string modePrefix = ScanMode == ScanMode.StatisticsOnly ? "[Stats] "
+                    : ScanMode == ScanMode.SearchAndStatistics ? "[Search+Stats] "
+                    : "";
+
+                if (ScanMode == ScanMode.StatisticsOnly)
+                    return modePrefix + "All logs" + logType;
+
                 return parts.Count > 0
-                    ? string.Join(", ", parts) + logType
+                    ? modePrefix + string.Join(", ", parts) + logType
                     : "(no criteria)";
             }
         }
@@ -90,5 +139,19 @@ namespace IndiLogs_3._0.Models.Grep
         Daily,
         Weekly,
         Interval
+    }
+
+    public enum ScanMode
+    {
+        SearchOnly,
+        StatisticsOnly,
+        SearchAndStatistics
+    }
+
+    public enum IntervalUnit
+    {
+        Minutes,
+        Hours,
+        Days
     }
 }

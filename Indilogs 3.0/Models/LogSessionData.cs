@@ -71,6 +71,13 @@ namespace IndiLogs_3._0.Models
         public List<StateEntry> CachedStates { get; set; }
         public List<AnalysisResult> CachedAnalysis { get; set; }
 
+        // --- Tab selection configs (preserved for add-back feature) ---
+        public TabSelectionConfig LoadTabSelection { get; set; }
+        public TabSelectionConfig PreScanConfig { get; set; }
+
+        // --- EM_Statistics CSV content (extracted from ZIP for Gantt chart) ---
+        public string EmStatisticsCsvContent { get; set; }
+
         // --- Per-session filter state (preserved across session switches) ---
         public SessionFilterState SavedFilterState { get; set; }
 

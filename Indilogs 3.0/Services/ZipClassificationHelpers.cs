@@ -114,6 +114,16 @@ namespace IndiLogs_3._0.Services
         }
 
         /// <summary>
+        /// Returns true if the file is an EM_Statistics CSV (Indigo.Infra.EM.Statistics.csv).
+        /// </summary>
+        public static bool IsEmStatisticsFile(string entryName)
+        {
+            if (string.IsNullOrEmpty(entryName)) return false;
+            return entryName.IndexOf("EM_Statistics", StringComparison.OrdinalIgnoreCase) >= 0
+                && entryName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
         /// Returns true if file should be skipped (backup, old, temp, archive folders).
         /// </summary>
         public static bool ShouldSkipEntry(string lowerFullName)

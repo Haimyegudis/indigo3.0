@@ -72,11 +72,41 @@ namespace IndiLogs_3._0.Models.Grep
 
     /// <summary>
     /// Time range with optional from/to bounds.
+    /// When RelativeRange is set, From/To are computed dynamically at scan execution time.
     /// </summary>
     public class TimeRangeFilter
     {
         public DateTime? From { get; set; }
         public DateTime? To { get; set; }
+
+        /// <summary>
+        /// If set to a value other than None, overrides From/To with a dynamic range
+        /// computed relative to when the scan actually runs.
+        /// </summary>
+        public RelativeTimeRange RelativeRange { get; set; } = RelativeTimeRange.None;
+
+        /// <summary>
+        /// Returns a resolved copy with From/To computed from RelativeRange if applicable.
+        /// </summary>
+        public TimeRangeFilter Resolve()
+        {
+            switch (RelativeRange)
+            {
+                case RelativeTimeRange.Last24Hours:
+                    return new TimeRangeFilter { From = DateTime.Now.AddHours(-24), To = null, RelativeRange = RelativeRange };
+                case RelativeTimeRange.LastWeek:
+                    return new TimeRangeFilter { From = DateTime.Now.AddDays(-7), To = null, RelativeRange = RelativeRange };
+                default:
+                    return this;
+            }
+        }
+    }
+
+    public enum RelativeTimeRange
+    {
+        None,
+        Last24Hours,
+        LastWeek
     }
 
     public enum SearchField

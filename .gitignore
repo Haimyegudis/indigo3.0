@@ -485,11 +485,22 @@ $RECYCLE.BIN/
 
 # IndiLogs project-specific ignores
 nul
-*.exe
-!Installer/**/*.exe
 *.pptx
-*.png
-*.ico
 *.py
 packages/
 .vs/
+
+# Installer build outputs (rebuilt from project)
+Installer/InstallerFiles/*.dll
+Installer/InstallerFiles/*.exe
+Installer/InstallerFiles/*.config
+Installer/InstallerFiles/runtimes/
+Installer/Output/
+Installer/.net/
+Installer/Flow CSV Viewer Installer.exe
+
+# Sample/test data files
+sample_*
+
+# Claude Code local settings
+.claude/settings.local.json

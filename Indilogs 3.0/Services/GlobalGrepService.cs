@@ -607,6 +607,26 @@ namespace IndiLogs_3._0.Services
                 int beforeFilter = files.Count;
                 files = FilterFilesByTimeRange(files, criteria.FileTimeFilter);
                 AppLogger.Info($"[Grep] Time filter applied: {beforeFilter} → {files.Count} file(s)");
+
+                // Diagnostic: if all files were filtered out, log the date range of what was available
+                if (files.Count == 0 && beforeFilter > 0)
+                {
+                    try
+                    {
+                        var dates = new List<DateTime>();
+                        foreach (var f in Directory.GetFiles(location.BasePath, "*.*", SearchOption.AllDirectories).Take(20))
+                        {
+                            try { dates.Add(File.GetLastWriteTime(f)); } catch { }
+                        }
+                        if (dates.Count > 0)
+                        {
+                            dates.Sort();
+                            AppLogger.Warn($"[Grep] All {beforeFilter} files filtered out! Filter: From={criteria.FileTimeFilter.From:yyyy-MM-dd HH:mm}. " +
+                                $"Sample file dates: oldest={dates.First():yyyy-MM-dd HH:mm}, newest={dates.Last():yyyy-MM-dd HH:mm}");
+                        }
+                    }
+                    catch { /* ignore diagnostic errors */ }
+                }
             }
 
             if (files.Count == 0)

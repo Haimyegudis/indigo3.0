@@ -30,6 +30,7 @@ namespace IndiLogs_3._0.ViewModels
         private readonly SearchLocationService _locationService;
         private readonly SearchConfigService _configService;
         private readonly SearchSchedulerService _schedulerService;
+        private readonly WindowsTaskSchedulerService _taskSchedulerService;
         private CancellationTokenSource _cancellationTokenSource;
         private SearchReportParams _lastSearchParams;
 
@@ -61,6 +62,7 @@ namespace IndiLogs_3._0.ViewModels
             _locationService = new SearchLocationService();
             _configService = new SearchConfigService();
             _schedulerService = new SearchSchedulerService(_grepService, _locationService);
+            _taskSchedulerService = new WindowsTaskSchedulerService();
             LoadedSessions = loadedSessions;
             Results = new ObservableRangeCollection<GrepResult>();
 
@@ -77,6 +79,13 @@ namespace IndiLogs_3._0.ViewModels
             // Load schedules
             Schedules = new ObservableCollection<ScheduledSearch>(_schedulerService.Schedules);
             _schedulerService.Start();
+
+            // Sync schedules with Windows Task Scheduler (background)
+            Task.Run(() =>
+            {
+                try { _taskSchedulerService.SyncAll(_schedulerService.Schedules); }
+                catch (Exception ex) { AppLogger.Error("[Scheduler] Failed to sync with Windows Task Scheduler", ex); }
+            });
 
             // Defaults
             SearchPLC = true;
@@ -1181,8 +1190,12 @@ namespace IndiLogs_3._0.ViewModels
             if (!ShowScheduleDialog("New Scheduled Search", schedule)) return;
 
             _schedulerService.AddSchedule(schedule);
+            _taskSchedulerService.RegisterSchedule(schedule);
             Schedules.Add(schedule);
             StatusMessage = $"Schedule '{schedule.Name}' added.";
+
+            // Immediately check if this schedule should run now
+            _ = _schedulerService.TriggerCheckAsync();
         }
 
         private void EditSchedule()
@@ -1193,6 +1206,7 @@ namespace IndiLogs_3._0.ViewModels
             if (!ShowScheduleDialog("Edit Scheduled Search", schedule)) return;
 
             _schedulerService.UpdateSchedule(schedule);
+            _taskSchedulerService.RegisterSchedule(schedule);
             var idx = Schedules.IndexOf(schedule);
             if (idx >= 0)
             {
@@ -1201,6 +1215,10 @@ namespace IndiLogs_3._0.ViewModels
                 SelectedSchedule = schedule;
             }
             StatusMessage = $"Schedule '{schedule.Name}' updated.";
+
+            // Immediately check if this schedule should run now
+            _ = _schedulerService.TriggerCheckAsync();
+
         }
 
         /// <summary>
@@ -1260,7 +1278,7 @@ namespace IndiLogs_3._0.ViewModels
             {
                 Title = title,
                 Width = 700,
-                Height = 780,
+                Height = 920,
                 MaxHeight = SystemParameters.WorkArea.Height,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
                 ResizeMode = ResizeMode.CanResizeWithGrip,
@@ -1322,6 +1340,46 @@ namespace IndiLogs_3._0.ViewModels
                 Margin = new Thickness(0, 6, 0, 0)
             };
             sec1.Children.Add(enabledCheck);
+
+            // Scan Mode
+            sec1.Children.Add(new System.Windows.Controls.Separator
+            {
+                Margin = new Thickness(0, 8, 0, 4), Background = borderBrush
+            });
+            sec1.Children.Add(makeLabel("Scan Mode"));
+            var scanModePanel = new System.Windows.Controls.StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal
+            };
+            var radioSearchOnly = new System.Windows.Controls.RadioButton
+            {
+                Content = "Search Only", Foreground = textPrimary,
+                IsChecked = schedule.ScanMode == ScanMode.SearchOnly,
+                FontSize = 12, Margin = new Thickness(0, 0, 16, 0)
+            };
+            var radioStatsOnly = new System.Windows.Controls.RadioButton
+            {
+                Content = "Statistics Only", Foreground = textPrimary,
+                IsChecked = schedule.ScanMode == ScanMode.StatisticsOnly,
+                FontSize = 12, Margin = new Thickness(0, 0, 16, 0)
+            };
+            var radioSearchAndStats = new System.Windows.Controls.RadioButton
+            {
+                Content = "Search + Statistics", Foreground = textPrimary,
+                IsChecked = schedule.ScanMode == ScanMode.SearchAndStatistics,
+                FontSize = 12
+            };
+            scanModePanel.Children.Add(radioSearchOnly);
+            scanModePanel.Children.Add(radioStatsOnly);
+            scanModePanel.Children.Add(radioSearchAndStats);
+            sec1.Children.Add(scanModePanel);
+            sec1.Children.Add(new System.Windows.Controls.TextBlock
+            {
+                Text = "Search Only = find matching log entries. Statistics Only = compute error histograms, load distribution, gaps, state analysis (no search query needed). Search + Statistics = both.",
+                Foreground = textSecondary, FontSize = 10, TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 3, 0, 0)
+            });
+
             root.Children.Add(makeSection("Schedule Details", sec1));
 
             // ════════════════════════════════════════════════════════
@@ -1339,7 +1397,7 @@ namespace IndiLogs_3._0.ViewModels
             typeCombo.Items.Add("Once (specific date & time)");
             typeCombo.Items.Add("Daily");
             typeCombo.Items.Add("Weekly");
-            typeCombo.Items.Add("Interval (repeat every N minutes)");
+            typeCombo.Items.Add("Interval (repeat every N hours/days)");
             switch (schedule.ScheduleType)
             {
                 case ScheduleType.Once: typeCombo.SelectedIndex = 0; break;
@@ -1417,13 +1475,35 @@ namespace IndiLogs_3._0.ViewModels
             }
             sec2.Children.Add(daysPanel);
 
-            // Repeat Interval (Interval only)
-            var intervalLabel = makeLabel("Repeat Every (minutes)");
+            // Repeat Interval (Interval only) — value + unit
+            var intervalLabel = makeLabel("Repeat Every");
             sec2.Children.Add(intervalLabel);
-            var intervalBox = makeTextBox(schedule.RepeatIntervalMinutes.ToString());
-            intervalBox.Width = 80;
+            var intervalPanel = new System.Windows.Controls.StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal
+            };
+            var intervalBox = makeTextBox(schedule.RepeatIntervalValue.ToString());
+            intervalBox.Width = 60;
             intervalBox.HorizontalAlignment = HorizontalAlignment.Left;
-            sec2.Children.Add(intervalBox);
+            var intervalUnitCombo = new System.Windows.Controls.ComboBox
+            {
+                Background = bgCard, Foreground = textPrimary,
+                BorderBrush = borderBrush, FontSize = 12,
+                Margin = new Thickness(6, 0, 0, 0),
+                Padding = new Thickness(4, 3, 4, 3)
+            };
+            intervalUnitCombo.Items.Add("Minutes");
+            intervalUnitCombo.Items.Add("Hours");
+            intervalUnitCombo.Items.Add("Days");
+            switch (schedule.IntervalUnit)
+            {
+                case IntervalUnit.Minutes: intervalUnitCombo.SelectedIndex = 0; break;
+                case IntervalUnit.Hours: intervalUnitCombo.SelectedIndex = 1; break;
+                case IntervalUnit.Days: intervalUnitCombo.SelectedIndex = 2; break;
+            }
+            intervalPanel.Children.Add(intervalBox);
+            intervalPanel.Children.Add(intervalUnitCombo);
+            sec2.Children.Add(intervalPanel);
 
             // Visibility toggling
             Action updateWhenVisibility = () =>
@@ -1431,13 +1511,14 @@ namespace IndiLogs_3._0.ViewModels
                 int idx = typeCombo.SelectedIndex;
                 dateLabel.Visibility = idx == 0 ? Visibility.Visible : Visibility.Collapsed;
                 datePicker.Visibility = idx == 0 ? Visibility.Visible : Visibility.Collapsed;
-                bool showTime = idx <= 2;
-                timeLabel.Visibility = showTime ? Visibility.Visible : Visibility.Collapsed;
-                timePanel.Visibility = showTime ? Visibility.Visible : Visibility.Collapsed;
+                // Show time for all types — label changes for Interval
+                timeLabel.Visibility = Visibility.Visible;
+                timePanel.Visibility = Visibility.Visible;
+                timeLabel.Text = idx == 3 ? "Start Time (HH:mm)" : "Run Time (HH:mm)";
                 daysLabel.Visibility = idx == 2 ? Visibility.Visible : Visibility.Collapsed;
                 daysPanel.Visibility = idx == 2 ? Visibility.Visible : Visibility.Collapsed;
                 intervalLabel.Visibility = idx == 3 ? Visibility.Visible : Visibility.Collapsed;
-                intervalBox.Visibility = idx == 3 ? Visibility.Visible : Visibility.Collapsed;
+                intervalPanel.Visibility = idx == 3 ? Visibility.Visible : Visibility.Collapsed;
             };
             typeCombo.SelectionChanged += (s, e) => updateWhenVisibility();
             updateWhenVisibility();
@@ -1695,7 +1776,19 @@ namespace IndiLogs_3._0.ViewModels
             logTypeRow.Children.Add(appCheck);
             sec3.Children.Add(logTypeRow);
 
-            root.Children.Add(makeSection("What to Search", sec3));
+            var sec3Border = makeSection("What to Search", sec3);
+            root.Children.Add(sec3Border);
+
+            // Toggle Section 3 visibility based on scan mode
+            Action updateScanModeVisibility = () =>
+            {
+                bool needsSearch = radioSearchOnly.IsChecked == true || radioSearchAndStats.IsChecked == true;
+                sec3Border.Visibility = needsSearch ? Visibility.Visible : Visibility.Collapsed;
+            };
+            radioSearchOnly.Checked += (s, e) => updateScanModeVisibility();
+            radioStatsOnly.Checked += (s, e) => updateScanModeVisibility();
+            radioSearchAndStats.Checked += (s, e) => updateScanModeVisibility();
+            updateScanModeVisibility();
 
             // ════════════════════════════════════════════════════════
             // SECTION 4: WHERE TO SEARCH
@@ -1867,7 +1960,38 @@ namespace IndiLogs_3._0.ViewModels
             // ════════════════════════════════════════════════════════
             var sec5 = new System.Windows.Controls.StackPanel();
 
-            sec5.Children.Add(makeLabel("File date range (skip files outside this range)"));
+            // --- File modified date filter ---
+            sec5.Children.Add(makeLabel("File modified date (skip files outside this range)"));
+
+            // Relative time range presets
+            var existingFileRelative = schedule.Criteria?.FileTimeFilter?.RelativeRange ?? RelativeTimeRange.None;
+            var ffPresetPanel = new System.Windows.Controls.StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                Margin = new Thickness(0, 2, 0, 4)
+            };
+            var ffPresetNone = new System.Windows.Controls.RadioButton
+            {
+                Content = "Custom range", Foreground = textPrimary, FontSize = 11,
+                IsChecked = existingFileRelative == RelativeTimeRange.None,
+                Margin = new Thickness(0, 0, 14, 0)
+            };
+            var ffPreset24h = new System.Windows.Controls.RadioButton
+            {
+                Content = "Last 24 hours", Foreground = textPrimary, FontSize = 11,
+                IsChecked = existingFileRelative == RelativeTimeRange.Last24Hours,
+                Margin = new Thickness(0, 0, 14, 0)
+            };
+            var ffPresetWeek = new System.Windows.Controls.RadioButton
+            {
+                Content = "Last week", Foreground = textPrimary, FontSize = 11,
+                IsChecked = existingFileRelative == RelativeTimeRange.LastWeek
+            };
+            ffPresetPanel.Children.Add(ffPresetNone);
+            ffPresetPanel.Children.Add(ffPreset24h);
+            ffPresetPanel.Children.Add(ffPresetWeek);
+            sec5.Children.Add(ffPresetPanel);
+
             var ffGrid = new System.Windows.Controls.Grid();
             ffGrid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new GridLength(50) });
             ffGrid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -1883,7 +2007,48 @@ namespace IndiLogs_3._0.ViewModels
             ffGrid.Children.Add(ffToLbl); ffGrid.Children.Add(ffToPicker);
             sec5.Children.Add(ffGrid);
 
+            // Toggle date pickers visibility based on preset selection
+            Action updateFilePresetVisibility = () =>
+            {
+                bool isCustom = ffPresetNone.IsChecked == true;
+                ffGrid.Visibility = isCustom ? Visibility.Visible : Visibility.Collapsed;
+            };
+            ffPresetNone.Checked += (s, e) => updateFilePresetVisibility();
+            ffPreset24h.Checked += (s, e) => updateFilePresetVisibility();
+            ffPresetWeek.Checked += (s, e) => updateFilePresetVisibility();
+            updateFilePresetVisibility();
+
+            // --- Result timestamp filter ---
             sec5.Children.Add(makeLabel("Result timestamp filter"));
+
+            var existingResRelative = schedule.Criteria?.ResultTimeFilter?.RelativeRange ?? RelativeTimeRange.None;
+            var rfPresetPanel = new System.Windows.Controls.StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                Margin = new Thickness(0, 2, 0, 4)
+            };
+            var rfPresetNone = new System.Windows.Controls.RadioButton
+            {
+                Content = "Custom range", Foreground = textPrimary, FontSize = 11,
+                IsChecked = existingResRelative == RelativeTimeRange.None,
+                Margin = new Thickness(0, 0, 14, 0)
+            };
+            var rfPreset24h = new System.Windows.Controls.RadioButton
+            {
+                Content = "Last 24 hours", Foreground = textPrimary, FontSize = 11,
+                IsChecked = existingResRelative == RelativeTimeRange.Last24Hours,
+                Margin = new Thickness(0, 0, 14, 0)
+            };
+            var rfPresetWeek = new System.Windows.Controls.RadioButton
+            {
+                Content = "Last week", Foreground = textPrimary, FontSize = 11,
+                IsChecked = existingResRelative == RelativeTimeRange.LastWeek
+            };
+            rfPresetPanel.Children.Add(rfPresetNone);
+            rfPresetPanel.Children.Add(rfPreset24h);
+            rfPresetPanel.Children.Add(rfPresetWeek);
+            sec5.Children.Add(rfPresetPanel);
+
             var rfGrid = new System.Windows.Controls.Grid();
             rfGrid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new GridLength(50) });
             rfGrid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -1898,6 +2063,17 @@ namespace IndiLogs_3._0.ViewModels
             rfGrid.Children.Add(rfFromLbl); rfGrid.Children.Add(rfFromPicker);
             rfGrid.Children.Add(rfToLbl); rfGrid.Children.Add(rfToPicker);
             sec5.Children.Add(rfGrid);
+
+            // Toggle result date pickers visibility
+            Action updateResPresetVisibility = () =>
+            {
+                bool isCustom = rfPresetNone.IsChecked == true;
+                rfGrid.Visibility = isCustom ? Visibility.Visible : Visibility.Collapsed;
+            };
+            rfPresetNone.Checked += (s, e) => updateResPresetVisibility();
+            rfPreset24h.Checked += (s, e) => updateResPresetVisibility();
+            rfPresetWeek.Checked += (s, e) => updateResPresetVisibility();
+            updateResPresetVisibility();
 
             root.Children.Add(makeSection("Time Filters (optional)", sec5));
 
@@ -1931,6 +2107,315 @@ namespace IndiLogs_3._0.ViewModels
             dirDock.Children.Add(dirBox);
             sec6.Children.Add(dirDock);
             root.Children.Add(makeSection("Output", sec6));
+
+            // ════════════════════════════════════════════════════════
+            // SECTION 7: EMAIL NOTIFICATIONS
+            // ════════════════════════════════════════════════════════
+            var sec7 = new System.Windows.Controls.StackPanel();
+            var existingEmail = schedule.EmailConfig ?? new EmailNotificationConfig();
+
+            var emailEnabledCheck = new System.Windows.Controls.CheckBox
+            {
+                Content = "Enable email notifications",
+                Foreground = textPrimary,
+                IsChecked = existingEmail.IsEnabled,
+                FontSize = 12, FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            sec7.Children.Add(emailEnabledCheck);
+
+            var emailDetailsPanel = new System.Windows.Controls.StackPanel();
+
+            // SMTP Settings
+            emailDetailsPanel.Children.Add(makeLabel("SMTP Server"));
+            var smtpHostRow = new System.Windows.Controls.StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal
+            };
+            var smtpHostBox = makeTextBox(existingEmail.SmtpHost);
+            smtpHostBox.Width = 300;
+            smtpHostRow.Children.Add(smtpHostBox);
+            smtpHostRow.Children.Add(new System.Windows.Controls.TextBlock
+            {
+                Text = "Port:", Foreground = textSecondary, FontSize = 11,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(12, 0, 4, 0)
+            });
+            var smtpPortBox = makeTextBox(existingEmail.SmtpPort.ToString());
+            smtpPortBox.Width = 60;
+            smtpHostRow.Children.Add(smtpPortBox);
+            emailDetailsPanel.Children.Add(smtpHostRow);
+
+            var sslCheck = new System.Windows.Controls.CheckBox
+            {
+                Content = "Use SSL/TLS", Foreground = textPrimary,
+                IsChecked = existingEmail.UseSsl, FontSize = 11,
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+            emailDetailsPanel.Children.Add(sslCheck);
+
+            // Authentication mode
+            emailDetailsPanel.Children.Add(makeLabel("Authentication"));
+            var authPanel = new System.Windows.Controls.StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                Margin = new Thickness(0, 0, 0, 4)
+            };
+            var authNone = new System.Windows.Controls.RadioButton
+            {
+                Content = "None", Foreground = textPrimary, FontSize = 11,
+                IsChecked = existingEmail.AuthMode == SmtpAuthMode.None,
+                Margin = new Thickness(0, 0, 14, 0)
+            };
+            var authWindows = new System.Windows.Controls.RadioButton
+            {
+                Content = "Windows (current user)", Foreground = textPrimary, FontSize = 11,
+                IsChecked = existingEmail.AuthMode == SmtpAuthMode.WindowsIntegrated,
+                Margin = new Thickness(0, 0, 14, 0)
+            };
+            var authUserPass = new System.Windows.Controls.RadioButton
+            {
+                Content = "Username / Password", Foreground = textPrimary, FontSize = 11,
+                IsChecked = existingEmail.AuthMode == SmtpAuthMode.UsernamePassword
+            };
+            authPanel.Children.Add(authNone);
+            authPanel.Children.Add(authWindows);
+            authPanel.Children.Add(authUserPass);
+            emailDetailsPanel.Children.Add(authPanel);
+
+            // Username/Password fields (only visible when UsernamePassword selected)
+            var credentialsPanel = new System.Windows.Controls.StackPanel();
+            credentialsPanel.Children.Add(makeLabel("Username"));
+            var smtpUserBox = makeTextBox(existingEmail.SmtpUsername);
+            credentialsPanel.Children.Add(smtpUserBox);
+            credentialsPanel.Children.Add(makeLabel("Password"));
+            var smtpPassBox = makeTextBox(existingEmail.SmtpPassword);
+            credentialsPanel.Children.Add(smtpPassBox);
+            emailDetailsPanel.Children.Add(credentialsPanel);
+
+            Action updateCredentialsVisibility = () =>
+            {
+                credentialsPanel.Visibility = authUserPass.IsChecked == true
+                    ? Visibility.Visible : Visibility.Collapsed;
+            };
+            authNone.Checked += (s2, e2) => updateCredentialsVisibility();
+            authWindows.Checked += (s2, e2) => updateCredentialsVisibility();
+            authUserPass.Checked += (s2, e2) => updateCredentialsVisibility();
+            updateCredentialsVisibility();
+
+            emailDetailsPanel.Children.Add(makeLabel("From Address"));
+            var fromBox = makeTextBox(existingEmail.FromAddress);
+            emailDetailsPanel.Children.Add(fromBox);
+
+            // Test button
+            var testBtn = new System.Windows.Controls.Button
+            {
+                Content = "Send Test Email", Background = bgCard,
+                Foreground = textPrimary, BorderBrush = borderBrush,
+                FontSize = 11, Padding = new Thickness(8, 3, 8, 3),
+                Cursor = System.Windows.Input.Cursors.Hand,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(0, 6, 0, 4)
+            };
+            var testStatusLabel = new System.Windows.Controls.TextBlock
+            {
+                Foreground = textSecondary, FontSize = 10,
+                Margin = new Thickness(0, 2, 0, 0), TextWrapping = TextWrapping.Wrap
+            };
+            // recipientList declared here so test button can reference it
+            var recipientList = new List<string>(existingEmail.Recipients ?? new List<string>());
+
+            testBtn.Click += async (s2, e2) =>
+            {
+                var testAuthMode = authWindows.IsChecked == true ? SmtpAuthMode.WindowsIntegrated
+                    : authUserPass.IsChecked == true ? SmtpAuthMode.UsernamePassword
+                    : SmtpAuthMode.None;
+                var testConfig = new EmailNotificationConfig
+                {
+                    SmtpHost = smtpHostBox.Text.Trim(),
+                    SmtpPort = int.TryParse(smtpPortBox.Text, out int tp) ? tp : 25,
+                    UseSsl = sslCheck.IsChecked == true,
+                    AuthMode = testAuthMode,
+                    SmtpUsername = testAuthMode == SmtpAuthMode.UsernamePassword ? smtpUserBox.Text.Trim() : null,
+                    SmtpPassword = testAuthMode == SmtpAuthMode.UsernamePassword ? smtpPassBox.Text : null,
+                    FromAddress = fromBox.Text.Trim(),
+                    FromDisplayName = "IndiLogs 3.0"
+                };
+                if (recipientList.Count == 0)
+                {
+                    testStatusLabel.Text = "Add at least one recipient first.";
+                    return;
+                }
+                testStatusLabel.Text = "Sending test email...";
+                testBtn.IsEnabled = false;
+                using (var emailSvc = new EmailNotificationService())
+                {
+                    var (ok, msg) = await emailSvc.TestConnectionAsync(testConfig, recipientList[0]);
+                    testStatusLabel.Text = msg;
+                }
+                testBtn.IsEnabled = true;
+            };
+            emailDetailsPanel.Children.Add(testBtn);
+            emailDetailsPanel.Children.Add(testStatusLabel);
+
+            // Recipients
+            emailDetailsPanel.Children.Add(new System.Windows.Controls.Separator
+            {
+                Margin = new Thickness(0, 4, 0, 4), Background = borderBrush
+            });
+            emailDetailsPanel.Children.Add(makeLabel("Recipients"));
+            var recipientPanel = new System.Windows.Controls.StackPanel();
+
+            Action rebuildRecipients = null;
+            rebuildRecipients = () =>
+            {
+                recipientPanel.Children.Clear();
+                for (int ri = 0; ri < recipientList.Count; ri++)
+                {
+                    int idx = ri;
+                    var row = new System.Windows.Controls.StackPanel
+                    {
+                        Orientation = System.Windows.Controls.Orientation.Horizontal,
+                        Margin = new Thickness(0, 0, 0, 2)
+                    };
+                    row.Children.Add(new System.Windows.Controls.TextBlock
+                    {
+                        Text = recipientList[idx], Foreground = textPrimary,
+                        FontSize = 11, VerticalAlignment = VerticalAlignment.Center,
+                        Margin = new Thickness(0, 0, 8, 0)
+                    });
+                    var removeRecipBtn = new System.Windows.Controls.Button
+                    {
+                        Content = "X", Width = 20, Padding = new Thickness(0),
+                        Background = bgCard, Foreground = dangerColor,
+                        BorderBrush = borderBrush, FontSize = 10,
+                        Cursor = System.Windows.Input.Cursors.Hand
+                    };
+                    removeRecipBtn.Click += (s2, e2) =>
+                    {
+                        recipientList.RemoveAt(idx);
+                        rebuildRecipients();
+                    };
+                    row.Children.Add(removeRecipBtn);
+                    recipientPanel.Children.Add(row);
+                }
+            };
+            rebuildRecipients();
+            emailDetailsPanel.Children.Add(recipientPanel);
+
+            var addRecipRow = new System.Windows.Controls.StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+            var newRecipBox = makeTextBox("");
+            newRecipBox.Width = 250;
+            var addRecipBtn = new System.Windows.Controls.Button
+            {
+                Content = "+", Width = 28, Padding = new Thickness(0, 2, 0, 2),
+                Background = bgCard, Foreground = textPrimary,
+                BorderBrush = borderBrush, FontSize = 12,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                Margin = new Thickness(4, 0, 0, 0)
+            };
+            addRecipBtn.Click += (s2, e2) =>
+            {
+                string email = newRecipBox.Text.Trim();
+                if (!string.IsNullOrEmpty(email) && email.Contains("@"))
+                {
+                    recipientList.Add(email);
+                    newRecipBox.Text = "";
+                    rebuildRecipients();
+                }
+            };
+            addRecipRow.Children.Add(newRecipBox);
+            addRecipRow.Children.Add(addRecipBtn);
+            emailDetailsPanel.Children.Add(addRecipRow);
+
+            // Timing
+            emailDetailsPanel.Children.Add(new System.Windows.Controls.Separator
+            {
+                Margin = new Thickness(0, 8, 0, 4), Background = borderBrush
+            });
+            emailDetailsPanel.Children.Add(makeLabel("Email Timing"));
+            var timingImmediate = new System.Windows.Controls.RadioButton
+            {
+                Content = "Send immediately after scan completes",
+                Foreground = textPrimary, FontSize = 11,
+                IsChecked = existingEmail.Timing == EmailTiming.Immediately,
+                Margin = new Thickness(0, 0, 0, 4)
+            };
+            var timingDeferred = new System.Windows.Controls.RadioButton
+            {
+                Content = "Send at specific time:",
+                Foreground = textPrimary, FontSize = 11,
+                IsChecked = existingEmail.Timing == EmailTiming.AtSpecificTime
+            };
+            var emailTimePanel = new System.Windows.Controls.StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                Margin = new Thickness(20, 4, 0, 0)
+            };
+            var emailHourBox = new System.Windows.Controls.TextBox
+            {
+                Text = existingEmail.SendTime.Hours.ToString("00"),
+                Width = 40, TextAlignment = TextAlignment.Center,
+                Padding = new Thickness(4), Background = bgCard,
+                Foreground = textPrimary, BorderBrush = borderBrush, FontSize = 12
+            };
+            emailTimePanel.Children.Add(emailHourBox);
+            emailTimePanel.Children.Add(new System.Windows.Controls.TextBlock
+            {
+                Text = ":", Foreground = textPrimary, FontSize = 14,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(3, 0, 3, 0)
+            });
+            var emailMinuteBox = new System.Windows.Controls.TextBox
+            {
+                Text = existingEmail.SendTime.Minutes.ToString("00"),
+                Width = 40, TextAlignment = TextAlignment.Center,
+                Padding = new Thickness(4), Background = bgCard,
+                Foreground = textPrimary, BorderBrush = borderBrush, FontSize = 12
+            };
+            emailTimePanel.Children.Add(emailMinuteBox);
+
+            emailDetailsPanel.Children.Add(timingImmediate);
+            emailDetailsPanel.Children.Add(timingDeferred);
+            emailDetailsPanel.Children.Add(emailTimePanel);
+
+            Action updateTimingVisibility = () =>
+            {
+                emailTimePanel.Visibility = timingDeferred.IsChecked == true
+                    ? Visibility.Visible : Visibility.Collapsed;
+            };
+            timingImmediate.Checked += (s2, e2) => updateTimingVisibility();
+            timingDeferred.Checked += (s2, e2) => updateTimingVisibility();
+            updateTimingVisibility();
+
+            // Custom Subject
+            emailDetailsPanel.Children.Add(makeLabel("Custom Subject (optional)"));
+            var subjectBox = makeTextBox(existingEmail.CustomSubject);
+            emailDetailsPanel.Children.Add(subjectBox);
+            emailDetailsPanel.Children.Add(new System.Windows.Controls.TextBlock
+            {
+                Text = "Leave empty for auto-generated: \"[IndiLogs] Name - N matches, N logs\"",
+                Foreground = textSecondary, FontSize = 10, TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 2, 0, 0)
+            });
+
+            sec7.Children.Add(emailDetailsPanel);
+
+            // Toggle email details visibility
+            Action updateEmailVisibility = () =>
+            {
+                emailDetailsPanel.Visibility = emailEnabledCheck.IsChecked == true
+                    ? Visibility.Visible : Visibility.Collapsed;
+            };
+            emailEnabledCheck.Checked += (s2, e2) => updateEmailVisibility();
+            emailEnabledCheck.Unchecked += (s2, e2) => updateEmailVisibility();
+            updateEmailVisibility();
+
+            root.Children.Add(makeSection("Email Notifications", sec7));
 
             // ════════════════════════════════════════════════════════
             // SAVE / CANCEL BUTTONS
@@ -1995,23 +2480,26 @@ namespace IndiLogs_3._0.ViewModels
                     return;
                 }
 
-                int intervalMins = 60;
+                int intervalValue = 1;
                 if (typeIdx == 3)
                 {
-                    if (!int.TryParse(intervalBox.Text, out intervalMins) || intervalMins < 1)
+                    if (!int.TryParse(intervalBox.Text, out intervalValue) || intervalValue < 1)
                     {
-                        MessageBox.Show("Interval must be at least 1 minute.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        MessageBox.Show("Interval value must be at least 1.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                         return;
                     }
                 }
 
+                bool isStatsOnly = radioStatsOnly.IsChecked == true;
+                bool needsSearch = !isStatsOnly;
+
                 bool isSimple = simpleRadio.IsChecked == true;
-                if (isSimple && string.IsNullOrWhiteSpace(simpleTextBox.Text))
+                if (needsSearch && isSimple && string.IsNullOrWhiteSpace(simpleTextBox.Text))
                 {
                     MessageBox.Show("Please enter search text.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
-                if (!isSimple && condValues.All(v => string.IsNullOrWhiteSpace(v.Text)))
+                if (needsSearch && !isSimple && condValues.All(v => string.IsNullOrWhiteSpace(v.Text)))
                 {
                     MessageBox.Show("Add at least one search condition with a value.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -2037,46 +2525,61 @@ namespace IndiLogs_3._0.ViewModels
                         .Select(kv => kv.Key).ToList()
                 };
 
-                if (ffFromPicker.SelectedDate.HasValue || ffToPicker.SelectedDate.HasValue)
+                // File time filter — relative presets or custom range
+                if (ffPreset24h.IsChecked == true)
+                    criteria.FileTimeFilter = new TimeRangeFilter { RelativeRange = RelativeTimeRange.Last24Hours };
+                else if (ffPresetWeek.IsChecked == true)
+                    criteria.FileTimeFilter = new TimeRangeFilter { RelativeRange = RelativeTimeRange.LastWeek };
+                else if (ffFromPicker.SelectedDate.HasValue || ffToPicker.SelectedDate.HasValue)
                     criteria.FileTimeFilter = new TimeRangeFilter { From = ffFromPicker.SelectedDate, To = ffToPicker.SelectedDate };
-                if (rfFromPicker.SelectedDate.HasValue || rfToPicker.SelectedDate.HasValue)
+
+                // Result time filter — relative presets or custom range
+                if (rfPreset24h.IsChecked == true)
+                    criteria.ResultTimeFilter = new TimeRangeFilter { RelativeRange = RelativeTimeRange.Last24Hours };
+                else if (rfPresetWeek.IsChecked == true)
+                    criteria.ResultTimeFilter = new TimeRangeFilter { RelativeRange = RelativeTimeRange.LastWeek };
+                else if (rfFromPicker.SelectedDate.HasValue || rfToPicker.SelectedDate.HasValue)
                     criteria.ResultTimeFilter = new TimeRangeFilter { From = rfFromPicker.SelectedDate, To = rfToPicker.SelectedDate };
 
-                if (isSimple)
+                // Only build search criteria groups if search mode requires it
+                if (needsSearch)
                 {
-                    criteria.Groups.Add(new SearchConditionGroup
+                    if (isSimple)
                     {
-                        Operator = ConditionOperator.Or,
-                        Conditions = new List<SearchCondition>
+                        criteria.Groups.Add(new SearchConditionGroup
                         {
-                            new SearchCondition
+                            Operator = ConditionOperator.Or,
+                            Conditions = new List<SearchCondition>
                             {
-                                Field = (SearchField)simpleFieldCombo.SelectedItem,
-                                Operator = simpleRegexCheck.IsChecked == true ? SearchOperator.Regex : SearchOperator.Contains,
-                                Value = simpleTextBox.Text.Trim()
+                                new SearchCondition
+                                {
+                                    Field = (SearchField)simpleFieldCombo.SelectedItem,
+                                    Operator = simpleRegexCheck.IsChecked == true ? SearchOperator.Regex : SearchOperator.Contains,
+                                    Value = simpleTextBox.Text.Trim()
+                                }
                             }
-                        }
-                    });
-                }
-                else
-                {
-                    var group = new SearchConditionGroup
-                    {
-                        Operator = (ConditionOperator)advOperatorCombo.SelectedItem
-                    };
-                    for (int ci = 0; ci < condValues.Count; ci++)
-                    {
-                        if (string.IsNullOrWhiteSpace(condValues[ci].Text)) continue;
-                        group.Conditions.Add(new SearchCondition
-                        {
-                            Field = (SearchField)condFields[ci].SelectedItem,
-                            Operator = (SearchOperator)condOps[ci].SelectedItem,
-                            Value = condValues[ci].Text.Trim(),
-                            Negate = condNegates[ci].IsChecked == true
                         });
                     }
-                    if (group.Conditions.Count > 0)
-                        criteria.Groups.Add(group);
+                    else
+                    {
+                        var group = new SearchConditionGroup
+                        {
+                            Operator = (ConditionOperator)advOperatorCombo.SelectedItem
+                        };
+                        for (int ci = 0; ci < condValues.Count; ci++)
+                        {
+                            if (string.IsNullOrWhiteSpace(condValues[ci].Text)) continue;
+                            group.Conditions.Add(new SearchCondition
+                            {
+                                Field = (SearchField)condFields[ci].SelectedItem,
+                                Operator = (SearchOperator)condOps[ci].SelectedItem,
+                                Value = condValues[ci].Text.Trim(),
+                                Negate = condNegates[ci].IsChecked == true
+                            });
+                        }
+                        if (group.Conditions.Count > 0)
+                            criteria.Groups.Add(group);
+                    }
                 }
 
                 // ═══ APPLY TO SCHEDULE ═══
@@ -2092,9 +2595,81 @@ namespace IndiLogs_3._0.ViewModels
                 schedule.RunDate = typeIdx == 0 ? datePicker.SelectedDate : null;
                 schedule.RunTime = new TimeSpan(hours, minutes, 0);
                 schedule.RunDays = dayCheckBoxes.Where(kv => kv.Value.IsChecked == true).Select(kv => kv.Key).ToList();
-                schedule.RepeatIntervalMinutes = intervalMins;
+                schedule.RepeatIntervalValue = intervalValue;
+                schedule.IntervalUnit = intervalUnitCombo.SelectedIndex == 0 ? IntervalUnit.Minutes
+                    : intervalUnitCombo.SelectedIndex == 1 ? IntervalUnit.Hours
+                    : IntervalUnit.Days;
                 schedule.OutputDirectory = dirBox.Text.Trim();
+                schedule.ScanMode = radioStatsOnly.IsChecked == true ? ScanMode.StatisticsOnly
+                    : radioSearchAndStats.IsChecked == true ? ScanMode.SearchAndStatistics
+                    : ScanMode.SearchOnly;
                 schedule.Criteria = criteria;
+
+                // ═══ EMAIL CONFIG ═══
+                if (emailEnabledCheck.IsChecked == true)
+                {
+                    if (string.IsNullOrWhiteSpace(smtpHostBox.Text))
+                    {
+                        MessageBox.Show("SMTP server is required when email is enabled.", "Validation",
+                            MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+                    if (string.IsNullOrWhiteSpace(fromBox.Text) || !fromBox.Text.Contains("@"))
+                    {
+                        MessageBox.Show("A valid From address is required.", "Validation",
+                            MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+                    if (recipientList.Count == 0)
+                    {
+                        MessageBox.Show("Add at least one email recipient.", "Validation",
+                            MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+
+                    int emailSendHour = 0, emailSendMin = 0;
+                    if (timingDeferred.IsChecked == true)
+                    {
+                        if (!int.TryParse(emailHourBox.Text, out emailSendHour) || emailSendHour < 0 || emailSendHour > 23)
+                        {
+                            MessageBox.Show("Email send hour must be 0\u201323.", "Validation",
+                                MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+                        if (!int.TryParse(emailMinuteBox.Text, out emailSendMin) || emailSendMin < 0 || emailSendMin > 59)
+                        {
+                            MessageBox.Show("Email send minutes must be 0\u201359.", "Validation",
+                                MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+                    }
+
+                    var authMode = authWindows.IsChecked == true ? SmtpAuthMode.WindowsIntegrated
+                        : authUserPass.IsChecked == true ? SmtpAuthMode.UsernamePassword
+                        : SmtpAuthMode.None;
+
+                    schedule.EmailConfig = new EmailNotificationConfig
+                    {
+                        IsEnabled = true,
+                        SmtpHost = smtpHostBox.Text.Trim(),
+                        SmtpPort = int.TryParse(smtpPortBox.Text, out int port) ? port : 25,
+                        UseSsl = sslCheck.IsChecked == true,
+                        AuthMode = authMode,
+                        SmtpUsername = authMode == SmtpAuthMode.UsernamePassword ? smtpUserBox.Text.Trim() : null,
+                        SmtpPassword = authMode == SmtpAuthMode.UsernamePassword ? smtpPassBox.Text : null,
+                        FromAddress = fromBox.Text.Trim(),
+                        Recipients = new List<string>(recipientList),
+                        Timing = timingDeferred.IsChecked == true
+                            ? EmailTiming.AtSpecificTime : EmailTiming.Immediately,
+                        SendTime = new TimeSpan(emailSendHour, emailSendMin, 0),
+                        CustomSubject = string.IsNullOrWhiteSpace(subjectBox.Text)
+                            ? null : subjectBox.Text.Trim()
+                    };
+                }
+                else
+                {
+                    schedule.EmailConfig = null;
+                }
 
                 dialogResult = true;
                 dialog.Close();
@@ -2115,6 +2690,7 @@ namespace IndiLogs_3._0.ViewModels
         {
             if (SelectedSchedule == null) return;
             if (MessageBox.Show($"Remove schedule '{SelectedSchedule.Name}'?", "Confirm", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+            _taskSchedulerService.UnregisterSchedule(SelectedSchedule.Id);
             _schedulerService.RemoveSchedule(SelectedSchedule.Id);
             Schedules.Remove(SelectedSchedule);
         }
@@ -2125,65 +2701,15 @@ namespace IndiLogs_3._0.ViewModels
             var schedule = SelectedSchedule;
             var scheduleName = schedule.Name;
 
-            // Calculate wait time until the scheduled RunTime
-            var now = DateTime.Now;
-            DateTime targetTime;
-            if (schedule.ScheduleType == ScheduleType.Once && schedule.RunDate.HasValue)
-            {
-                targetTime = schedule.RunDate.Value.Date.Add(schedule.RunTime);
-            }
-            else
-            {
-                targetTime = now.Date.Add(schedule.RunTime);
-                if (targetTime <= now && schedule.ScheduleType != ScheduleType.Interval)
-                    targetTime = targetTime.AddDays(1);
-            }
-
-            TimeSpan waitDuration = targetTime - now;
-
-            // For Interval type, calculate next interval run
-            if (schedule.ScheduleType == ScheduleType.Interval)
-            {
-                if (schedule.LastRunTime.HasValue)
-                {
-                    var nextRun = schedule.LastRunTime.Value.AddMinutes(schedule.RepeatIntervalMinutes);
-                    if (nextRun > now)
-                        waitDuration = nextRun - now;
-                    else
-                        waitDuration = TimeSpan.Zero; // Overdue — run immediately
-                }
-                else
-                {
-                    waitDuration = TimeSpan.Zero; // Never run — run immediately
-                }
-            }
-
-            // Close the window — search will run at the scheduled time
-            string timeMsg = waitDuration.TotalSeconds < 5
-                ? "starting now"
-                : waitDuration.TotalMinutes < 1
-                    ? $"starting in {waitDuration.Seconds}s"
-                    : waitDuration.TotalHours < 1
-                        ? $"starting at {targetTime:HH:mm} (in {waitDuration.TotalMinutes:F0} min)"
-                        : $"starting at {targetTime:HH:mm} (in {waitDuration.TotalHours:F1} hours)";
-
+            // "Start" = run immediately, no waiting
             RequestCloseForScheduledRun?.Invoke(scheduleName);
-            AppLogger.Info($"[Grep] Scheduled search '{scheduleName}' — {timeMsg}");
+            AppLogger.Info($"[Grep] Running scheduled search '{scheduleName}' now...");
 
             try
             {
-                // Wait until the scheduled time
-                if (waitDuration.TotalSeconds >= 1)
-                {
-                    AppLogger.Info($"[Grep] Waiting until {targetTime:yyyy-MM-dd HH:mm:ss} to run '{scheduleName}'...");
-                    await Task.Delay(waitDuration, _cancellationTokenSource?.Token ?? CancellationToken.None);
-                }
-
-                AppLogger.Info($"[Grep] Running scheduled search '{scheduleName}' now...");
                 var reportPath = await _schedulerService.RunNowAsync(schedule);
                 AppLogger.Info($"[Grep] Scheduled search '{scheduleName}' completed: {schedule.LastRunStatus}");
 
-                // Notify to reopen window and open report
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     ScheduledRunCompleted?.Invoke(scheduleName, reportPath);
@@ -2191,7 +2717,7 @@ namespace IndiLogs_3._0.ViewModels
             }
             catch (OperationCanceledException)
             {
-                AppLogger.Info($"[Grep] Scheduled search '{scheduleName}' wait cancelled");
+                AppLogger.Info($"[Grep] Scheduled search '{scheduleName}' cancelled");
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     ScheduledRunCompleted?.Invoke(scheduleName, null);
@@ -2220,13 +2746,15 @@ namespace IndiLogs_3._0.ViewModels
             base.Dispose(disposing);
         }
 
-        #region Enums (kept for backward compat)
+        #region Enums
 
         public enum SearchModeType
         {
             LoadedSessions,
             ExternalFiles
         }
+
+        public SearchModeType SearchMode { get; set; } = SearchModeType.LoadedSessions;
 
         #endregion
     }

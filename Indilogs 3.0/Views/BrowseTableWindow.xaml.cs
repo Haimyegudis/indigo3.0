@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SQLite;
+using Microsoft.Data.Sqlite;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -92,19 +92,19 @@ namespace IndiLogs_3._0.Views
                         }
                         _tempDbPath = tempPath;
 
-                        using (var connection = new SQLiteConnection($"Data Source={_tempDbPath};Version=3;"))
+                        using (var connection = new SqliteConnection($"Data Source={_tempDbPath}"))
                         {
                             connection.Open();
 
                             // Get total row count
-                            using (var cmd = new SQLiteCommand($"SELECT COUNT(*) FROM \"{EscapeSqlIdentifier(_tableName)}\"", connection))
+                            using (var cmd = new SqliteCommand($"SELECT COUNT(*) FROM \"{EscapeSqlIdentifier(_tableName)}\"", connection))
                             {
                                 _totalRowCount = (long)cmd.ExecuteScalar();
                             }
 
                             // Get column names for search
                             _columnNames = new List<string>();
-                            using (var cmd = new SQLiteCommand($"PRAGMA table_info([{EscapeSqlBracketId(_tableName)}])", connection))
+                            using (var cmd = new SqliteCommand($"PRAGMA table_info([{EscapeSqlBracketId(_tableName)}])", connection))
                             using (var reader = cmd.ExecuteReader())
                             {
                                 while (reader.Read())
@@ -146,7 +146,7 @@ namespace IndiLogs_3._0.Views
                 DataTable dataTable = null;
                 DataTable compactTable = null;
 
-                using (var connection = new SQLiteConnection($"Data Source={_tempDbPath};Version=3;"))
+                using (var connection = new SqliteConnection($"Data Source={_tempDbPath}"))
                 {
                     connection.Open();
 
@@ -176,16 +176,24 @@ namespace IndiLogs_3._0.Views
                         query = $"SELECT rowid AS ID, * FROM \"{EscapeSqlIdentifier(_tableName)}\" WHERE {string.Join(" OR ", whereConditions)} LIMIT 10000";
                     }
 
-                    using (var cmd = new SQLiteCommand(query, connection))
+                    using (var cmd = new SqliteCommand(query, connection))
                     {
                         if (!string.IsNullOrEmpty(searchText))
                         {
                             cmd.Parameters.AddWithValue("@searchParam", $"%{searchText}%");
                         }
-                        using (var adapter = new SQLiteDataAdapter(cmd))
+                        using (var reader = cmd.ExecuteReader())
                         {
                             dataTable = new DataTable();
-                            adapter.Fill(dataTable);
+                            for (int i = 0; i < reader.FieldCount; i++)
+                                dataTable.Columns.Add(reader.GetName(i), typeof(object));
+                            while (reader.Read())
+                            {
+                                var row = dataTable.NewRow();
+                                for (int i = 0; i < reader.FieldCount; i++)
+                                    row[i] = reader.IsDBNull(i) ? DBNull.Value : reader.GetValue(i);
+                                dataTable.Rows.Add(row);
+                            }
                         }
                     }
 

@@ -50,7 +50,7 @@
 
         <!-- Category Filter Buttons -->
         <Border Grid.Row="0" Background="{DynamicResource BgCard}" Margin="5,5,5,2" CornerRadius="4" Padding="3">
-            <UniformGrid Rows="1" Columns="6">
+            <UniformGrid Rows="1" Columns="7">
                 <RadioButton x:Name="AllBtn" Content="ALL" GroupName="Category"
                              IsChecked="True" Checked="CategoryButton_Checked"
                              Style="{StaticResource CategoryRadioButtonStyle}"/>
@@ -67,6 +67,10 @@
                              Checked="CategoryButton_Checked"
                              Style="{StaticResource CategoryRadioButtonStyle}"/>
                 <RadioButton x:Name="EventsBtn" Content="EVENTS" GroupName="Category"
+                             Checked="CategoryButton_Checked"
+                             Style="{StaticResource CategoryRadioButtonStyle}"/>
+                <RadioButton x:Name="EmStatsBtn" Content="EM STATS" GroupName="Category"
+                             Visibility="Collapsed"
                              Checked="CategoryButton_Checked"
                              Style="{StaticResource CategoryRadioButtonStyle}"/>
             </UniformGrid>

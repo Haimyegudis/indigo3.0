@@ -1,25 +1,27 @@
 # DeployToServer.ps1
-# Deploys the built IndiLogs installer to the corporate network share
+# Deploys the published IndiLogs single-file exe to the corporate network share
 # and updates version.txt so all users are prompted to update.
 #
 # USAGE:
-#   Run AFTER BuildInstaller.bat has succeeded.
-#   .\DeployToServer.ps1 -Version "1.0.0.7"
+#   1. Build:  dotnet publish "Indilogs 3.0\Indilogs 3.0.csproj" -c Release -r win-x64 --self-contained true
+#   2. Deploy: .\DeployToServer.ps1 -Version "1.0.0.11"
 #
-# The version must match AssemblyVersion in:
-#   Indilogs 3.0\Properties\AssemblyInfo.cs
+# The version must match <AssemblyVersion> in Indilogs 3.0.csproj
 
 param(
     [Parameter(Mandatory=$true)]
     [string]$Version,
 
-    [string]$InstallerSource = ".\Output\IndiLogsSuite_Setup.exe",
+    [string]$PublishFolder   = "..\Indilogs 3.0\bin\Release\net10.0-windows\win-x64\publish",
     [string]$ServerFolder    = "\\iihome.inr.rd.hpicorp.net\softwareqa$\QA-Utils\Indilogs3.0"
 )
 
+$exeName    = "IndiLogs 3.0.exe"
+$sourceExe  = Join-Path $PublishFolder $exeName
+
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "IndiLogs Deploy to Server" -ForegroundColor Cyan
+Write-Host "IndiLogs Deploy to Server (Single-File)" -ForegroundColor Cyan
 Write-Host "Version: $Version" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
@@ -31,22 +33,22 @@ try {
     Write-Host "  Version OK: $v" -ForegroundColor Green
 } catch {
     Write-Host "ERROR: Version '$Version' is not a valid format." -ForegroundColor Red
-    Write-Host "Expected format: X.X.X.X  (e.g. 1.0.0.7)" -ForegroundColor Yellow
+    Write-Host "Expected format: X.X.X.X  (e.g. 1.0.0.11)" -ForegroundColor Yellow
     pause
     exit 1
 }
 
-# ---- Step 2: Check installer file exists ----
+# ---- Step 2: Check published exe exists ----
 Write-Host ""
-Write-Host "Step 2: Checking installer file..." -ForegroundColor Cyan
-if (-not (Test-Path $InstallerSource)) {
-    Write-Host "ERROR: Installer not found at: $InstallerSource" -ForegroundColor Red
-    Write-Host "Run BuildInstaller.bat first!" -ForegroundColor Red
+Write-Host "Step 2: Checking published exe..." -ForegroundColor Cyan
+if (-not (Test-Path $sourceExe)) {
+    Write-Host "ERROR: Published exe not found at: $sourceExe" -ForegroundColor Red
+    Write-Host "Run 'dotnet publish' first!" -ForegroundColor Red
     pause
     exit 1
 }
-$installerInfo = Get-Item $InstallerSource
-Write-Host "  Found: $($installerInfo.Name) ($([Math]::Round($installerInfo.Length / 1MB, 2)) MB)" -ForegroundColor Green
+$exeInfo = Get-Item $sourceExe
+Write-Host "  Found: $($exeInfo.Name) ($([Math]::Round($exeInfo.Length / 1MB, 2)) MB)" -ForegroundColor Green
 
 # ---- Step 3: Check server accessibility ----
 Write-Host ""
@@ -63,27 +65,35 @@ if (-not (Test-Path $ServerFolder)) {
 }
 Write-Host "  Server reachable: YES" -ForegroundColor Green
 
-# ---- Step 4: Remove old IndiLogs*.exe installers from server ----
+# ---- Step 4: Remove old IndiLogs*.exe files from server ----
 Write-Host ""
-Write-Host "Step 4: Cleaning old installers from server..." -ForegroundColor Cyan
+Write-Host "Step 4: Cleaning old files from server..." -ForegroundColor Cyan
 $oldFiles = Get-ChildItem -Path $ServerFolder -Filter "IndiLogs*.exe" -ErrorAction SilentlyContinue
 if ($oldFiles.Count -eq 0) {
-    Write-Host "  No old installers found." -ForegroundColor Gray
+    Write-Host "  No old files found." -ForegroundColor Gray
 } else {
     foreach ($f in $oldFiles) {
         Write-Host "  Removing: $($f.Name)" -ForegroundColor Yellow
         Remove-Item $f.FullName -Force
     }
-    Write-Host "  Removed $($oldFiles.Count) old installer(s)." -ForegroundColor Green
+    Write-Host "  Removed $($oldFiles.Count) old file(s)." -ForegroundColor Green
 }
 
-# ---- Step 5: Copy new installer to server (versioned filename) ----
+# ---- Step 5: Copy new exe to server (versioned filename) ----
 Write-Host ""
-Write-Host "Step 5: Copying installer to server..." -ForegroundColor Cyan
-$destName = "IndiLogsSetup_$Version.exe"
-$destPath  = Join-Path $ServerFolder $destName
-Copy-Item $InstallerSource -Destination $destPath -Force
+Write-Host "Step 5: Copying exe to server..." -ForegroundColor Cyan
+$destName = "IndiLogs3.0_$Version.exe"
+$destPath = Join-Path $ServerFolder $destName
+Copy-Item $sourceExe -Destination $destPath -Force
 Write-Host "  Copied as: $destName" -ForegroundColor Green
+
+# ---- Step 5b: Copy appsettings.json alongside (for reference / first-time users) ----
+$sourceSettings = Join-Path $PublishFolder "appsettings.json"
+if (Test-Path $sourceSettings) {
+    $destSettings = Join-Path $ServerFolder "appsettings.json"
+    Copy-Item $sourceSettings -Destination $destSettings -Force
+    Write-Host "  Copied: appsettings.json" -ForegroundColor Green
+}
 
 # ---- Step 6: Write version.txt ----
 Write-Host ""
@@ -98,7 +108,7 @@ Write-Host "========================================" -ForegroundColor Green
 Write-Host "SUCCESS! IndiLogs $Version deployed." -ForegroundColor Green
 Write-Host ""
 Write-Host "  Server folder : $ServerFolder" -ForegroundColor White
-Write-Host "  Installer file: $destName" -ForegroundColor White
+Write-Host "  Exe file      : $destName" -ForegroundColor White
 Write-Host "  version.txt   : $Version" -ForegroundColor White
 Write-Host ""
 Write-Host "Users running a version < $Version will be prompted to" -ForegroundColor Yellow

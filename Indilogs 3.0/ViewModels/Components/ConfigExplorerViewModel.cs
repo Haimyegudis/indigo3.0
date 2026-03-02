@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data;
-using System.Data.SQLite;
+using Microsoft.Data.Sqlite;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -498,13 +498,13 @@ namespace IndiLogs_3._0.ViewModels.Components
                         DatabaseFileName = SelectedConfigFile // Store DB file name
                     };
 
-                    using (var connection = new SQLiteConnection($"Data Source={tempDbPath};Read Only=True;"))
+                    using (var connection = new SqliteConnection($"Data Source={tempDbPath};Mode=ReadOnly"))
                     {
                         connection.Open();
 
                         // Get all tables with their CREATE statements
                         var tablesInfo = new List<(string name, string sql)>();
-                        using (var cmd = new SQLiteCommand("SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name;", connection))
+                        using (var cmd = new SqliteCommand("SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name;", connection))
                         using (var reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
@@ -530,7 +530,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                             };
 
                             // Get column info using PRAGMA
-                            using (var cmd = new SQLiteCommand($"PRAGMA table_info([{EscapeSqlBracketId(tableName)}])", connection))
+                            using (var cmd = new SqliteCommand($"PRAGMA table_info([{EscapeSqlBracketId(tableName)}])", connection))
                             using (var reader = cmd.ExecuteReader())
                             {
                                 while (reader.Read())

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using SkiaSharp;
 using SkiaSharp.Views.Desktop;
@@ -31,7 +30,6 @@ namespace IndiLogs_3._0.Controls.Charts
         private int _viewStartIndex = 0;
         private int _viewEndIndex = 0;
         private int _cursorIndex = -1;
-        private bool _isExpanded = true;
         private bool _isLightTheme = false;
 
         // For X-axis labels
@@ -120,9 +118,15 @@ namespace IndiLogs_3._0.Controls.Charts
         // CHSTEP hover support
         private int _hoveredStateRow = -1;
         private StateInterval? _hoveredStateInterval = null;
+        private int _hoverDataIndex = -1; // Data index under cursor (for dynamic time tooltip)
 
         // Label hover support (show full name on hover over left margin)
         private int _hoveredLabelRow = -1;
+
+        // Independent-timeline support (e.g., EM Statistics Gantt)
+        public bool HasOwnTimeline { get; set; }
+        private float _verticalOffset = 0f;
+        private const float MAX_VISIBLE_ROWS_HEIGHT = 450f;
 
         public bool IsLightTheme
         {
@@ -196,13 +200,30 @@ namespace IndiLogs_3._0.Controls.Charts
 
         private void UpdateHeight()
         {
-            if (_isExpanded && _stateDataList.Count > 0)
+            if (_stateDataList.Count > 0)
             {
-                GanttContainer.Height = (_stateDataList.Count * ROW_HEIGHT) + X_AXIS_HEIGHT + 10;
+                if (HasOwnTimeline)
+                {
+                    // Height driven by ChartHeight binding — just clamp vertical offset
+                    float contentHeight = _stateDataList.Count * ROW_HEIGHT + PADDING * 2;
+                    if (contentHeight > MAX_VISIBLE_ROWS_HEIGHT)
+                    {
+                        float maxOffset = contentHeight - MAX_VISIBLE_ROWS_HEIGHT;
+                        _verticalOffset = Math.Min(_verticalOffset, maxOffset);
+                    }
+                    else
+                        _verticalOffset = 0;
+                }
+                else
+                {
+                    GanttContainer.Height = (_stateDataList.Count * ROW_HEIGHT) + X_AXIS_HEIGHT + 10;
+                    _verticalOffset = 0;
+                }
             }
             else
             {
-                GanttContainer.Height = _isExpanded ? 50 : 0;
+                GanttContainer.Height = 50;
+                _verticalOffset = 0;
             }
         }
 
@@ -218,18 +239,9 @@ namespace IndiLogs_3._0.Controls.Charts
 
         public void SyncCursor(int index)
         {
+            if (HasOwnTimeline) return;
             _cursorIndex = index;
             SkiaCanvas.InvalidateVisual();
-        }
-
-        private void ExpandCollapseButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is ToggleButton btn)
-            {
-                _isExpanded = btn.IsChecked == true;
-                btn.Content = _isExpanded ? "▼" : "▶";
-                UpdateHeight();
-            }
         }
 
         protected override void OnMouseLeftButtonDown(System.Windows.Input.MouseButtonEventArgs e)
@@ -239,6 +251,16 @@ namespace IndiLogs_3._0.Controls.Charts
             if (_totalDataLength == 0) return;
 
             var pos = e.GetPosition(SkiaCanvas);
+
+            if (HasOwnTimeline)
+            {
+                // Vertical drag for scrolling (no cursor for independent-timeline charts)
+                _isDragging = true;
+                _lastMousePos = pos;
+                CaptureMouse();
+                return;
+            }
+
             float w = (float)SkiaCanvas.ActualWidth;
 
             // Check if click is in chart area (past label)
@@ -278,29 +300,44 @@ namespace IndiLogs_3._0.Controls.Charts
             // Handle drag/pan
             if (_isDragging && _totalDataLength > 0)
             {
-                float w = (float)SkiaCanvas.ActualWidth;
-                float chartWidth = w - LEFT_MARGIN - RIGHT_MARGIN;
-                if (chartWidth <= 0) return;
-
-                double deltaX = pos.X - _lastMousePos.X;
-                int visiblePoints = _viewEndIndex - _viewStartIndex;
-                int shift = (int)((deltaX / chartWidth) * visiblePoints);
-
-                if (shift != 0)
+                if (HasOwnTimeline)
                 {
-                    int newStart = _viewStartIndex - shift;
-                    int newEnd = _viewEndIndex - shift;
+                    // Vertical scroll via drag
+                    float deltaY = (float)(pos.Y - _lastMousePos.Y);
+                    float contentHeight = _stateDataList.Count * ROW_HEIGHT + PADDING * 2;
+                    float canvasH = (float)SkiaCanvas.ActualHeight;
+                    float visibleRows = canvasH - X_AXIS_HEIGHT;
+                    float maxOffset = Math.Max(0, contentHeight - visibleRows);
+                    _verticalOffset = Math.Max(0, Math.Min(_verticalOffset - deltaY, maxOffset));
+                    _lastMousePos = pos;
+                    SkiaCanvas.InvalidateVisual();
+                }
+                else
+                {
+                    float w = (float)SkiaCanvas.ActualWidth;
+                    float chartWidth = w - LEFT_MARGIN - RIGHT_MARGIN;
+                    if (chartWidth <= 0) return;
 
-                    if (newStart < 0) { newStart = 0; newEnd = visiblePoints; }
-                    if (newEnd >= _totalDataLength) { newEnd = _totalDataLength - 1; newStart = newEnd - visiblePoints; }
+                    double deltaX = pos.X - _lastMousePos.X;
+                    int visiblePoints = _viewEndIndex - _viewStartIndex;
+                    int shift = (int)((deltaX / chartWidth) * visiblePoints);
 
-                    if (newStart != _viewStartIndex)
+                    if (shift != 0)
                     {
-                        _viewStartIndex = newStart;
-                        _viewEndIndex = newEnd;
-                        _lastMousePos = pos;
-                        if (!_isSyncing) OnViewRangeChanged?.Invoke(_viewStartIndex, _viewEndIndex);
-                        SkiaCanvas.InvalidateVisual();
+                        int newStart = _viewStartIndex - shift;
+                        int newEnd = _viewEndIndex - shift;
+
+                        if (newStart < 0) { newStart = 0; newEnd = visiblePoints; }
+                        if (newEnd >= _totalDataLength) { newEnd = _totalDataLength - 1; newStart = newEnd - visiblePoints; }
+
+                        if (newStart != _viewStartIndex)
+                        {
+                            _viewStartIndex = newStart;
+                            _viewEndIndex = newEnd;
+                            _lastMousePos = pos;
+                            if (!_isSyncing) OnViewRangeChanged?.Invoke(_viewStartIndex, _viewEndIndex);
+                            SkiaCanvas.InvalidateVisual();
+                        }
                     }
                 }
             }
@@ -319,7 +356,7 @@ namespace IndiLogs_3._0.Controls.Charts
                 int newLabelRow = -1;
                 if (pos.X < LEFT_MARGIN && pos.X >= 0 && _stateDataList.Count > 0)
                 {
-                    int rowIdx = Math.Max(0, (int)((pos.Y - PADDING) / ROW_HEIGHT));
+                    int rowIdx = Math.Max(0, (int)((pos.Y + _verticalOffset - PADDING) / ROW_HEIGHT));
                     if (rowIdx >= 0 && rowIdx < _stateDataList.Count)
                         newLabelRow = rowIdx;
                 }
@@ -334,8 +371,9 @@ namespace IndiLogs_3._0.Controls.Charts
                     int cnt = _viewEndIndex - _viewStartIndex + 1;
                     double ratio = (pos.X - LEFT_MARGIN) / chartWidth2;
                     int hoverIndex = _viewStartIndex + (int)(ratio * cnt);
+                    _hoverDataIndex = Math.Max(0, Math.Min(hoverIndex, _totalDataLength - 1));
                     float rowH = ROW_HEIGHT;
-                    int rowIdx = Math.Max(0, (int)((pos.Y - PADDING) / rowH));
+                    int rowIdx = Math.Max(0, (int)((pos.Y + _verticalOffset - PADDING) / rowH));
 
                     int newRow = -1;
                     StateInterval? newInterval = null;
@@ -367,11 +405,17 @@ namespace IndiLogs_3._0.Controls.Charts
                         _hoveredStateInterval = newInterval;
                         needsRepaint = true;
                     }
+                    // Repaint when cursor moves along a hovered bar (dynamic time tooltip)
+                    else if (newInterval.HasValue)
+                    {
+                        needsRepaint = true;
+                    }
                 }
                 else if (oldRow >= 0 || oldInterval.HasValue)
                 {
                     _hoveredStateRow = -1;
                     _hoveredStateInterval = null;
+                    _hoverDataIndex = -1;
                     needsRepaint = true;
                 }
 
@@ -392,6 +436,20 @@ namespace IndiLogs_3._0.Controls.Charts
             base.OnMouseWheel(e);
 
             if (_totalDataLength == 0) return;
+
+            if (HasOwnTimeline)
+            {
+                // Vertical scroll for independent-timeline charts
+                float scrollAmount = e.Delta > 0 ? -40f : 40f;
+                float contentHeight = _stateDataList.Count * ROW_HEIGHT + PADDING * 2;
+                float canvasH = (float)SkiaCanvas.ActualHeight;
+                float visibleRows = canvasH - X_AXIS_HEIGHT;
+                float maxOffset = Math.Max(0, contentHeight - visibleRows);
+                _verticalOffset = Math.Max(0, Math.Min(_verticalOffset + scrollAmount, maxOffset));
+                SkiaCanvas.InvalidateVisual();
+                e.Handled = true;
+                return;
+            }
 
             var pos = e.GetPosition(SkiaCanvas);
             float w = (float)SkiaCanvas.ActualWidth;
@@ -434,7 +492,7 @@ namespace IndiLogs_3._0.Controls.Charts
             var info = e.Info;
             canvas.Clear(_bgColor);
 
-            if (_totalDataLength == 0 || _stateDataList.Count == 0 || !_isExpanded) return;
+            if (_totalDataLength == 0 || _stateDataList.Count == 0) return;
 
             float w = info.Width;
             float h = info.Height;
@@ -459,8 +517,12 @@ namespace IndiLogs_3._0.Controls.Charts
 
             foreach (var stateData in _stateDataList)
             {
-                float rowTop = PADDING + (rowIndex * ROW_HEIGHT);
+                float rowTop = PADDING + (rowIndex * ROW_HEIGHT) - _verticalOffset;
                 float rowBottom = Math.Min(rowTop + ROW_HEIGHT - PADDING, chartBottom);
+
+                // Skip rows entirely outside the visible area
+                if (rowBottom < 0 || rowTop > chartBottom) { rowIndex++; continue; }
+
                 float barTop = rowTop + 2;
                 float barBottom = rowBottom - 2;
                 float barHeight = barBottom - barTop;
@@ -522,7 +584,8 @@ namespace IndiLogs_3._0.Controls.Charts
 
                         // Draw state label if there's room
                         float barW = x2 - x1;
-                        string stateLabel = interval.StateId.ToString();
+                        string stateLabel = !string.IsNullOrEmpty(interval.StateName)
+                            ? interval.StateName : interval.StateId.ToString();
                         float textWidth = _intervalLabelPaint.MeasureText(stateLabel);
                         if (textWidth < barW - 6 && barHeight > 10)
                         {
@@ -541,14 +604,19 @@ namespace IndiLogs_3._0.Controls.Charts
 
             canvas.Restore(); // Remove chart clip
 
-            // Draw row labels (outside clip so they don't get cut)
+            // Draw row labels and grid lines (clipped vertically so they don't overlap X-axis)
+            canvas.Save();
+            canvas.ClipRect(new SKRect(0, 0, w, chartBottom));
             rowIndex = 0;
             _labelPaint.Color = _textColor;
             _labelPaint.Typeface = s_segoeNormal;
             foreach (var stateData in _stateDataList)
             {
-                float rowTop = PADDING + (rowIndex * ROW_HEIGHT);
+                float rowTop = PADDING + (rowIndex * ROW_HEIGHT) - _verticalOffset;
                 float rowBottom = Math.Min(rowTop + ROW_HEIGHT - PADDING, chartBottom);
+
+                // Skip rows outside visible area
+                if (rowBottom < 0 || rowTop > chartBottom) { rowIndex++; continue; }
 
                 bool isLabelHovered = _hoveredLabelRow == (int)rowIndex;
 
@@ -575,6 +643,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
                 rowIndex++;
             }
+            canvas.Restore(); // Remove rows clip
 
             // Draw full name tooltip when hovering over left label area
             if (_hoveredLabelRow >= 0 && _hoveredLabelRow < _stateDataList.Count)
@@ -608,26 +677,35 @@ namespace IndiLogs_3._0.Controls.Charts
 
                 var tooltipSb = new StringBuilder();
 
+                // Line 1: Component name (fixed for this bar)
+                string compName = !string.IsNullOrEmpty(hoveredData.Category)
+                    ? $"{hoveredData.Category} > {hoveredData.Name}" : hoveredData.Name;
+                tooltipSb.AppendLine(compName);
+
+                // Line 2: Duration info (fixed for this bar)
                 if (!string.IsNullOrEmpty(hInterval.TooltipText))
                 {
                     tooltipSb.AppendLine(hInterval.TooltipText);
                 }
                 else
                 {
-                    tooltipSb.AppendLine($"CH: {hoveredData.Name}");
                     tooltipSb.AppendLine($"State: {hInterval.StateId}");
                     if (!string.IsNullOrEmpty(hInterval.StateName))
                         tooltipSb.AppendLine($"Step: {hInterval.StateName}");
-                    if (!string.IsNullOrEmpty(hoveredData.Category))
-                        tooltipSb.AppendLine($"Parent: {hoveredData.Category}");
+
+                    string startTime = GetXAxisLabel?.Invoke(hInterval.StartIndex);
+                    string endTime = GetXAxisLabel?.Invoke(hInterval.EndIndex);
+                    if (!string.IsNullOrEmpty(startTime) && !string.IsNullOrEmpty(endTime))
+                        tooltipSb.AppendLine($"{startTime} - {endTime}");
                 }
 
-                string startTime = GetXAxisLabel?.Invoke(hInterval.StartIndex);
-                string endTime = GetXAxisLabel?.Invoke(hInterval.EndIndex);
-                if (!string.IsNullOrEmpty(startTime))
-                    tooltipSb.AppendLine($"From: {startTime}");
-                if (!string.IsNullOrEmpty(endTime))
-                    tooltipSb.AppendLine($"To: {endTime}");
+                // Line 3: Dynamic time at cursor position (changes as mouse moves along the bar)
+                if (_hoverDataIndex >= 0 && GetXAxisLabel != null)
+                {
+                    string cursorTime = GetXAxisLabel(_hoverDataIndex);
+                    if (!string.IsNullOrEmpty(cursorTime))
+                        tooltipSb.AppendLine($"Time: {cursorTime}");
+                }
 
                 DrawCHStepTooltip(canvas, tooltipSb.ToString(), hoverX + 15, hoverY - 20, w, h);
             }
@@ -686,8 +764,8 @@ namespace IndiLogs_3._0.Controls.Charts
             // Draw X-axis with time labels
             DrawXAxis(canvas, chartLeft, chartRight, chartBottom, h, start, end, count);
 
-            // Draw cursor line with subtle glow
-            if (_cursorIndex >= start && _cursorIndex <= end)
+            // Draw cursor line with subtle glow (not for independent-timeline charts)
+            if (!HasOwnTimeline && _cursorIndex >= start && _cursorIndex <= end)
             {
                 float cursorX = chartLeft + (float)((_cursorIndex - start) / (double)count * chartWidth);
                 canvas.DrawLine(cursorX, 0, cursorX, chartBottom, _cursorGlowPaint);
@@ -696,6 +774,27 @@ namespace IndiLogs_3._0.Controls.Charts
 
             // Draw border
             canvas.DrawRect(new SKRect(chartLeft, 0, chartRight, chartBottom), _borderPaint);
+
+            // Draw scroll indicator for scrollable independent-timeline charts
+            if (HasOwnTimeline)
+            {
+                float contentHeight = _stateDataList.Count * ROW_HEIGHT + PADDING * 2;
+                if (contentHeight > chartBottom)
+                {
+                    float trackX = w - 6;
+                    float trackH = chartBottom - 4;
+                    float thumbRatio = chartBottom / contentHeight;
+                    float thumbH = Math.Max(20, trackH * thumbRatio);
+                    float maxOffset = contentHeight - chartBottom;
+                    float scrollRatio = maxOffset > 0 ? _verticalOffset / maxOffset : 0;
+                    float thumbY = 2 + scrollRatio * (trackH - thumbH);
+
+                    using (var trackPaint = new SKPaint { Color = _gridColor.WithAlpha(40), Style = SKPaintStyle.Fill })
+                        canvas.DrawRoundRect(new SKRoundRect(new SKRect(trackX, 2, trackX + 4, 2 + trackH), 2), trackPaint);
+                    using (var thumbPaint = new SKPaint { Color = _textColor.WithAlpha(100), Style = SKPaintStyle.Fill })
+                        canvas.DrawRoundRect(new SKRoundRect(new SKRect(trackX, thumbY, trackX + 4, thumbY + thumbH), 2), thumbPaint);
+                }
+            }
         }
 
         // Helper: lighten a color

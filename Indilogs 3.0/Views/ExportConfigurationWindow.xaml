@@ -183,67 +183,103 @@
                         <ColumnDefinition x:Name="ThreadColumn" Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- IO Components -->
-                    <GroupBox Grid.Column="0" Header="IO Components">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
+                    <!-- IO Components + EM Stats tabs -->
+                    <GroupBox Grid.Column="0">
+                        <GroupBox.Header>
+                            <TextBlock Text="IO Components"/>
+                        </GroupBox.Header>
+                        <TabControl Background="Transparent" BorderThickness="0" Padding="0">
+                            <TabControl.Resources>
+                                <Style TargetType="TabItem">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                    <Setter Property="FontSize" Value="12"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="Padding" Value="10,4"/>
+                                </Style>
+                            </TabControl.Resources>
 
-                            <TextBox Grid.Row="0"
-                                     Style="{StaticResource SearchBox}"
-                                     Text="{Binding IOSearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <!-- IO Tab -->
+                            <TabItem Header="IO">
+                                <Grid Margin="0,5,0,0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
 
-                            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,5">
-                                <Button Content="Select All"
-                                        Command="{Binding SelectAllIOCommand}"
-                                        Style="{StaticResource SecondaryBtn}"
-                                        Padding="8,4" FontSize="11"/>
-                                <Button Content="Deselect All"
-                                        Command="{Binding DeselectAllIOCommand}"
-                                        Style="{StaticResource SecondaryBtn}"
-                                        Padding="8,4" FontSize="11"/>
-                            </StackPanel>
+                                    <TextBox Grid.Row="0"
+                                             Style="{StaticResource SearchBox}"
+                                             Text="{Binding IOSearchText, UpdateSourceTrigger=PropertyChanged}"/>
 
-                            <ListBox Grid.Row="2" MaxHeight="400"
-                                     ItemsSource="{Binding FilteredIOComponents}"
-                                     Background="Transparent" BorderThickness="0"
-                                     VirtualizingStackPanel.IsVirtualizing="True"
-                                     VirtualizingStackPanel.VirtualizationMode="Recycling"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                     ScrollViewer.CanContentScroll="True">
-                                <ListBox.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <VirtualizingStackPanel/>
-                                    </ItemsPanelTemplate>
-                                </ListBox.ItemsPanel>
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}">
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Category}"
-                                                           Foreground="{DynamicResource WarningColor}"
-                                                           FontWeight="SemiBold"
-                                                           Margin="0,0,5,0"/>
-                                                <TextBlock Text=" | "/>
-                                                <TextBlock Text="{Binding Name}"/>
-                                            </StackPanel>
-                                        </CheckBox>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                                <ListBox.ItemContainerStyle>
-                                    <Style TargetType="ListBoxItem">
-                                        <Setter Property="Background" Value="Transparent"/>
-                                        <Setter Property="BorderThickness" Value="0"/>
-                                        <Setter Property="Padding" Value="0"/>
-                                        <Setter Property="Margin" Value="0"/>
-                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                    </Style>
-                                </ListBox.ItemContainerStyle>
-                            </ListBox>
-                        </Grid>
+                                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,5">
+                                        <Button Content="Select All"
+                                                Command="{Binding SelectAllIOCommand}"
+                                                Style="{StaticResource SecondaryBtn}"
+                                                Padding="8,4" FontSize="11"/>
+                                        <Button Content="Deselect All"
+                                                Command="{Binding DeselectAllIOCommand}"
+                                                Style="{StaticResource SecondaryBtn}"
+                                                Padding="8,4" FontSize="11"/>
+                                    </StackPanel>
+
+                                    <ListBox Grid.Row="2" MaxHeight="400"
+                                             ItemsSource="{Binding FilteredIOComponents}"
+                                             Background="Transparent" BorderThickness="0"
+                                             VirtualizingStackPanel.IsVirtualizing="True"
+                                             VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             ScrollViewer.CanContentScroll="True">
+                                        <ListBox.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <VirtualizingStackPanel/>
+                                            </ItemsPanelTemplate>
+                                        </ListBox.ItemsPanel>
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding Category}"
+                                                                   Foreground="{DynamicResource WarningColor}"
+                                                                   FontWeight="SemiBold"
+                                                                   Margin="0,0,5,0"/>
+                                                        <TextBlock Text=" | "/>
+                                                        <TextBlock Text="{Binding Name}"/>
+                                                    </StackPanel>
+                                                </CheckBox>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                        <ListBox.ItemContainerStyle>
+                                            <Style TargetType="ListBoxItem">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="BorderThickness" Value="0"/>
+                                                <Setter Property="Padding" Value="0"/>
+                                                <Setter Property="Margin" Value="0"/>
+                                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                            </Style>
+                                        </ListBox.ItemContainerStyle>
+                                    </ListBox>
+                                </Grid>
+                            </TabItem>
+
+                            <!-- EM Stats Tab (only visible when EM data exists) -->
+                            <TabItem Header="EM Stats"
+                                     Visibility="{Binding HasEmStatisticsData, Converter={StaticResource IoTerminalBoolToVis}}">
+                                <StackPanel Margin="10,15,10,10">
+                                    <TextBlock Text="EM Statistics Gantt"
+                                               FontSize="14" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource PrimaryColor}"
+                                               Margin="0,0,0,8"/>
+                                    <TextBlock Text="Component startup durations from EM_Statistics CSV."
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextSecondary}"
+                                               TextWrapping="Wrap"
+                                               Margin="0,0,0,12"/>
+                                    <CheckBox Content="Include EM Statistics Gantt"
+                                              IsChecked="{Binding IncludeEmStatistics}"
+                                              FontSize="13"/>
+                                </StackPanel>
+                            </TabItem>
+                        </TabControl>
                     </GroupBox>
 
                     <!-- AXIS Components (hidden for S4-5 binary APP) -->

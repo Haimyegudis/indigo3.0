@@ -384,6 +384,34 @@ namespace IndiLogs_3._0.ViewModels.Components
                 }
             }
 
+            // --- Tab Selection Dialog: show for ZIP files before parsing ---
+            TabSelectionConfig tabSelection = null;
+            TabSelectionConfig preScan = null;
+            bool hasZipFile = filePaths.Any(f => f.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+            if (hasZipFile)
+            {
+                string zipPath = filePaths.First(f => f.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+                preScan = await Task.Run(() => _logService.PreScanZip(zipPath));
+
+                // Show the dialog on the UI thread
+                var dialog = new Views.TabSelectionWindow(preScan);
+                dialog.Owner = Application.Current.MainWindow;
+                if (dialog.ShowDialog() != true)
+                {
+                    // User cancelled — abort load
+                    return;
+                }
+                tabSelection = dialog.ResultConfig;
+
+                // Propagate tab visibility to parent VM
+                _parent.ApplyTabSelection(tabSelection, preScan);
+            }
+            else
+            {
+                // Non-ZIP load: reset all tabs to visible
+                _parent.ApplyTabSelection(null, null);
+            }
+
             IsBusy = true;
             StatusMessage = "Processing files...";
 
@@ -395,11 +423,18 @@ namespace IndiLogs_3._0.ViewModels.Components
                     StatusMessage = update.Message;
                 });
 
-                var newSession = await _logService.LoadSessionAsync(filePaths, progress);
+                var newSession = await _logService.LoadSessionAsync(filePaths, progress, tabSelection);
 
                 newSession.FileName = Path.GetFileName(filePaths[0]);
                 if (filePaths.Length > 1) newSession.FileName += $" (+{filePaths.Length - 1})";
                 newSession.FilePath = filePaths[0];
+
+                // Store tab selection configs for add-back feature
+                if (hasZipFile && tabSelection != null)
+                {
+                    newSession.LoadTabSelection = tabSelection;
+                    newSession.PreScanConfig = preScan;
+                }
 
                 // Run APP log parsing and color application in parallel for maximum speed
                 StatusMessage = "Processing logs...";
@@ -588,6 +623,8 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _parent.NotifyPropertyChanged(nameof(_parent.HasBinaryAppLogs));
                 _parent.LoadGlobalsFiles();
                 _parent.LoadSystabFiles();
+                _parent.UpdateTabVisibilityAfterLoad();
+                _parent.NotifyPropertyChanged(nameof(_parent.HasSkippedComponents));
 
                 // Window title
                 if (!string.IsNullOrEmpty(newSession.VersionsInfo))
@@ -644,6 +681,144 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 StatusMessage = $"Error: {ex.Message}";
                 MessageBox.Show($"Error loading files: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                IsBusy = false;
+            }
+        }
+
+        /// <summary>
+        /// Reloads a single previously-skipped component from the ZIP and merges it into the current session.
+        /// </summary>
+        public async Task AddBackComponentAsync(string componentName)
+        {
+            var session = SelectedSession;
+            if (session == null || string.IsNullOrEmpty(session.FilePath)) return;
+
+            IsBusy = true;
+            StatusMessage = $"Adding {componentName}...";
+
+            try
+            {
+                var progress = new Progress<(double Percent, string Message)>(update =>
+                {
+                    CurrentProgress = update.Percent;
+                    StatusMessage = update.Message;
+                });
+
+                await _logService.ReloadComponentAsync(session, componentName, progress);
+
+                // Post-processing: apply colors to newly added logs
+                var postTasks = new List<Task>();
+                if (componentName == "App" && session.AppDevLogs != null && session.AppDevLogs.Count > 0)
+                {
+                    postTasks.Add(Services.LogParserService.ParseLogEntriesAsync(session.AppDevLogs));
+                    postTasks.Add(_coloringService.ApplyDefaultColorsAsync(session.AppDevLogs, true));
+                }
+                if (componentName == "Plc" || componentName == "ManagerThread")
+                {
+                    postTasks.Add(_coloringService.ApplyDefaultColorsAsync(session.Logs, false));
+                }
+                if (postTasks.Count > 0) await Task.WhenAll(postTasks);
+
+                // Refresh UI bindings
+                Logs = session.Logs;
+                AllLogsCache = session.Logs;
+                AllAppLogsCache = session.AppDevLogs ?? new List<LogEntry>();
+
+                if (componentName == "Events")
+                {
+                    AllEvents = session.Events;
+                    Events = new ObservableCollection<EventEntry>(session.Events);
+                    _parent.LoadEventsDataView();
+                }
+
+                if (componentName == "Screenshots")
+                {
+                    Screenshots = new ObservableCollection<BitmapImage>(session.Screenshots ?? new List<BitmapImage>());
+                }
+
+                if (componentName == "Configuration" || componentName == "TerminalLogs" || componentName == "Lrs")
+                {
+                    _configVM.LoadConfigurationFiles();
+                    _parent.NotifyPropertyChanged(nameof(_parent.DbConfigTabHeader));
+                }
+
+                if (componentName == "Globals")
+                {
+                    _parent.LoadGlobalsFiles();
+                }
+
+                if (componentName == "Systab")
+                {
+                    _parent.LoadSystabFiles();
+                }
+
+                if (componentName == "SetupInfo")
+                {
+                    _parent.SetupInfo = session.SetupInfo;
+                    _parent.PressConfig = session.PressConfiguration;
+                }
+
+                // Update tab visibility for the added component
+                var sel = session.LoadTabSelection;
+                var preScan = session.PreScanConfig;
+                switch (componentName)
+                {
+                    case "App": _parent.ShowAppTab = true; break;
+                    case "Plc": _parent.ShowPlcTab = true; break;
+                    case "Events": _parent.ShowEventsTab = true; break;
+                    case "Screenshots": _parent.ShowScreenshotsTab = true; break;
+                    case "TerminalLogs":
+                    case "Configuration":
+                    case "Lrs":
+                        _parent.ShowDbConfigTab = true;
+                        if (componentName == "Configuration") _parent.ShowConfigTab = true;
+                        break;
+                    case "Systab": _parent.ShowSystabTab = true; break;
+                    case "Globals": _parent.ShowGlobalsTab = true; break;
+                    case "SetupInfo": _parent.ShowSetupInfoTab = true; break;
+
+                    // Tool tabs — no data reload needed, just toggle visibility
+                    case "Charts":
+                        if (sel != null) sel.ShowCharts = true;
+                        _parent.ApplyTabSelection(sel, preScan);
+                        break;
+                    case "CPR":
+                        if (sel != null) sel.ShowCpr = true;
+                        _parent.ApplyTabSelection(sel, preScan);
+                        break;
+                    case "Step Recorder":
+                        if (sel != null) sel.ShowStepRecorder = true;
+                        _parent.ApplyTabSelection(sel, preScan);
+                        break;
+                    case "Different Logs":
+                        if (sel != null) sel.ShowDifferentLogs = true;
+                        _parent.ApplyTabSelection(sel, preScan);
+                        break;
+                }
+
+                _parent.UpdateTabVisibilityAfterLoad();
+                _parent.NotifyPropertyChanged(nameof(_parent.HasSkippedComponents));
+
+                // Rebuild logger trees if log data changed
+                if (componentName == "Plc" || componentName == "ManagerThread")
+                    _filterVM.BuildPlcLoggerTree(AllLogsCache);
+                if (componentName == "App")
+                    _filterVM.BuildLoggerTree(AllAppLogsCache);
+
+                // Re-apply filters
+                _filterVM.ApplyMainLogsFilter();
+                _filterVM.ApplyAppLogsFilter();
+
+                StatusMessage = $"{componentName} loaded successfully.";
+                CurrentProgress = 100;
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error loading {componentName}: {ex.Message}";
+                AppLogger.Error($"AddBackComponentAsync({componentName}) failed", ex);
+            }
+            finally
+            {
                 IsBusy = false;
             }
         }
@@ -776,6 +951,10 @@ namespace IndiLogs_3._0.ViewModels.Components
             _parent.NotifyPropertyChanged(nameof(_parent.DbConfigTabHeader));
             _parent.NotifyPropertyChanged(nameof(_parent.HasBinaryAppLogs));
             _parent.LoadGlobalsFiles();
+
+            // Restore tab visibility from the session's saved selection
+            _parent.ApplyTabSelection(session.LoadTabSelection, session.PreScanConfig);
+            _parent.UpdateTabVisibilityAfterLoad();
 
             // Update Events and Screenshots — single collection replacement instead of per-item Add
             Events = new ObservableCollection<EventEntry>(session.Events);

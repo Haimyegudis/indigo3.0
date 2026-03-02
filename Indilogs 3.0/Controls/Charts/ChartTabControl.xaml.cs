@@ -216,6 +216,11 @@ namespace IndiLogs_3._0.Controls.Charts
         private List<EventMarkerData> _eventMarkers = new List<EventMarkerData>();
         private List<GapRegion> _timeGapRegions = new List<GapRegion>();
 
+        // EM Statistics data (parsed once, displayed on demand via signal list double-click)
+        private List<StateData> _emStatisticsStates;
+        private DateTime[] _emTimestamps;
+        private int _emTotalLength;
+
         /// <summary>
         /// Sync cursor position from external source (log selection)
         /// </summary>
@@ -352,22 +357,42 @@ namespace IndiLogs_3._0.Controls.Charts
                 // Store event markers for display on charts
                 _eventMarkers = dataPackage.Events ?? new List<EventMarkerData>();
 
-                // Update empty state message
-                EmptyStateMessage.Visibility = Visibility.Collapsed;
-
                 // Clear existing charts
                 _charts.Clear();
 
                 // Ensure theme is current before creating charts
                 SyncThemeFromSettings();
 
-                // Add an empty chart — user selects signals manually from the list
-                AddNewChart();
+                // Don't auto-add a chart — user double-clicks a signal to create one
+                EmptyStateMessage.Visibility = Visibility.Visible;
 
                 // Update slider
                 NavSlider.Maximum = _totalDataLength > 0 ? _totalDataLength - 1 : 100;
 
                 RefreshChartViews();
+
+                // Parse and store EM Statistics data — add to signal list for on-demand display
+                _emStatisticsStates = null;
+                _emTimestamps = null;
+                _emTotalLength = 0;
+                if (!string.IsNullOrEmpty(dataPackage.EmStatisticsCsvContent))
+                {
+                    try
+                    {
+                        var (states, timestamps, totalLength) = EmStatisticsService.ParseEmStatistics(dataPackage.EmStatisticsCsvContent);
+                        if (states.Count > 0)
+                        {
+                            _emStatisticsStates = states;
+                            _emTimestamps = timestamps;
+                            _emTotalLength = totalLength;
+                            SignalList.AddEmStatisticsItems(states.Count);
+                        }
+                    }
+                    catch (Exception emEx)
+                    {
+                        AppLogger.Error("Failed to parse EM Statistics", emEx);
+                    }
+                }
 
                 sw.Stop();
                 AppLogger.Info($"[ChartLoad] Total LoadInMemoryData: {sw.ElapsedMilliseconds}ms (bg={bgMs}ms, UI={sw.ElapsedMilliseconds - bgMs}ms)");
@@ -380,6 +405,91 @@ namespace IndiLogs_3._0.Controls.Charts
             {
                 LoadingOverlay.Visibility = Visibility.Collapsed;
             }
+        }
+
+        /// <summary>
+        /// Creates an EM_Statistics Gantt chart from CSV content.
+        /// The Gantt has its own independent time axis derived from the CSV timestamps.
+        /// </summary>
+        public void AddEmStatisticsGantt(string csvContent)
+        {
+            if (string.IsNullOrWhiteSpace(csvContent)) return;
+
+            try
+            {
+                var (states, timestamps, totalLength) = EmStatisticsService.ParseEmStatistics(csvContent);
+                if (states.Count == 0) return;
+
+                // Remove existing EM Statistics chart if any
+                var existing = _charts.FirstOrDefault(c => c.Title == "EM Statistics");
+                if (existing != null) _charts.Remove(existing);
+
+                // Build a custom X-axis label function using EM timestamps
+                Func<int, string> emGetXAxisLabel = (index) =>
+                {
+                    if (index >= 0 && index < timestamps.Length)
+                        return timestamps[index].ToString("HH:mm:ss");
+                    return "";
+                };
+
+                var chart = new ChartViewModel
+                {
+                    Title = "EM Statistics",
+                    ViewType = ChartViewType.Gantt,
+                    GanttStates = states,
+                    GanttDataLength = totalLength,
+                    GanttGetXAxisLabel = emGetXAxisLabel,
+                    ChartHeight = Math.Min(states.Count * 24 + 24, 474) // Capped: MAX_VISIBLE(450) + X_AXIS(20) + pad(4)
+                };
+                _charts.Add(chart);
+
+                // Wire up after the item is rendered (uses WireUpGanttView which now respects per-chart values)
+                var c = chart;
+                Dispatcher.BeginInvoke(new Action(() => WireUpGanttView(c)),
+                    System.Windows.Threading.DispatcherPriority.Loaded);
+
+                EmptyStateMessage.Visibility = Visibility.Collapsed;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("AddEmStatisticsGantt failed", ex);
+            }
+        }
+
+        /// <summary>
+        /// Adds EM Statistics Gantt from pre-parsed stored data (triggered by signal list double-click).
+        /// </summary>
+        private void AddEmStatisticsFromStored()
+        {
+            if (_emStatisticsStates == null || _emStatisticsStates.Count == 0) return;
+
+            // Check if already added
+            var existing = _charts.FirstOrDefault(c => c.Title == "EM Statistics");
+            if (existing != null) return;
+
+            Func<int, string> emGetXAxisLabel = (index) =>
+            {
+                if (_emTimestamps != null && index >= 0 && index < _emTimestamps.Length)
+                    return _emTimestamps[index].ToString("HH:mm:ss");
+                return "";
+            };
+
+            var chart = new ChartViewModel
+            {
+                Title = "EM Statistics",
+                ViewType = ChartViewType.Gantt,
+                GanttStates = _emStatisticsStates,
+                GanttDataLength = _emTotalLength,
+                GanttGetXAxisLabel = emGetXAxisLabel,
+                ChartHeight = Math.Min(_emStatisticsStates.Count * 24 + 24, 474) // Capped: MAX_VISIBLE(450) + X_AXIS(20) + pad(4)
+            };
+            _charts.Add(chart);
+
+            var c = chart;
+            Dispatcher.BeginInvoke(new Action(() => WireUpGanttView(c)),
+                System.Windows.Threading.DispatcherPriority.Loaded);
+
+            EmptyStateMessage.Visibility = Visibility.Collapsed;
         }
 
         /// <summary>
@@ -798,6 +908,11 @@ namespace IndiLogs_3._0.Controls.Charts
                     AddEventsToChart();
                     break;
 
+                case SignalItemCategory.EmStats:
+                    // Add EM Statistics Gantt from pre-parsed data
+                    AddEmStatisticsFromStored();
+                    break;
+
                 default:
                     // Regular signal - add to chart
                     AddSignalToChart(item.FullName);
@@ -1026,18 +1141,31 @@ namespace IndiLogs_3._0.Controls.Charts
             var ganttView = FindVisualChild<ChartGanttView>(container);
             if (ganttView == null) return;
 
-            ganttView.SetStates(chart.GanttStates, _totalDataLength);
+            // Use per-chart data length for independent-timeline Gantt charts (e.g. EM Statistics)
+            bool hasOwnTimeline = chart.GanttDataLength.HasValue;
+            int dataLen = hasOwnTimeline ? chart.GanttDataLength.Value : _totalDataLength;
+
+            ganttView.HasOwnTimeline = hasOwnTimeline;
+            ganttView.SetStates(chart.GanttStates, dataLen);
             if (chart.EventMarkers != null)
                 ganttView.SetEventMarkers(chart.EventMarkers);
-            ganttView.GetXAxisLabel = GetXAxisLabel;
-            ganttView.SyncViewRange(_viewStartIndex, _viewEndIndex);
+            ganttView.GetXAxisLabel = chart.GanttGetXAxisLabel ?? GetXAxisLabel;
+
+            if (hasOwnTimeline)
+                ganttView.SyncViewRange(0, dataLen - 1);
+            else
+                ganttView.SyncViewRange(_viewStartIndex, _viewEndIndex);
+
             ganttView.SyncCursor(_cursorIndex);
             ganttView.IsLightTheme = _isLightTheme;
 
-            // Wire up events for full synchronization (zoom, cursor, range)
-            ganttView.OnTimeClicked += OnChartTimeClickedHandler;
-            ganttView.OnViewRangeChanged += (start, end) => SyncAllViewRanges(start, end);
-            ganttView.OnCursorMoved += (index) => SyncAllCursors(index);
+            // Wire up events for synchronization — skip sync for independent-timeline charts
+            if (!hasOwnTimeline)
+            {
+                ganttView.OnTimeClicked += OnChartTimeClickedHandler;
+                ganttView.OnViewRangeChanged += (start, end) => SyncAllViewRanges(start, end);
+                ganttView.OnCursorMoved += (index) => SyncAllCursors(index);
+            }
         }
 
         /// <summary>
@@ -1386,11 +1514,17 @@ namespace IndiLogs_3._0.Controls.Charts
                         var ganttView = FindGanttViewForChart(chart);
                         if (ganttView != null)
                         {
-                            ganttView.SetStates(chart.GanttStates, _totalDataLength);
+                            bool hasOwn = chart.GanttDataLength.HasValue;
+                            int gLen = hasOwn ? chart.GanttDataLength.Value : _totalDataLength;
+                            ganttView.SetStates(chart.GanttStates, gLen);
                             if (chart.EventMarkers != null)
                                 ganttView.SetEventMarkers(chart.EventMarkers);
-                            ganttView.SyncViewRange(_viewStartIndex, _viewEndIndex);
-                            ganttView.SyncCursor(_cursorIndex);
+                            // Independent-timeline charts keep their own view range
+                            if (!hasOwn)
+                            {
+                                ganttView.SyncViewRange(_viewStartIndex, _viewEndIndex);
+                                ganttView.SyncCursor(_cursorIndex);
+                            }
                         }
                         break;
                     case ChartViewType.Thread:
@@ -2195,6 +2329,9 @@ namespace IndiLogs_3._0.Controls.Charts
             }
             _detachedWindows.Clear();
 
+            // Clear singleton reference so Loaded event doesn't reload stale data
+            ChartDataTransferService.Instance.ClearCurrentData();
+
             // Clear data
             _currentDataPackage = null;
             _timeData = null;
@@ -2225,6 +2362,9 @@ namespace IndiLogs_3._0.Controls.Charts
             NavSlider.Maximum = 100;
             StateTimeline.SetStates(new List<StateInterval>(), 0);
             SignalList.SetDataPackage(null);
+
+            // Force visual refresh so stale chart visuals are cleared
+            UpdateChartsLayout();
         }
 
         #endregion

@@ -9,7 +9,9 @@ namespace IndiLogs_3._0.Services.Interfaces
 {
     public interface ILogFileService
     {
-        Task<LogSessionData> LoadSessionAsync(string[] filePaths, IProgress<(double, string)> progress);
+        Task<LogSessionData> LoadSessionAsync(string[] filePaths, IProgress<(double, string)> progress, TabSelectionConfig tabSelection = null);
+        TabSelectionConfig PreScanZip(string zipPath);
+        Task ReloadComponentAsync(LogSessionData session, string componentName, IProgress<(double, string)> progress);
         List<EventEntry> ParseEventsCsv(Stream stream);
         List<LogEntry> ParseLogStreamPartial(Stream stream);
         (List<LogEntry> AllLogs, List<LogEntry> Transitions, List<LogEntry> Failures) ParseLogStream(Stream stream, StringPool pool = null);

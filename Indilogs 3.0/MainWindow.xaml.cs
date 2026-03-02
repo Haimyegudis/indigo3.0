@@ -263,6 +263,36 @@ namespace IndiLogs_3._0
         }
 
         /// <summary>
+        /// "+" button click: builds context menu with skipped components and shows it.
+        /// </summary>
+        private void AddBackButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is IndiLogs_3._0.ViewModels.MainViewModel vm)
+            {
+                var skipped = vm.GetSkippedComponents();
+                if (skipped.Count == 0) return;
+
+                var menu = AddBackContextMenu;
+                menu.Items.Clear();
+
+                foreach (var (name, displayName) in skipped)
+                {
+                    var item = new System.Windows.Controls.MenuItem
+                    {
+                        Header = displayName,
+                        CommandParameter = name,
+                        Command = vm.AddBackComponentCommand
+                    };
+                    menu.Items.Add(item);
+                }
+
+                menu.PlacementTarget = sender as Button;
+                menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+                menu.IsOpen = true;
+            }
+        }
+
+        /// <summary>
         /// Detach button click handler (called from tab header buttons)
         /// </summary>
         public void DetachTab_Click(object sender, RoutedEventArgs e)
