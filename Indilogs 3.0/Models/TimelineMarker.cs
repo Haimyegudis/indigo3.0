@@ -13,7 +13,7 @@ namespace IndiLogs_3._0.Models
         public string Severity { get; set; }
         public Color Color { get; set; }
 
-        // אם זה שגיאה - יהיה כאן הלוג המקורי. אם זה איוונט - זה יהיה null.
+        // If this is an error - the original log will be here. If this is an event - it will be null.
         public LogEntry OriginalLog { get; set; }
     }
 }

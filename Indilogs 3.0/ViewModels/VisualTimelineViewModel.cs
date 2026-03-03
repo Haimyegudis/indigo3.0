@@ -286,7 +286,7 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         /// <summary>
-        /// מתמקד על סטייט ספציפי על ידי זום וסלקט
+        /// Focuses on a specific state by zooming and selecting
         /// </summary>
         public void FocusOnState(string stateName)
         {
@@ -297,7 +297,7 @@ namespace IndiLogs_3._0.ViewModels
             {
                 SelectedState = targetState;
 
-                // חישוב זום ואופסט כדי להתמקד על הסטייט
+                // Calculate zoom and offset to focus on the state
                 if (States.Count > 1)
                 {
                     var firstState = States.First();
@@ -306,10 +306,10 @@ namespace IndiLogs_3._0.ViewModels
                     var stateDuration = (targetState.EndTime - targetState.StartTime).TotalSeconds;
                     var stateOffset = (targetState.StartTime - firstState.StartTime).TotalSeconds;
 
-                    // זום כך שהסטייט יתפוס כ-50% מהמסך
+                    // Zoom so the state occupies about 50% of the screen
                     ViewScale = Math.Max(1.0, totalDuration / (stateDuration * 2));
 
-                    // אופסט כדי למרכז את הסטייט
+                    // Offset to center the state
                     ViewOffset = -(stateOffset / totalDuration) * ViewScale * 100;
                 }
             }

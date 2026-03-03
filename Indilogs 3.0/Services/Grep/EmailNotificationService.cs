@@ -396,30 +396,37 @@ namespace IndiLogs_3._0.Services.Grep
 
         private async void OnDeferredTimerElapsed(object sender, ElapsedEventArgs e)
         {
-            var now = DateTime.Now;
-            var toSend = new List<DeferredEmail>();
-
-            int count = _deferredQueue.Count;
-            for (int i = 0; i < count; i++)
+            try
             {
-                if (_deferredQueue.TryDequeue(out var item))
-                {
-                    // Calculate the target send time
-                    DateTime sendAt = item.QueuedAt.Date.Add(item.SendTime);
-                    if (sendAt <= item.QueuedAt)
-                        sendAt = sendAt.AddDays(1); // send time is next day
+                var now = DateTime.Now;
+                var toSend = new List<DeferredEmail>();
 
-                    if (now >= sendAt)
-                        toSend.Add(item);
-                    else
-                        _deferredQueue.Enqueue(item); // not yet, put back
+                int count = _deferredQueue.Count;
+                for (int i = 0; i < count; i++)
+                {
+                    if (_deferredQueue.TryDequeue(out var item))
+                    {
+                        // Calculate the target send time
+                        DateTime sendAt = item.QueuedAt.Date.Add(item.SendTime);
+                        if (sendAt <= item.QueuedAt)
+                            sendAt = sendAt.AddDays(1); // send time is next day
+
+                        if (now >= sendAt)
+                            toSend.Add(item);
+                        else
+                            _deferredQueue.Enqueue(item); // not yet, put back
+                    }
+                }
+
+                foreach (var item in toSend)
+                {
+                    await SendEmailAsync(item.Config, item.Subject,
+                        item.PlainTextBody, item.HtmlReportPath, item.ScheduleName);
                 }
             }
-
-            foreach (var item in toSend)
+            catch (Exception ex)
             {
-                await SendEmailAsync(item.Config, item.Subject,
-                    item.PlainTextBody, item.HtmlReportPath, item.ScheduleName);
+                AppLogger.Error("[EmailNotification] Deferred timer callback failed", ex);
             }
         }
 

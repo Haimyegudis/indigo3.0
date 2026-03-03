@@ -93,7 +93,7 @@ namespace IndiLogs_3._0.Views
         {
             if (e.ChangedButton == MouseButton.Left)
             {
-                try { DragMove(); } catch { }
+                try { DragMove(); } catch (InvalidOperationException) { /* DragMove can throw if mouse is released during drag */ }
             }
         }
 

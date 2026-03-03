@@ -53,21 +53,24 @@ namespace IndiLogs_3._0
             // Initialize DI container before creating MainWindow
             Bootstrapper.Configure();
 
+            // Ensure singletons are disposed on shutdown
+            this.Exit += (_, __) => Bootstrapper.Shutdown();
+
             // Splash is gone – now create and show the main window
             var mainWindow = new MainWindow();
             this.MainWindow = mainWindow;
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             mainWindow.Show();
 
-            // בדיקת עדכונים ברקע
+            // Check for updates in the background
             try
             {
                 var updateService = new UpdateService();
                 await updateService.CheckForUpdatesSimpleAsync();
             }
-            catch
+            catch (Exception ex)
             {
-                // התעלמות משגיאות אם אין אינטרנט או שרת העדכונים למטה
+                AppLogger.Warn($"Update check failed: {ex.Message}");
             }
         }
 

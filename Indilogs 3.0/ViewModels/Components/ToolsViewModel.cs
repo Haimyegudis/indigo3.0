@@ -27,6 +27,7 @@ namespace IndiLogs_3._0.ViewModels.Components
     {
         private readonly MainViewModel _parent;
         private readonly ICsvExportService _csvService;
+        private readonly IDialogService _dialogService;
         private readonly IWindowManager _windowManager;
 
         // Windows Instances
@@ -55,14 +56,15 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand ZoomOutCommand { get; }
         public ICommand ViewLogDetailsCommand { get; }
 
-        public ToolsViewModel(MainViewModel parent, ICsvExportService csvService)
+        public ToolsViewModel(MainViewModel parent, ICsvExportService csvService, IDialogService dialogService)
         {
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
             _csvService = csvService ?? throw new ArgumentNullException(nameof(csvService));
+            _dialogService = dialogService;
             _windowManager = Bootstrapper.Resolve<IWindowManager>();
 
             // External tools
-            OpenJiraCommand = new RelayCommand(o => OpenUrl("https://hp-jira.external.hp.com/secure/Dashboard.jspa"));
+            OpenJiraCommand = new RelayCommand(o => OpenUrl(Services.AppSettingsService.JiraUrl));
             OpenKibanaCommand = new RelayCommand(OpenKibana);
             OpenOutlookCommand = new RelayCommand(OpenOutlook);
 
@@ -102,14 +104,24 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         public void OpenUrl(string url)
         {
-            try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
+            try
+            {
+                if (string.IsNullOrWhiteSpace(url)) return;
+                if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+                    (uri.Scheme != "https" && uri.Scheme != "http" && uri.Scheme != "mailto"))
+                {
+                    AppLogger.Warn($"OpenUrl blocked unsafe or invalid URI: '{url}'");
+                    return;
+                }
+                Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
+            }
             catch (Exception ex) { AppLogger.Error("OpenUrl failed", ex); }
         }
 
         private void OpenOutlook(object obj)
         {
             try { Process.Start("outlook.exe", "/c ipm.note"); }
-            catch { OpenUrl("mailto:"); }
+            catch (Exception) { OpenUrl("mailto:"); }
         }
 
         private void OpenKibana(object obj)
@@ -148,7 +160,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         {
             if (_parent.SessionVM.SelectedSession == null || _parent.SessionVM.SelectedSession.Logs == null || !_parent.SessionVM.SelectedSession.Logs.Any())
             {
-                MessageBox.Show("No logs loaded.", "Info");
+                _dialogService.ShowInfo("No logs loaded.", "Info");
                 return;
             }
 
@@ -159,7 +171,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
 
             _exportConfigWindow = new ExportConfigurationWindow();
-            var viewModel = new ExportConfigurationViewModel(_parent.SessionVM.SelectedSession, _csvService);
+            var viewModel = new ExportConfigurationViewModel(_parent.SessionVM.SelectedSession, _csvService, Bootstrapper.Resolve<IDialogService>());
             _exportConfigWindow.DataContext = viewModel;
             _exportConfigWindow.Closed += (s, e) => _exportConfigWindow = null;
             _windowManager.OpenWindow(_exportConfigWindow);
@@ -167,8 +179,8 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         private void RunAnalysis(object obj)
         {
-            if (_parent.SessionVM.SelectedSession == null) { MessageBox.Show("No logs loaded."); return; }
-            if (_parent.IsAnalysisRunning) { MessageBox.Show("Analysis is already running..."); return; }
+            if (_parent.SessionVM.SelectedSession == null) { _dialogService.ShowInfo("No logs loaded."); return; }
+            if (_parent.IsAnalysisRunning) { _dialogService.ShowInfo("Analysis is already running..."); return; }
 
             var session = _parent.SessionVM.SelectedSession;
             if (session.CachedAnalysis != null && session.CachedAnalysis.Count > 0)
@@ -193,12 +205,12 @@ namespace IndiLogs_3._0.ViewModels.Components
         {
             if (_parent.IsAnalysisRunning)
             {
-                MessageBox.Show("Still analyzing data in background...\nPlease wait until the process finishes.",
-                                "Processing", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowInfo("Still analyzing data in background...\nPlease wait until the process finishes.",
+                                "Processing");
                 return;
             }
 
-            if (_parent.SessionVM.SelectedSession == null) { MessageBox.Show("No logs loaded."); return; }
+            if (_parent.SessionVM.SelectedSession == null) { _dialogService.ShowInfo("No logs loaded."); return; }
 
             if (_parent.SessionVM.SelectedSession.CachedStates != null && _parent.SessionVM.SelectedSession.CachedStates.Count > 0)
             {
@@ -210,14 +222,14 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
             else
             {
-                MessageBox.Show("No states detected in this session.");
+                _dialogService.ShowInfo("No states detected in this session.");
             }
         }
 
         private void OpenGlobalGrepWindow()
         {
             var sessions = _parent.SessionVM?.LoadedSessions ?? new ObservableCollection<LogSessionData>();
-            var viewModel = new GlobalGrepViewModel(sessions);
+            var viewModel = new GlobalGrepViewModel(sessions, Bootstrapper.Resolve<IDialogService>());
 
             if (!sessions.Any())
                 viewModel.SearchMode = GlobalGrepViewModel.SearchModeType.ExternalFiles;
@@ -246,9 +258,9 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             if (logs == null || !logs.Any())
             {
-                MessageBox.Show(
+                _dialogService.ShowInfo(
                     "No APP logs loaded.\n\nPlease load a session with APP logs first, or switch to the APP tab.",
-                    "Stripe Analysis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    "Stripe Analysis");
                 return;
             }
 
@@ -258,10 +270,10 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             if (!hasStripeData)
             {
-                MessageBox.Show(
+                _dialogService.ShowInfo(
                     "No stripe data found in APP logs.\n\n" +
                     "This feature requires logs containing stripeDescriptor JSON data.",
-                    "Stripe Analysis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    "Stripe Analysis");
                 return;
             }
 

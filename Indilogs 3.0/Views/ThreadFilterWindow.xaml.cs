@@ -9,7 +9,7 @@ namespace IndiLogs_3._0.Views
 {
     public partial class ThreadFilterWindow : Window
     {
-        // שינוי: רשימה במקום משתנה בודד
+        // Changed: list instead of a single variable
         public List<string> SelectedThreads { get; private set; }
         public bool ShouldClear { get; private set; }
         private List<string> _allThreads;
@@ -103,7 +103,7 @@ namespace IndiLogs_3._0.Views
 
         private void Apply_Click(object sender, RoutedEventArgs e)
         {
-            // שינוי: איסוף כל הפריטים שנבחרו
+            // Changed: collect all selected items
             if (ThreadsList.SelectedItems.Count > 0)
             {
                 SelectedThreads = ThreadsList.SelectedItems.Cast<string>().ToList();
@@ -121,7 +121,7 @@ namespace IndiLogs_3._0.Views
 
         private void ThreadsList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            // דאבל קליק עדיין יבחר את הפריט הנוכחי וייצא
+            // Double-click still selects the current item and exits
             if (ThreadsList.SelectedItem != null)
             {
                 SelectedThreads = new List<string> { ThreadsList.SelectedItem.ToString() };

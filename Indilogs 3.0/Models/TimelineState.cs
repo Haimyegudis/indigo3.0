@@ -16,7 +16,7 @@ namespace IndiLogs_3._0.Models
         public int EventCount { get; set; }
         public string Status { get; set; } // SUCCESS / FAILED / WARNING / RUNNING
 
-        // רשימת הלוגים ששייכים לסטייט הזה (עבור הטבלה למטה)
+        // List of logs that belong to this state (for the table below)
         public List<LogEntry> RelatedLogs { get; set; } = new List<LogEntry>();
     }
 }

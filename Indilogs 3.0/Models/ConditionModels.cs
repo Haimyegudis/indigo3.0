@@ -2,14 +2,14 @@
 
 namespace IndiLogs_3._0.Models
 {
-    // זה המקום היחיד שבו המחלקה הזו צריכה להיות מוגדרת!
+    // This is the only place where this class should be defined!
     public class ColoringCondition
     {
         public string Field { get; set; }
         public string Operator { get; set; }
         public string Value { get; set; }
 
-        // משתמשים ב-Color של WPF (System.Windows.Media)
+        // Uses WPF Color (System.Windows.Media)
         public Color Color { get; set; }
 
         /// <summary>
@@ -19,7 +19,7 @@ namespace IndiLogs_3._0.Models
         [Newtonsoft.Json.JsonIgnore]
         public bool IsEnabled { get; set; } = true;
 
-        // פונקציה לשכפול (Deep Copy)
+        // Deep copy function
         public ColoringCondition Clone()
         {
             return new ColoringCondition

@@ -41,8 +41,11 @@ namespace IndiLogs_3._0
 
             Register<IWindowManager>(new WindowManagerAdapter());
 
+            var dialogService = new DialogService();
+            Register<IDialogService>(dialogService);
+
             // --- ViewModels ---
-            var mainVM = new MainViewModel(logFileService, coloringService, csvService, defaultConfigService);
+            var mainVM = new MainViewModel(logFileService, coloringService, csvService, defaultConfigService, dialogService);
             Register<MainViewModel>(mainVM);
 
             _configured = true;

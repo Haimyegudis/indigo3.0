@@ -9,15 +9,15 @@ namespace IndiLogs_3._0.Models
         public string FilePath { get; set; }
         public DateTime CreatedDate { get; set; }
 
-        // --- הגדרות עבור ה-LOGS הראשיים (PLC) ---
+        // --- Settings for the main LOGS (PLC) ---
         public List<ColoringCondition> MainColoringRules { get; set; }
         public FilterNode MainFilterRoot { get; set; }
 
-        // --- הגדרות עבור ה-APP ---
+        // --- Settings for the APP ---
         public List<ColoringCondition> AppColoringRules { get; set; }
         public FilterNode AppFilterRoot { get; set; }
 
-        // --- הגדרות עבור ה-PLC Filtered ---
+        // --- Settings for PLC Filtered ---
         public FilterNode PlcFilteredRoot { get; set; }
 
         // --- Flags to indicate which tabs were configured ---

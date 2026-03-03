@@ -1,4 +1,5 @@
 using IndiLogs_3._0.Services;
+using IndiLogs_3._0.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -41,6 +42,9 @@ namespace IndiLogs_3._0.ViewModels
 
     public class StepRecorderViewModel : ViewModelBase
     {
+        // ─── Dependencies ────────────────────────────────────────────────────
+        private readonly IDialogService _dialogService;
+
         // ─── State ───────────────────────────────────────────────────────────
         private List<StepFrame> _frames = new List<StepFrame>();
         private int _currentIndex = -1;
@@ -94,8 +98,9 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand OpenFolderCommand { get; }
 
         // ─── Constructor ─────────────────────────────────────────────────────
-        public StepRecorderViewModel()
+        public StepRecorderViewModel(IDialogService dialogService)
         {
+            _dialogService = dialogService;
             PreviousCommand   = new RelayCommand(_ => MovePrevious(),   _ => HasFrames && _currentIndex > 0);
             NextCommand       = new RelayCommand(_ => MoveNext(),       _ => HasFrames && _currentIndex < _frames.Count - 1);
             PlayCommand       = new RelayCommand(_ => StartPlay(),      _ => HasFrames && !IsPlaying);
@@ -335,8 +340,7 @@ namespace IndiLogs_3._0.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Could not open folder:\n{ex.Message}", "Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Could not open folder:\n{ex.Message}", "Error");
             }
         }
 

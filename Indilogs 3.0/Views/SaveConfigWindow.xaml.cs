@@ -10,19 +10,19 @@ namespace IndiLogs_3._0.Views
         public string ConfigName { get; private set; }
         private readonly HashSet<string> _existingNames;
 
-        // זה הבנאי ש-MainViewModel מחפש (מקבל רשימת שמות)
+        // This is the constructor that MainViewModel looks for (receives a list of names)
         public SaveConfigWindow(IEnumerable<string> existingNames = null)
         {
             InitializeComponent();
             NameTextBox.Focus();
 
-            // יצירת HashSet לחיפוש מהיר (Case Insensitive)
+            // Create HashSet for fast lookup (Case Insensitive)
             _existingNames = existingNames != null
                 ? new HashSet<string>(existingNames, StringComparer.OrdinalIgnoreCase)
                 : new HashSet<string>();
         }
 
-        // בנאי ברירת מחדל (למקרה שה-XAML דורש אותו, למרות שבקוד אנחנו משתמשים בשני)
+        // Default constructor (in case XAML requires it, even though in code we use the other one)
         public SaveConfigWindow() : this(null) { }
 
         private void OK_Click(object sender, RoutedEventArgs e)
@@ -35,11 +35,11 @@ namespace IndiLogs_3._0.Views
                 return;
             }
 
-            // בדיקת כפילות - כאן אנחנו משתמשים ברשימה שקיבלנו
+            // Duplicate check - here we use the list we received
             if (_existingNames.Contains(name))
             {
                 MessageBox.Show($"A configuration named '{name}' already exists.\nPlease choose a different name.", "Duplicate Name", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return; // לא סוגרים את החלון כדי לתת למשתמש לתקן
+                return; // Don't close the window so the user can correct the name
             }
 
             ConfigName = name;

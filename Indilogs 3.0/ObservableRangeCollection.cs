@@ -29,8 +29,8 @@ namespace IndiLogs_3._0.Models
             OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
         }
 
-        // --- אופטימיזציה קריטית ל-Live Monitoring (הכנסה לראש הרשימה) ---
-        // בתוך המחלקה ObservableRangeCollection<T>
+        // --- Critical optimization for Live Monitoring (insertion at the head of the list) ---
+        // Inside the ObservableRangeCollection<T> class
         public void InsertRange(int index, IEnumerable<T> collection)
         {
             if (collection == null) throw new ArgumentNullException(nameof(collection));
@@ -40,21 +40,21 @@ namespace IndiLogs_3._0.Models
 
             CheckReentrancy();
 
-            // 1. הוספה מהירה לרשימה הפנימית (ללא עדכון UI עדיין)
+            // 1. Fast addition to the internal list (without updating the UI yet)
             if (Items is List<T> items)
             {
                 items.InsertRange(index, list);
             }
             else
             {
-                // Fallback למקרה שזה לא List רגיל
+                // Fallback in case this is not a regular List
                 int i = index;
                 foreach (var item in list) Items.Insert(i++, item);
             }
 
-            // 2. תיקון קריטי ל-WPF: שימוש ב-Reset
-            // WPF לא תומך ב-Range Actions (הוספת רשימה). השימוש ב-Reset מודיע ל-UI
-            // שהרשימה השתנתה ומחייב רענון אחד בלבד. זה מונע את הקריסה ופותר את ה-Freeze.
+            // 2. Critical fix for WPF: use Reset
+            // WPF does not support Range Actions (adding a list). Using Reset notifies the UI
+            // that the list has changed and requires only a single refresh. This prevents the crash and fixes the freeze.
             OnCollectionChanged(new System.Collections.Specialized.NotifyCollectionChangedEventArgs(
                 System.Collections.Specialized.NotifyCollectionChangedAction.Reset));
 

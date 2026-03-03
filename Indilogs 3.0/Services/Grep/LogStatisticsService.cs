@@ -777,7 +777,7 @@ namespace IndiLogs_3._0.Services.Grep
                 else
                 {
                     try { fileTime = File.GetLastWriteTime(f); }
-                    catch { return true; }
+                    catch (Exception) { return true; }
                 }
 
                 if (filter.From.HasValue && fileTime < filter.From.Value) return false;

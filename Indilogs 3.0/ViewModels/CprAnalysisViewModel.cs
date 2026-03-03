@@ -8,6 +8,7 @@ using System.Windows.Input;
 using IndiLogs_3._0.Models.Cpr;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Cpr;
+using IndiLogs_3._0.Services.Interfaces;
 
 namespace IndiLogs_3._0.ViewModels
 {
@@ -19,10 +20,12 @@ namespace IndiLogs_3._0.ViewModels
     {
         private readonly CprDataService _dataService = new CprDataService();
         private readonly CprAnalysisService _analysisService = new CprAnalysisService();
+        private readonly IDialogService _dialogService;
         private bool _isLoadingFilters; // guard against cascading Apply calls during population
 
-        public CprAnalysisViewModel()
+        public CprAnalysisViewModel(IDialogService dialogService)
         {
+            _dialogService = dialogService;
             LoadFileCommand = new RelayCommand(_ => LoadFile());
             ExportCommand = new RelayCommand(_ => Export(), _ => CurrentResult != null);
             SetRefCommand = new RelayCommand(_ => SetRefStation());
@@ -277,8 +280,7 @@ namespace IndiLogs_3._0.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.MessageBox.Show($"Error loading CSV: {ex.Message}", "Error",
-                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    _dialogService.ShowError($"Error loading CSV: {ex.Message}", "Error");
                 }
             });
         }
@@ -296,9 +298,9 @@ namespace IndiLogs_3._0.ViewModels
 
                 if (!_dataService.IsLoaded)
                 {
-                    System.Windows.MessageBox.Show(
+                    _dialogService.ShowWarning(
                         $"No CPR data found in file:\n{path}\n\nThe file may use an unsupported format or may not contain recognized CPR columns.",
-                        "No Data", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                        "No Data");
                     return;
                 }
 
@@ -307,8 +309,7 @@ namespace IndiLogs_3._0.ViewModels
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Error loading CSV: {ex.Message}", "Error",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                _dialogService.ShowError($"Error loading CSV: {ex.Message}", "Error");
             }
         }
 

@@ -106,7 +106,7 @@ namespace IndiLogs_3._0.Controls.Cpr
 
             if (dlg.ShowDialog() == true)
             {
-                _compareVm = new CprAnalysisViewModel();
+                _compareVm = new CprAnalysisViewModel(new Services.DialogService());
                 _compareVm.GraphResultUpdated += OnCompareGraphResultUpdated;
                 _compareVm.LoadFileDirect(dlg.FileName);
                 ShowCompareUI(true);

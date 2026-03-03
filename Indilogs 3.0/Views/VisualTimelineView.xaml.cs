@@ -38,10 +38,10 @@ namespace IndiLogs_3._0.Views
         {
             if (DataContext is VisualTimelineViewModel vm)
             {
-                // איוונט - אין לאן לקפוץ
+                // Event marker - nowhere to jump to
                 if (e.Type == TimelineMarkerType.Event) return;
 
-                // שגיאה - מוצאים את הסטייט, בוחרים אותו, וגוללים אליו בטבלה למטה
+                // Error - find the state, select it, and scroll to it in the table below
                 if (e.OriginalLog != null && vm.States != null)
                 {
                     var parentState = vm.States.FirstOrDefault(s => s.RelatedLogs.Contains(e.OriginalLog));
@@ -49,7 +49,7 @@ namespace IndiLogs_3._0.Views
                     {
                         vm.SelectedState = parentState;
 
-                        // גלילה בטבלה למטה
+                        // Scroll in the table below
                         DetailLogGrid.UpdateLayout();
                         DetailLogGrid.ScrollIntoView(e.OriginalLog);
                         DetailLogGrid.SelectedItem = e.OriginalLog;

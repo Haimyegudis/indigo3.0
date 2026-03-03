@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:IndiLogs_3._0"
              xmlns:converters="clr-namespace:IndiLogs_3._0.Converters">
-    <!-- ✅ הסרנו את StartupUri="MainWindow.xaml" כדי למנוע כפילות -->
+    <!-- Removed StartupUri="MainWindow.xaml" to prevent duplication -->
     <Application.Resources>
         <FontFamily x:Key="ContentFontFamily">Consolas, JetBrains Mono, Cascadia Code, Segoe UI</FontFamily>
         <FontFamily x:Key="UIFontFamily">Segoe UI Variable Display, Segoe UI</FontFamily>
@@ -299,7 +299,7 @@
             </Setter>
 
             <Style.Triggers>
-                <!-- Hover רק כשלא נבחר ואין צבע מותאם או סימון -->
+                <!-- Hover only when not selected and no custom color or mark -->
                 <MultiDataTrigger>
                     <MultiDataTrigger.Conditions>
                         <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
@@ -311,14 +311,14 @@
                     <Setter Property="Background" Value="{DynamicResource RowHoverBg}"/>
                 </MultiDataTrigger>
 
-                <!-- בחירה - צהוב בהיר עם טקסט שחור -->
+                <!-- Selection - light yellow with black text -->
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="{DynamicResource RowSelectedBg}"/>
                     <Setter Property="Foreground" Value="Black"/>
                     <Setter Property="BorderBrush" Value="Transparent"/>
                 </Trigger>
 
-                <!-- ✅ שורה מסומנת ונבחרת - ירוק בהיר מיידי עם טקסט שחור (עדיפות גבוהה ביותר) -->
+                <!-- Marked and selected row - immediate light green with black text (highest priority) -->
                 <MultiDataTrigger>
                     <MultiDataTrigger.Conditions>
                         <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsSelected}" Value="True"/>

@@ -74,29 +74,6 @@ namespace IndiLogs_3._0.ViewModels
 
         // ==================== TIME-SYNC SCROLLING METHODS ====================
 
-        private int LinearSearchNearest(IList<LogEntry> collection, DateTime targetTime)
-        {
-            if (collection == null || collection.Count == 0)
-                return -1;
-
-            int nearestIndex = 0;
-            TimeSpan minDiff = (collection[0].Date - targetTime).Duration();
-
-            for (int i = 1; i < collection.Count; i++)
-            {
-                TimeSpan currentDiff = (collection[i].Date - targetTime).Duration();
-                if (currentDiff < minDiff)
-                {
-                    minDiff = currentDiff;
-                    nearestIndex = i;
-                }
-                if (minDiff.TotalMilliseconds < 1)
-                    break;
-            }
-
-            return nearestIndex;
-        }
-
         private int BinarySearchNearest(IList<LogEntry> collection, DateTime targetTime)
         {
             if (collection == null || collection.Count == 0) return -1;

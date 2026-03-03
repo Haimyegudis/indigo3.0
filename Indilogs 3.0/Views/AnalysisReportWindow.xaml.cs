@@ -10,7 +10,7 @@ namespace IndiLogs_3._0.Views
 {
     public partial class AnalysisReportWindow : Window
     {
-        // המאפיין שאליו ה-ListBox בצד שמאל מתחבר
+        // The property that the left-side ListBox binds to
         public List<AnalysisResult> AllResults { get; set; }
 
         /// <summary>Called when the user double-clicks a log row — navigates the PLC tab.</summary>
@@ -31,10 +31,10 @@ namespace IndiLogs_3._0.Views
                     JumpToLog?.Invoke(entry);
             });
 
-            // קישור הנתונים לחלון עצמו
+            // Bind data to the window itself
             this.DataContext = this;
 
-            // בחירה אוטומטית של הריצה הראשונה (אם קיימת) כדי שהמשתמש יראה משהו מיד
+            // Automatically select the first run (if it exists) so the user sees something immediately
             if (AllResults != null && AllResults.Any())
             {
                 RunsList.SelectedIndex = 0;

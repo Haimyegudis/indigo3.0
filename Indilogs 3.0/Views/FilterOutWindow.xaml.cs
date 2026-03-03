@@ -24,8 +24,8 @@ namespace IndiLogs_3._0.Views
                 return;
             }
 
-            // הסרנו את ה-MessageBox.Show שמבקש אישור
-            // הפעולה כעת מידית
+            // Removed the confirmation MessageBox.Show
+            // The action is now immediate
             DialogResult = true;
             Close();
         }

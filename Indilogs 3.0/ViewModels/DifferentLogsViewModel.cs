@@ -33,6 +33,7 @@ namespace IndiLogs_3._0.ViewModels
         };
 
         private readonly IPluginLoader _pluginLoader;
+        private readonly IDialogService _dialogService;
         /// <summary>
         /// Combined plugin list for manual file opening: external DLL plugins (highest priority)
         /// followed by AllForManualOpen (which includes IndigoAppLogPlugin).
@@ -132,9 +133,10 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand CloseFileCommand { get; }
 
         // ── Constructor ─────────────────────────────────────────────
-        public DifferentLogsViewModel(IPluginLoader pluginLoader)
+        public DifferentLogsViewModel(IPluginLoader pluginLoader, IDialogService dialogService)
         {
             _pluginLoader = pluginLoader ?? throw new ArgumentNullException(nameof(pluginLoader));
+            _dialogService = dialogService;
 
             // Build combined plugin list: external DLL plugins first (highest priority),
             // then AllForManualOpen which includes IndigoAppLogPlugin.
@@ -175,17 +177,17 @@ namespace IndiLogs_3._0.ViewModels
                     string tempFile = await Task.Run(() => ExtractSingleZipEntry(zipPath, picker.SelectedEntryName));
                     if (tempFile == null)
                     {
-                        MessageBox.Show("Could not extract the selected file from the ZIP.",
-                            "Extraction Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        _dialogService.ShowWarning("Could not extract the selected file from the ZIP.",
+                            "Extraction Error");
                         return;
                     }
 
                     var success = await LoadFileAsync(tempFile);
                     if (!success)
                     {
-                        MessageBox.Show(
+                        _dialogService.ShowWarning(
                             $"No plugin could handle the file:\n{Path.GetFileName(tempFile)}\n\nLoad additional plugins via the Plugin Tester.",
-                            "Unsupported File", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            "Unsupported File");
                     }
                     return;
                 }
@@ -208,10 +210,9 @@ namespace IndiLogs_3._0.ViewModels
             var success2 = await LoadFileAsync(dlg.FileName);
             if (!success2)
             {
-                MessageBox.Show(
+                _dialogService.ShowWarning(
                     $"No plugin could handle the file:\n{Path.GetFileName(dlg.FileName)}\n\nLoad additional plugins via the Plugin Tester.",
-                    "Unsupported File",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                    "Unsupported File");
             }
         }
 

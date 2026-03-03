@@ -12,7 +12,7 @@ namespace IndiLogs_3._0.Views
         {
             InitializeComponent();
 
-            // שמירת הפונט המקורי ברגע שהחלון נטען
+            // Save the original font when the window loads
             this.Loaded += (s, e) =>
             {
                 if (DataContext is MainViewModel vm)
@@ -25,14 +25,14 @@ namespace IndiLogs_3._0.Views
 
         private void OK_Click(object sender, RoutedEventArgs e)
         {
-            // המשתמש אישר - משאירים את הבחירה וסוגרים
+            // User confirmed - keep the selection and close
             DialogResult = true;
             Close();
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
-            // המשתמש ביטל - אם יש לנו את הפונט המקורי, נחזיר אותו
+            // User cancelled - if we have the original font, restore it
             if (_viewModel != null && _originalFont != null)
             {
                 _viewModel.SelectedFont = _originalFont;

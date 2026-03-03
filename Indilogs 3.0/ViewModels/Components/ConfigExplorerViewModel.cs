@@ -1,6 +1,7 @@
 using IndiLogs_3._0;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
+using IndiLogs_3._0.Services.Interfaces;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -25,6 +26,7 @@ namespace IndiLogs_3._0.ViewModels.Components
     {
         private readonly MainViewModel _parent;
         private readonly LogSessionViewModel _sessionVM;
+        private readonly IDialogService _dialogService;
 
         // Configuration file management
         public ObservableCollection<string> ConfigurationFiles { get; set; }
@@ -123,6 +125,10 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 // Search was cancelled by newer search - this is expected
             }
+            catch (Exception ex)
+            {
+                AppLogger.Error("[ConfigExplorer] DB tree filter debounce failed", ex);
+            }
         }
 
         private async void DebouncedFilterConfigContent()
@@ -137,6 +143,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     FilterConfigContent();
             }
             catch (TaskCanceledException) { }
+            catch (Exception ex) { AppLogger.Error("[ConfigExplorer] Config content filter debounce failed", ex); }
         }
 
         private void FilterDbTreeNodes()
@@ -267,10 +274,11 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand RefreshConfigExplorerCommand { get; }
         public ICommand ClearConfigSearchCommand { get; }
 
-        public ConfigExplorerViewModel(MainViewModel parent, LogSessionViewModel sessionVM)
+        public ConfigExplorerViewModel(MainViewModel parent, LogSessionViewModel sessionVM, IDialogService dialogService)
         {
             _parent = parent;
             _sessionVM = sessionVM;
+            _dialogService = dialogService;
 
             // Initialize collections
             ConfigurationFiles = new ObservableCollection<string>();
@@ -593,13 +601,13 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 if (_sessionVM.SelectedSession?.DatabaseFiles == null || string.IsNullOrEmpty(node.DatabaseFileName))
                 {
-                    MessageBox.Show("No database file available.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    _dialogService.ShowWarning("No database file available.", "Error");
                     return;
                 }
 
                 if (!_sessionVM.SelectedSession.DatabaseFiles.ContainsKey(node.DatabaseFileName))
                 {
-                    MessageBox.Show($"Database file '{node.DatabaseFileName}' not found in session.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    _dialogService.ShowWarning($"Database file '{node.DatabaseFileName}' not found in session.", "Error");
                     return;
                 }
 
@@ -629,7 +637,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error opening table browser: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError($"Error opening table browser: {ex.Message}", "Error");
                 }
             }
         }

@@ -29,19 +29,19 @@ namespace IndiLogs_3._0.Models.Analysis
         public string CriticalEventMessage { get; set; }
         public bool HasCriticalEvent => !string.IsNullOrEmpty(CriticalEventMessage);
 
-        // עזר ל-UI
+        // UI helper
         public Brush StatusColor => Status == AnalysisStatus.Success ? Brushes.Green :
                                     Status == AnalysisStatus.Warning ? Brushes.Orange : Brushes.Red;
     }
 
     public class AnalysisStep
     {
-        public string StepName { get; set; }     // למשל: "Init Motors"
+        public string StepName { get; set; }     // e.g.: "Init Motors"
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public double DurationMs => (EndTime - StartTime).TotalMilliseconds;
         public string Status { get; set; }       // "OK", "TIMEOUT", "ERROR"
-        public LogEntry StartLog { get; set; }   // מצביע לשורה שהתחילה את השלב
-        public LogEntry EndLog { get; set; }     // מצביע לשורה שסיימה
+        public LogEntry StartLog { get; set; }   // Points to the log line that started the step
+        public LogEntry EndLog { get; set; }     // Points to the log line that ended the step
     }
 }

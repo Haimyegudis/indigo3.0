@@ -15,7 +15,7 @@ namespace IndiLogs_3._0.Services
         public event Action<string> OnStatusChanged;
 
         private const int BATCH_SIZE_LIMIT = 2000;
-        private DateTime _lastLogTime = DateTime.MinValue; // מעקב אחרי הזמן האחרון שהוצג
+        private DateTime _lastLogTime = DateTime.MinValue; // Track the last displayed time
 
         public async Task StartMonitoring(string filePath, CancellationToken token)
         {
@@ -45,8 +45,8 @@ namespace IndiLogs_3._0.Services
             {
                 var reader = new IndigoLogsReader(fs);
 
-                // --- שלב הסנכרון (Re-Sync) ---
-                // אם כבר יש לנו זמן אחרון (כלומר אנחנו אחרי קריסה/התאוששות), נרוץ מהר עד אליו
+                // --- Re-Sync phase ---
+                // If we already have a last time (i.e. after a crash/recovery), fast-forward to it
                 if (_lastLogTime != DateTime.MinValue)
                 {
                     OnStatusChanged?.Invoke("Re-syncing stream...");
@@ -57,10 +57,10 @@ namespace IndiLogs_3._0.Services
                         try { hasMore = reader.MoveToNext(); } catch (Exception ex) { AppLogger.Error("MoveToNext failed during re-sync", ex); break; }
                         if (!hasMore) break;
 
-                        // דילוג מהיר ללא הקצאת זיכרון
+                        // Fast skip without memory allocation
                         if (reader.Current != null && reader.Current.Time > _lastLogTime)
                         {
-                            // מצאנו את נקודת ההמשך!
+                            // Found the resume point!
                             var log = MapToLogEntry(reader);
                             if (log != null)
                             {
@@ -74,8 +74,8 @@ namespace IndiLogs_3._0.Services
                 }
                 else
                 {
-                    // --- טעינה ראשונית (Smart Seek) ---
-                    // טעינת ה-2MB האחרונים בלבד
+                    // --- Initial load (Smart Seek) ---
+                    // Load only the last 2MB
                     long tailThreshold = Math.Max(0, fs.Length - (2 * 1024 * 1024));
                     var buffer = new Queue<LogEntry>(BATCH_SIZE_LIMIT);
 
@@ -87,7 +87,7 @@ namespace IndiLogs_3._0.Services
                         try { hasMore = reader.MoveToNext(); } catch (Exception ex) { AppLogger.Error("MoveToNext failed during initial load", ex); break; }
                         if (!hasMore) break;
 
-                        // אופטימיזציה: דילוג על כל ההתחלה
+                        // Optimization: skip the entire beginning
                         if (fs.Position < tailThreshold) continue;
 
                         var log = MapToLogEntry(reader);
@@ -95,7 +95,7 @@ namespace IndiLogs_3._0.Services
                         {
                             buffer.Enqueue(log);
                             if (buffer.Count > BATCH_SIZE_LIMIT) buffer.Dequeue();
-                            _lastLogTime = log.Date; // עדכון הזמן
+                            _lastLogTime = log.Date; // Update the time
                         }
                     }
 
@@ -106,7 +106,7 @@ namespace IndiLogs_3._0.Services
                     OnStatusChanged?.Invoke("Live monitoring active.");
                 }
 
-                // --- שלב האזנה שוטפת (Tail -f) ---
+                // --- Continuous listening phase (Tail -f) ---
                 long lastKnownPosition = fs.Position;
                 int stuckCounter = 0;
 
@@ -114,7 +114,7 @@ namespace IndiLogs_3._0.Services
                 {
                     var newBatch = new List<LogEntry>();
 
-                    // קריאת חדשים
+                    // Read new entries
                     while (true)
                     {
                         bool success = false;
@@ -124,7 +124,7 @@ namespace IndiLogs_3._0.Services
                         var log = MapToLogEntry(reader);
                         if (log != null)
                         {
-                            // סינון כפילויות במקרה של חפיפה במילי-שניות
+                            // Filter duplicates in case of millisecond overlap
                             if (log.Date > _lastLogTime || (log.Date == _lastLogTime && !string.IsNullOrEmpty(log.Message)))
                             {
                                 newBatch.Add(log);
@@ -138,19 +138,19 @@ namespace IndiLogs_3._0.Services
                     {
                         OnLogsReceived?.Invoke(newBatch);
                         lastKnownPosition = fs.Position;
-                        stuckCounter = 0; // איפוס מונה תקלות
+                        stuckCounter = 0; // Reset stuck counter
                     }
                     else
                     {
-                        // --- זיהוי תקיעה והתאוששות ---
-                        // אם הקובץ גדל משמעותית וה-Reader לא קורא כלום
+                        // --- Stuck detection and recovery ---
+                        // If the file has grown significantly and the Reader isn't reading anything
                         if (fs.Length > fs.Position)
                         {
                             stuckCounter++;
-                            // מחכים קצת כדי לוודא שזו לא סתם כתיבה איטית
+                            // Wait a bit to make sure it's not just slow writing
                             if (stuckCounter > 2)
                             {
-                                return; // יציאה מהלולאה -> תגרום ל-StartMonitoring לקרוא ל-MonitorLoop מחדש
+                                return; // Exit the loop -> causes StartMonitoring to call MonitorLoop again
                             }
                         }
                     }

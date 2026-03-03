@@ -36,12 +36,12 @@ namespace IndiLogs_3._0.ViewModels
             set { _availableFilterFields = value; OnPropertyChanged(); }
         }
 
-        // פקודות לעריכת העץ
+        // Commands for editing the tree
         public ICommand AddGroupCommand { get; }
         public ICommand AddConditionCommand { get; }
         public ICommand RemoveNodeCommand { get; }
 
-        // פקודות לשינוי האופרטור הלוגי
+        // Commands for changing the logical operator
         public ICommand SetAndCommand { get; }
         public ICommand SetOrCommand { get; }
         public ICommand SetNotAndCommand { get; }
@@ -50,29 +50,29 @@ namespace IndiLogs_3._0.ViewModels
         public FilterEditorViewModel()
         {
             RootNodes = new ObservableCollection<FilterNode>();
-            // יצירת קבוצת שורש (Root) כברירת מחדל
+            // Create a root group (Root) as default
             RootNodes.Add(new FilterNode { Type = NodeType.Group, LogicalOperator = "AND" });
 
-            // --- אתחול הפקודות ---
+            // --- Initialize commands ---
 
-            // הוספת קבוצה חדשה תחת ה-Node הנוכחי
+            // Add a new group under the current node
             AddGroupCommand = new RelayCommand(node => 
             {
                 if (node is FilterNode fn) 
                     fn.Children.Add(new FilterNode { Type = NodeType.Group, LogicalOperator = "AND" });
             });
 
-            // הוספת תנאי חדש תחת ה-Node הנוכחי
+            // Add a new condition under the current node
             AddConditionCommand = new RelayCommand(node => 
             {
                 if (node is FilterNode fn)
                     fn.Children.Add(new FilterNode { Type = NodeType.Condition, Field = "Message", Operator = "Contains" });
             });
 
-            // מחיקת Node (רקורסיבית)
+            // Delete a node (recursive)
             RemoveNodeCommand = new RelayCommand(RemoveNode);
 
-            // --- לוגיקה לשינוי סוג הקבוצה ---
+            // --- Logic for changing group type ---
             SetAndCommand = new RelayCommand(node => 
             { 
                 if (node is FilterNode fn) fn.LogicalOperator = "AND"; 
@@ -98,7 +98,7 @@ namespace IndiLogs_3._0.ViewModels
         {
             if (param is FilterNode nodeToRemove)
             {
-                // אם מנסים למחוק את השורש, רק מנקים את הילדים שלו (כדי שתמיד יישאר שורש)
+                // If trying to delete the root, only clear its children (so a root always remains)
                 if (RootNodes.Contains(nodeToRemove))
                 {
                     nodeToRemove.Children.Clear();

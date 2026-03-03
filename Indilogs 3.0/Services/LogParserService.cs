@@ -143,19 +143,5 @@ namespace IndiLogs_3._0.Services
             });
         }
 
-        /// <summary>
-        /// Parse multiple log entries in batch (legacy synchronous version - use ParseLogEntriesAsync instead)
-        /// </summary>
-        [System.Obsolete("Use ParseLogEntriesAsync for better performance")]
-        public static void ParseLogEntries(System.Collections.Generic.IEnumerable<LogEntry> logs)
-        {
-            if (logs == null)
-                return;
-
-            foreach (var log in logs)
-            {
-                ParseLogEntry(log);
-            }
-        }
     }
 }

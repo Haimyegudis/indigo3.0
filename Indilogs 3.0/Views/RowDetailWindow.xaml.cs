@@ -209,7 +209,7 @@ namespace IndiLogs_3._0.Views
                 // Try to find Notepad++
                 var notepadPlusPlusPath = FindNotepadPlusPlus();
 
-                if (!string.IsNullOrEmpty(notepadPlusPlusPath))
+                if (!string.IsNullOrEmpty(notepadPlusPlusPath) && File.Exists(notepadPlusPlusPath))
                 {
                     Process.Start(notepadPlusPlusPath, $"\"{tempFile}\"");
                 }

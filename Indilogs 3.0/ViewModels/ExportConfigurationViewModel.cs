@@ -25,6 +25,7 @@ namespace IndiLogs_3._0.ViewModels
     {
         private readonly LogSessionData _sessionData;
         private readonly ICsvExportService _csvService;
+        private readonly IDialogService _dialogService;
 
         // S4-5 mode: binary APP — hides AXIS, CHStep, Thread columns (show only IO)
         public bool IsBinaryApp { get; private set; }
@@ -332,10 +333,11 @@ namespace IndiLogs_3._0.ViewModels
 
         public bool CanOpenInViewer => !string.IsNullOrEmpty(LastExportedFilePath) && File.Exists(LastExportedFilePath);
 
-        public ExportConfigurationViewModel(LogSessionData sessionData, ICsvExportService csvService)
+        public ExportConfigurationViewModel(LogSessionData sessionData, ICsvExportService csvService, IDialogService dialogService)
         {
             _sessionData = sessionData;
             _csvService = csvService;
+            _dialogService = dialogService;
 
             // S4-5: binary APP — only IO column visible in export window
             IsBinaryApp = sessionData?.HasBinaryAppLogs == true;
@@ -806,7 +808,7 @@ namespace IndiLogs_3._0.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Export failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Export failed: {ex.Message}", "Error");
             }
         }
 
@@ -842,12 +844,12 @@ namespace IndiLogs_3._0.ViewModels
                 {
                     string json = JsonConvert.SerializeObject(preset, Formatting.Indented);
                     File.WriteAllText(saveDialog.FileName, json, Encoding.UTF8);
-                    MessageBox.Show("Preset saved successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowInfo("Preset saved successfully!", "Success");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to save preset: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Failed to save preset: {ex.Message}", "Error");
             }
         }
 
@@ -868,13 +870,13 @@ namespace IndiLogs_3._0.ViewModels
                     if (preset != null)
                     {
                         ApplyPreset(preset);
-                        MessageBox.Show("Preset loaded successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                        _dialogService.ShowInfo("Preset loaded successfully!", "Success");
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load preset: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Failed to load preset: {ex.Message}", "Error");
             }
         }
 
@@ -925,7 +927,7 @@ namespace IndiLogs_3._0.ViewModels
         {
             if (string.IsNullOrEmpty(LastExportedFilePath) || !File.Exists(LastExportedFilePath))
             {
-                MessageBox.Show("No exported file available to open.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _dialogService.ShowWarning("No exported file available to open.", "Error");
                 return;
             }
 
@@ -950,9 +952,9 @@ namespace IndiLogs_3._0.ViewModels
                     }
                 }
 
-                if (flowViewerPath != null)
+                if (flowViewerPath != null && File.Exists(flowViewerPath))
                 {
-                    System.Diagnostics.Process.Start(flowViewerPath, $"\"{LastExportedFilePath}\"");
+                    System.Diagnostics.Process.Start(Path.GetFullPath(flowViewerPath), $"\"{LastExportedFilePath}\"");
                 }
                 else
                 {
@@ -974,14 +976,13 @@ namespace IndiLogs_3._0.ViewModels
                     }
                     else
                     {
-                        MessageBox.Show($"Cannot open file: unsupported file type or file not found.\n{LastExportedFilePath}",
-                            "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        _dialogService.ShowWarning($"Cannot open file: unsupported file type or file not found.\n{LastExportedFilePath}", "Error");
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to open viewer: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Failed to open viewer: {ex.Message}", "Error");
             }
         }
 
@@ -1109,8 +1110,7 @@ namespace IndiLogs_3._0.ViewModels
                 if (dataPackage == null || (dataPackage.Signals.Count == 0 && dataPackage.States.Count == 0
                     && string.IsNullOrEmpty(dataPackage.EmStatisticsCsvContent)))
                 {
-                    MessageBox.Show("No data to display. Please select at least one signal or state.",
-                        "No Data", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    _dialogService.ShowWarning("No data to display. Please select at least one signal or state.", "No Data");
                     return;
                 }
 
@@ -1124,7 +1124,7 @@ namespace IndiLogs_3._0.ViewModels
             catch (Exception ex)
             {
                 IsLoading = false;
-                MessageBox.Show($"Failed to open in Charts tab: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Failed to open in Charts tab: {ex.Message}", "Error");
             }
         }
 

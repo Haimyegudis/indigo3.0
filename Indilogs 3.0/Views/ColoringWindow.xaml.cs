@@ -113,20 +113,20 @@ namespace IndiLogs_3._0.Views
 
         private void PickColor(Button btn)
         {
-            // יצירת החלון החדש שלנו
+            // Create our new window
             var paletteWindow = new ColorPaletteWindow();
 
-            // אופציונלי: פתיחת החלון ליד הכפתור שנלחץ (כדי שיראה כמו Popup)
+            // Optional: open the window near the clicked button (to look like a Popup)
             Point location = btn.PointToScreen(new Point(0, 0));
             paletteWindow.Left = location.X;
             paletteWindow.Top = location.Y + btn.ActualHeight + 5;
 
-            // פתיחת החלון כ-Dialog
+            // Open the window as a Dialog
             if (paletteWindow.ShowDialog() == true)
             {
                 var c = paletteWindow.SelectedColor;
 
-                // עדכון הכפתור בצבע הנבחר
+                // Update the button with the selected color
                 btn.Background = new SolidColorBrush(c);
                 btn.Tag = c;
             }

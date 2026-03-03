@@ -1,6 +1,6 @@
 ﻿// BILINGUAL-HEADER-START
 // EN: File: IndigoInvadersWindow.xaml.cs - Auto-added bilingual header.
-// HE: קובץ: IndigoInvadersWindow.xaml.cs - כותרת דו-לשונית שנוספה אוטומטית.
+// HE: File: IndigoInvadersWindow.xaml.cs - Auto-added bilingual header.
 
 using System;
 using System.Collections.Generic;
@@ -16,30 +16,30 @@ namespace IndiLogs_3._0.Views
 {
     public partial class IndigoInvadersWindow : Window
     {
-        // קבועים וגודל
+        // Constants and sizing
         private const double PlayerSpeed = 7;
         private const double BulletSpeed = 12;
         private const double AlienDropDistance = 15;
         private const int AlienRows = 4;
         private const int AlienCols = 9;
 
-        // טיימר ושליטה
+        // Timer and controls
         private DispatcherTimer _gameTimer;
         private bool _moveLeft, _moveRight, _isShooting;
         private bool _gameRunning = false;
 
-        // אובייקטים במשחק
+        // Game objects
         private Rectangle _player;
         private List<Rectangle> _playerBullets = new List<Rectangle>();
         private List<Rectangle> _alienBullets = new List<Rectangle>();
         private List<Invader> _invaders = new List<Invader>();
 
-        // סטטוס משחק
+        // Game status
         private int _score = 0;
         private int _lives = 3;
         private int _level = 1;
         private double _alienSpeedX = 2;
-        private int _alienDirection = 1; // 1 ימינה, -1 שמאלה
+        private int _alienDirection = 1; // 1 right, -1 left
         private DateTime _lastShotTime = DateTime.MinValue;
 
         public IndigoInvadersWindow()
@@ -130,7 +130,7 @@ namespace IndiLogs_3._0.Views
                 RadiusY = 3
             };
 
-            // תותח קטן מעל השחקן
+            // Small cannon above the player
             var cannon = new Rectangle { Width = 6, Height = 8, Fill = Brushes.LightBlue };
 
             Canvas.SetLeft(_player, (GameCanvas.ActualWidth / 2) - 20);
@@ -161,7 +161,7 @@ namespace IndiLogs_3._0.Views
         private void SpawnInvaders()
         {
             _invaders.Clear();
-            _alienSpeedX = 1.5 + (_level * 0.5); // מהירות עולה בכל שלב
+            _alienSpeedX = 1.5 + (_level * 0.5); // Speed increases each level
             _alienDirection = 1;
 
             double startX = 50;
@@ -206,7 +206,7 @@ namespace IndiLogs_3._0.Views
                 if ((_alienDirection == 1 && x > rightEdge) || (_alienDirection == -1 && x < 10))
                 {
                     hitEdge = true;
-                    break; // מספיק שאחד נגע בקיר
+                    break; // One touching the wall is enough
                 }
             }
 
@@ -218,14 +218,14 @@ namespace IndiLogs_3._0.Views
                     double y = Canvas.GetTop(invader.UIElement);
                     Canvas.SetTop(invader.UIElement, y + AlienDropDistance);
 
-                    // אם החייזרים הגיעו למטה מדי
+                    // If the aliens reached too far down
                     if (y + AlienDropDistance > Canvas.GetTop(_player) - 30)
                     {
                         GameOver();
                         return;
                     }
                 }
-                // האצה קטנה בכל ירידה
+                // Small acceleration on each descent
                 _alienSpeedX *= 1.05;
             }
             else
@@ -240,14 +240,14 @@ namespace IndiLogs_3._0.Views
 
         private void AlienShootLogic()
         {
-            // סיכוי לירי גדל ככל שיש פחות חייזרים וככל שהשלב גבוה יותר
+            // Shooting chance increases as fewer aliens remain and as the level gets higher
             int chance = 100 - (_level * 2);
             if (chance < 20) chance = 20;
 
             var random = new Random();
             if (random.Next(0, chance) == 0 && _invaders.Count > 0)
             {
-                // בוחרים חייזר אקראי שיורה
+                // Pick a random alien to shoot
                 var shooter = _invaders[random.Next(_invaders.Count)];
                 ShootAlienBullet(shooter.UIElement);
             }
@@ -303,7 +303,7 @@ namespace IndiLogs_3._0.Views
                 }
                 else
                 {
-                    Canvas.SetTop(b, y + (BulletSpeed * 0.6)); // יריות חייזרים איטיות יותר
+                    Canvas.SetTop(b, y + (BulletSpeed * 0.6)); // Alien bullets are slower
                 }
             }
         }
@@ -312,7 +312,7 @@ namespace IndiLogs_3._0.Views
         {
             Rect playerRect = new Rect(Canvas.GetLeft(_player), Canvas.GetTop(_player), _player.Width, _player.Height);
 
-            // 1. כדורי שחקן פוגעים בחייזרים
+            // 1. Player bullets hitting aliens
             for (int i = _playerBullets.Count - 1; i >= 0; i--)
             {
                 var bullet = _playerBullets[i];
@@ -326,7 +326,7 @@ namespace IndiLogs_3._0.Views
 
                     if (bulletRect.IntersectsWith(alienRect))
                     {
-                        // פיצוץ חייזר
+                        // Alien explosion
                         GameCanvas.Children.Remove(alien);
                         _invaders.RemoveAt(j);
                         hit = true;
@@ -343,7 +343,7 @@ namespace IndiLogs_3._0.Views
                 }
             }
 
-            // 2. כדורי חייזרים פוגעים בשחקן
+            // 2. Alien bullets hitting the player
             for (int i = _alienBullets.Count - 1; i >= 0; i--)
             {
                 var bullet = _alienBullets[i];
@@ -357,7 +357,7 @@ namespace IndiLogs_3._0.Views
                 }
             }
 
-            // 3. חייזרים נוגעים בשחקן
+            // 3. Aliens touching the player
             foreach (var invader in _invaders)
             {
                 var alien = invader.UIElement;
@@ -375,7 +375,7 @@ namespace IndiLogs_3._0.Views
             _lives--;
             UpdateUI();
 
-            // אפקט פגיעה (הבהוב)
+            // Hit effect (flash)
             _player.Opacity = 0.5;
             var dt = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
             dt.Tick += (s, e) => { _player.Opacity = 1; dt.Stop(); };

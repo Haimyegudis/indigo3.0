@@ -7,7 +7,7 @@ namespace IndiLogs_3._0.Services.Analysis
     public interface ILogAnalyzer
     {
         string Name { get; }
-        // שינוי: מקבל את כל הסשן כדי לגשת לרשימות המוכנות
+        // Changed: receives the entire session to access the pre-built lists
         List<AnalysisResult> Analyze(LogSessionData session);
     }
 }

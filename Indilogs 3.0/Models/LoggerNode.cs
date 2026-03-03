@@ -6,9 +6,9 @@ namespace IndiLogs_3._0.Models
 {
     public class LoggerNode : INotifyPropertyChanged
     {
-        public string Name { get; set; }        // שם הצומת (למשל "indigo")
-        public string FullPath { get; set; }    // נתיב מלא (למשל "com.indigo")
-        public int Count { get; set; }          // כמות לוגים תחת צומת זה
+        public string Name { get; set; }        // Node name (e.g. "indigo")
+        public string FullPath { get; set; }    // Full path (e.g. "com.indigo")
+        public int Count { get; set; }          // Number of logs under this node
         public ObservableCollection<LoggerNode> Children { get; set; } = new ObservableCollection<LoggerNode>();
 
         private bool _isExpanded;
@@ -25,7 +25,7 @@ namespace IndiLogs_3._0.Models
             set { _isSelected = value; OnPropertyChanged(); }
         }
 
-        // --- סימון ויזואלי של לוגר מוסתר ---
+        // --- Visual marking of a hidden logger ---
         private bool _isHidden;
         public bool IsHidden
         {
@@ -33,7 +33,7 @@ namespace IndiLogs_3._0.Models
             set { _isHidden = value; OnPropertyChanged(); }
         }
 
-        // --- סימון ויזואלי של לוגר פעיל (מודגש בירוק) ---
+        // --- Visual marking of an active logger (highlighted in green) ---
         private bool _isActive;
         public bool IsActive
         {

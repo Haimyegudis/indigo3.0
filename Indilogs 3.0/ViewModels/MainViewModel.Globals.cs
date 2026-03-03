@@ -92,6 +92,7 @@ namespace IndiLogs_3._0.ViewModels
                     FilterGlobalsEntries();
             }
             catch (TaskCanceledException) { }
+            catch (Exception ex) { AppLogger.Error("[Globals] Filter debounce failed", ex); }
         }
 
         private void LoadGlobalsFileContent()

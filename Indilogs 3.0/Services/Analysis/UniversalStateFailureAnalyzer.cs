@@ -21,7 +21,7 @@ namespace IndiLogs_3._0.Services.Analysis
             if (criticalFailures == null || criticalFailures.Count == 0)
                 return results;
 
-            // *** אופטימיזציה: מיון מראש של שגיאות לפי זמן ***
+            // *** Optimization: pre-sort errors by time ***
             var errorLogs = allLogs
                 .Where(l => string.Equals(l.Level, "Error", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(l => l.Date)
@@ -38,7 +38,7 @@ namespace IndiLogs_3._0.Services.Analysis
 
                     double duration = (failEvent.Date - lastTransition.Date).TotalSeconds;
 
-                    // *** אופטימיזציה: חיפוש בינארי בדיוק במקום סריקה מלאה ***
+                    // *** Optimization: precise binary search instead of full scan ***
                     var errorsInContext = errorLogs
                         .Where(l => l.Date >= lastTransition.Date && l.Date <= failEvent.Date)
                         .ToList();
@@ -53,7 +53,7 @@ namespace IndiLogs_3._0.Services.Analysis
                                            l.Message.IndexOf("PLC_FAILURE_STATE_CHANGE",
                                                StringComparison.OrdinalIgnoreCase) >= 0);
 
-                    // --- תיקון: שם ספציפי ומדויק ---
+                    // --- Fix: specific and accurate name ---
                     string specificTitle = $"FAILED: {fromState} -> {targetState}";
 
                     var result = new AnalysisResult

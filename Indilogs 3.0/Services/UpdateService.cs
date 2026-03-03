@@ -4,7 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Security.Principal;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
@@ -37,8 +39,9 @@ namespace IndiLogs_3._0.Services
                     InstallerFolder = "";
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"UpdateService: Failed to read appsettings.json: {ex.Message}");
                 VersionFileUrl = "";
                 InstallerFolder = "";
             }
@@ -153,6 +156,14 @@ namespace IndiLogs_3._0.Services
                 UpdateLogger.Log($"[AUTO-UPDATE] Copying from server: {serverExePath}");
                 File.Copy(serverExePath, tempExePath, true);
                 UpdateLogger.Log($"[AUTO-UPDATE] Copied to: {tempExePath}");
+
+                // Verify Authenticode signature of the downloaded binary — block if invalid
+                if (!VerifyAuthenticode(tempExePath))
+                {
+                    UpdateLogger.Log("[AUTO-UPDATE] BLOCKED: Update binary has no valid Authenticode signature. Aborting update.");
+                    try { File.Delete(tempExePath); } catch { }
+                    return;
+                }
 
                 // Write a small .cmd script that waits, replaces, and relaunches
                 string cmdPath = Path.Combine(currentDir, "update.cmd");
@@ -284,19 +295,117 @@ namespace IndiLogs_3._0.Services
                     return;
                 }
 
-                UpdateLogger.Log($"[NETWORK] Default credentials failed (code {result}), using service account...");
+                UpdateLogger.Log($"[NETWORK] Default credentials failed (code {result}), trying stored service account...");
 
-                // Connect with the shared service account
-                result = WNetAddConnection2(ref nr, "hpindigo2010", @"inr\automation", CONNECT_TEMPORARY);
+                // Try DPAPI-encrypted service account credentials from local config
+                var (username, password) = LoadEncryptedCredentials();
+                if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
+                {
+                    result = WNetAddConnection2(ref nr, password, username, CONNECT_TEMPORARY);
 
-                if (result == 0 || result == 1219)
-                    UpdateLogger.Log($"[NETWORK] Connected to {uncFolder} via service account");
+                    if (result == 0 || result == 1219)
+                        UpdateLogger.Log($"[NETWORK] Connected to {uncFolder} via stored service account");
+                    else
+                        UpdateLogger.Log($"[NETWORK] Stored service account connection failed (code {result})");
+                }
                 else
-                    UpdateLogger.Log($"[NETWORK] Service account connection failed (code {result})");
+                {
+                    UpdateLogger.Log("[NETWORK] No stored credentials found. Use SetUpdateCredentials() to configure.");
+                }
             }
             catch (Exception ex)
             {
                 UpdateLogger.Log($"[NETWORK] Connection attempt failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Verifies that a file has a valid Authenticode signature with a trusted certificate chain.
+        /// Returns true if the signature is valid, false otherwise.
+        /// </summary>
+        private static bool VerifyAuthenticode(string filePath)
+        {
+            try
+            {
+                var rawCert = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(filePath);
+                if (rawCert != null)
+                {
+                    var cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(rawCert);
+                    using (var chain = new System.Security.Cryptography.X509Certificates.X509Chain())
+                    {
+                        chain.ChainPolicy.RevocationMode = System.Security.Cryptography.X509Certificates.X509RevocationMode.Online;
+                        chain.ChainPolicy.RevocationFlag = System.Security.Cryptography.X509Certificates.X509RevocationFlag.EntireChain;
+                        if (chain.Build(cert))
+                        {
+                            UpdateLogger.Log($"[AUTO-UPDATE] Binary signed by (chain valid): {cert.Subject}");
+                            return true;
+                        }
+                        UpdateLogger.Log($"[AUTO-UPDATE] Certificate chain invalid: {cert.Subject}");
+                    }
+                }
+            }
+            catch (System.Security.Cryptography.CryptographicException)
+            {
+                UpdateLogger.Log("[AUTO-UPDATE] Binary has no Authenticode signature.");
+            }
+            catch (Exception ex)
+            {
+                UpdateLogger.Log($"[AUTO-UPDATE] Signature verification error: {ex.Message}");
+            }
+            return false;
+        }
+
+        // ── DPAPI-encrypted credential storage for network share access ──
+
+        private static string CredentialFilePath
+        {
+            get
+            {
+                string exeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
+                return Path.Combine(exeDir, "update-credentials.dat");
+            }
+        }
+
+        /// <summary>
+        /// Stores network share credentials encrypted with DPAPI (CurrentUser scope).
+        /// Call once during initial setup; the encrypted file persists across runs.
+        /// </summary>
+        public static void SetUpdateCredentials(string username, string password)
+        {
+            try
+            {
+                string payload = $"{username}\n{password}";
+                byte[] encrypted = ProtectedData.Protect(
+                    Encoding.UTF8.GetBytes(payload), null, DataProtectionScope.CurrentUser);
+                File.WriteAllBytes(CredentialFilePath, encrypted);
+                UpdateLogger.Log("[CREDENTIALS] Service account credentials saved (DPAPI-encrypted).");
+            }
+            catch (Exception ex)
+            {
+                UpdateLogger.Log($"[CREDENTIALS] Failed to save credentials: {ex.Message}");
+            }
+        }
+
+        private static (string username, string password) LoadEncryptedCredentials()
+        {
+            try
+            {
+                string path = CredentialFilePath;
+                if (!File.Exists(path))
+                    return (null, null);
+
+                byte[] encrypted = File.ReadAllBytes(path);
+                byte[] decrypted = ProtectedData.Unprotect(encrypted, null, DataProtectionScope.CurrentUser);
+                string payload = Encoding.UTF8.GetString(decrypted);
+                int sep = payload.IndexOf('\n');
+                if (sep < 0) return (null, null);
+
+                return (payload.Substring(0, sep), payload.Substring(sep + 1));
+            }
+            catch (Exception ex)
+            {
+                UpdateLogger.Log($"[CREDENTIALS] Failed to load credentials: {ex.Message}");
+                return (null, null);
             }
         }
     }

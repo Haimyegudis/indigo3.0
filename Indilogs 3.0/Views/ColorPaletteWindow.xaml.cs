@@ -17,10 +17,10 @@ namespace IndiLogs_3._0.Views
 
         private void LoadColors()
         {
-            // רשימת צבעים ידנית שנראית טוב על רקע כהה (פסטלים וצבעים חיים)
+            // Manual color list that looks good on a dark background (pastels and vivid colors)
             var colorList = new List<SolidColorBrush>();
 
-            // שורה 1: אדומים/כתומים
+            // Row 1: Reds/Oranges
             colorList.Add(new SolidColorBrush(Color.FromRgb(255, 179, 186))); // Pastel Red
             colorList.Add(new SolidColorBrush(Color.FromRgb(255, 105, 97)));  // Salmon
             colorList.Add(new SolidColorBrush(Color.FromRgb(255, 87, 87)));   // Red
@@ -30,7 +30,7 @@ namespace IndiLogs_3._0.Views
             colorList.Add(new SolidColorBrush(Color.FromRgb(255, 140, 0)));   // Dark Orange
             colorList.Add(new SolidColorBrush(Color.FromRgb(139, 69, 19)));   // Brown
 
-            // שורה 2: צהובים/ירוקים
+            // Row 2: Yellows/Greens
             colorList.Add(new SolidColorBrush(Color.FromRgb(255, 255, 186))); // Pastel Yellow
             colorList.Add(new SolidColorBrush(Color.FromRgb(255, 255, 84)));  // Yellow
             colorList.Add(new SolidColorBrush(Color.FromRgb(186, 255, 201))); // Pastel Green
@@ -40,7 +40,7 @@ namespace IndiLogs_3._0.Views
             colorList.Add(new SolidColorBrush(Color.FromRgb(0, 100, 0)));     // Dark Green
             colorList.Add(new SolidColorBrush(Color.FromRgb(85, 107, 47)));   // Olive
 
-            // שורה 3: כחולים/תכלת
+            // Row 3: Blues/Cyan
             colorList.Add(new SolidColorBrush(Color.FromRgb(186, 225, 255))); // Pastel Blue
             colorList.Add(new SolidColorBrush(Color.FromRgb(135, 206, 250))); // Sky Blue
             colorList.Add(new SolidColorBrush(Color.FromRgb(100, 149, 237))); // Cornflower
@@ -50,7 +50,7 @@ namespace IndiLogs_3._0.Views
             colorList.Add(new SolidColorBrush(Color.FromRgb(25, 25, 112)));   // Midnight Blue
             colorList.Add(new SolidColorBrush(Color.FromRgb(0, 128, 128)));   // Teal
 
-            // שורה 4: סגולים/ורודים
+            // Row 4: Purples/Pinks
             colorList.Add(new SolidColorBrush(Color.FromRgb(230, 230, 250))); // Lavender
             colorList.Add(new SolidColorBrush(Color.FromRgb(216, 191, 216))); // Thistle
             colorList.Add(new SolidColorBrush(Color.FromRgb(221, 160, 221))); // Plum
@@ -60,7 +60,7 @@ namespace IndiLogs_3._0.Views
             colorList.Add(new SolidColorBrush(Color.FromRgb(75, 0, 130)));    // Indigo
             colorList.Add(new SolidColorBrush(Color.FromRgb(255, 20, 147)));  // Deep Pink
 
-            // שורה 5: אפורים/מיוחדים
+            // Row 5: Grays/Special
             colorList.Add(new SolidColorBrush(Color.FromRgb(255, 255, 255))); // White
             colorList.Add(new SolidColorBrush(Color.FromRgb(211, 211, 211))); // Light Gray
             colorList.Add(new SolidColorBrush(Color.FromRgb(169, 169, 169))); // Dark Gray

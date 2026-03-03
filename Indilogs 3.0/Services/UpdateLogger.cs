@@ -17,9 +17,10 @@ namespace IndiLogs_3._0.Services
                 string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} | {message}{Environment.NewLine}";
                 File.AppendAllText(LogPath, logEntry);
             }
-            catch
+            catch (Exception ex)
             {
-                // התעלמות משגיאות כתיבה ללוג כדי לא להקריס את התוכנה
+                // Swallow log-write errors to avoid crashing the application
+                System.Diagnostics.Debug.WriteLine($"UpdateLogger: Failed to write log entry: {ex.Message}");
             }
         }
 

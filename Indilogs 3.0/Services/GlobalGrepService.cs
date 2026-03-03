@@ -308,7 +308,7 @@ namespace IndiLogs_3._0.Services
         private bool IsLineMatch(string line, string query, Regex regex, bool useRegex)
         {
             if (useRegex && regex != null) return regex.IsMatch(line);
-            // תיקון: שימוש בשם פרמטר נכון query במקום searchQuery
+            // Fix: use correct parameter name query instead of searchQuery
             if (QueryParserService.HasBooleanOperators(query: query)) return EvaluateQueryOnText(line, _queryParser.Parse(query, out _));
             return line.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
         }
@@ -323,7 +323,7 @@ namespace IndiLogs_3._0.Services
         private bool EvaluateQueryOnText(string text, FilterNode node)
         {
             if (node == null || string.IsNullOrEmpty(text)) return false;
-            // תיקון: שימוש ב-node.Type (Enum) במקום node.NodeType (String)
+            // Fix: use node.Type (Enum) instead of node.NodeType (String)
             if (node.Type == NodeType.Condition)
             {
                 bool match = text.IndexOf(node.Value ?? "", StringComparison.OrdinalIgnoreCase) >= 0;
@@ -616,7 +616,7 @@ namespace IndiLogs_3._0.Services
                         var dates = new List<DateTime>();
                         foreach (var f in Directory.GetFiles(location.BasePath, "*.*", SearchOption.AllDirectories).Take(20))
                         {
-                            try { dates.Add(File.GetLastWriteTime(f)); } catch { }
+                            try { dates.Add(File.GetLastWriteTime(f)); } catch (Exception) { /* file access error during diagnostics */ }
                         }
                         if (dates.Count > 0)
                         {
@@ -625,7 +625,7 @@ namespace IndiLogs_3._0.Services
                                 $"Sample file dates: oldest={dates.First():yyyy-MM-dd HH:mm}, newest={dates.Last():yyyy-MM-dd HH:mm}");
                         }
                     }
-                    catch { /* ignore diagnostic errors */ }
+                    catch (Exception ex) { AppLogger.Warn($"Diagnostic file date sampling failed: {ex.Message}"); }
                 }
             }
 
@@ -888,7 +888,7 @@ namespace IndiLogs_3._0.Services
                 {
                     // Fallback to file modification date
                     try { fileTime = File.GetLastWriteTime(f); }
-                    catch { return true; } // Include file if we can't determine its time
+                    catch (Exception) { return true; } // Include file if we can't determine its time
                 }
 
                 if (filter.From.HasValue && fileTime < filter.From.Value) return false;
@@ -994,7 +994,7 @@ namespace IndiLogs_3._0.Services
                     return text.EndsWith(value, StringComparison.OrdinalIgnoreCase);
                 case SearchOperator.Regex:
                     try { return Regex.IsMatch(text, value, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(2)); }
-                    catch { return false; }
+                    catch (Exception) { return false; }
                 default:
                     return false;
             }

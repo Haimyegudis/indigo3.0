@@ -27,6 +27,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly LogSessionViewModel _sessionVM;
         private readonly FilterSearchViewModel _filterVM;
         private readonly ILogColoringService _coloringService;
+        private readonly IDialogService _dialogService;
 
         // Case management
         private CaseFile _currentCase = null;
@@ -126,12 +127,13 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand LoadCaseCommand { get; }
         public ICommand OpenColoringWindowCommand { get; }
 
-        public CaseManagementViewModel(MainViewModel parent, LogSessionViewModel sessionVM, FilterSearchViewModel filterVM)
+        public CaseManagementViewModel(MainViewModel parent, LogSessionViewModel sessionVM, FilterSearchViewModel filterVM, IDialogService dialogService)
         {
             _parent = parent;
             _sessionVM = sessionVM;
             _filterVM = filterVM;
             _coloringService = new LogColoringService();
+            _dialogService = dialogService;
 
             // Initialize collections
             MarkedLogs = new ObservableCollection<LogEntry>();
@@ -165,7 +167,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.MessageBox.Show($"Cannot open folder:\n{ex.Message}", "Error");
+                    _dialogService.ShowError($"Cannot open folder:\n{ex.Message}", "Error");
                 }
             });
             SaveCaseCommand = new RelayCommand(SaveCase);
@@ -252,11 +254,9 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             if (log == null || !log.HasAnnotation) return;
 
-            var result = MessageBox.Show(
+            var result = _dialogService.ShowConfirm(
                 $"Delete annotation for this log entry?\n\n{log.Message}",
-                "Delete Annotation",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
+                "Delete Annotation");
 
             if (result == MessageBoxResult.Yes)
             {
@@ -517,15 +517,14 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading configuration: {ex.Message}", "Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error loading configuration: {ex.Message}", "Error");
             }
         }
 
         private void DeleteConfig(object obj)
         {
             var configToDelete = SelectedConfig;
-            if (configToDelete != null && MessageBox.Show($"Delete '{configToDelete.Name}'?", "Confirm", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (configToDelete != null && _dialogService.ShowConfirm($"Delete '{configToDelete.Name}'?", "Confirm") == MessageBoxResult.Yes)
             {
                 if (File.Exists(configToDelete.FilePath)) File.Delete(configToDelete.FilePath);
                 SavedConfigs.Remove(configToDelete);
@@ -685,17 +684,17 @@ namespace IndiLogs_3._0.ViewModels.Components
                     _currentCase = caseFile;
 
                     _sessionVM.StatusMessage = $"Case saved: {Path.GetFileName(dialog.FileName)}";
-                    MessageBox.Show($"Case file saved successfully!\n\n" +
+                    _dialogService.ShowInfo($"Case file saved successfully!\n\n" +
                                   $"Filters: {(_filterVM.MainFilterRoot != null ? "✓" : "✗")}\n" +
                                   $"Coloring Rules: {MainColoringRules?.Count ?? 0} (Main) + {AppColoringRules?.Count ?? 0} (App)\n" +
                                   $"Annotations: {caseFile.Annotations.Count}\n" +
                                   $"Search: {(string.IsNullOrEmpty(_filterVM.SearchText) ? "✗" : "✓")}",
-                                  "Case Saved", MessageBoxButton.OK, MessageBoxImage.Information);
+                                  "Case Saved");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error saving case: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error saving case: {ex.Message}", "Error");
             }
         }
 
@@ -719,7 +718,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                     if (caseFile == null)
                     {
-                        MessageBox.Show("Invalid case file format.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        _dialogService.ShowError("Invalid case file format.", "Error");
                         return;
                     }
 
@@ -734,13 +733,11 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                         if (!File.Exists(logPath))
                         {
-                            var result = MessageBox.Show(
+                            var result = _dialogService.ShowConfirm(
                                 $"Log file not found: {resource.FileName}\n\n" +
                                 $"Expected location: {caseDir}\n\n" +
                                 $"Would you like to locate it manually?",
-                                "File Not Found",
-                                MessageBoxButton.YesNo,
-                                MessageBoxImage.Question);
+                                "File Not Found");
 
                             if (result == MessageBoxResult.Yes)
                             {
@@ -795,19 +792,17 @@ namespace IndiLogs_3._0.ViewModels.Components
                     }
                     else
                     {
-                        MessageBox.Show(
+                        _dialogService.ShowWarning(
                             "Case cannot be loaded without the log files.\n\n" +
                             "Please ensure the log files are in the same folder as the .indi-case file,\n" +
                             "or select them manually when prompted.",
-                            "Missing Log Files",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Warning);
+                            "Missing Log Files");
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading case: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error loading case: {ex.Message}", "Error");
                 _isLoadingCase = false;
             }
         }
@@ -938,7 +933,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _sessionVM.IsBusy = false;
                 _sessionVM.StatusMessage = $"Case loaded: {annotationsRestored} annotations restored";
 
-                MessageBox.Show(
+                _dialogService.ShowInfo(
                     $"Case loaded successfully!\n\n" +
                     $"📝 Annotations: {annotationsRestored}/{caseFile.Annotations?.Count ?? 0}\n" +
                     $"🎨 Coloring Rules: {MainColoringRules.Count} (Main) + {AppColoringRules.Count} (App)\n" +
@@ -946,7 +941,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     $"🔎 Search: {(string.IsNullOrEmpty(_filterVM.SearchText) ? "None" : $"\"{_filterVM.SearchText}\"")}\n" +
                     $"🧵 Thread Filters: {_filterVM.ActiveThreadFilters.Count}\n" +
                     $"🚫 Filter Out: {_filterVM.NegativeFilters.Count}",
-                    "Case Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
+                    "Case Loaded");
             });
             }
             catch (Exception ex) { AppLogger.Error("ApplyCaseSettings failed", ex); }
@@ -1244,7 +1239,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}");
+                _dialogService.ShowError($"Error: {ex.Message}");
                 _sessionVM.IsBusy = false;
             }
         }
@@ -1304,7 +1299,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}");
+                _dialogService.ShowError($"Error: {ex.Message}");
                 _sessionVM.IsBusy = false;
             }
         }

@@ -16,20 +16,20 @@ namespace IndiLogs_3._0.Views
 {
     public partial class SnakeWindow : Window
     {
-        private const int Size = 20; // גודל המשבצת
+        private const int Size = 20; // Cell size
         private DispatcherTimer _timer;
 
-        // משתני משחק
+        // Game variables
         private List<Point> _snake;
         private Point _food;
         private int _score;
         private bool _isGameOver;
 
-        // ניהול תנועה חכם (למניעת באגים)
+        // Smart movement management (to prevent bugs)
         private Point _currentDirection;
-        private Queue<Point> _inputQueue; // תור הוראות תנועה
+        private Queue<Point> _inputQueue; // Movement instruction queue
 
-        // נתיב שמירת שיאים
+        // High scores save path
         private string _scoreFile = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IndiLogs", "snake_scores.json");
 
         public SnakeWindow()
@@ -48,7 +48,7 @@ namespace IndiLogs_3._0.Views
 
         private void StartNewGame()
         {
-            // הגדרת מהירות לפי הרמה שנבחרה
+            // Set speed according to selected difficulty level
             if (DifficultySelector.SelectedItem is ComboBoxItem item && int.TryParse(item.Tag.ToString(), out int speed))
             {
                 _timer.Interval = TimeSpan.FromMilliseconds(speed);
@@ -58,7 +58,7 @@ namespace IndiLogs_3._0.Views
                 _timer.Interval = TimeSpan.FromMilliseconds(100);
             }
 
-            // איפוס הנחש (מתחיל במרכז)
+            // Reset the snake (starts at center)
             _snake = new List<Point>
             {
                 new Point(100, 100),
@@ -71,8 +71,8 @@ namespace IndiLogs_3._0.Views
             _isGameOver = false;
             Overlay.Visibility = Visibility.Collapsed;
 
-            // איפוס כיוונים
-            _currentDirection = new Point(1, 0); // מתחילים ימינה
+            // Reset directions
+            _currentDirection = new Point(1, 0); // Start moving right
             _inputQueue = new Queue<Point>();
 
             SpawnFood();
@@ -80,26 +80,26 @@ namespace IndiLogs_3._0.Views
             _timer.Start();
         }
 
-        // לולאת המשחק - רצה כל X מילישניות
+        // Game loop - runs every X milliseconds
         private void GameLoop(object sender, EventArgs e)
         {
             if (_isGameOver) return;
 
-            // 1. שליפת הכיוון הבא מהתור (אם המשתמש לחץ)
-            // זה התיקון לבאג הלחיצה המהירה!
+            // 1. Dequeue the next direction from the queue (if the user pressed a key)
+            // This is the fix for the rapid key-press bug!
             if (_inputQueue.Count > 0)
             {
                 _currentDirection = _inputQueue.Dequeue();
             }
 
-            // 2. חישוב מיקום הראש החדש
+            // 2. Calculate the new head position
             Point currentHead = _snake[0];
             Point newHead = new Point(
                 currentHead.X + (_currentDirection.X * Size),
                 currentHead.Y + (_currentDirection.Y * Size)
             );
 
-            // 3. בדיקת התנגשות בקירות
+            // 3. Check wall collision
             if (newHead.X < 0 || newHead.X >= GameCanvas.ActualWidth ||
                 newHead.Y < 0 || newHead.Y >= GameCanvas.ActualHeight)
             {
@@ -107,8 +107,8 @@ namespace IndiLogs_3._0.Views
                 return;
             }
 
-            // 4. בדיקת התנגשות עצמית
-            // בודקים עד Count-1 כי הזנב יזוז תכף, אז מותר להיכנס למשבצת שלו
+            // 4. Check self-collision
+            // Check up to Count-1 because the tail is about to move, so entering its cell is allowed
             for (int i = 0; i < _snake.Count - 1; i++)
             {
                 if (IsPointsEqual(_snake[i], newHead))
@@ -118,27 +118,27 @@ namespace IndiLogs_3._0.Views
                 }
             }
 
-            // 5. הוספת הראש החדש
+            // 5. Add the new head
             _snake.Insert(0, newHead);
 
-            // 6. בדיקת אכילה
+            // 6. Check food consumption
             if (IsPointsEqual(newHead, _food))
             {
                 _score++;
                 ScoreText.Text = _score.ToString();
                 SpawnFood();
-                // לא מוחקים זנב -> הנחש גדל
+                // Don't remove the tail -> the snake grows
             }
             else
             {
-                // תזוזה רגילה -> מוחקים זנב
+                // Normal movement -> remove the tail
                 _snake.RemoveAt(_snake.Count - 1);
             }
 
             Draw();
         }
 
-        // שימוש ב-PreviewKeyDown מבטיח שהחלון יקבל את המקש לפני הפקדים האחרים
+        // Using PreviewKeyDown ensures the window receives the key before other controls
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (_isGameOver)
@@ -163,19 +163,19 @@ namespace IndiLogs_3._0.Views
 
             if (!isArrowKey) return;
 
-            // מניעת באג האיפוס: מסמנים שהמקש טופל כדי שה-ComboBox לא יגיב
+            // Prevent reset bug: mark the key as handled so the ComboBox doesn't react
             e.Handled = true;
 
-            // חישוב הכיוון האחרון הידוע (מהתור או מהנחש)
+            // Calculate the last known direction (from the queue or from the snake)
             Point lastKnownDir = _inputQueue.Count > 0 ? _inputQueue.Last() : _currentDirection;
 
-            // מניעת פניית פרסה (למשל ימינה ואז שמאלה)
+            // Prevent U-turn (e.g., right then left)
             if ((lastKnownDir.X + nextDir.X == 0) && (lastKnownDir.Y + nextDir.Y == 0))
             {
                 return;
             }
 
-            // מגבלה על גודל התור למניעת דיליי אם לוחצים בטירוף
+            // Limit queue size to prevent delay if keys are pressed frantically
             if (_inputQueue.Count < 2)
             {
                 _inputQueue.Enqueue(nextDir);
@@ -196,7 +196,7 @@ namespace IndiLogs_3._0.Views
                 int y = r.Next(0, maxY) * Size;
                 Point p = new Point(x, y);
 
-                // וודא שהאוכל לא נוצר על הנחש
+                // Make sure the food doesn't spawn on the snake
                 bool onSnake = false;
                 foreach (var part in _snake)
                 {
@@ -215,7 +215,7 @@ namespace IndiLogs_3._0.Views
         {
             GameCanvas.Children.Clear();
 
-            // ציור אוכל
+            // Draw food
             Ellipse foodParams = new Ellipse
             {
                 Width = Size,
@@ -227,14 +227,14 @@ namespace IndiLogs_3._0.Views
             Canvas.SetTop(foodParams, _food.Y);
             GameCanvas.Children.Add(foodParams);
 
-            // ציור נחש
+            // Draw snake
             for (int i = 0; i < _snake.Count; i++)
             {
                 Rectangle rect = new Rectangle
                 {
                     Width = Size,
                     Height = Size,
-                    Fill = (i == 0) ? Brushes.Lime : Brushes.ForestGreen, // ראש בצבע שונה
+                    Fill = (i == 0) ? Brushes.Lime : Brushes.ForestGreen, // Head in a different color
                     RadiusX = 3,
                     RadiusY = 3
                 };
@@ -258,11 +258,11 @@ namespace IndiLogs_3._0.Views
 
         private void DifficultySelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // אם המשחק רץ ומשנים רמה, מתחילים מחדש
+            // If the game is running and difficulty is changed, restart
             if (_timer != null) StartNewGame();
         }
 
-        // --- ניהול שיאים ---
+        // --- High Scores Management ---
 
         private void SaveScore()
         {
@@ -274,9 +274,9 @@ namespace IndiLogs_3._0.Views
                     scores = JsonConvert.DeserializeObject<List<int>>(File.ReadAllText(_scoreFile), new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth }) ?? new List<int>();
 
                 scores.Add(_score);
-                scores = scores.OrderByDescending(s => s).Take(3).ToList(); // שמירת טופ 3
+                scores = scores.OrderByDescending(s => s).Take(3).ToList(); // Keep top 3
 
-                // יצירת תיקייה אם לא קיימת
+                // Create directory if it doesn't exist
                 Directory.CreateDirectory(System.IO.Path.GetDirectoryName(_scoreFile));
                 File.WriteAllText(_scoreFile, JsonConvert.SerializeObject(scores));
             }
@@ -296,7 +296,7 @@ namespace IndiLogs_3._0.Views
             catch (Exception ex) { AppLogger.Error("LoadHighScores failed", ex); HighScoresText.Text = "Error"; }
         }
 
-        // עזר להשוואת נקודות (בגלל ש-Point משתמש ב-Double)
+        // Helper for comparing points (because Point uses Double)
         private bool IsPointsEqual(Point p1, Point p2)
         {
             return Math.Abs(p1.X - p2.X) < 0.1 && Math.Abs(p1.Y - p2.Y) < 0.1;

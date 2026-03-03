@@ -20,12 +20,12 @@ namespace IndiLogs_3._0.Models
         /// </summary>
         public IReadOnlyList<PluginColumnDef> PluginColumns { get; set; }
 
-        // --- אופטימיזציה: רשימות מוכנות מראש לניתוח מהיר ---
+        // --- Optimization: pre-built lists for fast analysis ---
         public List<LogEntry> StateTransitions { get; set; } = new List<LogEntry>();
         public List<LogEntry> CriticalFailureEvents { get; set; } = new List<LogEntry>();
         // ----------------------------------------------------
 
-        // >>> כאן התיקון: הוספנו את המילון שחסר לך <<<
+        // >>> Fix: added the missing dictionary <<<
         public Dictionary<string, string> ConfigurationFiles { get; set; } = new Dictionary<string, string>();
 
         // Binary DB files (SQLite) - stored as byte arrays

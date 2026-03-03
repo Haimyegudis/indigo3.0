@@ -63,6 +63,7 @@ namespace IndiLogs_3._0.ViewModels
         private readonly ILogColoringService _coloringService;
         private readonly ICsvExportService _csvService;
         private readonly IDefaultConfigurationService _defaultConfigService;
+        private readonly IDialogService _dialogService;
         public IDefaultConfigurationService DefaultConfigService => _defaultConfigService;
         public ILogColoringService ColoringService => _coloringService;
 
@@ -686,68 +687,21 @@ namespace IndiLogs_3._0.ViewModels
                     return;
                 }
 
-                // Save the currently selected log and its scroll position BEFORE changing filter state
-                var savedSelectedLog = SelectedLog;
-                if (savedSelectedLog != null)
-                {
-                    SaveScrollPosition(savedSelectedLog);
-                }
-
                 if (SelectedTabIndex == AppConstants.TAB_APP)
                 {
-                    if (FilterVM != null && FilterVM.IsAppFilterActive != value)
-                    {
-                        // Only toggle if there's a stored filter to show/hide
-                        // If no stored filter and trying to activate, do nothing
-                        if (value && !FilterVM.HasAppStoredFilter)
-                            return;
-
-                        FilterVM.IsAppFilterActive = value;
-                        OnPropertyChanged();
-                        ApplyAppLogsFilter();
-
-                        // Restore the selected log and scroll to it, preserving visual position
-                        // Use Dispatcher to ensure UI has fully updated before scrolling
-                        if (savedSelectedLog != null)
-                        {
-                            var logToRestore = savedSelectedLog;
-                            Application.Current.Dispatcher.BeginInvoke(
-                                System.Windows.Threading.DispatcherPriority.ContextIdle,
-                                new Action(() =>
-                                {
-                                    SelectedLog = logToRestore;
-                                    ScrollToLogPreservePosition(logToRestore);
-                                }));
-                        }
-                    }
+                    ToggleFilterState(value,
+                        () => FilterVM?.IsAppFilterActive ?? false,
+                        v => FilterVM.IsAppFilterActive = v,
+                        () => FilterVM?.HasAppStoredFilter ?? false,
+                        () => ApplyAppLogsFilter());
                 }
                 else
                 {
-                    if (FilterVM != null && FilterVM.IsMainFilterActive != value)
-                    {
-                        // Only toggle if there's a stored filter to show/hide
-                        // If no stored filter and trying to activate, do nothing
-                        if (value && !FilterVM.HasMainStoredFilter)
-                            return;
-
-                        FilterVM.IsMainFilterActive = value;
-                        OnPropertyChanged();
-                        UpdateMainLogsFilter(value);
-
-                        // Restore the selected log and scroll to it, preserving visual position
-                        // Use Dispatcher to ensure UI has fully updated before scrolling
-                        if (savedSelectedLog != null)
-                        {
-                            var logToRestore = savedSelectedLog;
-                            Application.Current.Dispatcher.BeginInvoke(
-                                System.Windows.Threading.DispatcherPriority.ContextIdle,
-                                new Action(() =>
-                                {
-                                    SelectedLog = logToRestore;
-                                    ScrollToLogPreservePosition(logToRestore);
-                                }));
-                        }
-                    }
+                    ToggleFilterState(value,
+                        () => FilterVM?.IsMainFilterActive ?? false,
+                        v => FilterVM.IsMainFilterActive = v,
+                        () => FilterVM?.HasMainStoredFilter ?? false,
+                        () => UpdateMainLogsFilter(value));
                 }
             }
         }
@@ -757,67 +711,54 @@ namespace IndiLogs_3._0.ViewModels
             get => SelectedTabIndex == AppConstants.TAB_APP ? (FilterVM?.IsAppFilterOutActive ?? false) : (FilterVM?.IsMainFilterOutActive ?? false);
             set
             {
-                // Save the currently selected log and its scroll position BEFORE changing filter state
-                var savedSelectedLog = SelectedLog;
-                if (savedSelectedLog != null)
-                {
-                    SaveScrollPosition(savedSelectedLog);
-                }
-
                 if (SelectedTabIndex == AppConstants.TAB_APP)
                 {
-                    if (FilterVM != null && FilterVM.IsAppFilterOutActive != value)
-                    {
-                        // Only toggle if there's a stored filter out to show/hide
-                        if (value && !FilterVM.HasAppStoredFilterOut)
-                            return;
-
-                        FilterVM.IsAppFilterOutActive = value;
-                        OnPropertyChanged();
-                        ApplyAppLogsFilter();
-
-                        // Restore the selected log and scroll to it, preserving visual position
-                        // Use Dispatcher to ensure UI has fully updated before scrolling
-                        if (savedSelectedLog != null)
-                        {
-                            var logToRestore = savedSelectedLog;
-                            Application.Current.Dispatcher.BeginInvoke(
-                                System.Windows.Threading.DispatcherPriority.ContextIdle,
-                                new Action(() =>
-                                {
-                                    SelectedLog = logToRestore;
-                                    ScrollToLogPreservePosition(logToRestore);
-                                }));
-                        }
-                    }
+                    ToggleFilterState(value,
+                        () => FilterVM?.IsAppFilterOutActive ?? false,
+                        v => FilterVM.IsAppFilterOutActive = v,
+                        () => FilterVM?.HasAppStoredFilterOut ?? false,
+                        () => ApplyAppLogsFilter());
                 }
                 else
                 {
-                    if (FilterVM != null && FilterVM.IsMainFilterOutActive != value)
-                    {
-                        // Only toggle if there's a stored filter out to show/hide
-                        if (value && !FilterVM.HasMainStoredFilterOut)
-                            return;
-
-                        FilterVM.IsMainFilterOutActive = value;
-                        OnPropertyChanged();
-                        UpdateMainLogsFilter(FilterVM.IsMainFilterActive);
-
-                        // Restore the selected log and scroll to it, preserving visual position
-                        // Use Dispatcher to ensure UI has fully updated before scrolling
-                        if (savedSelectedLog != null)
-                        {
-                            var logToRestore = savedSelectedLog;
-                            Application.Current.Dispatcher.BeginInvoke(
-                                System.Windows.Threading.DispatcherPriority.ContextIdle,
-                                new Action(() =>
-                                {
-                                    SelectedLog = logToRestore;
-                                    ScrollToLogPreservePosition(logToRestore);
-                                }));
-                        }
-                    }
+                    ToggleFilterState(value,
+                        () => FilterVM?.IsMainFilterOutActive ?? false,
+                        v => FilterVM.IsMainFilterOutActive = v,
+                        () => FilterVM?.HasMainStoredFilterOut ?? false,
+                        () => UpdateMainLogsFilter(FilterVM.IsMainFilterActive));
                 }
+            }
+        }
+
+        /// <summary>
+        /// Shared helper for filter toggle logic: saves scroll position, toggles filter,
+        /// applies changes, and restores scroll position.
+        /// </summary>
+        private void ToggleFilterState(bool value, Func<bool> getCurrent, Action<bool> setCurrent,
+            Func<bool> hasStoredFilter, Action applyFilter)
+        {
+            if (FilterVM == null || getCurrent() == value) return;
+            if (value && !hasStoredFilter()) return;
+
+            var savedSelectedLog = SelectedLog;
+            if (savedSelectedLog != null)
+                SaveScrollPosition(savedSelectedLog);
+
+            setCurrent(value);
+            OnPropertyChanged(nameof(IsFilterActive));
+            OnPropertyChanged(nameof(IsFilterOutActive));
+            applyFilter();
+
+            if (savedSelectedLog != null)
+            {
+                var logToRestore = savedSelectedLog;
+                Application.Current.Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.ContextIdle,
+                    new Action(() =>
+                    {
+                        SelectedLog = logToRestore;
+                        ScrollToLogPreservePosition(logToRestore);
+                    }));
             }
         }
 
@@ -958,25 +899,26 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand SetAsDefaultCommand { get; }
         public ICommand ResetDefaultsCommand { get; }
 
-        public MainViewModel(ILogFileService logService, ILogColoringService coloringService, ICsvExportService csvService, IDefaultConfigurationService defaultConfigService)
+        public MainViewModel(ILogFileService logService, ILogColoringService coloringService, ICsvExportService csvService, IDefaultConfigurationService defaultConfigService, IDialogService dialogService)
         {
             _logService = logService;
             _coloringService = coloringService;
             _csvService = csvService;
             _defaultConfigService = defaultConfigService;
+            _dialogService = dialogService;
             _isTimeSyncEnabled = false;
 
             // Initialize child ViewModels
-            SessionVM = new LogSessionViewModel(this, _logService, _coloringService);
-            FilterVM = new FilterSearchViewModel(this, SessionVM);
-            CaseVM = new CaseManagementViewModel(this, SessionVM, FilterVM);
+            SessionVM = new LogSessionViewModel(this, _logService, _coloringService, _dialogService);
+            FilterVM = new FilterSearchViewModel(this, SessionVM, _dialogService);
+            CaseVM = new CaseManagementViewModel(this, SessionVM, FilterVM, _dialogService);
             LiveVM = new LiveMonitoringViewModel(this, SessionVM, FilterVM, CaseVM, _logService, _coloringService);
-            ConfigVM = new ConfigExplorerViewModel(this, SessionVM);
+            ConfigVM = new ConfigExplorerViewModel(this, SessionVM, _dialogService);
             ChartVM = new ChartTabViewModel(this);
-            CprVM = new CprAnalysisViewModel();
-            DifferentLogsVM = new DifferentLogsViewModel(_logService.GetPluginLoader());
+            CprVM = new CprAnalysisViewModel(_dialogService);
+            DifferentLogsVM = new DifferentLogsViewModel(_logService.GetPluginLoader(), _dialogService);
             DifferentLogsVM.GetCurrentZipPath = () => SessionVM?.SelectedSession?.FilePath;
-            StepRecorderVM = new StepRecorderViewModel();
+            StepRecorderVM = new StepRecorderViewModel(_dialogService);
 
             // Set dependencies
             SessionVM.SetDependencies(FilterVM, CaseVM, ConfigVM, LiveVM);
@@ -1030,7 +972,7 @@ namespace IndiLogs_3._0.ViewModels
             PrevMarkedCommand = new RelayCommand(GoToPrevMarked);
             JumpToLogCommand = new RelayCommand(JumpToLog);
             FilterAppErrorsCommand = new RelayCommand(FilterAppErrors);
-            OpenJiraCommand = new RelayCommand(o => OpenUrl("https://hp-jira.external.hp.com/secure/Dashboard.jspa"));
+            OpenJiraCommand = new RelayCommand(o => OpenUrl(Services.AppSettingsService.JiraUrl));
             OpenKibanaCommand = new RelayCommand(OpenKibana);
             OpenOutlookCommand = new RelayCommand(OpenOutlook);
 
@@ -1388,12 +1330,11 @@ namespace IndiLogs_3._0.ViewModels
         {
             if (IsAnalysisRunning)
             {
-                MessageBox.Show("Still analyzing data in background...\nPlease wait until the process finishes.",
-                                "Processing", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowInfo("Still analyzing data in background...\nPlease wait until the process finishes.", "Processing");
                 return;
             }
 
-            if (SessionVM.SelectedSession == null) { MessageBox.Show("No logs loaded."); return; }
+            if (SessionVM.SelectedSession == null) { _dialogService.ShowInfo("No logs loaded."); return; }
 
             if (SessionVM.SelectedSession.CachedStates != null && SessionVM.SelectedSession.CachedStates.Count > 0)
             {
@@ -1405,7 +1346,7 @@ namespace IndiLogs_3._0.ViewModels
             }
             else
             {
-                MessageBox.Show("No states detected in this session.");
+                _dialogService.ShowInfo("No states detected in this session.");
             }
         }
 
@@ -1447,14 +1388,13 @@ namespace IndiLogs_3._0.ViewModels
         {
             if (SessionVM.SelectedSession == null)
             {
-                MessageBox.Show("No logs loaded.");
+                _dialogService.ShowInfo("No logs loaded.");
                 return;
             }
 
             if (IsAnalysisRunning)
             {
-                MessageBox.Show("Analysis is still running in the background.\nPlease wait a moment and try again.",
-                                "Processing", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowInfo("Analysis is still running in the background.\nPlease wait a moment and try again.", "Processing");
                 return;
             }
 
@@ -1497,8 +1437,7 @@ namespace IndiLogs_3._0.ViewModels
             }
             else
             {
-                MessageBox.Show("Great news! No critical state failures were detected in this session.",
-                                "Analysis Result", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowInfo("Great news! No critical state failures were detected in this session.", "Analysis Result");
             }
         }
 
@@ -1507,17 +1446,17 @@ namespace IndiLogs_3._0.ViewModels
             var plcLogs = SessionVM?.AllLogsCache;
             var appLogs = SessionVM?.AllAppLogsCache;
 
-            // בדיקה אם יש בכלל נתונים להציג
+            // Check if there is any data to display
             bool hasPlc = plcLogs != null && plcLogs.Any();
             bool hasApp = appLogs != null && appLogs.Any();
 
             if (!hasPlc && !hasApp)
             {
-                MessageBox.Show("No logs available for analysis.", "No Data", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _dialogService.ShowWarning("No logs available for analysis.", "No Data");
                 return;
             }
 
-            // יצירת החלון עם שני הפרמטרים וקולבק לפילטור
+            // Create the window with both parameters and a callback for filtering
             var statsWindow = new Views.StatsWindow(plcLogs, appLogs, ApplyChartDrillDownFilter, NavigateToLogFromStats, IsDarkMode, HasBinaryAppLogs);
             statsWindow.Title = "Log Statistics Dashboard";
             WindowManager.OpenWindow(statsWindow);
@@ -1538,8 +1477,7 @@ namespace IndiLogs_3._0.ViewModels
                     SelectedTabIndex = AppConstants.TAB_PLC;
 
                     int logCount = SessionVM?.Logs?.Count() ?? 0;
-                    MessageBox.Show($"Filter applied: Logger = {filterValue}\n\nShowing {logCount} matching logs.",
-                        "Logger Filter Applied", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowInfo($"Filter applied: Logger = {filterValue}\n\nShowing {logCount} matching logs.", "Logger Filter Applied");
                 }
                 else if (filterType == "State")
                 {
@@ -1552,14 +1490,12 @@ namespace IndiLogs_3._0.ViewModels
                     SelectedTabIndex = AppConstants.TAB_PLC;
 
                     int logCount = SessionVM?.Logs?.Count() ?? 0;
-                    MessageBox.Show($"Filter applied: STATE = {filterValue}\n\nShowing {logCount} matching logs.",
-                        "State Filter Applied", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowInfo($"Filter applied: STATE = {filterValue}\n\nShowing {logCount} matching logs.", "State Filter Applied");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error applying filter: {ex.Message}", "Filter Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error applying filter: {ex.Message}", "Filter Error");
             }
         }
 
@@ -1819,7 +1755,7 @@ namespace IndiLogs_3._0.ViewModels
             {
             if (SessionVM.SelectedSession == null)
             {
-                MessageBox.Show("No logs loaded.", "Info");
+                _dialogService.ShowInfo("No logs loaded.");
                 return;
             }
 
@@ -1832,7 +1768,7 @@ namespace IndiLogs_3._0.ViewModels
 
             if (!hasLogs && !hasIoCsv)
             {
-                MessageBox.Show("No logs loaded.", "Info");
+                _dialogService.ShowInfo("No logs loaded.");
                 return;
             }
 
@@ -1843,7 +1779,7 @@ namespace IndiLogs_3._0.ViewModels
             }
 
             _exportConfigWindow = new ExportConfigurationWindow();
-            var viewModel = new ExportConfigurationViewModel(selectedSession, _csvService);
+            var viewModel = new ExportConfigurationViewModel(selectedSession, _csvService, _dialogService);
             _exportConfigWindow.DataContext = viewModel;
             _exportConfigWindow.Closed += (s, e) => _exportConfigWindow = null;
             WindowManager.OpenWindow(_exportConfigWindow);
@@ -2003,10 +1939,10 @@ namespace IndiLogs_3._0.ViewModels
 
         private void OpenGlobalGrepWindow()
         {
-            // יצירת אוסף ריק במידה ולא נטענו סשנים, כדי לאפשר לחלון להיפתח
+            // Create an empty collection if no sessions are loaded, to allow the window to open
             var sessions = SessionVM?.LoadedSessions ?? new ObservableCollection<LogSessionData>();
 
-            var viewModel = new GlobalGrepViewModel(sessions);
+            var viewModel = new GlobalGrepViewModel(sessions, _dialogService);
 
             var window = new GlobalGrepWindow(viewModel, NavigateToGrepResult, LoadMultipleFiles);
             WindowManager.OpenWindow(window);
@@ -2032,9 +1968,9 @@ namespace IndiLogs_3._0.ViewModels
 
             if (logs == null || !logs.Any())
             {
-                MessageBox.Show(
+                _dialogService.ShowInfo(
                     "No APP logs loaded.\n\nPlease load a session with APP logs first, or switch to the APP tab.",
-                    "Stripe Analysis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    "Stripe Analysis");
                 return;
             }
 
@@ -2045,10 +1981,10 @@ namespace IndiLogs_3._0.ViewModels
 
             if (!hasStripeData)
             {
-                MessageBox.Show(
+                _dialogService.ShowInfo(
                     "No stripe data found in APP logs.\n\n" +
                     "This feature requires logs containing stripeDescriptor JSON data.",
-                    "Stripe Analysis", MessageBoxButton.OK, MessageBoxImage.Information);
+                    "Stripe Analysis");
                 return;
             }
 
@@ -2157,14 +2093,28 @@ namespace IndiLogs_3._0.ViewModels
                     // Load all files using ProcessFiles
                     ProcessFiles(filesToLoad.ToArray(), null);
 
-                    MessageBox.Show($"Loaded {filesToLoad.Count} file(s).", "Open All Files", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowInfo($"Loaded {filesToLoad.Count} file(s).", "Open All Files");
                 }
             }
         }
 
         private bool IsDefaultLog(LogEntry l) => FilterVM?.IsDefaultLog(l) ?? false;
-        private void OpenUrl(string url) { try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); } catch (Exception ex) { AppLogger.Error($"OpenUrl failed for '{url}'", ex); } }
-        private void OpenOutlook(object obj) { try { Process.Start("outlook.exe", "/c ipm.note"); } catch { OpenUrl("mailto:"); } }
+        private void OpenUrl(string url)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(url)) return;
+                if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+                    (uri.Scheme != "https" && uri.Scheme != "http" && uri.Scheme != "mailto"))
+                {
+                    AppLogger.Warn($"OpenUrl blocked unsafe or invalid URI: '{url}'");
+                    return;
+                }
+                Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
+            }
+            catch (Exception ex) { AppLogger.Error($"OpenUrl failed for '{url}'", ex); }
+        }
+        private void OpenOutlook(object obj) { try { Process.Start("outlook.exe", "/c ipm.note"); } catch (Exception) { OpenUrl("mailto:"); } }
         /// <summary>
         /// Opens Kibana in the default browser, pre-filling the machine name from the loaded ZIP.
         /// </summary>

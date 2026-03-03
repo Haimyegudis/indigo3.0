@@ -197,7 +197,7 @@ namespace IndiLogs_3._0.Services
             return source.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        // מבנה עזר לאופטימיזציה (מונע יצירת Regex מחדש לכל שורה)
+        // Helper struct for optimization (prevents recreating Regex for every row)
         private struct PreparedCondition
         {
             public ColoringCondition Rule;

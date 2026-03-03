@@ -23,6 +23,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly MainViewModel _parent;
         private readonly ILogFileService _logService;
         private readonly ILogColoringService _coloringService;
+        private readonly IDialogService _dialogService;
         private FilterSearchViewModel _filterVM;
         private CaseManagementViewModel _caseVM;
         private ConfigExplorerViewModel _configVM;
@@ -198,11 +199,12 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand ClearCommand { get; }
         public ICommand RemoveSessionCommand { get; }
 
-        public LogSessionViewModel(MainViewModel parent, ILogFileService logService, ILogColoringService coloringService)
+        public LogSessionViewModel(MainViewModel parent, ILogFileService logService, ILogColoringService coloringService, IDialogService dialogService)
         {
             _parent = parent;
             _logService = logService;
             _coloringService = coloringService;
+            _dialogService = dialogService;
 
             // Initialize collections
             _allLogsCache = new List<LogEntry>();
@@ -680,7 +682,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             catch (Exception ex)
             {
                 StatusMessage = $"Error: {ex.Message}";
-                MessageBox.Show($"Error loading files: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error loading files: {ex.Message}", "Error");
                 IsBusy = false;
             }
         }

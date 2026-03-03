@@ -8,7 +8,7 @@ namespace IndiLogs_3._0.Converters
     {
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
-            return values.Clone(); // מחזיר את מערך הערכים כמו שהוא לפקודה
+            return values.Clone(); // Returns the values array as-is for the command
         }
 
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
