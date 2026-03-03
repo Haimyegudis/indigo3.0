@@ -20,12 +20,24 @@ namespace IndiLogs_3._0.Services
         private static readonly string InstallerFolder;
         private const string ExePattern = "IndiLogs3.0_*.exe";
 
+        private readonly Interfaces.IDialogService _dialogService;
+
+        public UpdateService(Interfaces.IDialogService dialogService = null)
+        {
+            _dialogService = dialogService;
+        }
+
         static UpdateService()
         {
             try
             {
                 // Environment.ProcessPath points to the actual exe even in single-file mode
                 string exeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
+
+                // Load base settings, then overlay with local settings (which are gitignored)
+                VersionFileUrl = "";
+                InstallerFolder = "";
+
                 string settingsPath = Path.Combine(exeDir, "appsettings.json");
                 if (File.Exists(settingsPath))
                 {
@@ -33,15 +45,21 @@ namespace IndiLogs_3._0.Services
                     VersionFileUrl = doc.RootElement.TryGetProperty("UpdateVersionFile", out var vf) ? vf.GetString() : "";
                     InstallerFolder = doc.RootElement.TryGetProperty("UpdateInstallerFolder", out var inf) ? inf.GetString() : "";
                 }
-                else
+
+                // Local overrides (not committed to source control)
+                string localPath = Path.Combine(exeDir, "appsettings.local.json");
+                if (File.Exists(localPath))
                 {
-                    VersionFileUrl = "";
-                    InstallerFolder = "";
+                    using var localDoc = JsonDocument.Parse(File.ReadAllText(localPath));
+                    if (localDoc.RootElement.TryGetProperty("UpdateVersionFile", out var lvf) && !string.IsNullOrEmpty(lvf.GetString()))
+                        VersionFileUrl = lvf.GetString();
+                    if (localDoc.RootElement.TryGetProperty("UpdateInstallerFolder", out var linf) && !string.IsNullOrEmpty(linf.GetString()))
+                        InstallerFolder = linf.GetString();
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"UpdateService: Failed to read appsettings.json: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"UpdateService: Failed to read appsettings: {ex.Message}");
                 VersionFileUrl = "";
                 InstallerFolder = "";
             }
@@ -96,14 +114,14 @@ namespace IndiLogs_3._0.Services
                         // Show dialog on UI thread
                         Application.Current.Dispatcher.Invoke(() =>
                         {
-                            var result = MessageBox.Show(
-                                $"A new version is available!\n\n" +
-                                $"Current version: {currentVersion}\n" +
-                                $"New version: {serverVersion}\n\n" +
-                                "Do you want to download and install the update now?",
-                                "IndiLogs Update Available",
-                                MessageBoxButton.YesNo,
-                                MessageBoxImage.Information);
+                            var result = _dialogService != null
+                                ? _dialogService.ShowConfirm(
+                                    $"A new version is available!\n\n" +
+                                    $"Current version: {currentVersion}\n" +
+                                    $"New version: {serverVersion}\n\n" +
+                                    "Do you want to download and install the update now?",
+                                    "IndiLogs Update Available")
+                                : MessageBoxResult.No;
 
                             if (result == MessageBoxResult.Yes)
                             {
@@ -137,12 +155,10 @@ namespace IndiLogs_3._0.Services
                 if (string.IsNullOrEmpty(serverExePath))
                 {
                     UpdateLogger.Log("[ERROR] Could not find update exe on server");
-                    MessageBox.Show(
+                    _dialogService?.ShowWarning(
                         "Could not find the update file on the server.\n\n" +
                         $"Please open this folder and copy the exe manually:\n{InstallerFolder}",
-                        "Update Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                        "Update Error");
                     return;
                 }
 
@@ -194,12 +210,10 @@ namespace IndiLogs_3._0.Services
             catch (Exception ex)
             {
                 UpdateLogger.Log("[AUTO-UPDATE ERROR]", ex);
-                MessageBox.Show(
+                _dialogService?.ShowError(
                     $"Failed to apply update:\n{ex.Message}\n\n" +
                     $"Please open this folder and copy the exe manually:\n{InstallerFolder}",
-                    "Update Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Update Error");
             }
         }
 

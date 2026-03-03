@@ -27,22 +27,22 @@ namespace IndiLogs_3._0
             var pluginLoader = new PluginLoader();
             Register<IPluginLoader>(pluginLoader);
 
-            var logFileService = new LogFileService(pluginLoader);
+            var dialogService = new DialogService();
+            Register<IDialogService>(dialogService);
+
+            var logFileService = new LogFileService(pluginLoader, dialogService);
             Register<ILogFileService>(logFileService);
 
             var coloringService = new LogColoringService();
             Register<ILogColoringService>(coloringService);
 
-            var csvService = new CsvExportService();
+            var csvService = new CsvExportService(dialogService);
             Register<ICsvExportService>(csvService);
 
             var defaultConfigService = new DefaultConfigurationService();
             Register<IDefaultConfigurationService>(defaultConfigService);
 
             Register<IWindowManager>(new WindowManagerAdapter());
-
-            var dialogService = new DialogService();
-            Register<IDialogService>(dialogService);
 
             // --- ViewModels ---
             var mainVM = new MainViewModel(logFileService, coloringService, csvService, defaultConfigService, dialogService);

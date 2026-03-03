@@ -31,6 +31,20 @@ namespace IndiLogs_3._0.Services
                     if (root.TryGetProperty("KibanaBaseUrl", out var kibana) && !string.IsNullOrEmpty(kibana.GetString()))
                         KibanaBaseUrl = kibana.GetString()!;
                 }
+
+                // Local overrides (not committed to source control)
+                string localPath = Path.Combine(exeDir, "appsettings.local.json");
+                if (File.Exists(localPath))
+                {
+                    using var localDoc = JsonDocument.Parse(File.ReadAllText(localPath));
+                    var localRoot = localDoc.RootElement;
+
+                    if (localRoot.TryGetProperty("JiraUrl", out var lj) && !string.IsNullOrEmpty(lj.GetString()))
+                        JiraUrl = lj.GetString()!;
+
+                    if (localRoot.TryGetProperty("KibanaBaseUrl", out var lk) && !string.IsNullOrEmpty(lk.GetString()))
+                        KibanaBaseUrl = lk.GetString()!;
+                }
             }
             catch (Exception ex)
             {

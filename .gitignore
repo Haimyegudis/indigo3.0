@@ -502,5 +502,9 @@ Installer/Flow CSV Viewer Installer.exe
 # Sample/test data files
 sample_*
 
+# Local settings overrides (site-specific, not committed)
+**/appsettings.local.json
+update-credentials.dat
+
 # Claude Code local settings
 .claude/settings.local.json

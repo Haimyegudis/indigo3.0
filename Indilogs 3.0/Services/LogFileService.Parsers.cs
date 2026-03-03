@@ -214,9 +214,9 @@ namespace IndiLogs_3._0.Services
                 // Use non-blocking BeginInvoke to avoid stalling parallel worker threads
                 AppLogger.Error("Error parsing log stream", ex);
                 System.Windows.Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
-                    System.Windows.MessageBox.Show(
+                    _dialogService?.ShowWarning(
                         $"Error parsing log stream: {ex.GetType().Name}: {ex.Message}",
-                        "Parse Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning)));
+                        "Parse Error")));
             }
             return (allLogs, transitions, failures);
         }

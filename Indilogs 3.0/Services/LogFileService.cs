@@ -22,10 +22,12 @@ namespace IndiLogs_3._0.Services
         // Plugin loader — injected via DI; null-safe (no plugins = graceful skip)
         // -----------------------------------------------------------------------
         private readonly IPluginLoader _pluginLoader;
+        private readonly Interfaces.IDialogService _dialogService;
 
-        public LogFileService(IPluginLoader pluginLoader)
+        public LogFileService(IPluginLoader pluginLoader, Interfaces.IDialogService dialogService = null)
         {
             _pluginLoader = pluginLoader;
+            _dialogService = dialogService;
         }
 
         /// <summary>Exposes the plugin loader for external callers (e.g. dialog filter building).</summary>
@@ -1135,9 +1137,9 @@ namespace IndiLogs_3._0.Services
                         {
                             string allErrors = string.Join("\n", nzErrors);
                             System.Windows.Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
-                                System.Windows.MessageBox.Show(
+                                _dialogService?.ShowWarning(
                                     $"Errors processing {nzErrors.Count} file(s):\n\n{allErrors}",
-                                    "File Processing Errors", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning)));
+                                    "File Processing Errors")));
                         }
 
                         foreach (var l in nzLocalLogs) mergedLogs.AddRange(l);
@@ -1249,9 +1251,9 @@ namespace IndiLogs_3._0.Services
                 {
                     AppLogger.Error("Fatal error during file loading", ex);
                     System.Windows.Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
-                        System.Windows.MessageBox.Show(
+                        _dialogService?.ShowError(
                             $"An error occurred during file loading:\n\n{ex.GetType().Name}: {ex.Message}\n\nPlease check the application log for details.",
-                            "Loading Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)));
+                            "Loading Error")));
                 }
 
                 return session;
