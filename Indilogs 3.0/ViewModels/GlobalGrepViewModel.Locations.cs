@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using IndiLogs_3._0.Models.Grep;
+using IndiLogs_3._0.Services.Interfaces;
 
 namespace IndiLogs_3._0.ViewModels
 {
@@ -35,7 +36,7 @@ namespace IndiLogs_3._0.ViewModels
         private void RemoveLocation()
         {
             if (SelectedLocation == null) return;
-            if (_dialogService.ShowConfirm($"Remove location '{SelectedLocation.Name}'?", "Confirm") == MessageBoxResult.Yes)
+            if (_dialogService.ShowConfirm($"Remove location '{SelectedLocation.Name}'?", "Confirm") == DialogResult.Yes)
             {
                 _locationService.Remove(SelectedLocation.Id);
                 Locations.Remove(SelectedLocation);

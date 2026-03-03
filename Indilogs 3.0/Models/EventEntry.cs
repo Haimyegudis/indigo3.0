@@ -1,15 +1,14 @@
-#nullable disable
-﻿using System;
+using System;
 
 namespace IndiLogs_3._0.Models
 {
     public class EventEntry
     {
         public DateTime Time { get; set; }
-        public string Name { get; set; }
-        public string State { get; set; }
-        public string Severity { get; set; }
-        public string Description { get; set; } // Subsystem
-        public string Parameters { get; set; }  // <-- Added this new property
+        public string Name { get; set; } = "";
+        public string State { get; set; } = "";
+        public string Severity { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string? Parameters { get; set; }
     }
 }

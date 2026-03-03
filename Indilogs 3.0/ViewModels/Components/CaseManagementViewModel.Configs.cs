@@ -1,6 +1,7 @@
 #nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
+using IndiLogs_3._0.Services.Interfaces;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using System;
@@ -103,7 +104,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private void DeleteConfig(object obj)
         {
             var configToDelete = SelectedConfig;
-            if (configToDelete != null && _dialogService.ShowConfirm($"Delete '{configToDelete.Name}'?", "Confirm") == MessageBoxResult.Yes)
+            if (configToDelete != null && _dialogService.ShowConfirm($"Delete '{configToDelete.Name}'?", "Confirm") == DialogResult.Yes)
             {
                 if (File.Exists(configToDelete.FilePath)) File.Delete(configToDelete.FilePath);
                 SavedConfigs.Remove(configToDelete);

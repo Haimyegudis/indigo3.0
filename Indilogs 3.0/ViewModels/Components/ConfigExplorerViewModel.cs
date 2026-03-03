@@ -483,7 +483,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         private async Task LoadSqliteToTreeAsync(byte[] dbBytes)
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            Application.Current.Dispatcher.BeginInvoke(() =>
             {
                 DbTreeNodes.Clear();
                 _allDbTreeNodes.Clear();

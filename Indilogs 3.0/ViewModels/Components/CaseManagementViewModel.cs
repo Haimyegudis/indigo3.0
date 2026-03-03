@@ -251,7 +251,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 $"Delete annotation for this log entry?\n\n{log.Message}",
                 "Delete Annotation");
 
-            if (result == MessageBoxResult.Yes)
+            if (result == DialogResult.Yes)
             {
                 if (LogAnnotations.ContainsKey(log))
                     LogAnnotations.Remove(log);

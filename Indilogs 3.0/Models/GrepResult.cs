@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.ComponentModel;
 
@@ -18,7 +17,7 @@ namespace IndiLogs_3._0.Models
         /// <summary>
         /// Full path to the file or ZIP containing this result
         /// </summary>
-        public string FilePath { get; set; }
+        public string FilePath { get; set; } = "";
 
         /// <summary>
         /// Line number within the file (1-based)
@@ -28,22 +27,22 @@ namespace IndiLogs_3._0.Models
         /// <summary>
         /// Log origin: "PLC" or "APP"
         /// </summary>
-        public string LogType { get; set; }
+        public string LogType { get; set; } = "";
 
         /// <summary>
         /// Preview of the matched line (limited to 500 characters for UI performance)
         /// </summary>
-        public string PreviewText { get; set; }
+        public string PreviewText { get; set; } = "";
 
         /// <summary>
         /// Name of the session/file (for display purposes)
         /// </summary>
-        public string SessionName { get; set; }
+        public string SessionName { get; set; } = "";
 
         /// <summary>
         /// Reference to the actual LogEntry (only populated for in-memory searches)
         /// </summary>
-        public LogEntry ReferencedLogEntry { get; set; }
+        public LogEntry? ReferencedLogEntry { get; set; }
 
         /// <summary>
         /// Index of the session in LoadedSessions collection (for navigation)
@@ -53,17 +52,17 @@ namespace IndiLogs_3._0.Models
         /// <summary>
         /// Field that matched the search (Message, Exception, Method, Data)
         /// </summary>
-        public string MatchedField { get; set; }
+        public string MatchedField { get; set; } = "";
 
         /// <summary>
         /// Friendly name of the search location (e.g. "Simulator 1")
         /// </summary>
-        public string LocationName { get; set; }
+        public string? LocationName { get; set; }
 
         /// <summary>
         /// IP address or path of the search location
         /// </summary>
-        public string LocationAddress { get; set; }
+        public string? LocationAddress { get; set; }
 
         private bool _isSelected;
         /// <summary>
@@ -91,7 +90,7 @@ namespace IndiLogs_3._0.Models
 
         #region INotifyPropertyChanged
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         protected virtual void OnPropertyChanged(string propertyName)
         {

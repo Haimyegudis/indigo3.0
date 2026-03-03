@@ -27,6 +27,23 @@ jobs:
     - name: Run tests with coverage
       run: dotnet test "IndiLogs.Tests/IndiLogs.Tests.csproj" --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
+    - name: Check coverage threshold
+      shell: pwsh
+      run: |
+        $coverageFile = Get-ChildItem -Path ./TestResults -Recurse -Filter coverage.cobertura.xml | Select-Object -First 1
+        if (-not $coverageFile) {
+          Write-Error "No coverage file found"
+          exit 1
+        }
+        [xml]$xml = Get-Content $coverageFile.FullName
+        $lineRate = [double]$xml.coverage.'line-rate' * 100
+        $threshold = 5
+        Write-Host "Line coverage: $([math]::Round($lineRate, 2))%  (threshold: ${threshold}%)"
+        if ($lineRate -lt $threshold) {
+          Write-Error "Coverage $([math]::Round($lineRate, 2))% is below threshold of ${threshold}%"
+          exit 1
+        }
+
     - name: Upload coverage report
       if: always()
       uses: actions/upload-artifact@v4

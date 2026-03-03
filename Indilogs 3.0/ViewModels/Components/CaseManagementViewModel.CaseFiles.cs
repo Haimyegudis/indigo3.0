@@ -1,6 +1,7 @@
 #nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
+using IndiLogs_3._0.Services.Interfaces;
 using IndiLogs_3._0.Views;
 using Microsoft.Win32;
 using Newtonsoft.Json;
@@ -134,7 +135,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                                 $"Would you like to locate it manually?",
                                 "File Not Found");
 
-                            if (result == MessageBoxResult.Yes)
+                            if (result == DialogResult.Yes)
                             {
                                 var fileDialog = new OpenFileDialog
                                 {
@@ -387,7 +388,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         }
                     });
 
-                    Application.Current.Dispatcher.Invoke(() =>
+                    Application.Current.Dispatcher.BeginInvoke(() =>
                     {
                         // Notify Active Filters panel so coloring labels appear
                         _parent.NotifyPropertyChanged(nameof(_parent.ActiveFilters));

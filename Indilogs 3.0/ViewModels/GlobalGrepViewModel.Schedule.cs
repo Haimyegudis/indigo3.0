@@ -8,6 +8,7 @@ using System.Windows;
 using IndiLogs_3._0.Models.Grep;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Grep;
+using IndiLogs_3._0.Services.Interfaces;
 
 namespace IndiLogs_3._0.ViewModels
 {
@@ -98,7 +99,7 @@ namespace IndiLogs_3._0.ViewModels
         private void RemoveSchedule()
         {
             if (SelectedSchedule == null) return;
-            if (_dialogService.ShowConfirm($"Remove schedule '{SelectedSchedule.Name}'?", "Confirm") != MessageBoxResult.Yes) return;
+            if (_dialogService.ShowConfirm($"Remove schedule '{SelectedSchedule.Name}'?", "Confirm") != DialogResult.Yes) return;
             _taskSchedulerService.UnregisterSchedule(SelectedSchedule.Id);
             _schedulerService.RemoveSchedule(SelectedSchedule.Id);
             Schedules.Remove(SelectedSchedule);

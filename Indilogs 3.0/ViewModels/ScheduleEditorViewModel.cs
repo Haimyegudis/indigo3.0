@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Input;
 using IndiLogs_3._0.Models.Grep;
 using IndiLogs_3._0.Services.Grep;
+using IndiLogs_3._0.Services.Interfaces;
 
 namespace IndiLogs_3._0.ViewModels
 {
@@ -18,6 +19,7 @@ namespace IndiLogs_3._0.ViewModels
     {
         private readonly ScheduledSearch _schedule;
         private readonly List<SearchLocation> _allLocations;
+        private readonly IDialogService _dialogService;
 
         // ═══ Section 1: Schedule Details ═══
         private string _scheduleName;
@@ -468,10 +470,11 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand CancelCommand { get; }
 
         // ═══ Constructor ═══
-        public ScheduleEditorViewModel(ScheduledSearch schedule, List<SearchLocation> locations, SearchCriteria parentCriteria)
+        public ScheduleEditorViewModel(ScheduledSearch schedule, List<SearchLocation> locations, SearchCriteria parentCriteria, IDialogService dialogService = null)
         {
             _schedule = schedule;
             _allLocations = locations;
+            _dialogService = dialogService;
 
             // Commands
             AddConditionCommand = new RelayCommand(_ => AddCondition());
@@ -709,7 +712,7 @@ namespace IndiLogs_3._0.ViewModels
             // ═══ VALIDATION ═══
             if (string.IsNullOrWhiteSpace(ScheduleName))
             {
-                MessageBox.Show("Schedule name is required.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _dialogService?.ShowWarning("Schedule name is required.", "Validation");
                 return;
             }
 
@@ -719,25 +722,25 @@ namespace IndiLogs_3._0.ViewModels
             {
                 if (!int.TryParse(RunHour, out hours) || hours < 0 || hours > 23)
                 {
-                    MessageBox.Show("Hours must be 0\u201323.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    _dialogService?.ShowWarning("Hours must be 0\u201323.", "Validation");
                     return;
                 }
                 if (!int.TryParse(RunMinute, out minutes) || minutes < 0 || minutes > 59)
                 {
-                    MessageBox.Show("Minutes must be 0\u201359.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    _dialogService?.ShowWarning("Minutes must be 0\u201359.", "Validation");
                     return;
                 }
             }
 
             if (ScheduleTypeIndex == 0 && RunDate == null)
             {
-                MessageBox.Show("Please select a date for 'Once' schedule.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _dialogService?.ShowWarning("Please select a date for 'Once' schedule.", "Validation");
                 return;
             }
 
             if (ScheduleTypeIndex == 2 && !DaySun && !DayMon && !DayTue && !DayWed && !DayThu && !DayFri && !DaySat)
             {
-                MessageBox.Show("Select at least one day for weekly schedule.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _dialogService?.ShowWarning("Select at least one day for weekly schedule.", "Validation");
                 return;
             }
 
@@ -746,7 +749,7 @@ namespace IndiLogs_3._0.ViewModels
             {
                 if (!int.TryParse(IntervalValue, out intervalVal) || intervalVal < 1)
                 {
-                    MessageBox.Show("Interval value must be at least 1.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    _dialogService?.ShowWarning("Interval value must be at least 1.", "Validation");
                     return;
                 }
             }
@@ -756,22 +759,22 @@ namespace IndiLogs_3._0.ViewModels
 
             if (needsSearch && IsSimpleMode && string.IsNullOrWhiteSpace(SimpleSearchText))
             {
-                MessageBox.Show("Please enter search text.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _dialogService?.ShowWarning("Please enter search text.", "Validation");
                 return;
             }
             if (needsSearch && !IsSimpleMode && Conditions.All(c => string.IsNullOrWhiteSpace(c.Value)))
             {
-                MessageBox.Show("Add at least one search condition with a value.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _dialogService?.ShowWarning("Add at least one search condition with a value.", "Validation");
                 return;
             }
             if (!SearchPLC && !SearchAPP)
             {
-                MessageBox.Show("Select at least PLC or APP log type.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _dialogService?.ShowWarning("Select at least PLC or APP log type.", "Validation");
                 return;
             }
             if (LocationItems.Count > 0 && !LocationItems.Any(l => l.IsChecked))
             {
-                MessageBox.Show("Select at least one search location.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _dialogService?.ShowWarning("Select at least one search location.", "Validation");
                 return;
             }
 
@@ -881,17 +884,17 @@ namespace IndiLogs_3._0.ViewModels
             {
                 if (string.IsNullOrWhiteSpace(SmtpHost))
                 {
-                    MessageBox.Show("SMTP server is required when email is enabled.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    _dialogService?.ShowWarning("SMTP server is required when email is enabled.", "Validation");
                     return;
                 }
                 if (string.IsNullOrWhiteSpace(FromAddress) || !FromAddress.Contains("@"))
                 {
-                    MessageBox.Show("A valid From address is required.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    _dialogService?.ShowWarning("A valid From address is required.", "Validation");
                     return;
                 }
                 if (Recipients.Count == 0)
                 {
-                    MessageBox.Show("Add at least one email recipient.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    _dialogService?.ShowWarning("Add at least one email recipient.", "Validation");
                     return;
                 }
 
@@ -900,12 +903,12 @@ namespace IndiLogs_3._0.ViewModels
                 {
                     if (!int.TryParse(EmailHour, out emailSendHour) || emailSendHour < 0 || emailSendHour > 23)
                     {
-                        MessageBox.Show("Email send hour must be 0\u201323.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        _dialogService?.ShowWarning("Email send hour must be 0\u201323.", "Validation");
                         return;
                     }
                     if (!int.TryParse(EmailMinute, out emailSendMin) || emailSendMin < 0 || emailSendMin > 59)
                     {
-                        MessageBox.Show("Email send minutes must be 0\u201359.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        _dialogService?.ShowWarning("Email send minutes must be 0\u201359.", "Validation");
                         return;
                     }
                 }

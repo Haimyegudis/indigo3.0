@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
+using IndiLogs_3._0.Services.Interfaces;
 
 namespace IndiLogs_3._0.Services
 {
@@ -122,9 +123,9 @@ namespace IndiLogs_3._0.Services
                                     $"New version: {serverVersion}\n\n" +
                                     "Do you want to download and install the update now?",
                                     "IndiLogs Update Available")
-                                : MessageBoxResult.No;
+                                : DialogResult.No;
 
-                            if (result == MessageBoxResult.Yes)
+                            if (result == DialogResult.Yes)
                             {
                                 DownloadAndInstallUpdate(serverVersion, serverVersionText);
                             }

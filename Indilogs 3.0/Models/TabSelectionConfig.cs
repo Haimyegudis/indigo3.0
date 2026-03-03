@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 
 namespace IndiLogs_3._0.Models

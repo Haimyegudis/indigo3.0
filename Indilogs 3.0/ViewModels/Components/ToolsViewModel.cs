@@ -57,12 +57,12 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand ZoomOutCommand { get; }
         public ICommand ViewLogDetailsCommand { get; }
 
-        public ToolsViewModel(MainViewModel parent, ICsvExportService csvService, IDialogService dialogService)
+        public ToolsViewModel(MainViewModel parent, ICsvExportService csvService, IDialogService dialogService, IWindowManager windowManager)
         {
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
             _csvService = csvService ?? throw new ArgumentNullException(nameof(csvService));
             _dialogService = dialogService;
-            _windowManager = Bootstrapper.Resolve<IWindowManager>();
+            _windowManager = windowManager;
 
             // External tools
             OpenJiraCommand = new RelayCommand(o => OpenUrl(Services.AppSettingsService.JiraUrl));
@@ -158,7 +158,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
 
             _exportConfigWindow = new ExportConfigurationWindow();
-            var viewModel = new ExportConfigurationViewModel(_parent.SessionVM.SelectedSession, _csvService, Bootstrapper.Resolve<IDialogService>());
+            var viewModel = new ExportConfigurationViewModel(_parent.SessionVM.SelectedSession, _csvService, _dialogService);
             _exportConfigWindow.DataContext = viewModel;
             _exportConfigWindow.Closed += (s, e) => _exportConfigWindow = null;
             _windowManager.OpenWindow(_exportConfigWindow);
@@ -216,7 +216,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private void OpenGlobalGrepWindow()
         {
             var sessions = _parent.SessionVM?.LoadedSessions ?? new ObservableCollection<LogSessionData>();
-            var viewModel = new GlobalGrepViewModel(sessions, Bootstrapper.Resolve<IDialogService>());
+            var viewModel = new GlobalGrepViewModel(sessions, _dialogService);
 
             if (!sessions.Any())
                 viewModel.SearchMode = GlobalGrepViewModel.SearchModeType.ExternalFiles;

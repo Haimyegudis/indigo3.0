@@ -690,7 +690,7 @@ namespace IndiLogs_3._0.ViewModels
         {
             LiveVM.IsRunning = false;
 
-            Application.Current.Dispatcher.Invoke(() =>
+            Application.Current.Dispatcher.BeginInvoke(() =>
             {
                 lock (_collectionLock)
                 {

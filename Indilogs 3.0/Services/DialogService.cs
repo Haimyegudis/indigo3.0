@@ -24,14 +24,20 @@ namespace IndiLogs_3._0.Services
             MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
-        public MessageBoxResult ShowConfirm(string message, string title = "Confirm")
+        public DialogResult ShowConfirm(string message, string title = "Confirm")
         {
-            return MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Question);
+            return MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Question)
+                == MessageBoxResult.Yes ? DialogResult.Yes : DialogResult.No;
         }
 
-        public MessageBoxResult ShowYesNoCancel(string message, string title = "Confirm")
+        public DialogResult ShowYesNoCancel(string message, string title = "Confirm")
         {
-            return MessageBox.Show(message, title, MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+            return MessageBox.Show(message, title, MessageBoxButton.YesNoCancel, MessageBoxImage.Question) switch
+            {
+                MessageBoxResult.Yes => DialogResult.Yes,
+                MessageBoxResult.No  => DialogResult.No,
+                _                    => DialogResult.Cancel
+            };
         }
     }
 }

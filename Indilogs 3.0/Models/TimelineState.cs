@@ -1,5 +1,4 @@
-#nullable disable
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Windows.Media;
 
@@ -7,7 +6,7 @@ namespace IndiLogs_3._0.Models
 {
     public class TimelineState
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = "";
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public TimeSpan Duration => EndTime - StartTime;
@@ -15,7 +14,7 @@ namespace IndiLogs_3._0.Models
         public bool Success { get; set; }
         public int ErrorCount { get; set; }
         public int EventCount { get; set; }
-        public string Status { get; set; } // SUCCESS / FAILED / WARNING / RUNNING
+        public string? Status { get; set; } // SUCCESS / FAILED / WARNING / RUNNING
 
         // List of logs that belong to this state (for the table below)
         public List<LogEntry> RelatedLogs { get; set; } = new List<LogEntry>();

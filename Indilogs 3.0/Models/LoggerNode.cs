@@ -1,5 +1,4 @@
-#nullable disable
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -7,8 +6,8 @@ namespace IndiLogs_3._0.Models
 {
     public class LoggerNode : INotifyPropertyChanged
     {
-        public string Name { get; set; }        // Node name (e.g. "indigo")
-        public string FullPath { get; set; }    // Full path (e.g. "com.indigo")
+        public string Name { get; set; } = "";        // Node name (e.g. "indigo")
+        public string FullPath { get; set; } = "";    // Full path (e.g. "com.indigo")
         public int Count { get; set; }          // Number of logs under this node
         public ObservableCollection<LoggerNode> Children { get; set; } = new ObservableCollection<LoggerNode>();
 
@@ -44,8 +43,8 @@ namespace IndiLogs_3._0.Models
 
         public string DisplayText => $"{Name} ({Count})";
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string name = null)
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

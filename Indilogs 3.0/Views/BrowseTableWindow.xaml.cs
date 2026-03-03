@@ -125,7 +125,7 @@ namespace IndiLogs_3._0.Views
                         // Clean up temp file on error
                         CleanupTempFile();
 
-                        Dispatcher.Invoke(() =>
+                        Dispatcher.BeginInvoke(() =>
                         {
                             MessageBox.Show($"Error loading table data: {ex.Message}", "Error",
                                 MessageBoxButton.OK, MessageBoxImage.Error);
@@ -206,7 +206,7 @@ namespace IndiLogs_3._0.Views
                 compactTable = CreateCompactTable(dataTable);
 
                 // Update UI on main thread
-                Dispatcher.Invoke(() =>
+                Dispatcher.BeginInvoke(() =>
                 {
                     _dataTable = compactTable;
                     _filteredView = _dataTable.DefaultView;

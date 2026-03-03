@@ -8,6 +8,7 @@ using System.Windows;
 using IndiLogs_3._0.Models.Grep;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Grep;
+using IndiLogs_3._0.Services.Interfaces;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 
@@ -55,7 +56,7 @@ namespace IndiLogs_3._0.ViewModels
         private void DeleteSelectedProfile()
         {
             if (SelectedProfile == null) return;
-            if (_dialogService.ShowConfirm($"Delete profile '{SelectedProfile}'?", "Confirm") != MessageBoxResult.Yes) return;
+            if (_dialogService.ShowConfirm($"Delete profile '{SelectedProfile}'?", "Confirm") != DialogResult.Yes) return;
             _configService.DeleteProfile(SelectedProfile);
             RefreshSavedProfiles();
         }
