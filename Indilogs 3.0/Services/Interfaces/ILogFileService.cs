@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using System;
 using System.Collections.Generic;
@@ -10,12 +9,12 @@ namespace IndiLogs_3._0.Services.Interfaces
 {
     public interface ILogFileService
     {
-        Task<LogSessionData> LoadSessionAsync(string[] filePaths, IProgress<(double, string)> progress, TabSelectionConfig tabSelection = null);
-        TabSelectionConfig PreScanZip(string zipPath);
+        Task<LogSessionData> LoadSessionAsync(string[] filePaths, IProgress<(double, string)> progress, TabSelectionConfig? tabSelection = null);
+        TabSelectionConfig? PreScanZip(string zipPath);
         Task ReloadComponentAsync(LogSessionData session, string componentName, IProgress<(double, string)> progress);
         List<EventEntry> ParseEventsCsv(Stream stream);
         List<LogEntry> ParseLogStreamPartial(Stream stream);
-        (List<LogEntry> AllLogs, List<LogEntry> Transitions, List<LogEntry> Failures) ParseLogStream(Stream stream, StringPool pool = null);
+        (List<LogEntry> AllLogs, List<LogEntry> Transitions, List<LogEntry> Failures) ParseLogStream(Stream stream, StringPool? pool = null);
         (List<LogEntry> NewEntries, int TotalCount) ParseLogStreamSkipExisting(Stream stream, int skipCount);
         IPluginLoader GetPluginLoader();
     }

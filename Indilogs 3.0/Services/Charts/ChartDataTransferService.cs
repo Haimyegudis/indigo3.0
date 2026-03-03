@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +13,7 @@ namespace IndiLogs_3._0.Services.Charts
     /// </summary>
     public class ChartDataTransferService
     {
-        private static ChartDataTransferService _instance;
+        private static ChartDataTransferService? _instance;
         private static readonly object _lock = new object();
 
         public static ChartDataTransferService Instance
@@ -40,27 +39,27 @@ namespace IndiLogs_3._0.Services.Charts
         /// <summary>
         /// Event fired when new data is ready for the Charts tab
         /// </summary>
-        public event Action<ChartDataPackage> OnDataReady;
+        public event Action<ChartDataPackage>? OnDataReady;
 
         /// <summary>
         /// Event fired when user requests to switch to Charts tab
         /// </summary>
-        public event Action OnSwitchToChartsRequested;
+        public event Action? OnSwitchToChartsRequested;
 
         /// <summary>
         /// Event fired when log selection changes (for Log -> Chart sync)
         /// </summary>
-        public event Action<DateTime> OnLogTimeSelected;
+        public event Action<DateTime>? OnLogTimeSelected;
 
         /// <summary>
         /// Event fired when chart cursor moves (for Chart -> Log sync)
         /// </summary>
-        public event Action<DateTime> OnChartTimeSelected;
+        public event Action<DateTime>? OnChartTimeSelected;
 
         /// <summary>
         /// Current data package available for charts
         /// </summary>
-        public ChartDataPackage CurrentData { get; private set; }
+        public ChartDataPackage? CurrentData { get; private set; }
 
         /// <summary>
         /// Transfers log data directly to charts without file export
@@ -111,8 +110,8 @@ namespace IndiLogs_3._0.Services.Charts
             IEnumerable<LogEntry> logs,
             ExportPreset preset,
             string sessionName,
-            IProgress<(double pct, string msg)> progress = null,
-            IProgress<(string signal, string status)> signalProgress = null)
+            IProgress<(double pct, string msg)>? progress = null,
+            IProgress<(string signal, string status)>? signalProgress = null)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
             AppLogger.Info($"[ChartBuild] Starting BuildDataPackage for '{sessionName}'");
@@ -340,7 +339,7 @@ namespace IndiLogs_3._0.Services.Charts
             List<string> selectedComponents,
             int dataLength,
             Dictionary<DateTime, int> timeIndexLookup,
-            IProgress<(string signal, string status)> signalProgress = null)
+            IProgress<(string signal, string status)>? signalProgress = null)
         {
             // Two-level selection: subsystem → set of component names (no string concat per field)
             var selectionBySubsystem = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
@@ -579,7 +578,7 @@ namespace IndiLogs_3._0.Services.Charts
             List<string> selectedComponents,
             int dataLength,
             Dictionary<DateTime, int> timeIndexLookup,
-            IProgress<(string signal, string status)> signalProgress = null)
+            IProgress<(string signal, string status)>? signalProgress = null)
         {
             // Two-level selection: subsystem → set of motors (no string concat per log)
             var selectionBySubsystem = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
@@ -887,7 +886,7 @@ namespace IndiLogs_3._0.Services.Charts
         /// S6 transitions: PlcMngr: STATE1 -> STATE2 (already filtered during classification).
         /// S4-5 fallback: ==== STATE_XXX - Enter (already filtered during classification).
         /// </summary>
-        private StateData ParseMachineState(
+        private StateData? ParseMachineState(
             List<LogEntry> s6TransitionLogs,
             List<LogEntry> s4StateLogs,
             int dataLength,
@@ -1183,17 +1182,17 @@ namespace IndiLogs_3._0.Services.Charts
     /// </summary>
     public class ChartDataPackage
     {
-        public string SessionName { get; set; }
+        public string SessionName { get; set; } = "";
         public DateTime CreatedAt { get; set; }
-        public List<DateTime> TimeStamps { get; set; }
-        public List<SignalData> Signals { get; set; }
-        public List<StateData> States { get; set; }
-        public List<ThreadMessageData> ThreadMessages { get; set; }
-        public List<EventMarkerData> Events { get; set; }
+        public List<DateTime> TimeStamps { get; set; } = new();
+        public List<SignalData> Signals { get; set; } = new();
+        public List<StateData> States { get; set; } = new();
+        public List<ThreadMessageData> ThreadMessages { get; set; } = new();
+        public List<EventMarkerData> Events { get; set; } = new();
         /// <summary>When true, ChartTabControl skips gap detection (used for IO terminal data).</summary>
         public bool SuppressGapDetection { get; set; }
         /// <summary>EM_Statistics CSV content for Gantt chart display (optional, from ZIP extraction).</summary>
-        public string EmStatisticsCsvContent { get; set; }
+        public string? EmStatisticsCsvContent { get; set; }
     }
 
     /// <summary>
@@ -1201,11 +1200,11 @@ namespace IndiLogs_3._0.Services.Charts
     /// </summary>
     public class EventMarkerData
     {
-        public string Name { get; set; }
-        public string State { get; set; }
-        public string Severity { get; set; }
-        public string Description { get; set; }
-        public string Parameters { get; set; }
+        public string Name { get; set; } = "";
+        public string State { get; set; } = "";
+        public string Severity { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Parameters { get; set; } = "";
         public DateTime TimeStamp { get; set; }
         public int TimeIndex { get; set; }
     }
@@ -1215,8 +1214,8 @@ namespace IndiLogs_3._0.Services.Charts
     /// </summary>
     public class SignalData
     {
-        public string Name { get; set; }
-        public string Category { get; set; }
+        public string Name { get; set; } = "";
+        public string Category { get; set; } = "";
         public SignalType SignalType { get; set; }
 
         /// <summary>
@@ -1232,15 +1231,15 @@ namespace IndiLogs_3._0.Services.Charts
         }
 
         /// <summary>Sparse data points collected during parsing (index → value).</summary>
-        internal List<KeyValuePair<int, double>> SparsePoints { get; set; }
+        internal List<KeyValuePair<int, double>>? SparsePoints { get; set; }
 
-        private double[] _data;
+        private double[]? _data;
 
         /// <summary>
         /// Dense data array. Lazy-materialized from SparsePoints on first access
         /// (avoids ~13GB upfront allocation when only a few signals are charted).
         /// </summary>
-        public double[] Data
+        public double[]? Data
         {
             get
             {
@@ -1288,9 +1287,9 @@ namespace IndiLogs_3._0.Services.Charts
     /// </summary>
     public class StateData
     {
-        public string Name { get; set; }
-        public string Category { get; set; }
-        public List<StateInterval> Intervals { get; set; }
+        public string Name { get; set; } = "";
+        public string Category { get; set; } = "";
+        public List<StateInterval> Intervals { get; set; } = new();
     }
 
     /// <summary>
@@ -1299,8 +1298,8 @@ namespace IndiLogs_3._0.Services.Charts
     public class ThreadMessageData
     {
         public int TimeIndex { get; set; }
-        public string ThreadName { get; set; }
-        public string Message { get; set; }
+        public string ThreadName { get; set; } = "";
+        public string Message { get; set; } = "";
         public DateTime TimeStamp { get; set; }
     }
 

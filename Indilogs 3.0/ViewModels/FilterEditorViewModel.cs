@@ -1,5 +1,4 @@
-#nullable disable
-﻿using IndiLogs_3._0.Models;
+using IndiLogs_3._0.Models;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Input;

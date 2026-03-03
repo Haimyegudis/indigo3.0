@@ -377,8 +377,11 @@ namespace IndiLogs_3._0.Services
         {
             get
             {
-                string exeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
-                return Path.Combine(exeDir, "update-credentials.dat");
+                string dir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "IndiLogs3.0");
+                Directory.CreateDirectory(dir);
+                return Path.Combine(dir, "update-credentials.dat");
             }
         }
 

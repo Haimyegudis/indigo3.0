@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using System;
 using System.Collections.Generic;
@@ -17,11 +16,11 @@ namespace IndiLogs_3._0.Services.Interfaces
             bool searchException,
             bool searchMethod,
             bool searchData,
-            IProgress<(int current, int total, string status)> progress,
+            IProgress<(int current, int total, string status)>? progress,
             CancellationToken cancellationToken);
 
         Task<List<GrepResult>> SearchExternalFilesAsync(
             string path, string searchQuery, bool useRegex, bool searchPLC, bool searchAPP,
-            IProgress<(int current, int total, string status)> progress, CancellationToken cancellationToken);
+            IProgress<(int current, int total, string status)>? progress, CancellationToken cancellationToken);
     }
 }

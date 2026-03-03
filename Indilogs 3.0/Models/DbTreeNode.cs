@@ -1,4 +1,3 @@
-#nullable disable
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -9,9 +8,9 @@ namespace IndiLogs_3._0.Models
     {
         private bool _isExpanded = false;
         private bool _isVisible = true;
-        private string _name;
-        private string _type;
-        private string _schema;
+        private string _name = "";
+        private string _type = "";
+        private string _schema = "";
 
         // Name column (table name, column name, or value identifier)
         public string Name
@@ -35,10 +34,10 @@ namespace IndiLogs_3._0.Models
         }
 
         // Node type: "Root", "Table", "Column", "DataRow"
-        public string NodeType { get; set; }
+        public string NodeType { get; set; } = "";
 
         // Store reference to parent database file name
-        public string DatabaseFileName { get; set; }
+        public string DatabaseFileName { get; set; } = "";
 
         // For data rows - stores the actual row data as key-value pairs
         public ObservableCollection<DbFieldValue> FieldValues { get; set; } = new ObservableCollection<DbFieldValue>();
@@ -57,20 +56,20 @@ namespace IndiLogs_3._0.Models
 
         public ObservableCollection<DbTreeNode> Children { get; set; } = new ObservableCollection<DbTreeNode>();
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string name = null)
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
     // Represents a field value in a data row
     public class DbFieldValue : INotifyPropertyChanged
     {
-        public string ColumnName { get; set; }
-        public string Value { get; set; }
-        public string Type { get; set; }
+        public string ColumnName { get; set; } = "";
+        public string Value { get; set; } = "";
+        public string Type { get; set; } = "";
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string name = null)
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

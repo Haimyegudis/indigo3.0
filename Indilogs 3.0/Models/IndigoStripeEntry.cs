@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 
 namespace IndiLogs_3._0.Models
@@ -13,7 +12,7 @@ namespace IndiLogs_3._0.Models
         public DateTime Timestamp { get; set; }
         public int SpreadId { get; set; }
         public int StripeId { get; set; }
-        public string StripeType { get; set; } // Print-Image / Null-Gap
+        public string StripeType { get; set; } = ""; // Print-Image / Null-Gap
         public double LengthMm { get; set; }
         public double LengthNotScaledMm { get; set; }
 
@@ -26,7 +25,7 @@ namespace IndiLogs_3._0.Models
 
         // === Ink Info ===
         public int InkId { get; set; }
-        public string InkName { get; set; }
+        public string InkName { get; set; } = "";
         public bool IsStationActive { get; set; }
 
         // === BID Data (Binary Image Developer) ===
@@ -50,19 +49,19 @@ namespace IndiLogs_3._0.Models
         public int EmMeasureId { get; set; }
 
         // === HV Target ===
-        public string HvTarget { get; set; }
+        public string HvTarget { get; set; } = "";
 
         // === SPM Data (Spectrophotometer) ===
-        public string SpmStatus { get; set; }
+        public string SpmStatus { get; set; } = "";
         public int SpmMeasureId { get; set; }
-        public string SpmScanDirection { get; set; }
-        public string SpmMeasureMode { get; set; }
+        public string SpmScanDirection { get; set; } = "";
+        public string SpmMeasureMode { get; set; } = "";
         public int SpmNumOfStrips { get; set; }
 
         // === ILS Data (Inline Scanner) ===
         public bool IlsIsActive { get; set; }
         public int IlsScanLenUm { get; set; }
-        public string IlsScanMode { get; set; }
+        public string IlsScanMode { get; set; } = "";
         public int IlsScanSpeedUmSec { get; set; }
 
         // === Position Data ===
@@ -80,7 +79,7 @@ namespace IndiLogs_3._0.Models
         // === Other Stripe Properties ===
         public bool LastStripeInSpread { get; set; }
         public bool ImageToBru { get; set; }
-        public string DataTransferControl { get; set; }
+        public string DataTransferControl { get; set; } = "";
         public bool ReportPrintDetails { get; set; }
         public int ReportId { get; set; }
         public int NSliceGroups { get; set; }

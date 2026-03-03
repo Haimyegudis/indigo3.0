@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -32,14 +31,14 @@ namespace IndiLogs_3._0.Services.Grep
             AppLogger.Info($"[Grep] Profile '{profile.Name}' saved to {path}");
         }
 
-        public SearchProfile LoadProfile(string name)
+        public SearchProfile? LoadProfile(string name)
         {
             string path = GetProfilePath(name);
             if (!File.Exists(path)) return null;
             return JsonConvert.DeserializeObject<SearchProfile>(File.ReadAllText(path));
         }
 
-        public SearchProfile LoadProfileFromFile(string filePath)
+        public SearchProfile? LoadProfileFromFile(string filePath)
         {
             if (!File.Exists(filePath)) return null;
             return JsonConvert.DeserializeObject<SearchProfile>(File.ReadAllText(filePath));
@@ -68,6 +67,7 @@ namespace IndiLogs_3._0.Services.Grep
             if (!File.Exists(oldPath) || File.Exists(newPath)) return false;
 
             var profile = LoadProfile(oldName);
+            if (profile == null) return false;
             profile.Name = newName;
             File.Delete(oldPath);
             SaveProfile(profile);
@@ -85,7 +85,7 @@ namespace IndiLogs_3._0.Services.Grep
         /// <summary>
         /// Imports a profile from an arbitrary file path.
         /// </summary>
-        public SearchProfile ImportProfile(string filePath)
+        public SearchProfile? ImportProfile(string filePath)
         {
             var profile = JsonConvert.DeserializeObject<SearchProfile>(File.ReadAllText(filePath));
             if (profile != null)

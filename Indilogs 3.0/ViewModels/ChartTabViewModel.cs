@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.ComponentModel;
 using IndiLogs_3._0.Controls.Charts;
@@ -11,8 +10,8 @@ namespace IndiLogs_3._0.ViewModels
     /// </summary>
     public class ChartTabViewModel : ViewModelBase
     {
-        private MainViewModel _mainViewModel;
-        private ChartTabControl _chartControl;
+        private MainViewModel? _mainViewModel;
+        private ChartTabControl? _chartControl;
 
         public ChartTabViewModel(MainViewModel mainViewModel)
         {
@@ -22,7 +21,7 @@ namespace IndiLogs_3._0.ViewModels
         /// <summary>
         /// Set the chart control reference for bidirectional communication
         /// </summary>
-        public void SetChartControl(ChartTabControl control)
+        public void SetChartControl(ChartTabControl? control)
         {
             if (_chartControl != null)
             {
@@ -61,7 +60,7 @@ namespace IndiLogs_3._0.ViewModels
         /// <summary>
         /// Saves the current chart state for per-session persistence.
         /// </summary>
-        public SessionChartState SaveChartState()
+        public SessionChartState? SaveChartState()
         {
             return _chartControl?.SaveChartState();
         }
@@ -69,7 +68,7 @@ namespace IndiLogs_3._0.ViewModels
         /// <summary>
         /// Restores a previously saved chart state (or clears if null).
         /// </summary>
-        public bool RestoreChartState(SessionChartState state)
+        public bool RestoreChartState(SessionChartState? state)
         {
             return _chartControl?.RestoreChartState(state) ?? false;
         }

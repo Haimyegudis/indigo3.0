@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Globalization;
 using System.Windows.Data;
@@ -11,13 +10,12 @@ namespace IndiLogs_3._0.Converters
     /// </summary>
     public class AnnotationTextBrushConverter : IValueConverter
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
-            // Always return black text for annotations (yellow background)
             return Brushes.Black;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }

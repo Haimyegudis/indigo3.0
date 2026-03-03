@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -7,7 +6,7 @@ namespace IndiLogs_3._0.Models
 {
     public class ExportPreset
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = "";
         public DateTime CreatedDate { get; set; }
 
         public bool IncludeUnixTime { get; set; }
@@ -37,8 +36,8 @@ namespace IndiLogs_3._0.Models
     public class SelectableItem : INotifyPropertyChanged
     {
         private bool _isSelected;
-        private string _name;
-        private string _category;
+        private string _name = "";
+        private string _category = "";
 
         public string Name
         {
@@ -58,7 +57,7 @@ namespace IndiLogs_3._0.Models
             set { _isSelected = value; OnPropertyChanged(nameof(IsSelected)); }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         protected void OnPropertyChanged(string propertyName)
         {

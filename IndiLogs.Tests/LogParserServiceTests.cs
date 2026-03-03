@@ -6,7 +6,7 @@ namespace IndiLogs.Tests
 {
     public class LogParserServiceTests
     {
-        private LogEntry MakeEntry(string message, string level = null)
+        private LogEntry MakeEntry(string message, string level = "")
         {
             return new LogEntry { Message = message, Level = level };
         }
@@ -30,11 +30,11 @@ namespace IndiLogs.Tests
         }
 
         [Fact]
-        public void ParseLogEntry_NoPattern_LeavesNull()
+        public void ParseLogEntry_NoPattern_LeavesEmpty()
         {
             var entry = MakeEntry("Just a regular log message");
             LogParserService.ParseLogEntry(entry);
-            Assert.Null(entry.Pattern);
+            Assert.Empty(entry.Pattern);
         }
 
         // ── Data extraction ──
@@ -90,7 +90,7 @@ namespace IndiLogs.Tests
         {
             var entry = MakeEntry("This is a normal info log", "Error");
             LogParserService.ParseLogEntry(entry);
-            Assert.Null(entry.Exception);
+            Assert.Empty(entry.Exception);
         }
 
         // ── Edge cases ──
@@ -107,9 +107,9 @@ namespace IndiLogs.Tests
         {
             var entry = new LogEntry { Message = null };
             LogParserService.ParseLogEntry(entry);
-            Assert.Null(entry.Pattern);
-            Assert.Null(entry.Data);
-            Assert.Null(entry.Exception);
+            Assert.Empty(entry.Pattern);
+            Assert.Empty(entry.Data);
+            Assert.Empty(entry.Exception);
         }
 
         [Fact]
@@ -117,7 +117,7 @@ namespace IndiLogs.Tests
         {
             var entry = MakeEntry("");
             LogParserService.ParseLogEntry(entry);
-            Assert.Null(entry.Pattern);
+            Assert.Empty(entry.Pattern);
         }
 
         [Fact]

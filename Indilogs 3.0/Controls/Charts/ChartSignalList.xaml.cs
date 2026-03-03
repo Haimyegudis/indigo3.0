@@ -48,7 +48,6 @@ namespace IndiLogs_3._0.Controls.Charts
 
         private List<SignalListItem> _allItems = new List<SignalListItem>();
         private List<SignalListItem> _filteredItems = new List<SignalListItem>();
-        private SignalItemCategory _currentCategory = SignalItemCategory.All;
 
         // Debounce timer for search
         private DispatcherTimer _searchDebounceTimer;

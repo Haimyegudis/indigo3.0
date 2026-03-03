@@ -1,5 +1,4 @@
-#nullable disable
-﻿using IndiLogs_3._0.Models;
+using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using System;
 using System.Collections.Generic;
@@ -18,8 +17,8 @@ namespace IndiLogs_3._0.ViewModels
         public ObservableCollection<TimelineState> States { get; set; } = new ObservableCollection<TimelineState>();
         public ObservableCollection<TimelineMarker> Markers { get; set; } = new ObservableCollection<TimelineMarker>();
 
-        private TimelineState _selectedState;
-        public TimelineState SelectedState
+        private TimelineState? _selectedState;
+        public TimelineState? SelectedState
         {
             get => _selectedState;
             set
@@ -77,7 +76,7 @@ namespace IndiLogs_3._0.ViewModels
             @"STATE_(\w+)\s*-\s*(Enter|Exit)",
             RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(2));
 
-        public void LoadData(IEnumerable<LogEntry> logs, IEnumerable<EventEntry> events)
+        public void LoadData(IEnumerable<LogEntry> logs, IEnumerable<EventEntry>? events)
         {
             Clear();
 

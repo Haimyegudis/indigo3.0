@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -401,7 +400,7 @@ namespace IndiLogs_3._0.Controls
 
         #region Helpers
 
-        private static T FindParent<T>(DependencyObject child) where T : DependencyObject
+        private static T? FindParent<T>(DependencyObject child) where T : DependencyObject
         {
             var parent = VisualTreeHelper.GetParent(child);
             while (parent != null)

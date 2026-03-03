@@ -1,4 +1,3 @@
-#nullable disable
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
@@ -51,9 +50,9 @@ namespace IndiLogs_3._0.Controls
         /// <summary>
         /// The diff segments to display with highlighting.
         /// </summary>
-        public IList<DiffSegment> DiffSegments
+        public IList<DiffSegment>? DiffSegments
         {
-            get => (IList<DiffSegment>)GetValue(DiffSegmentsProperty);
+            get => (IList<DiffSegment>?)GetValue(DiffSegmentsProperty);
             set => SetValue(DiffSegmentsProperty, value);
         }
 

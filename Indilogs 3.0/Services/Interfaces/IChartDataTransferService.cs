@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services.Charts;
 using System;
@@ -8,10 +7,10 @@ namespace IndiLogs_3._0.Services.Interfaces
 {
     public interface IChartDataTransferService
     {
-        event Action<ChartDataPackage> OnDataReady;
-        event Action OnSwitchToChartsRequested;
-        event Action<DateTime> OnLogTimeSelected;
-        event Action<DateTime> OnChartTimeSelected;
+        event Action<ChartDataPackage>? OnDataReady;
+        event Action? OnSwitchToChartsRequested;
+        event Action<DateTime>? OnLogTimeSelected;
+        event Action<DateTime>? OnChartTimeSelected;
 
         void TransferDataToCharts(ChartDataPackage data);
         void RequestSwitchToCharts();

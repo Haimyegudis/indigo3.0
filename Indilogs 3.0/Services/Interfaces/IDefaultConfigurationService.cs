@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 
 namespace IndiLogs_3._0.Services.Interfaces

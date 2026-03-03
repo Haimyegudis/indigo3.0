@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -11,16 +10,16 @@ namespace IndiLogs_3._0.Models.Grep
         public bool IsEnabled { get; set; }
 
         // ── SMTP Settings ──
-        public string SmtpHost { get; set; }
+        public string SmtpHost { get; set; } = "";
         public int SmtpPort { get; set; } = 25;
         public bool UseSsl { get; set; }
         public SmtpAuthMode AuthMode { get; set; } = SmtpAuthMode.WindowsIntegrated;
-        public string SmtpUsername { get; set; }
+        public string SmtpUsername { get; set; } = "";
 
         /// <summary>
         /// DPAPI-encrypted SMTP password (Base64). Serialized to JSON.
         /// </summary>
-        public string EncryptedSmtpPassword { get; set; }
+        public string? EncryptedSmtpPassword { get; set; }
 
         /// <summary>
         /// Runtime-only accessor for the plaintext password.
@@ -29,7 +28,7 @@ namespace IndiLogs_3._0.Models.Grep
         /// Falls back to reading legacy plaintext SmtpPasswordLegacy if EncryptedSmtpPassword is empty.
         /// </summary>
         [Newtonsoft.Json.JsonIgnore]
-        public string SmtpPassword
+        public string? SmtpPassword
         {
             get
             {
@@ -90,9 +89,9 @@ namespace IndiLogs_3._0.Models.Grep
         /// New saves will use EncryptedSmtpPassword instead.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("SmtpPassword")]
-        public string SmtpPasswordLegacy { get; set; }
+        public string? SmtpPasswordLegacy { get; set; }
 
-        public string FromAddress { get; set; }
+        public string FromAddress { get; set; } = "";
         public string FromDisplayName { get; set; } = "IndiLogs 3.0";
 
         // ── Recipients ──
@@ -109,7 +108,7 @@ namespace IndiLogs_3._0.Models.Grep
         /// <summary>
         /// Custom email subject. If empty, auto-generated from schedule name + status.
         /// </summary>
-        public string CustomSubject { get; set; }
+        public string? CustomSubject { get; set; }
     }
 
     public enum EmailTiming

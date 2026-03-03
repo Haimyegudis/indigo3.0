@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Globalization;
 using System.Windows;
@@ -8,7 +7,7 @@ namespace IndiLogs_3._0.Converters
 {
     public class BoolToVisibilityConverter : IValueConverter
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value is bool boolValue)
             {
@@ -17,7 +16,7 @@ namespace IndiLogs_3._0.Converters
             return Visibility.Collapsed;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value is Visibility visibility)
             {
@@ -29,7 +28,7 @@ namespace IndiLogs_3._0.Converters
 
     public class InverseBoolToVisibilityConverter : IValueConverter
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value is bool boolValue)
             {
@@ -38,7 +37,7 @@ namespace IndiLogs_3._0.Converters
             return Visibility.Visible;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value is Visibility visibility)
             {
@@ -50,14 +49,14 @@ namespace IndiLogs_3._0.Converters
 
     public class NullToVisibilityConverter : IValueConverter
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             return value != null && !string.IsNullOrEmpty(value.ToString())
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }
@@ -68,7 +67,7 @@ namespace IndiLogs_3._0.Converters
         public string TrueValue { get; set; } = "◀";
         public string FalseValue { get; set; } = "▶";
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value is bool boolValue)
             {
@@ -77,7 +76,7 @@ namespace IndiLogs_3._0.Converters
             return FalseValue;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }

@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using System;
 using System.Collections.Generic;
@@ -28,7 +27,7 @@ namespace IndiLogs_3._0.Services
         private class Token
         {
             public TokenType Type { get; set; }
-            public string Value { get; set; }
+            public string Value { get; set; } = "";
             public int Position { get; set; }
 
             public Token(TokenType type, string value, int position)
@@ -39,9 +38,9 @@ namespace IndiLogs_3._0.Services
             }
         }
 
-        private List<Token> _tokens;
+        private List<Token> _tokens = new();
         private int _currentTokenIndex;
-        private string _originalQuery;
+        private string _originalQuery = "";
 
         /// <summary>
         /// Parses a boolean search query into a FilterNode tree.
@@ -49,7 +48,7 @@ namespace IndiLogs_3._0.Services
         /// <param name="query">The search query string</param>
         /// <param name="errorMessage">Error message if parsing fails</param>
         /// <returns>FilterNode tree, or null if parsing fails</returns>
-        public FilterNode Parse(string query, out string errorMessage)
+        public FilterNode? Parse(string? query, out string? errorMessage)
         {
             errorMessage = null;
             _originalQuery = query;

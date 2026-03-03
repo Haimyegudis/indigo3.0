@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Globalization;
 using System.Windows;
@@ -12,7 +11,7 @@ namespace IndiLogs_3._0.Converters
     /// </summary>
     public class ScreenshotWidthConverter : IMultiValueConverter
     {
-        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        public object Convert(object?[] values, Type targetType, object? parameter, CultureInfo culture)
         {
             if (values.Length >= 2 &&
                 values[0] is double zoom &&
@@ -23,7 +22,7 @@ namespace IndiLogs_3._0.Converters
             return double.NaN;
         }
 
-        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        public object?[] ConvertBack(object? value, Type[] targetTypes, object? parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }
@@ -38,7 +37,7 @@ namespace IndiLogs_3._0.Converters
     {
         private const double BaseZoom = 400.0;
 
-        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        public object Convert(object?[] values, Type targetType, object? parameter, CultureInfo culture)
         {
             if (values.Length >= 2 &&
                 values[0] is double zoom &&
@@ -46,14 +45,13 @@ namespace IndiLogs_3._0.Converters
             {
                 if (count == 1)
                 {
-                    // Scale relative to base: zoom=400 → 1.0, zoom=800 → 2.0, zoom=200 → 0.5
                     return Math.Max(0.1, zoom / BaseZoom);
                 }
             }
             return 1.0;
         }
 
-        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        public object?[] ConvertBack(object? value, Type[] targetTypes, object? parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }

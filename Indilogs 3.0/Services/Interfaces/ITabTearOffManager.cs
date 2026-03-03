@@ -1,4 +1,3 @@
-#nullable disable
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,10 +10,10 @@ namespace IndiLogs_3._0.Services.Interfaces
         void Initialize(Window mainWindow, TabControl mainTabControl);
         bool IsTabDetachable(TabItem tabItem);
         bool IsTabDetached(string header);
-        DetachedTabWindow DetachTab(TabItem tabItem, Point screenPosition);
+        DetachedTabWindow? DetachTab(TabItem tabItem, Point screenPosition);
         void ReattachTab(string header);
         void ReattachAll();
-        T GetDetachedControl<T>(string tabHeader) where T : class;
+        T? GetDetachedControl<T>(string tabHeader) where T : class;
         IEnumerable<DetachedTabWindow> GetDetachedWindows();
         int GetAttachedTabCount();
     }

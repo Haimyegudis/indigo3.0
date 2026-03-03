@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -12,14 +11,14 @@ namespace IndiLogs_3._0.Models.Grep
     {
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        private string _name;
+        private string _name = "";
         public string Name
         {
             get => _name;
             set { _name = value; OnPropertyChanged(); }
         }
 
-        private string _address;
+        private string _address = "";
         /// <summary>
         /// IP address or hostname of the machine.
         /// </summary>
@@ -29,7 +28,7 @@ namespace IndiLogs_3._0.Models.Grep
             set { _address = value; OnPropertyChanged(); }
         }
 
-        private string _basePath;
+        private string _basePath = "";
         /// <summary>
         /// UNC path or mapped drive path to the log directory.
         /// When Address is set, this can be auto-built as \\Address\share.
@@ -61,8 +60,8 @@ namespace IndiLogs_3._0.Models.Grep
             set { _lastAccessed = value; OnPropertyChanged(); }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string name = null)
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 

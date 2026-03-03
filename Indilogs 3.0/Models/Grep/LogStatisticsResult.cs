@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using IndiLogs_3._0.Views;
@@ -46,7 +45,7 @@ namespace IndiLogs_3._0.Models.Grep
     /// </summary>
     public class StatCount
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = "";
         public int Count { get; set; }
     }
 }

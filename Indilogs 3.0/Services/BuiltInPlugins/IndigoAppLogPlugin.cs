@@ -1,4 +1,3 @@
-#nullable disable
 /*
  * IndigoAppLogPlugin — IndiLogs 3.0 Built-in Parser
  * ===================================================
@@ -59,7 +58,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             @"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3,7}\s+\|[^|]*\|\s+\|",
             RegexOptions.Compiled, TimeSpan.FromSeconds(2));
 
-        public bool CanHandle(string fileName, string[] sampleLines)
+        public bool CanHandle(string fileName, string[]? sampleLines)
         {
             if (sampleLines == null || sampleLines.Length == 0) return false;
 
@@ -122,7 +121,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
 
         public IEnumerable<LogEntryDto> Parse(
             Stream stream, ParseContext context,
-            IProgress<double> progress, CancellationToken ct)
+            IProgress<double>? progress, CancellationToken ct)
         {
             stream.Position = 0;
             long totalBytes = stream.CanSeek ? stream.Length : 0;
@@ -133,7 +132,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             using (var reader = new StreamReader(stream, Encoding.UTF8,
                        detectEncodingFromByteOrderMarks: true, bufferSize: 65536, leaveOpen: true))
             {
-                string line;
+                string? line;
                 int lineNum = 0;
 
                 while ((line = reader.ReadLine()) != null)
@@ -185,7 +184,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
 
         // ── Format-specific parsers ────────────────────────────────────────────
 
-        private static LogEntryDto TryParseOld(string text)
+        private static LogEntryDto? TryParseOld(string text)
         {
             try
             {
@@ -210,7 +209,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             catch (Exception ex) { AppLogger.Error("TryParseOld failed", ex); return null; }
         }
 
-        private static LogEntryDto TryParseNew(string text)
+        private static LogEntryDto? TryParseNew(string text)
         {
             try
             {
@@ -287,7 +286,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             return DateTime.Now;
         }
 
-        private static string NormalizeLevel(string raw)
+        private static string NormalizeLevel(string? raw)
         {
             if (raw == null) return "Info";
             string u = raw.ToUpperInvariant().Trim();

@@ -1,4 +1,3 @@
-#nullable disable
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -21,7 +20,7 @@ namespace IndiLogs_3._0.Models
             return brush;
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         // ===== ANNOTATION PROPERTIES =====
         private bool _isAnnotationExpanded;
@@ -38,7 +37,7 @@ namespace IndiLogs_3._0.Models
                 }
             }
         }
-        private string _annotationContent;
+        private string _annotationContent = "";
         public string AnnotationContent
         {
             get => _annotationContent;
@@ -78,19 +77,19 @@ namespace IndiLogs_3._0.Models
         }
 
         // ===== BASIC LOG PROPERTIES =====
-        public string Level { get; set; }
+        public string Level { get; set; } = "";
         public DateTime Date { get; set; }
         public DateTime? SyncedTime { get; set; }  // PLC time adjusted to APP clock
-        public string ThreadName { get; set; }
-        public string Message { get; set; }
-        public string Logger { get; set; }
-        public string ProcessName { get; set; }
-        public string Method { get; set; }
+        public string ThreadName { get; set; } = "";
+        public string Message { get; set; } = "";
+        public string Logger { get; set; } = "";
+        public string ProcessName { get; set; } = "";
+        public string Method { get; set; } = "";
 
         // ===== PARSED FIELDS =====
-        public string Pattern { get; set; }
-        public string Data { get; set; }
-        public string Exception { get; set; }
+        public string Pattern { get; set; } = "";
+        public string Data { get; set; } = "";
+        public string Exception { get; set; } = "";
 
         // ===== PLUGIN EXTRA FIELDS =====
         /// <summary>
@@ -99,7 +98,7 @@ namespace IndiLogs_3._0.Models
         /// Bound in the DataGrid as ExtraFields[key] when a plugin provides
         /// custom column definitions via ILogFilePlugin.GetColumns().
         /// </summary>
-        public Dictionary<string, string> ExtraFields { get; set; }
+        public Dictionary<string, string>? ExtraFields { get; set; }
 
         // ===== MARKING & COLORING =====
         private bool _isMarked;
@@ -171,7 +170,7 @@ namespace IndiLogs_3._0.Models
         public bool HasSystemDefaultColor => SystemDefaultColor.HasValue;
 
         // Cached brush for SystemDefaultColor
-        private Brush _cachedSystemBrush;
+        private Brush? _cachedSystemBrush;
         private Color? _cachedSystemBrushColor;
 
         /// <summary>
@@ -213,8 +212,8 @@ namespace IndiLogs_3._0.Models
         }
 
         // Legacy property for compatibility - will be removed
-        private Brush _rowForeground;
-        public Brush RowForeground
+        private Brush? _rowForeground;
+        public Brush? RowForeground
         {
             get => _rowForeground;
             set
@@ -228,7 +227,7 @@ namespace IndiLogs_3._0.Models
         }
 
         // Cached brush for CustomColor to avoid creating new instances on every access
-        private Brush _cachedCustomBrush;
+        private Brush? _cachedCustomBrush;
         private Color? _cachedCustomBrushColor;
 
         // ── Level-based row tinting (static frozen brushes — one allocation per process) ──
@@ -281,7 +280,7 @@ namespace IndiLogs_3._0.Models
         }
 
         // ===== INotifyPropertyChanged IMPLEMENTATION =====
-        public void OnPropertyChanged([CallerMemberName] string name = null)  // ✅ PUBLIC!
+        public void OnPropertyChanged([CallerMemberName] string? name = null)  // ✅ PUBLIC!
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

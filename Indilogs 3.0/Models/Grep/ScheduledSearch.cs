@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,12 +11,12 @@ namespace IndiLogs_3._0.Models.Grep
     public class ScheduledSearch
     {
         public Guid Id { get; set; } = Guid.NewGuid();
-        public string Name { get; set; }
+        public string Name { get; set; } = "";
 
         /// <summary>
         /// The search criteria to execute.
         /// </summary>
-        public SearchCriteria Criteria { get; set; }
+        public SearchCriteria? Criteria { get; set; }
 
         public ScheduleType ScheduleType { get; set; } = ScheduleType.Once;
 
@@ -78,7 +77,7 @@ namespace IndiLogs_3._0.Models.Grep
         /// <summary>
         /// Directory where results are saved as JSON/CSV.
         /// </summary>
-        public string OutputDirectory { get; set; }
+        public string? OutputDirectory { get; set; }
 
         /// <summary>
         /// What the scheduled scan does: search only, statistics only, or both.
@@ -88,10 +87,10 @@ namespace IndiLogs_3._0.Models.Grep
         /// <summary>
         /// Email notification configuration. Null or IsEnabled=false means no email.
         /// </summary>
-        public EmailNotificationConfig EmailConfig { get; set; }
+        public EmailNotificationConfig? EmailConfig { get; set; }
 
         public DateTime? LastRunTime { get; set; }
-        public string LastRunStatus { get; set; }
+        public string? LastRunStatus { get; set; }
 
         /// <summary>
         /// Display-only: summary of what this schedule searches for.

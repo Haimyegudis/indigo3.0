@@ -77,7 +77,7 @@ namespace IndiLogs.Tests
             Assert.Equal(SearchField.Any, condition.Field);
             Assert.Equal(SearchOperator.Contains, condition.Operator);
             Assert.False(condition.Negate);
-            Assert.Null(condition.Value);
+            Assert.Empty(condition.Value);
         }
     }
 

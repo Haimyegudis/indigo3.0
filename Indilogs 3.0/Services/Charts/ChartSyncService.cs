@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,8 +17,8 @@ namespace IndiLogs_3._0.Services.Charts
         private Dictionary<int, DateTime> _indexToTimeMap = new Dictionary<int, DateTime>();
 
         // Events for bidirectional synchronization
-        public event Action<DateTime> ChartTimeClicked;
-        public event Action<int> LogTimeSelected;
+        public event Action<DateTime>? ChartTimeClicked;
+        public event Action<int>? LogTimeSelected;
 
         public bool HasMapping => _timeMap.Count > 0;
         public int DataPointCount => _timeMap.Count;

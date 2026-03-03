@@ -22,7 +22,6 @@ namespace IndiLogs_3._0.Controls.Charts
         private static readonly SKTypeface s_consolas = SKTypeface.FromFamilyName("Consolas");
 
         public event Action<int> OnTimeClicked;
-        public event Action<int, int> OnStateClicked;
         public event Action<int, int> OnViewRangeChanged;
         public event Action<int> OnCursorMoved;
 

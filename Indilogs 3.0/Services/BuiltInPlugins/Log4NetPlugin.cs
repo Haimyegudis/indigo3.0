@@ -1,4 +1,3 @@
-#nullable disable
 /*
  * Log4NetPlugin — IndiLogs 3.0 Built-in Parser
  * =============================================
@@ -35,7 +34,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         public string[] SupportedExtensions => new[] { "*.log", "*.xml" };
 
         // ── Detection ─────────────────────────────────────────────────────────
-        public bool CanHandle(string fileName, string[] sampleLines)
+        public bool CanHandle(string fileName, string[]? sampleLines)
         {
             string lower = fileName.ToLowerInvariant();
             if (!lower.EndsWith(".log") && !lower.EndsWith(".xml")) return false;
@@ -92,7 +91,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         // ── Parse ─────────────────────────────────────────────────────────────
         public IEnumerable<LogEntryDto> Parse(
             Stream stream, ParseContext context,
-            IProgress<double> progress, CancellationToken ct)
+            IProgress<double>? progress, CancellationToken ct)
         {
             // Peek to determine format
             stream.Position = 0;
@@ -112,7 +111,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             {
                 for (int i = 0; i < 10; i++)
                 {
-                    string line = sr.ReadLine();
+                    string? line = sr.ReadLine();
                     if (line == null) break;
                     if (line.Contains("<log4net:event") || line.Contains("<log4j:event"))
                         return true;
@@ -123,7 +122,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
 
         // ── XML format parsing ────────────────────────────────────────────────
         private static IEnumerable<LogEntryDto> ParseXml(
-            Stream stream, IProgress<double> progress, CancellationToken ct)
+            Stream stream, IProgress<double>? progress, CancellationToken ct)
         {
             long totalBytes = stream.CanSeek ? stream.Length : 0;
 
@@ -158,12 +157,12 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
                     string localName = reader.LocalName;  // "event" for both log4net: and log4j:
                     if (!localName.Equals("event", StringComparison.OrdinalIgnoreCase)) continue;
 
-                    string timestamp = reader.GetAttribute("timestamp");
-                    string level     = reader.GetAttribute("level");
-                    string logger    = reader.GetAttribute("logger");
-                    string thread    = reader.GetAttribute("thread");
-                    string message   = null;
-                    string exception = null;
+                    string? timestamp = reader.GetAttribute("timestamp");
+                    string? level     = reader.GetAttribute("level");
+                    string? logger    = reader.GetAttribute("logger");
+                    string? thread    = reader.GetAttribute("thread");
+                    string? message   = null;
+                    string? exception = null;
 
                     using (var sub = reader.ReadSubtree())
                     {
@@ -199,16 +198,16 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
 
         // ── PatternLayout format parsing ──────────────────────────────────────
         private static IEnumerable<LogEntryDto> ParsePatternLayout(
-            Stream stream, IProgress<double> progress, CancellationToken ct)
+            Stream stream, IProgress<double>? progress, CancellationToken ct)
         {
             long totalBytes = stream.CanSeek ? stream.Length : 0;
             int  lineNum    = 0;
-            LogEntryDto current = null;
+            LogEntryDto? current = null;
 
             using (var reader = new StreamReader(stream, Encoding.UTF8,
                        detectEncodingFromByteOrderMarks: true, 65536, leaveOpen: true))
             {
-                string line;
+                string? line;
                 while ((line = reader.ReadLine()) != null)
                 {
                     ct.ThrowIfCancellationRequested();
@@ -245,7 +244,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────
-        private static DateTime ParseTimestamp(string raw)
+        private static DateTime ParseTimestamp(string? raw)
         {
             if (string.IsNullOrWhiteSpace(raw)) return DateTime.Now;
             string trimmed = raw.Trim();
@@ -263,7 +262,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             return DateTime.Now;
         }
 
-        private static string NormalizeLevel(string raw)
+        private static string NormalizeLevel(string? raw)
         {
             if (raw == null) return "Info";
             string u = raw.ToUpperInvariant();

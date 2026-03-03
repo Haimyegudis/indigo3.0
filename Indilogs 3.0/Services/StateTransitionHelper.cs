@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using IndiLogs_3._0.Models;
 
@@ -27,7 +26,7 @@ namespace IndiLogs_3._0.Services
         /// Parses a state transition message ("PlcMngr: OldState -> NewState") into its from/to parts.
         /// Returns <c>false</c> when the message does not contain a valid arrow.
         /// </summary>
-        public static bool TryParseTransition(string message, out string fromState, out string toState)
+        public static bool TryParseTransition(string? message, out string? fromState, out string? toState)
         {
             fromState = null;
             toState = null;

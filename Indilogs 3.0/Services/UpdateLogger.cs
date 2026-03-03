@@ -1,4 +1,3 @@
-#nullable disable
 ﻿using System;
 using System.IO;
 
@@ -12,7 +11,7 @@ namespace IndiLogs_3._0.Services
         {
             try
             {
-                string dir = Path.GetDirectoryName(LogPath);
+                string? dir = Path.GetDirectoryName(LogPath);
                 if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
 
                 string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} | {message}{Environment.NewLine}";

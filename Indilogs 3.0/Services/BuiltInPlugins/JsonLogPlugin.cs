@@ -1,4 +1,3 @@
-#nullable disable
 /*
  * JsonLogPlugin — IndiLogs 3.0 Built-in Parser
  * =============================================
@@ -35,7 +34,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         public string[] SupportedExtensions => new[] { "*.json", "*.jsonl" };
 
         // ── Detection ─────────────────────────────────────────────────────────
-        public bool CanHandle(string fileName, string[] sampleLines)
+        public bool CanHandle(string fileName, string[]? sampleLines)
         {
             string lower = fileName.ToLowerInvariant();
             bool extOk = lower.EndsWith(".json") || lower.EndsWith(".jsonl");
@@ -80,7 +79,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         // ── Parse ─────────────────────────────────────────────────────────────
         public IEnumerable<LogEntryDto> Parse(
             Stream stream, ParseContext context,
-            IProgress<double> progress, CancellationToken ct)
+            IProgress<double>? progress, CancellationToken ct)
         {
             stream.Position = 0;
             long totalBytes  = stream.CanSeek ? stream.Length : 0;
@@ -90,7 +89,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             using (var reader = new StreamReader(stream, Encoding.UTF8,
                        detectEncodingFromByteOrderMarks: true, bufferSize: 65536, leaveOpen: true))
             {
-                string line;
+                string? line;
                 while ((line = reader.ReadLine()) != null)
                 {
                     ct.ThrowIfCancellationRequested();
@@ -110,7 +109,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
                     if (format == JsonFormat.Unknown)
                         format = DetectFormat(obj);
 
-                    LogEntryDto entry = ParseEntry(obj, format);
+                    LogEntryDto? entry = ParseEntry(obj, format);
                     if (entry != null) yield return entry;
                 }
             }
@@ -149,7 +148,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
 
         // ── Entry parsing by format ───────────────────────────────────────────
 
-        private static LogEntryDto ParseEntry(JObject obj, JsonFormat format)
+        private static LogEntryDto? ParseEntry(JObject obj, JsonFormat format)
         {
             try
             {
@@ -210,7 +209,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         private static LogEntryDto ParseGeneric(JObject o)
         {
             // Find time key
-            string timeVal = null;
+            string? timeVal = null;
             foreach (var k in new[] { "timestamp", "time", "ts", "date", "@timestamp", "datetime", "created" })
             {
                 timeVal = Str(o, k);
@@ -218,8 +217,8 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             }
 
             // Find message key
-            string msgVal = null;
-            string msgKey = null;
+            string? msgVal = null;
+            string? msgKey = null;
             foreach (var k in new[] { "message", "msg", "text", "body", "log", "content", "description" })
             {
                 msgVal = Str(o, k);
@@ -227,7 +226,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             }
 
             // Find level key
-            string levelVal = null;
+            string? levelVal = null;
             foreach (var k in new[] { "level", "severity", "loglevel", "log_level", "priority" })
             {
                 levelVal = Str(o, k);
@@ -255,7 +254,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
 
         // ── Helpers ───────────────────────────────────────────────────────────
 
-        private static string Str(JObject o, string key)
+        private static string? Str(JObject o, string key)
         {
             var tok = o[key];
             if (tok == null || tok.Type == JTokenType.Null) return null;
@@ -272,7 +271,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             return dict;
         }
 
-        private static DateTime ParseTime(string raw)
+        private static DateTime ParseTime(string? raw)
         {
             if (string.IsNullOrWhiteSpace(raw)) return DateTime.Now;
             if (DateTime.TryParse(raw, CultureInfo.InvariantCulture,
@@ -291,7 +290,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             return "Trace";
         }
 
-        private static string NormalizeLevel(string raw)
+        private static string? NormalizeLevel(string? raw)
         {
             if (raw == null) return null;
             string u = raw.ToUpperInvariant();

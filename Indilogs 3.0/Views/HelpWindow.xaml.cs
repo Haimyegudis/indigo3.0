@@ -12,7 +12,6 @@ namespace IndiLogs_3._0.Views
     public partial class HelpWindow : Window
     {
         private readonly FrameworkElement[] _sections;
-        private bool _isNavigating;
 
         public HelpWindow()
         {
@@ -50,9 +49,7 @@ namespace IndiLogs_3._0.Views
             {
                 if (int.TryParse(tagStr, out int index) && index >= 0 && index < _sections.Length && _sections[index] != null)
                 {
-                    _isNavigating = true;
                     _sections[index].BringIntoView();
-                    _isNavigating = false;
                 }
             }
         }

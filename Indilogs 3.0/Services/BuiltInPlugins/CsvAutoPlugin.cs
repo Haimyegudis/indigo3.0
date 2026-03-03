@@ -1,4 +1,3 @@
-#nullable disable
 /*
  * CsvAutoPlugin — IndiLogs 3.0 Built-in Parser
  * =============================================
@@ -34,7 +33,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         public string[] SupportedExtensions => new[] { "*.csv" };
 
         // ── Detection ─────────────────────────────────────────────────────────
-        public bool CanHandle(string fileName, string[] sampleLines)
+        public bool CanHandle(string fileName, string[]? sampleLines)
         {
             string lower = fileName.ToLowerInvariant();
             if (!lower.EndsWith(".csv")) return false;
@@ -67,7 +66,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         // ── Parse ─────────────────────────────────────────────────────────────
         public IEnumerable<LogEntryDto> Parse(
             Stream stream, ParseContext context,
-            IProgress<double> progress, CancellationToken ct)
+            IProgress<double>? progress, CancellationToken ct)
         {
             stream.Position = 0;
             long totalBytes = stream.CanSeek ? stream.Length : 0;
@@ -77,7 +76,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
                        detectEncodingFromByteOrderMarks: true, bufferSize: 65536, leaveOpen: true))
             {
                 // ── Parse header ────────────────────────────────────────────
-                string headerLine = reader.ReadLine();
+                string? headerLine = reader.ReadLine();
                 if (headerLine == null) yield break;
 
                 string[] headers = SplitCsvLine(headerLine);
@@ -98,7 +97,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
                         extraIndices.Add((i, headers[i].Trim()));
 
                 // ── Parse rows ──────────────────────────────────────────────
-                string line;
+                string? line;
                 while ((line = reader.ReadLine()) != null)
                 {
                     ct.ThrowIfCancellationRequested();
@@ -155,7 +154,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             return -1;
         }
 
-        private static string SafeGet(string[] parts, int idx)
+        private static string? SafeGet(string[] parts, int idx)
         {
             if (idx < 0 || idx >= parts.Length) return null;
             string v = parts[idx].Trim().Trim('"');
@@ -177,7 +176,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             "MM/dd/yyyy HH:mm:ss",          "dd/MM/yyyy HH:mm:ss"
         };
 
-        private static DateTime ParseDate(string raw)
+        private static DateTime ParseDate(string? raw)
         {
             if (string.IsNullOrWhiteSpace(raw)) return DateTime.Now;
             string trimmed = raw.Trim();
@@ -195,7 +194,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             return DateTime.Now;
         }
 
-        private static string NormalizeLevel(string raw)
+        private static string NormalizeLevel(string? raw)
         {
             if (raw == null) return "Info";
             string u = raw.ToUpperInvariant().Trim();

@@ -1,4 +1,3 @@
-#nullable disable
 using System.Collections.Generic;
 
 namespace IndiLogs_3._0.Models.Grep
@@ -9,7 +8,7 @@ namespace IndiLogs_3._0.Models.Grep
     /// </summary>
     public class SearchProfile
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = "";
         public List<SearchLocation> Locations { get; set; } = new List<SearchLocation>();
         public SearchCriteria Criteria { get; set; } = new SearchCriteria();
         public List<ScheduledSearch> Schedules { get; set; } = new List<ScheduledSearch>();

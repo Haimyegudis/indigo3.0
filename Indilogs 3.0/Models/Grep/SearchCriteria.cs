@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 
@@ -9,7 +8,7 @@ namespace IndiLogs_3._0.Models.Grep
     /// </summary>
     public class SearchCriteria
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = "";
 
         /// <summary>
         /// Condition groups evaluated with GroupOperator between them.
@@ -24,12 +23,12 @@ namespace IndiLogs_3._0.Models.Grep
         /// <summary>
         /// Filter files by time range (based on filename timestamp or file modification date).
         /// </summary>
-        public TimeRangeFilter FileTimeFilter { get; set; }
+        public TimeRangeFilter? FileTimeFilter { get; set; }
 
         /// <summary>
         /// Filter results by log entry timestamp.
         /// </summary>
-        public TimeRangeFilter ResultTimeFilter { get; set; }
+        public TimeRangeFilter? ResultTimeFilter { get; set; }
 
         /// <summary>
         /// Which location IDs to search. Empty = search all active locations.
@@ -67,7 +66,7 @@ namespace IndiLogs_3._0.Models.Grep
     {
         public SearchField Field { get; set; } = SearchField.Any;
         public SearchOperator Operator { get; set; } = SearchOperator.Contains;
-        public string Value { get; set; }
+        public string Value { get; set; } = "";
         public bool Negate { get; set; }
     }
 

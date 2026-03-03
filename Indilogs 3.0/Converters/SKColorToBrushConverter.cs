@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Globalization;
 using System.Windows.Data;
@@ -9,7 +8,7 @@ namespace IndiLogs_3._0.Converters
 {
     public class SKColorToBrushConverter : IValueConverter
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value is SKColor skColor)
             {
@@ -18,7 +17,7 @@ namespace IndiLogs_3._0.Converters
             return Colors.Gray;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value is Color wpfColor)
             {

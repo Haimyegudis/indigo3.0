@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Interfaces;
 using System;
@@ -19,15 +18,15 @@ namespace IndiLogs_3._0.ViewModels
     /// <summary>A single step image frame with optional matching text file content.</summary>
     public class StepFrame
     {
-        public string   FileName    { get; set; }
+        public string   FileName    { get; set; } = "";
         public DateTime Timestamp   { get; set; }
-        public byte[]   ImageData   { get; set; }
-        public string   TextContent { get; set; }
+        public byte[]?  ImageData   { get; set; }
+        public string   TextContent { get; set; } = "";
 
-        private BitmapImage _bitmap;
-        public BitmapImage Bitmap => _bitmap ??= CreateBitmap(ImageData);
+        private BitmapImage? _bitmap;
+        public BitmapImage? Bitmap => _bitmap ??= CreateBitmap(ImageData);
 
-        private static BitmapImage CreateBitmap(byte[] data)
+        private static BitmapImage? CreateBitmap(byte[]? data)
         {
             if (data == null || data.Length == 0) return null;
             var bmp = new BitmapImage();
@@ -49,8 +48,8 @@ namespace IndiLogs_3._0.ViewModels
         // ─── State ───────────────────────────────────────────────────────────
         private List<StepFrame> _frames = new List<StepFrame>();
         private int _currentIndex = -1;
-        private DispatcherTimer _timer;
-        private string _zipPath; // Stores the ZIP file path for extracting ISR files alongside it
+        private DispatcherTimer? _timer;
+        private string? _zipPath;
 
         // ─── Properties ──────────────────────────────────────────────────────
         /// <summary>True when the loaded ZIP contains an IndigoLogs/ISR/ folder — drives tab visibility.</summary>
@@ -63,7 +62,7 @@ namespace IndiLogs_3._0.ViewModels
 
         public bool HasFrames => _frames.Count > 0;
 
-        public StepFrame CurrentFrame =>
+        public StepFrame? CurrentFrame =>
             (_currentIndex >= 0 && _currentIndex < _frames.Count) ? _frames[_currentIndex] : null;
 
         public int CurrentIndex => HasFrames ? _currentIndex + 1 : 0;
@@ -191,7 +190,7 @@ namespace IndiLogs_3._0.ViewModels
                 string baseName  = Path.GetFileNameWithoutExtension(imageFile);
 
                 // Find matching text file (same base name, any txt extension)
-                string textKey = textEntries.Keys
+                string? textKey = textEntries.Keys
                     .FirstOrDefault(k => string.Equals(
                         Path.GetFileNameWithoutExtension(k), baseName,
                         StringComparison.OrdinalIgnoreCase));

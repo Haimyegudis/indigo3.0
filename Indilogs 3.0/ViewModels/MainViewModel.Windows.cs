@@ -270,7 +270,7 @@ namespace IndiLogs_3._0.ViewModels
 
         /// <summary>
         /// Opens a URL in the default browser with scheme validation.
-        /// Shared utility used by both MainViewModel and ToolsViewModel.
+        /// Shared utility for opening URLs in the default browser.
         /// </summary>
         internal static void OpenUrl(string url)
         {

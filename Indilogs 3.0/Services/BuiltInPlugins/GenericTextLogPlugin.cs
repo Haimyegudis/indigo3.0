@@ -1,4 +1,3 @@
-#nullable disable
 /*
  * GenericTextLogPlugin — IndiLogs 3.0 Built-in Parser
  * =====================================================
@@ -36,7 +35,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         };
 
         // ── Detection ────────────────────────────────────────────────────────
-        public bool CanHandle(string fileName, string[] sampleLines)
+        public bool CanHandle(string fileName, string[]? sampleLines)
         {
             string lower = fileName.ToLowerInvariant();
             bool extOk = lower.EndsWith(".log")   || lower.EndsWith(".txt") ||
@@ -101,19 +100,19 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         // ── Parse ─────────────────────────────────────────────────────────────
         public IEnumerable<LogEntryDto> Parse(
             Stream stream, ParseContext context,
-            IProgress<double> progress, CancellationToken ct)
+            IProgress<double>? progress, CancellationToken ct)
         {
             stream.Position = 0;
             long totalBytes = stream.CanSeek ? stream.Length : 0;
             int  lineNum    = 0;
 
             // Running entry we might accumulate continuation lines into
-            LogEntryDto current = null;
+            LogEntryDto? current = null;
 
             using (var reader = new StreamReader(stream, Encoding.UTF8,
                        detectEncodingFromByteOrderMarks: true, bufferSize: 65536, leaveOpen: true))
             {
-                string line;
+                string? line;
                 while ((line = reader.ReadLine()) != null)
                 {
                     ct.ThrowIfCancellationRequested();
@@ -124,7 +123,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
 
                     if (string.IsNullOrWhiteSpace(line)) continue;
 
-                    LogEntryDto parsed = TryParseAsNewEntry(line);
+                    LogEntryDto? parsed = TryParseAsNewEntry(line);
                     if (parsed != null)
                     {
                         if (current != null) yield return current;
@@ -154,7 +153,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
 
         // ── Helpers ───────────────────────────────────────────────────────────
 
-        private static LogEntryDto TryParseAsNewEntry(string line)
+        private static LogEntryDto? TryParseAsNewEntry(string line)
         {
             Match m;
 
@@ -228,7 +227,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
                        DateTimeStyles.None, out result);
         }
 
-        private static string NormalizeLevel(string raw)
+        private static string NormalizeLevel(string? raw)
         {
             if (raw == null) return "Info";
             string u = raw.ToUpperInvariant();

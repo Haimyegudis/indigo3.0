@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Charts;
 using IndiLogs_3._0.Services;
@@ -25,8 +24,8 @@ namespace IndiLogs_3._0.ViewModels
         // ==========================================
         private readonly List<LogEntry> _plcLogs;
         private readonly List<LogEntry> _appLogs;
-        private readonly Action<string, string> _applyFilterCallback;
-        private readonly Action<LogEntry> _navigateToLogCallback;
+        private readonly Action<string, string>? _applyFilterCallback;
+        private readonly Action<LogEntry>? _navigateToLogCallback;
         private readonly bool _hasBinaryAppLogs;
         private readonly bool _isDarkMode;
 
@@ -35,30 +34,30 @@ namespace IndiLogs_3._0.ViewModels
         // ==========================================
 
         // PLC
-        private List<ErrorStat> _plcErrorStats;
-        public List<ErrorStat> PlcErrorStats { get => _plcErrorStats; private set => SetField(ref _plcErrorStats, value); }
+        private List<ErrorStat>? _plcErrorStats;
+        public List<ErrorStat>? PlcErrorStats { get => _plcErrorStats; private set => SetField(ref _plcErrorStats, value); }
 
-        private List<LoadStat> _plcThreadStats;
-        public List<LoadStat> PlcThreadStats { get => _plcThreadStats; private set => SetField(ref _plcThreadStats, value); }
+        private List<LoadStat>? _plcThreadStats;
+        public List<LoadStat>? PlcThreadStats { get => _plcThreadStats; private set => SetField(ref _plcThreadStats, value); }
 
-        private List<GapInfo> _plcGaps;
-        public List<GapInfo> PlcGaps { get => _plcGaps; private set => SetField(ref _plcGaps, value); }
+        private List<GapInfo>? _plcGaps;
+        public List<GapInfo>? PlcGaps { get => _plcGaps; private set => SetField(ref _plcGaps, value); }
 
         // APP
-        private List<ErrorStat> _appThreadErrorStats;
-        public List<ErrorStat> AppThreadErrorStats { get => _appThreadErrorStats; private set => SetField(ref _appThreadErrorStats, value); }
+        private List<ErrorStat>? _appThreadErrorStats;
+        public List<ErrorStat>? AppThreadErrorStats { get => _appThreadErrorStats; private set => SetField(ref _appThreadErrorStats, value); }
 
-        private List<LoadStat> _appThreadStats;
-        public List<LoadStat> AppThreadStats { get => _appThreadStats; private set => SetField(ref _appThreadStats, value); }
+        private List<LoadStat>? _appThreadStats;
+        public List<LoadStat>? AppThreadStats { get => _appThreadStats; private set => SetField(ref _appThreadStats, value); }
 
-        private List<ErrorStat> _appMethodErrorStats;
-        public List<ErrorStat> AppMethodErrorStats { get => _appMethodErrorStats; private set => SetField(ref _appMethodErrorStats, value); }
+        private List<ErrorStat>? _appMethodErrorStats;
+        public List<ErrorStat>? AppMethodErrorStats { get => _appMethodErrorStats; private set => SetField(ref _appMethodErrorStats, value); }
 
-        private List<LoadStat> _appMethodStats;
-        public List<LoadStat> AppMethodStats { get => _appMethodStats; private set => SetField(ref _appMethodStats, value); }
+        private List<LoadStat>? _appMethodStats;
+        public List<LoadStat>? AppMethodStats { get => _appMethodStats; private set => SetField(ref _appMethodStats, value); }
 
-        private List<GapInfo> _appGaps;
-        public List<GapInfo> AppGaps { get => _appGaps; private set => SetField(ref _appGaps, value); }
+        private List<GapInfo>? _appGaps;
+        public List<GapInfo>? AppGaps { get => _appGaps; private set => SetField(ref _appGaps, value); }
 
         // Summary strings
         private string _summaryText = "Analyzing logs...";
@@ -125,22 +124,22 @@ namespace IndiLogs_3._0.ViewModels
         // ==========================================
         //  CHART DATA — consumed by SkiaSharp rendering in the View
         // ==========================================
-        public List<(string Name, int Count, List<LogEntry> Logs)> BarChartData { get; private set; }
-        public List<(string State, int Count, List<LogEntry> Logs)> PieChartData { get; private set; }
-        public int[] TimelineBuckets { get; private set; }
-        public List<LogEntry>[] TimelineBucketLogs { get; private set; }
+        public List<(string Name, int Count, List<LogEntry> Logs)>? BarChartData { get; private set; }
+        public List<(string State, int Count, List<LogEntry> Logs)>? PieChartData { get; private set; }
+        public int[]? TimelineBuckets { get; private set; }
+        public List<LogEntry>[]? TimelineBucketLogs { get; private set; }
         public DateTime TimelineFirstTime { get; private set; }
         public double TimelineBucketSize { get; private set; }
         public int TimelineBucketCount { get; private set; }
-        public List<StateEntry> TimelineStateEntries { get; private set; }
+        public List<StateEntry>? TimelineStateEntries { get; private set; }
 
         // Timeline zoom state — mutable from the View
         public int TimelineZoomStart { get; set; }
         public int TimelineZoomEnd { get; set; }
 
         // Advanced Analytics drill-down data
-        public List<(string Logger, int Count)> LoggerData { get; private set; }
-        public List<(string State, int Count)> StateData { get; private set; }
+        public List<(string Logger, int Count)>? LoggerData { get; private set; }
+        public List<(string State, int Count)>? StateData { get; private set; }
 
         // ==========================================
         //  PUBLIC CONFIG
@@ -152,10 +151,10 @@ namespace IndiLogs_3._0.ViewModels
         //  CONSTRUCTOR
         // ==========================================
         public StatsViewModel(
-            IEnumerable<LogEntry> plcLogs,
-            IEnumerable<LogEntry> appLogs,
-            Action<string, string> applyFilterCallback,
-            Action<LogEntry> navigateToLogCallback,
+            IEnumerable<LogEntry>? plcLogs,
+            IEnumerable<LogEntry>? appLogs,
+            Action<string, string>? applyFilterCallback,
+            Action<LogEntry>? navigateToLogCallback,
             bool isDarkMode,
             bool hasBinaryAppLogs)
         {
@@ -574,11 +573,11 @@ namespace IndiLogs_3._0.ViewModels
             return result;
         }
 
-        private static List<ErrorStat> CalculateErrorHistogram(List<LogEntry> errors, int take, Func<LogEntry, string> keySelector = null)
+        private static List<ErrorStat> CalculateErrorHistogram(List<LogEntry> errors, int take, Func<LogEntry, string>? keySelector = null)
         {
             if (errors.Count == 0) return new List<ErrorStat>();
 
-            keySelector = keySelector ?? (l => TruncateMessage(l.Message, 100));
+            keySelector ??= l => TruncateMessage(l.Message, 100);
 
             var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < errors.Count; i++)
@@ -611,7 +610,7 @@ namespace IndiLogs_3._0.ViewModels
             return result;
         }
 
-        private static List<LoadStat> CalculateLoadDistribution(List<LogEntry> logs, Func<LogEntry, string> keySelector, int take, Func<LogEntry, string> fullNameSelector = null)
+        private static List<LoadStat> CalculateLoadDistribution(List<LogEntry> logs, Func<LogEntry, string> keySelector, int take, Func<LogEntry, string>? fullNameSelector = null)
         {
             var counts = new Dictionary<string, int>();
             var firstLog = new Dictionary<string, LogEntry>();
@@ -748,8 +747,8 @@ namespace IndiLogs_3._0.ViewModels
             return combinedCounts.Count > 10 ? combinedCounts.GetRange(0, 10) : combinedCounts;
         }
 
-        private List<(string State, int Count, List<LogEntry> Logs)> BuildStatePieChartData(
-            List<LogEntry> plcLogs, List<StateEntry> stateEntries)
+        private List<(string State, int Count, List<LogEntry> Logs)>? BuildStatePieChartData(
+            List<LogEntry> plcLogs, List<StateEntry>? stateEntries)
         {
             var plcErrors = GetErrorLogs(plcLogs);
             if (plcErrors.Count == 0 || stateEntries == null || stateEntries.Count == 0) return null;

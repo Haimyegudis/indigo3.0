@@ -50,7 +50,6 @@ namespace IndiLogs_3._0.ViewModels
             OnPropertyChanged(nameof(ResultCount));
             StatusMessage = "Preparing search...";
             SearchDuration = "";
-            _streamedResultCount = 0;
 
             _cancellationTokenSource?.Dispose();
             _cancellationTokenSource = new CancellationTokenSource();

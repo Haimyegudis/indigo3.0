@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -15,16 +14,16 @@ namespace IndiLogs_3._0.Converters
     /// </summary>
     public class ExtraFieldConverter : IValueConverter
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value is Dictionary<string, string> dict && parameter is string key)
             {
-                return dict.TryGetValue(key, out string val) ? val : string.Empty;
+                return dict.TryGetValue(key, out string? val) ? val : string.Empty;
             }
             return string.Empty;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             throw new NotSupportedException();
         }

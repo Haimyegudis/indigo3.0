@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Globalization;
 using System.Windows.Data;
@@ -21,7 +20,7 @@ namespace IndiLogs_3._0.Converters
             UnselectedBrush.Freeze();
         }
 
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value is bool isSelected && isSelected)
             {
@@ -30,7 +29,7 @@ namespace IndiLogs_3._0.Converters
             return UnselectedBrush;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }

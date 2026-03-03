@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -18,9 +17,8 @@ namespace IndiLogs_3._0.Converters
     /// </summary>
     public class DiffSegmentsConverter : IMultiValueConverter
     {
-        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        public object? Convert(object?[] values, Type targetType, object? parameter, CultureInfo culture)
         {
-            // Basic validation
             if (values == null || values.Length < 3)
             {
                 return null;
@@ -48,7 +46,6 @@ namespace IndiLogs_3._0.Converters
                 return null;
             }
 
-            // Determine which pane this is
             ComparisonPaneViewModel sourcePane;
             ComparisonPaneViewModel targetPane;
 
@@ -63,36 +60,14 @@ namespace IndiLogs_3._0.Converters
                 targetPane = viewModel.LeftPane;
             }
 
-            // Find the index of this log in the source pane (needed mostly for debug/logging)
-            // Note: In a high-performance scenario, we might want to skip this linear search if not needed.
-            /*
-            int sourceIndex = -1;
-            for (int i = 0; i < sourcePane.FilteredLogs.Count; i++)
-            {
-                if (ReferenceEquals(sourcePane.FilteredLogs[i], logEntry))
-                {
-                    sourceIndex = i;
-                    break;
-                }
-            }
-            */
-
-            // --- CRITICAL FIX: ALWAYS USE TIME MATCHING ---
-            // Previously, there was logic here that checked 'if (sameSource)'.
-            // That logic caused issues when comparing two runs of the same type where row counts differed.
-            // We now force BinarySearchNearest based on Timestamp.
-
             int correspondingIndex = targetPane.BinarySearchNearest(logEntry.Date);
-            LogEntry correspondingLog = targetPane.GetLogAtIndex(correspondingIndex);
+            LogEntry? correspondingLog = targetPane.GetLogAtIndex(correspondingIndex);
 
-            // Optional: Sanity check for time difference.
-            // If the nearest log is too far away (e.g., > 2 seconds), treat it as "no match" to avoid showing misleading diffs.
             if (correspondingLog != null)
             {
                 double deltaMs = Math.Abs((logEntry.Date - correspondingLog.Date).TotalMilliseconds);
-                if (deltaMs > 2000) // 2 seconds threshold
+                if (deltaMs > 2000)
                 {
-                    // Too far apart - likely not the corresponding line.
                     return null;
                 }
             }
@@ -102,7 +77,6 @@ namespace IndiLogs_3._0.Converters
                 return null;
             }
 
-            // Get diff result
             var diffResult = viewModel.DiffEngine.Compare(logEntry.Message, correspondingLog.Message);
 
             if (diffResult == null)
@@ -112,22 +86,21 @@ namespace IndiLogs_3._0.Converters
 
             if (diffResult.AreEqual)
             {
-                return null; // Return null to use default coloring (no diff highlight)
+                return null;
             }
 
-            // Return the segments relevant to the current pane (Left or Right)
             var segments = paneIndicator == "Left" ? diffResult.LeftSegments : diffResult.RightSegments;
 
             return segments;
         }
 
-        private static string Truncate(string s, int maxLen)
+        private static string Truncate(string? s, int maxLen)
         {
             if (string.IsNullOrEmpty(s)) return "(empty)";
             return s.Length <= maxLen ? s : s.Substring(0, maxLen) + "...";
         }
 
-        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        public object?[] ConvertBack(object? value, Type[] targetTypes, object? parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }

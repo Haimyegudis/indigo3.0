@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 
@@ -36,9 +35,9 @@ namespace IndiLogs_3._0.Models
     public class CaseMetadata
     {
         public string Version { get; set; } = "1.0";
-        public string Author { get; set; }
+        public string Author { get; set; } = "";
         public DateTime CreatedAt { get; set; }
-        public string Description { get; set; }
+        public string Description { get; set; } = "";
     }
 
     /// <summary>
@@ -46,10 +45,10 @@ namespace IndiLogs_3._0.Models
     /// </summary>
     public class CaseResource
     {
-        public string FileName { get; set; }
+        public string FileName { get; set; } = "";
         public long Size { get; set; }
         public DateTime LastModified { get; set; }
-        public string Hash { get; set; } // Optional: partial hash for verification
+        public string? Hash { get; set; } // Optional: partial hash for verification
     }
 
     /// <summary>
@@ -57,9 +56,9 @@ namespace IndiLogs_3._0.Models
     /// </summary>
     public class CaseViewState
     {
-        public FilterNode ActiveFilters { get; set; }
-        public string QuickSearchText { get; set; }
-        public string SelectedTab { get; set; }
+        public FilterNode? ActiveFilters { get; set; }
+        public string? QuickSearchText { get; set; }
+        public string? SelectedTab { get; set; }
         public List<string> ActiveThreadFilters { get; set; }
         public List<string> NegativeFilters { get; set; }
 
@@ -76,11 +75,11 @@ namespace IndiLogs_3._0.Models
     /// </summary>
     public class LogAnnotation
     {
-        public LogTarget TargetLog { get; set; }
-        public string Content { get; set; }
+        public LogTarget? TargetLog { get; set; }
+        public string Content { get; set; } = "";
         public string Color { get; set; } = "#FFFF00"; // Default yellow
         public DateTime CreatedAt { get; set; }
-        public string Author { get; set; }
+        public string Author { get; set; } = "";
 
         public LogAnnotation()
         {
@@ -94,9 +93,9 @@ namespace IndiLogs_3._0.Models
     public class LogTarget
     {
         public DateTime Timestamp { get; set; }
-        public string Logger { get; set; }
-        public string Thread { get; set; }
-        public string Snippet { get; set; } // First 100 chars of message for verification
-        public string Level { get; set; }
+        public string Logger { get; set; } = "";
+        public string Thread { get; set; } = "";
+        public string Snippet { get; set; } = ""; // First 100 chars of message for verification
+        public string Level { get; set; } = "";
     }
 }

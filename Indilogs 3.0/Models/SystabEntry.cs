@@ -1,4 +1,3 @@
-#nullable disable
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -12,11 +11,11 @@ namespace IndiLogs_3._0.Models
     /// </summary>
     public class SystabEntry
     {
-        public string Parameter { get; set; }
-        public string Saved { get; set; }
-        public string Default { get; set; }
-        public string Minimum { get; set; }
-        public string Maximum { get; set; }
+        public string Parameter { get; set; } = "";
+        public string Saved { get; set; } = "";
+        public string Default { get; set; } = "";
+        public string Minimum { get; set; } = "";
+        public string Maximum { get; set; } = "";
 
         /// <summary>
         /// True when Saved != Default, used for row highlighting in the DataGrid.
@@ -31,8 +30,8 @@ namespace IndiLogs_3._0.Models
     /// </summary>
     public class SystabTopicNode : INotifyPropertyChanged
     {
-        private string _name;
-        private string _fullPath;
+        private string _name = "";
+        private string _fullPath = "";
         private bool _isExpanded;
         private bool _isSelected;
         private bool _hasDifferences;
@@ -93,8 +92,8 @@ namespace IndiLogs_3._0.Models
         /// </summary>
         public int Count { get; set; }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string name = null)
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

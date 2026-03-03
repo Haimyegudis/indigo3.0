@@ -13,7 +13,6 @@ namespace IndiLogs_3._0.Views
         private readonly GlobalGrepViewModel _viewModel;
         private readonly Action<GrepResult> _navigationCallback;
         private readonly Action<System.Collections.Generic.List<(string FilePath, string SessionName)>> _openAllFilesCallback;
-        private bool _closingForScheduledRun;
 
         public GlobalGrepWindow(GlobalGrepViewModel viewModel, Action<GrepResult> navigationCallback, Action<System.Collections.Generic.List<(string FilePath, string SessionName)>> openAllFilesCallback = null)
         {
@@ -37,15 +36,12 @@ namespace IndiLogs_3._0.Views
 
         private void OnRequestCloseForScheduledRun(string scheduleName)
         {
-            _closingForScheduledRun = true;
             Hide();
             AppLogger.Info($"[Grep] Window hidden — running scheduled search '{scheduleName}' in background");
         }
 
         private void OnScheduledRunCompleted(string scheduleName, string reportPath)
         {
-            _closingForScheduledRun = false;
-
             // Reopen the window
             Show();
             Activate();

@@ -58,7 +58,6 @@ namespace IndiLogs_3._0.Controls.Charts
         };
         private int _colorIndex = 0;
         private bool _isSignalPanelVisible = true;
-        private int _referenceLineCounter = 0;
         private bool _isGridLayout = false;
         private bool _isLightTheme = false;
         private ChartViewModel _selectedChart = null;

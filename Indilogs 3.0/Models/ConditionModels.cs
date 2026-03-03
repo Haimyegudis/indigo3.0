@@ -1,4 +1,3 @@
-#nullable disable
 ﻿using System.Windows.Media;
 
 namespace IndiLogs_3._0.Models
@@ -6,9 +5,9 @@ namespace IndiLogs_3._0.Models
     // This is the only place where this class should be defined!
     public class ColoringCondition
     {
-        public string Field { get; set; }
-        public string Operator { get; set; }
-        public string Value { get; set; }
+        public string Field { get; set; } = "";
+        public string Operator { get; set; } = "";
+        public string Value { get; set; } = "";
 
         // Uses WPF Color (System.Windows.Media)
         public Color Color { get; set; }
@@ -35,9 +34,9 @@ namespace IndiLogs_3._0.Models
 
     public class FilterCondition
     {
-        public string Field { get; set; }
-        public string Operator { get; set; }
-        public string Value { get; set; }
+        public string Field { get; set; } = "";
+        public string Operator { get; set; } = "";
+        public string Value { get; set; } = "";
         public bool IsActive { get; set; } = true;
     }
 }

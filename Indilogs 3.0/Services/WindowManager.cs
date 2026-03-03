@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -17,7 +16,7 @@ namespace IndiLogs_3._0.Services
     public static class WindowManager
     {
         private static readonly List<WeakReference<Window>> _childWindows = new List<WeakReference<Window>>();
-        private static Window _mainWindow;
+        private static Window? _mainWindow;
 
         [DllImport("user32.dll")]
         private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
@@ -76,7 +75,7 @@ namespace IndiLogs_3._0.Services
         /// centered on that screen. Window is NON-MODAL - user can switch freely.
         /// Does NOT set Owner to allow independent window operation.
         /// </summary>
-        public static void OpenWindow(Window childWindow, Window referenceWindow = null)
+        public static void OpenWindow(Window childWindow, Window? referenceWindow = null)
         {
             if (childWindow == null) return;
             var winSw = Stopwatch.StartNew();
@@ -162,7 +161,7 @@ namespace IndiLogs_3._0.Services
         /// Shows a MODAL dialog window on the same screen as the main window.
         /// This blocks interaction with other windows until closed.
         /// </summary>
-        public static bool? ShowDialog(Window dialogWindow, Window owner = null)
+        public static bool? ShowDialog(Window dialogWindow, Window? owner = null)
         {
             if (dialogWindow == null) return null;
             var dlgSw = Stopwatch.StartNew();
@@ -188,7 +187,7 @@ namespace IndiLogs_3._0.Services
         /// <summary>
         /// Positions a window on the same screen as the reference window, centered
         /// </summary>
-        private static void PositionOnSameScreen(Window window, Window referenceWindow = null)
+        private static void PositionOnSameScreen(Window window, Window? referenceWindow = null)
         {
             if (window == null) return;
 
@@ -334,13 +333,13 @@ namespace IndiLogs_3._0.Services
         /// <summary>
         /// Finds an open window of a specific type
         /// </summary>
-        public static T FindWindow<T>() where T : Window
+        public static T? FindWindow<T>() where T : Window
         {
             CleanupDeadReferences();
 
             foreach (var weakRef in _childWindows)
             {
-                if (weakRef.TryGetTarget(out Window window) && window is T typedWindow && window.IsVisible)
+                if (weakRef.TryGetTarget(out Window? window) && window is T typedWindow && window.IsVisible)
                 {
                     return typedWindow;
                 }
@@ -367,7 +366,7 @@ namespace IndiLogs_3._0.Services
         /// Gets or creates a window of a specific type. If one exists, it's activated and returned.
         /// Otherwise, the factory is called to create a new one.
         /// </summary>
-        public static T GetOrCreate<T>(Func<T> factory, Window referenceWindow = null) where T : Window
+        public static T GetOrCreate<T>(Func<T> factory, Window? referenceWindow = null) where T : Window
         {
             var winSw = Stopwatch.StartNew();
             var existing = FindWindow<T>();
@@ -408,13 +407,13 @@ namespace IndiLogs_3._0.Services
     internal sealed class WindowManagerAdapter : Interfaces.IWindowManager
     {
         public void Initialize(Window mainWindow) => WindowManager.Initialize(mainWindow);
-        public void OpenWindow(Window childWindow, Window referenceWindow = null) => WindowManager.OpenWindow(childWindow, referenceWindow);
-        public bool? ShowDialog(Window dialogWindow, Window owner = null) => WindowManager.ShowDialog(dialogWindow, owner);
+        public void OpenWindow(Window childWindow, Window? referenceWindow = null) => WindowManager.OpenWindow(childWindow, referenceWindow);
+        public bool? ShowDialog(Window dialogWindow, Window? owner = null) => WindowManager.ShowDialog(dialogWindow, owner);
         public void ActivateWindow(Window window) => WindowManager.ActivateWindow(window);
         public IEnumerable<Window> GetOpenWindows() => WindowManager.GetOpenWindows();
-        public T FindWindow<T>() where T : Window => WindowManager.FindWindow<T>();
+        public T? FindWindow<T>() where T : Window => WindowManager.FindWindow<T>();
         public bool ActivateExisting<T>() where T : Window => WindowManager.ActivateExisting<T>();
-        public T GetOrCreate<T>(Func<T> factory, Window referenceWindow = null) where T : Window => WindowManager.GetOrCreate(factory, referenceWindow);
+        public T GetOrCreate<T>(Func<T> factory, Window? referenceWindow = null) where T : Window => WindowManager.GetOrCreate(factory, referenceWindow);
         public void ActivateMainWindow() => WindowManager.ActivateMainWindow();
     }
 }

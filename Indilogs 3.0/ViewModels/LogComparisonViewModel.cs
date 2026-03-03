@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -23,15 +22,15 @@ namespace IndiLogs_3._0.ViewModels
         /// <summary>
         /// Raised when a log should be scrolled to in the main window.
         /// </summary>
-        public event Action<LogEntry> RequestScrollToMainWindow;
+        public event Action<LogEntry>? RequestScrollToMainWindow;
 
         #endregion
 
         #region Fields
 
-        private readonly MainViewModel _mainViewModel;
+        private readonly MainViewModel? _mainViewModel;
         private bool _showDiffs = true;
-        private string _ignoreMaskPattern;
+        private string? _ignoreMaskPattern;
         private bool _isSyncLocked = true;
         private bool _isMaskValid = true;
 
@@ -43,7 +42,7 @@ namespace IndiLogs_3._0.ViewModels
 
         #region Constructor
 
-        public LogComparisonViewModel(IList<LogEntry> allPlcLogs, IList<LogEntry> allAppLogs, MainViewModel mainViewModel = null)
+        public LogComparisonViewModel(IList<LogEntry> allPlcLogs, IList<LogEntry> allAppLogs, MainViewModel? mainViewModel = null)
         {
             _mainViewModel = mainViewModel;
 
@@ -119,7 +118,7 @@ namespace IndiLogs_3._0.ViewModels
         /// <summary>
         /// Regex pattern for content to ignore during comparison.
         /// </summary>
-        public string IgnoreMaskPattern
+        public string? IgnoreMaskPattern
         {
             get => _ignoreMaskPattern;
             set
@@ -269,7 +268,7 @@ namespace IndiLogs_3._0.ViewModels
         /// <summary>
         /// Gets the diff result for comparing two log entries.
         /// </summary>
-        public DiffResult GetDiffForRow(LogEntry left, LogEntry right)
+        public DiffResult? GetDiffForRow(LogEntry? left, LogEntry? right)
         {
             if (left == null || right == null || !ShowDiffs)
                 return null;
@@ -297,7 +296,7 @@ namespace IndiLogs_3._0.ViewModels
         /// <summary>
         /// Gets the log at the corresponding index in the other pane based on time.
         /// </summary>
-        public LogEntry GetCorrespondingLog(ComparisonPaneViewModel fromPane, LogEntry log)
+        public LogEntry? GetCorrespondingLog(ComparisonPaneViewModel fromPane, LogEntry? log)
         {
             if (log == null)
                 return null;
@@ -312,7 +311,7 @@ namespace IndiLogs_3._0.ViewModels
 
         #region Event Handlers
 
-        private void OnPanePropertyChanged(object sender, PropertyChangedEventArgs e)
+        private void OnPanePropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(ComparisonPaneViewModel.SelectedLog))
             {

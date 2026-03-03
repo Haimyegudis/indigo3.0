@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -89,7 +88,7 @@ namespace IndiLogs_3._0.Models.Charts
             set { _yAxis = value; OnPropertyChanged(nameof(YAxis)); }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
@@ -98,8 +97,8 @@ namespace IndiLogs_3._0.Models.Charts
     /// </summary>
     public class SignalSeries : INotifyPropertyChanged
     {
-        public string Name { get; set; }
-        public double[] Data { get; set; }
+        public string Name { get; set; } = "";
+        public double[] Data { get; set; } = Array.Empty<double>();
         public SKColor Color { get; set; }
 
         private bool _isVisible = true;
@@ -145,7 +144,7 @@ namespace IndiLogs_3._0.Models.Charts
             }
         }
 
-        public double[] SmoothedData { get; set; }
+        public double[]? SmoothedData { get; set; }
 
         /// <summary>
         /// Calculate Moving Average smoothing for noise reduction
@@ -184,7 +183,7 @@ namespace IndiLogs_3._0.Models.Charts
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
@@ -193,7 +192,7 @@ namespace IndiLogs_3._0.Models.Charts
     /// </summary>
     public class ChartViewModel : INotifyPropertyChanged
     {
-        private string _title;
+        private string _title = "";
         public string Title
         {
             get => _title;
@@ -213,20 +212,20 @@ namespace IndiLogs_3._0.Models.Charts
 
         public ObservableCollection<SignalSeries> Series { get; set; } = new ObservableCollection<SignalSeries>();
         public ObservableCollection<ReferenceLine> ReferenceLines { get; set; } = new ObservableCollection<ReferenceLine>();
-        public List<StateInterval> States { get; set; }
-        public List<EventMarker> EventMarkers { get; set; }
+        public List<StateInterval>? States { get; set; }
+        public List<EventMarker>? EventMarkers { get; set; }
 
         // For GANTT view - state data to display
-        public List<StateData> GanttStates { get; set; }
+        public List<StateData>? GanttStates { get; set; }
 
         // For independent-timeline Gantt charts (e.g. EM Statistics) — stores the chart's own data length
         // and custom X-axis label callback so WireUpGanttView/RefreshChartViews use the right values
         public int? GanttDataLength { get; set; }
-        public Func<int, string> GanttGetXAxisLabel { get; set; }
+        public Func<int, string>? GanttGetXAxisLabel { get; set; }
 
         // For THREAD view - messages to display
-        public List<ThreadMessageData> ThreadMessages { get; set; }
-        public string ThreadName { get; set; }
+        public List<ThreadMessageData>? ThreadMessages { get; set; }
+        public string? ThreadName { get; set; }
 
         private bool _isSelected;
         public bool IsSelected
@@ -251,7 +250,7 @@ namespace IndiLogs_3._0.Models.Charts
             set { _chartHeight = value; OnPropertyChanged(nameof(ChartHeight)); }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
@@ -260,8 +259,8 @@ namespace IndiLogs_3._0.Models.Charts
     /// </summary>
     public class StateEventItem
     {
-        public string Time { get; set; }
-        public string StateName { get; set; }
+        public string Time { get; set; } = "";
+        public string StateName { get; set; } = "";
         public int LineIndex { get; set; }
         public SKColor Color { get; set; }
     }
@@ -275,7 +274,7 @@ namespace IndiLogs_3._0.Models.Charts
         public int EndIndex;
         public int StateId;
         public string StateName;
-        public string TooltipText;
+        public string? TooltipText;
     }
 
     /// <summary>
@@ -283,7 +282,7 @@ namespace IndiLogs_3._0.Models.Charts
     /// </summary>
     public class WorkspaceModel
     {
-        public string SourceCsvPath { get; set; }
+        public string SourceCsvPath { get; set; } = "";
         public List<ChartSaveData> Charts { get; set; } = new List<ChartSaveData>();
     }
 
@@ -292,7 +291,7 @@ namespace IndiLogs_3._0.Models.Charts
     /// </summary>
     public class ChartSaveData
     {
-        public string Title { get; set; }
+        public string Title { get; set; } = "";
         public List<SeriesSaveData> Series { get; set; } = new List<SeriesSaveData>();
         public List<ReferenceLine> ReferenceLines { get; set; } = new List<ReferenceLine>();
     }
@@ -302,8 +301,8 @@ namespace IndiLogs_3._0.Models.Charts
     /// </summary>
     public class SeriesSaveData
     {
-        public string Name { get; set; }
-        public string ColorHex { get; set; }
+        public string Name { get; set; } = "";
+        public string ColorHex { get; set; } = "";
         public bool IsVisible { get; set; }
         public AxisType Axis { get; set; }
     }
@@ -314,11 +313,11 @@ namespace IndiLogs_3._0.Models.Charts
     public class EventMarker
     {
         public int Index { get; set; }
-        public string Name { get; set; }
-        public string Message { get; set; }
-        public string Time { get; set; }
-        public string Severity { get; set; }
-        public string Description { get; set; }
+        public string Name { get; set; } = "";
+        public string Message { get; set; } = "";
+        public string Time { get; set; } = "";
+        public string Severity { get; set; } = "";
+        public string Description { get; set; } = "";
     }
 
     /// <summary>
@@ -328,9 +327,9 @@ namespace IndiLogs_3._0.Models.Charts
     {
         public int StartIndex { get; set; }
         public int EndIndex { get; set; }
-        public string Duration { get; set; }
-        public string StartTime { get; set; }
-        public string EndTime { get; set; }
+        public string Duration { get; set; } = "";
+        public string StartTime { get; set; } = "";
+        public string EndTime { get; set; } = "";
     }
 
     /// <summary>
@@ -338,8 +337,8 @@ namespace IndiLogs_3._0.Models.Charts
     /// </summary>
     public class SignalCategory
     {
-        public string Name { get; set; }
-        public string[] Keywords { get; set; }
+        public string Name { get; set; } = "";
+        public string[] Keywords { get; set; } = Array.Empty<string>();
 
         public static SignalCategory[] DefaultCategories = new[]
         {

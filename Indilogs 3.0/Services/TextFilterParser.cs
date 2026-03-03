@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -49,8 +48,9 @@ namespace IndiLogs_3._0.Services
 
         private struct Token
         {
+            public Token() { }
             public TT     Type;
-            public string Text;
+            public string Text = "";
         }
 
         #endregion
@@ -62,7 +62,7 @@ namespace IndiLogs_3._0.Services
         /// Returns null if the text is blank.
         /// Throws <see cref="FormatException"/> on syntax errors.
         /// </summary>
-        public static FilterNode Parse(string filterText)
+        public static FilterNode? Parse(string? filterText)
         {
             if (string.IsNullOrWhiteSpace(filterText))
                 return null;

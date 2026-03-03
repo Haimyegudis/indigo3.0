@@ -1,5 +1,4 @@
-#nullable disable
-﻿using System;
+using System;
 using System.Globalization;
 using System.Windows.Data;
 
@@ -7,7 +6,7 @@ namespace IndiLogs_3._0.Converters
 {
     public class InverseBooleanConverter : IValueConverter
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value is bool boolValue)
             {
@@ -16,7 +15,7 @@ namespace IndiLogs_3._0.Converters
             return false;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value is bool boolValue)
             {

@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -94,7 +93,7 @@ namespace IndiLogs_3._0.Services.Grep
         /// <summary>
         /// Builds a UNC path from an IP address and a share name.
         /// </summary>
-        public static string BuildUncPath(string address, string shareName)
+        public static string? BuildUncPath(string? address, string? shareName)
         {
             if (string.IsNullOrWhiteSpace(address) || string.IsNullOrWhiteSpace(shareName))
                 return null;

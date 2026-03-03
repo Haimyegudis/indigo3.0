@@ -35,7 +35,6 @@ namespace IndiLogs_3._0.ViewModels
         // Streaming results: background threads enqueue, timer flushes to UI
         private readonly ConcurrentQueue<GrepResult> _resultQueue = new ConcurrentQueue<GrepResult>();
         private System.Threading.Timer _flushTimer;
-        private int _streamedResultCount;
 
         /// <summary>
         /// Raised when a scheduled "Run Now" wants to close the window.

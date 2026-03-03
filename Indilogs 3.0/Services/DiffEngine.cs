@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -11,14 +10,14 @@ namespace IndiLogs_3._0.Services
     /// </summary>
     public class DiffEngine
     {
-        private string _ignoreMaskPattern;
-        private Regex _maskRegex;
+        private string? _ignoreMaskPattern;
+        private Regex? _maskRegex;
 
         /// <summary>
         /// Regex pattern for content to ignore during comparison.
         /// Example: "\d+" to ignore all numbers.
         /// </summary>
-        public string IgnoreMaskPattern
+        public string? IgnoreMaskPattern
         {
             get => _ignoreMaskPattern;
             set
@@ -48,7 +47,7 @@ namespace IndiLogs_3._0.Services
         /// <summary>
         /// Applies the mask pattern to text, replacing matched content with a placeholder.
         /// </summary>
-        public string ApplyMask(string text)
+        public string ApplyMask(string? text)
         {
             if (string.IsNullOrEmpty(text) || _maskRegex == null)
                 return text;
@@ -67,7 +66,7 @@ namespace IndiLogs_3._0.Services
         /// <summary>
         /// Compares two strings and returns diff results for both sides.
         /// </summary>
-        public DiffResult Compare(string left, string right)
+        public DiffResult Compare(string? left, string? right)
         {
             if (left == null) left = string.Empty;
             if (right == null) right = string.Empty;
@@ -287,12 +286,12 @@ namespace IndiLogs_3._0.Services
         /// <summary>
         /// Diff segments for the left (source) text.
         /// </summary>
-        public List<DiffSegment> LeftSegments { get; set; }
+        public List<DiffSegment> LeftSegments { get; set; } = new();
 
         /// <summary>
         /// Diff segments for the right (target) text.
         /// </summary>
-        public List<DiffSegment> RightSegments { get; set; }
+        public List<DiffSegment> RightSegments { get; set; } = new();
     }
 
     /// <summary>
@@ -303,7 +302,7 @@ namespace IndiLogs_3._0.Services
         /// <summary>
         /// The text content of this segment.
         /// </summary>
-        public string Text { get; set; }
+        public string Text { get; set; } = "";
 
         /// <summary>
         /// The type of difference for this segment.
