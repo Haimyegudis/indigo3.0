@@ -1,11 +1,9 @@
-﻿using IndiLogs.PluginAPI;
+using IndiLogs.PluginAPI;
 using IndiLogs_3._0.Models;
-using IndiLogs_3._0.Models.Analysis;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Interfaces;
 using IndiLogs_3._0.Views;
 using IndiLogs_3._0.ViewModels.Components;
-using Microsoft.Win32;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -14,14 +12,10 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Threading;
 using Microsoft.Data.Sqlite;
 
 namespace IndiLogs_3._0.ViewModels
@@ -83,12 +77,9 @@ namespace IndiLogs_3._0.ViewModels
 
         // Coloring
         private List<ColoringCondition> _savedColoringRules = new List<ColoringCondition>();
-        // Case Management — bind XAML directly to CaseVM.* properties
 
         private const int UI_UPDATE_BATCH_SIZE = AppConstants.UiUpdateBatchSize;
         private readonly object _collectionLock = new object();
-
-        // Collections — bind XAML directly to SessionVM.* / FilterVM.* properties
 
         // Full-column DataView for EVENTS tab (all CSV columns as-is)
         private System.Data.DataView _eventsDataView;
@@ -100,440 +91,76 @@ namespace IndiLogs_3._0.ViewModels
 
         public void LoadEventsDataView()
         {
-            EventsDataView = null;
-            if (SessionVM?.SelectedSession?.EventsCsvRawContent == null) return;
+            var session = SessionVM?.SelectedSession;
+            if (session == null) return;
 
-            try
+            // Events tab: display terminal CSV bytes
+            var eventsCsvEntries = session.TerminalCsvBytes?
+                .Where(kv => !Path.GetFileName(kv.Key).StartsWith("Io-", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (eventsCsvEntries == null || eventsCsvEntries.Count == 0)
             {
-                var dt = new System.Data.DataTable();
-                var csvContent = SessionVM.SelectedSession.EventsCsvRawContent;
-                var lines = csvContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                if (lines.Length == 0) return;
+                EventsDataView = null;
+                return;
+            }
 
-                var headers = SplitCsvLineHelper(lines[0]);
-                foreach (var header in headers)
+            var dt = new System.Data.DataTable("Events");
+            bool headersDone = false;
+
+            foreach (var kv in eventsCsvEntries)
+            {
+                string csvText = System.Text.Encoding.UTF8.GetString(kv.Value);
+                using var reader = new StringReader(csvText);
+                string headerLine = reader.ReadLine();
+                if (headerLine == null) continue;
+
+                if (!headersDone)
                 {
-                    string colName = header.Trim().Trim('"');
-                    if (string.IsNullOrEmpty(colName)) colName = $"Col{dt.Columns.Count}";
-                    string uniqueName = colName;
-                    int suffix = 2;
-                    while (dt.Columns.Contains(uniqueName))
-                        uniqueName = $"{colName}_{suffix++}";
-                    dt.Columns.Add(uniqueName, typeof(string));
+                    var headers = SplitCsvLineHelper(headerLine);
+                    foreach (var h in headers)
+                        dt.Columns.Add(h.Trim(), typeof(string));
+                    headersDone = true;
                 }
 
-                for (int i = 1; i < lines.Length; i++)
+                string dataLine;
+                while ((dataLine = reader.ReadLine()) != null)
                 {
-                    var values = SplitCsvLineHelper(lines[i]);
+                    var values = SplitCsvLineHelper(dataLine);
                     var row = dt.NewRow();
-                    for (int j = 0; j < dt.Columns.Count && j < values.Count; j++)
-                        row[j] = values[j].Trim().Trim('"');
+                    for (int i = 0; i < Math.Min(values.Count, dt.Columns.Count); i++)
+                        row[i] = values[i].Trim();
                     dt.Rows.Add(row);
                 }
-
-                EventsDataView = dt.DefaultView;
             }
-            catch (Exception ex)
-            {
-                AppLogger.Error("Loading events CSV failed", ex);
-            }
+            EventsDataView = dt.DefaultView;
         }
 
         private static List<string> SplitCsvLineHelper(string line)
         {
             var result = new List<string>();
             bool inQuotes = false;
-            int start = 0;
-            for (int i = 0; i < line.Length; i++)
+            var sb = new System.Text.StringBuilder();
+            foreach (char c in line)
             {
-                if (line[i] == '"') inQuotes = !inQuotes;
-                else if (line[i] == ',' && !inQuotes)
+                if (c == '"') { inQuotes = !inQuotes; continue; }
+                if (c == ',' && !inQuotes)
                 {
-                    result.Add(line.Substring(start, i - start));
-                    start = i + 1;
+                    result.Add(sb.ToString());
+                    sb.Clear();
+                    continue;
                 }
+                sb.Append(c);
             }
-            result.Add(line.Substring(start));
+            result.Add(sb.ToString());
             return result;
         }
 
-        // Session/Live — bind XAML directly to SessionVM.* / LiveVM.* properties
+        /// <summary>Exposes the plugin loader so child VMs can query loaded plugins.</summary>
+        public Services.Interfaces.IPluginLoader GetPluginLoader()
+            => _logService?.GetPluginLoader();
 
-        // Search & Filter — bind XAML directly to FilterVM.* properties
-        // Live Mode — bind XAML directly to LiveVM.* properties
-
-        // Case Management — bind XAML directly to CaseVM.* properties
-
-        // Config Explorer — bind XAML directly to ConfigVM.* properties
-
-        // Dynamic tab header: "TERMINALS" for binary APP logs, "DB & CONFIG" otherwise
-        public string DbConfigTabHeader =>
-            SessionVM?.SelectedSession?.HasBinaryAppLogs == true ? "TERMINALS" : "DB & CONFIG";
-
-        // Dynamic tab header: "PLC-FW" for S4 (binary APP logs), "PLC LOGS" otherwise
-        public string PlcTabHeader =>
-            SessionVM?.SelectedSession?.HasBinaryAppLogs == true ? "PLC-FW" : "PLC LOGS";
-
-        // Hide SetupInfo tab when APP files are binary
-        public bool HasBinaryAppLogs =>
-            SessionVM?.SelectedSession?.HasBinaryAppLogs == true;
-
-        public bool HasSessionLoaded => SessionVM?.SelectedSession != null;
-
-        /// <summary>True when no ZIP session is loaded but an external file is open in Different Logs.</summary>
-        public bool HasExternalFileOnly => SessionVM?.SelectedSession == null && DifferentLogsVM?.HasFile == true;
-
-        /// <summary>Controls MainTabs visibility: shown when a session is loaded OR an external file is open.</summary>
-        public bool ShowMainTabs => HasSessionLoaded || HasExternalFileOnly;
-
-        // Show Globals tab only when loaded from a ZIP that contains globals files
-        public bool HasGlobalsFiles =>
-            SessionVM?.SelectedSession?.GlobalsFiles != null && SessionVM.SelectedSession.GlobalsFiles.Count > 0 &&
-            SessionVM.SelectedSession.FilePath != null && SessionVM.SelectedSession.FilePath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
-
-        // --- TAB SELECTION VISIBILITY (set by TabSelectionWindow dialog) ---
-        private bool _showPlcTab = true;
-        public bool ShowPlcTab { get => _showPlcTab; set { _showPlcTab = value; OnPropertyChanged(); } }
-
-        private bool _showAppTab = true;
-        public bool ShowAppTab { get => _showAppTab; set { _showAppTab = value; OnPropertyChanged(); } }
-
-        private bool _showEventsTab = true;
-        public bool ShowEventsTab { get => _showEventsTab; set { _showEventsTab = value; OnPropertyChanged(); } }
-
-        private bool _showScreenshotsTab = true;
-        public bool ShowScreenshotsTab { get => _showScreenshotsTab; set { _showScreenshotsTab = value; OnPropertyChanged(); } }
-
-        private bool _showConfigTab = true;
-        public bool ShowConfigTab { get => _showConfigTab; set { _showConfigTab = value; OnPropertyChanged(); } }
-
-        private bool _showDbConfigTab = true;
-        public bool ShowDbConfigTab { get => _showDbConfigTab; set { _showDbConfigTab = value; OnPropertyChanged(); } }
-
-        private bool _showSetupInfoTab = true;
-        public bool ShowSetupInfoTab { get => _showSetupInfoTab; set { _showSetupInfoTab = value; OnPropertyChanged(); } }
-
-        private bool _showGlobalsTab = true;
-        public bool ShowGlobalsTab { get => _showGlobalsTab; set { _showGlobalsTab = value; OnPropertyChanged(); } }
-
-        private bool _showSystabTab = true;
-        public bool ShowSystabTab { get => _showSystabTab; set { _showSystabTab = value; OnPropertyChanged(); } }
-
-        private bool _showChartsTab = true;
-        public bool ShowChartsTab { get => _showChartsTab; set { _showChartsTab = value; OnPropertyChanged(); } }
-
-        private bool _showCprTab = true;
-        public bool ShowCprTab { get => _showCprTab; set { _showCprTab = value; OnPropertyChanged(); } }
-
-        private bool _showStepRecorderTab = true;
-        public bool ShowStepRecorderTab { get => _showStepRecorderTab; set { _showStepRecorderTab = value; OnPropertyChanged(); } }
-
-        private bool _showDifferentLogsTab = true;
-        public bool ShowDifferentLogsTab { get => _showDifferentLogsTab; set { _showDifferentLogsTab = value; OnPropertyChanged(); } }
-
-        // Stores the user's tab selection to combine with data-driven visibility after load
-        private TabSelectionConfig _lastTabSelection;
-
-        /// <summary>
-        /// Applies tab visibility from the user's tab selection dialog choices.
-        /// Called before loading starts.
-        /// </summary>
-        public void ApplyTabSelection(TabSelectionConfig selection, TabSelectionConfig preScan)
-        {
-            _lastTabSelection = selection;
-
-            // Reset all to visible first
-            ShowPlcTab = true;
-            ShowAppTab = true;
-            ShowEventsTab = true;
-            ShowScreenshotsTab = true;
-            ShowConfigTab = true;
-            ShowDbConfigTab = true;
-            ShowSetupInfoTab = true;
-            ShowGlobalsTab = true;
-            ShowSystabTab = true;
-            ShowChartsTab = true;
-            ShowCprTab = true;
-            ShowStepRecorderTab = true;
-            ShowDifferentLogsTab = true;
-
-            if (selection == null) return;
-
-            ShowPlcTab = selection.LoadPlc;
-            ShowAppTab = selection.LoadApp;
-            ShowEventsTab = selection.LoadEvents;
-            ShowScreenshotsTab = selection.LoadScreenshots;
-            ShowConfigTab = selection.LoadConfiguration;
-            // DB & CONFIG / TERMINALS tab is controlled by Configuration + Terminal selection
-            ShowDbConfigTab = selection.LoadConfiguration || selection.LoadTerminalLogs || selection.LoadLrs;
-            ShowSetupInfoTab = selection.LoadSetupInfo;
-            ShowGlobalsTab = selection.LoadGlobals;
-            ShowSystabTab = selection.LoadSystab;
-            ShowChartsTab = selection.ShowCharts;
-            ShowCprTab = selection.ShowCpr;
-            ShowStepRecorderTab = selection.ShowStepRecorder;
-            ShowDifferentLogsTab = selection.ShowDifferentLogs;
-        }
-
-        /// <summary>
-        /// Re-evaluates data-driven tab visibility after session data is loaded.
-        /// Combines user selection (must have been checked) with data availability.
-        /// </summary>
-        public void UpdateTabVisibilityAfterLoad()
-        {
-            bool userAllowsGlobals = _lastTabSelection?.LoadGlobals ?? true;
-            bool userAllowsSystab = _lastTabSelection?.LoadSystab ?? true;
-            bool userAllowsSetupInfo = _lastTabSelection?.LoadSetupInfo ?? true;
-
-            ShowGlobalsTab = userAllowsGlobals && HasGlobalsFiles;
-            ShowSystabTab = userAllowsSystab && HasSystabFiles;
-            // Setup Info: hide for S4-5 (HasBinaryAppLogs) even if user checked it
-            ShowSetupInfoTab = userAllowsSetupInfo && HasSessionLoaded && !HasBinaryAppLogs;
-        }
-
-        // --- ADD BACK SKIPPED COMPONENTS ---
-
-        /// <summary>True when the current session has components that were skipped but exist in the ZIP.</summary>
-        public bool HasSkippedComponents
-        {
-            get
-            {
-                var skipped = GetSkippedComponents();
-                return skipped != null && skipped.Count > 0;
-            }
-        }
-
-        /// <summary>Returns component names that were skipped during load but exist in the ZIP.</summary>
-        public List<(string Name, string DisplayName)> GetSkippedComponents()
-        {
-            var session = SessionVM?.SelectedSession;
-            if (session?.LoadTabSelection == null || session?.PreScanConfig == null)
-                return new List<(string, string)>();
-
-            var sel = session.LoadTabSelection;
-            var pre = session.PreScanConfig;
-            var result = new List<(string Name, string DisplayName)>();
-
-            if (!sel.LoadPlc && pre.HasPlc) result.Add(("Plc", "PLC Logs"));
-            if (!sel.LoadApp && pre.HasApp) result.Add(("App", "APP Logs"));
-            if (!sel.LoadEvents && pre.HasEvents) result.Add(("Events", "Events"));
-            if (!sel.LoadScreenshots && pre.HasScreenshots) result.Add(("Screenshots", "Screenshots"));
-            if (!sel.LoadConfiguration && pre.HasConfiguration) result.Add(("Configuration", "Configuration"));
-            if (!sel.LoadTerminalLogs && pre.HasTerminalLogs) result.Add(("TerminalLogs", "Terminal Logs"));
-            if (!sel.LoadLrs && pre.HasLrs) result.Add(("Lrs", "LRS"));
-            if (!sel.LoadSetupInfo && pre.HasSetupInfo) result.Add(("SetupInfo", "Setup Info"));
-            if (!sel.LoadSystab && pre.HasSystab) result.Add(("Systab", "Systab"));
-            if (!sel.LoadGlobals && pre.HasGlobals) result.Add(("Globals", "Globals"));
-            if (pre.IsS6 && !sel.LoadManagerThread && pre.HasManagerThread) result.Add(("ManagerThread", "Manager Thread"));
-
-            // Tool tabs
-            if (!sel.ShowCharts) result.Add(("Charts", "Charts"));
-            if (!sel.ShowCpr) result.Add(("CPR", "CPR"));
-            if (!pre.IsS6 && !sel.ShowStepRecorder) result.Add(("Step Recorder", "Step Recorder"));
-            if (!sel.ShowDifferentLogs) result.Add(("Different Logs", "Different Logs"));
-
-            return result;
-        }
-
-        public ICommand AddBackComponentCommand { get; private set; }
-
-        // --- PANEL VISIBILITY ---
-        private bool _isLeftPanelVisible = true;
-        public bool IsLeftPanelVisible
-        {
-            get => _isLeftPanelVisible;
-            set { _isLeftPanelVisible = value; OnPropertyChanged(); }
-        }
-
-        private bool _isRightPanelVisible = true;
-        public bool IsRightPanelVisible
-        {
-            get => _isRightPanelVisible;
-            set { _isRightPanelVisible = value; OnPropertyChanged(); }
-        }
-
-        private bool _isBottomPanelVisible = true;
-        public bool IsBottomPanelVisible
-        {
-            get => _isBottomPanelVisible;
-            set { _isBottomPanelVisible = value; OnPropertyChanged(); }
-        }
-
-        public ICommand ToggleLeftPanelCommand { get; }
-        public ICommand ToggleRightPanelCommand { get; }
-
-        public ObservableCollection<string> AvailableFonts { get; set; }
-        public ObservableCollection<string> TimeUnits { get; } = new ObservableCollection<string> { "Seconds", "Minutes" };
-
-
-        public event Action<LogEntry> RequestScrollToLog;
-        public event Action<LogEntry, bool> RequestScrollToLogPreservePosition;
-        public event Action<LogEntry> RequestSaveScrollPosition;
-        public event Action<string> RequestScrollToBottom;
-
-        /// <summary>
-        /// Public method to trigger scroll to log event from child ViewModels
-        /// </summary>
-        public void ScrollToLog(LogEntry log)
-        {
-            RequestScrollToLog?.Invoke(log);
-        }
-
-        /// <summary>
-        /// Scrolls to log while preserving its visual position on screen (used when filter changes)
-        /// </summary>
-        public void ScrollToLogPreservePosition(LogEntry log)
-        {
-            RequestScrollToLogPreservePosition?.Invoke(log, true);
-        }
-
-        /// <summary>
-        /// Saves the current scroll position before filter changes (call BEFORE applying filters)
-        /// </summary>
-        public void SaveScrollPosition(LogEntry log)
-        {
-            RequestSaveScrollPosition?.Invoke(log);
-        }
-
-        /// <summary>
-        /// Scrolls a specific tab grid to its last row. Tab names: "PLC", "FILTERED", "APP"
-        /// </summary>
-        public void ScrollTabToBottom(string tabName)
-        {
-            RequestScrollToBottom?.Invoke(tabName);
-        }
-
-        // --- SELECTED TAB INDEX ---
-        private int _selectedTabIndex;
-        public int SelectedTabIndex
-        {
-            get => _selectedTabIndex;
-            set
-            {
-                if (_selectedTabIndex != value)
-                {
-                    _selectedTabIndex = value;
-                    OnPropertyChanged();
-
-                    if (_selectedTabIndex == AppConstants.TAB_APP) // APP Tab
-                    {
-                        LeftTabIndex = 1; // LOGGERS
-                    }
-                    else if (_selectedTabIndex == AppConstants.TAB_PLC) // PLC Tab
-                    {
-                        LeftTabIndex = 0; // EXPLORER
-                    }
-
-                    OnPropertyChanged(nameof(IsFilterActive));
-                    OnPropertyChanged(nameof(IsFilterOutActive));
-                    OnPropertyChanged(nameof(IsPLCTabSelected));
-                    OnPropertyChanged(nameof(IsAppTabSelected));
-                    OnPropertyChanged(nameof(IsPrintAnalysisVisible));
-                    OnPropertyChanged(nameof(IsExportVisible));
-                    OnPropertyChanged(nameof(ActiveLoggerTree));
-                    OnPropertyChanged(nameof(LoggerTabTitle));
-                    OnPropertyChanged(nameof(ActiveFilters));
-                    OnPropertyChanged(nameof(HasActiveFilters));
-
-                    // Auto-manage panel visibility per tab type
-                    // Tabs 0,1 (PLC, APP) = left + right + bottom panels visible
-                    // Tab 9 (CHARTS), 10 (CPR), 11 (STEP RECORDER), 12 (DIFFERENT LOGS) = all panels hidden
-                    // Other tabs = left + right hidden, bottom visible
-                    if (_selectedTabIndex == AppConstants.TAB_PLC || _selectedTabIndex == AppConstants.TAB_APP)
-                    {
-                        IsLeftPanelVisible = true;
-                        IsRightPanelVisible = true;
-                        IsBottomPanelVisible = true;
-                    }
-                    else if (_selectedTabIndex == AppConstants.TAB_CHARTS  || // CHARTS
-                             _selectedTabIndex == AppConstants.TAB_CPR || // CPR
-                             _selectedTabIndex == AppConstants.TAB_STEP_RECORDER || // STEP RECORDER
-                             _selectedTabIndex == AppConstants.TAB_DIFFERENT_LOGS)   // DIFFERENT LOGS
-                    {
-                        IsLeftPanelVisible = false;
-                        IsRightPanelVisible = false;
-                        IsBottomPanelVisible = false;
-                    }
-                    else // EVENTS, SCREENSHOTS, CONFIG, DB CONFIG, SETUP INFO, GLOBALS, SYSTAB
-                    {
-                        IsLeftPanelVisible = false;
-                        IsRightPanelVisible = false;
-                        IsBottomPanelVisible = true;
-                    }
-
-                    // Block RequestSyncScroll from firing on the initial ScrollChanged of
-                    // the newly-visible tab. WPF re-renders the DataGrid when a tab becomes
-                    // visible, which raises ScrollChanged → TriggerTimeSyncScroll even though
-                    // no user scroll happened. Without this flag:
-                    //   Bug 1: the render-ScrollChanged overwrites _pendingSyncLog so the
-                    //          check below finds _pendingSyncTabIndex != _selectedTabIndex
-                    //          and the scroll is skipped (user must switch twice).
-                    //   Bug 2: every tab switch creates a new spurious pending sync that
-                    //          advances the visible time forward.
-                    _isTabSwitching = true;
-
-                    // Apply pending sync scroll when user switches to the target tab
-                    if (_pendingSyncLog != null && _selectedTabIndex == _pendingSyncTabIndex)
-                    {
-                        var logToScroll = _pendingSyncLog;
-                        _pendingSyncLog = null;
-                        _pendingSyncTabIndex = -1;
-                        Application.Current?.Dispatcher?.BeginInvoke(
-                            System.Windows.Threading.DispatcherPriority.Loaded,
-                            new Action(() =>
-                            {
-                                RequestScrollToLog?.Invoke(logToScroll);
-                                // Tell the view's ApplicationIdle callback NOT to overwrite
-                                // this synced position with a scroll-to-bottom.
-                                TimeSyncScrollWasApplied = true;
-                                // Clear AFTER the scroll so user-initiated scrolls that
-                                // happen immediately after the tab lands are not blocked.
-                                _isTabSwitching = false;
-                            }));
-                    }
-                    else
-                    {
-                        // No pending sync — still must clear the flag once layout settles.
-                        // Also reset TimeSyncScrollWasApplied so a stale true value from a
-                        // previous APP→PLC sync (where PLC is never in _pendingScrollToBottom
-                        // and the flag would never be cleared) does not block a future
-                        // first-open scroll-to-bottom on any tab.
-                        Application.Current?.Dispatcher?.BeginInvoke(
-                            System.Windows.Threading.DispatcherPriority.Loaded,
-                            new Action(() =>
-                            {
-                                TimeSyncScrollWasApplied = false;
-                                _isTabSwitching = false;
-                            }));
-                    }
-                }
-            }
-        }
-
-        public bool IsPLCTabSelected => _selectedTabIndex == AppConstants.TAB_PLC;
-        public bool IsAppTabSelected => _selectedTabIndex == AppConstants.TAB_APP;
-
-        /// <summary>Print Analysis visible only on APP tab AND when NOT S4-5 (S6 only).</summary>
-        public bool IsPrintAnalysisVisible => IsAppTabSelected && !HasBinaryAppLogs;
-
-        /// <summary>Button text changes: "📊 Statistics" for S4-5, "⚙ Reports" for S6.</summary>
-        public string ReportsButtonText => HasBinaryAppLogs ? "📊 Statistics" : "⚙ Reports";
-
-        // Dynamic logger tree: PLC loggers for PLC tabs, APP loggers for APP tab
-        public ObservableCollection<LoggerNode> ActiveLoggerTree =>
-            IsPLCTabSelected ? FilterVM?.PlcLoggerTreeRoot : FilterVM?.LoggerTreeRoot;
-
-        public string LoggerTabTitle =>
-            IsPLCTabSelected ? "PLC LOGGERS" : "APP LOGGERS";
-        public bool IsExportVisible => _selectedTabIndex == AppConstants.TAB_PLC || _selectedTabIndex == AppConstants.TAB_CHARTS;
-
-
-        private int _leftTabIndex;
-        public int LeftTabIndex
-        {
-            get => _leftTabIndex;
-            set { _leftTabIndex = value; OnPropertyChanged(); }
-        }
+        // ── UI properties ──
 
         private string _windowTitle = "IndiLogs 3.0";
         public string WindowTitle
@@ -548,10 +175,6 @@ namespace IndiLogs_3._0.ViewModels
             get => _currentPluginColumns;
             set { _currentPluginColumns = value; OnPropertyChanged(); }
         }
-
-        /// <summary>Exposes the plugin loader so child VMs can query loaded plugins.</summary>
-        public Services.Interfaces.IPluginLoader GetPluginLoader()
-            => _logService?.GetPluginLoader();
 
         private string _setupInfo;
         public string SetupInfo
@@ -583,7 +206,7 @@ namespace IndiLogs_3._0.ViewModels
 
         public bool HasSelectedLog => _selectedLog != null;
 
-        // Log Details panel pin/auto-hide state — pinned by default so it's always visible
+        // Log Details panel pin/auto-hide state
         private bool _isLogDetailsPinned = true;
         public bool IsLogDetailsPinned
         {
@@ -593,175 +216,7 @@ namespace IndiLogs_3._0.ViewModels
 
         public ICommand ToggleLogDetailsPinCommand { get; private set; }
 
-        private bool _isSearchSyntaxValid = true;
-        public bool IsSearchSyntaxValid
-        {
-            get => _isSearchSyntaxValid;
-            set
-            {
-                if (_isSearchSyntaxValid != value)
-                {
-                    _isSearchSyntaxValid = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-        private string _searchSyntaxError;
-        public string SearchSyntaxError
-        {
-            get => _searchSyntaxError;
-            set
-            {
-                if (_searchSyntaxError != value)
-                {
-                    _searchSyntaxError = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-        private void ValidateSearchSyntax()
-        {
-            if (string.IsNullOrWhiteSpace(FilterVM?.SearchText))
-            {
-                IsSearchSyntaxValid = true;
-                SearchSyntaxError = null;
-                return;
-            }
-
-            if (QueryParserService.HasBooleanOperators(FilterVM.SearchText))
-            {
-                var parser = new QueryParserService();
-                var result = parser.Parse(FilterVM.SearchText, out string errorMessage);
-
-                if (result == null)
-                {
-                    IsSearchSyntaxValid = false;
-                    SearchSyntaxError = errorMessage;
-                }
-                else
-                {
-                    IsSearchSyntaxValid = true;
-                    SearchSyntaxError = null;
-                }
-            }
-            else
-            {
-                IsSearchSyntaxValid = true;
-                SearchSyntaxError = null;
-            }
-        }
-
-        public bool IsFilterActive
-        {
-            get
-            {
-                if (SelectedTabIndex == AppConstants.TAB_DIFFERENT_LOGS) return DifferentLogsVM?.IsFilterActive ?? false;
-                return SelectedTabIndex == AppConstants.TAB_APP ? (FilterVM?.IsAppFilterActive ?? false) : (FilterVM?.IsMainFilterActive ?? false);
-            }
-            set
-            {
-                // Different Logs tab: toggle its own filter
-                if (SelectedTabIndex == AppConstants.TAB_DIFFERENT_LOGS)
-                {
-                    var diffVM = DifferentLogsVM;
-                    if (diffVM != null && diffVM.IsFilterActive != value)
-                    {
-                        if (value && diffVM.FilterRoot == null) return; // No stored filter
-                        diffVM.IsFilterActive = value;
-                        OnPropertyChanged();
-
-                        if (value && diffVM.FilterRoot != null)
-                        {
-                            var filtered = diffVM.AllLogEntries
-                                .Where(l => FilterVM.EvaluateFilterNode(l, diffVM.FilterRoot))
-                                .ToList();
-                            diffVM.FilteredEntries = new ObservableCollection<LogEntry>(filtered);
-                        }
-                        else
-                        {
-                            diffVM.FilteredEntries = new ObservableCollection<LogEntry>(diffVM.AllLogEntries);
-                        }
-                    }
-                    return;
-                }
-
-                if (SelectedTabIndex == AppConstants.TAB_APP)
-                {
-                    ToggleFilterState(value,
-                        () => FilterVM?.IsAppFilterActive ?? false,
-                        v => FilterVM.IsAppFilterActive = v,
-                        () => FilterVM?.HasAppStoredFilter ?? false,
-                        () => ApplyAppLogsFilter());
-                }
-                else
-                {
-                    ToggleFilterState(value,
-                        () => FilterVM?.IsMainFilterActive ?? false,
-                        v => FilterVM.IsMainFilterActive = v,
-                        () => FilterVM?.HasMainStoredFilter ?? false,
-                        () => UpdateMainLogsFilter(value));
-                }
-            }
-        }
-
-        public bool IsFilterOutActive
-        {
-            get => SelectedTabIndex == AppConstants.TAB_APP ? (FilterVM?.IsAppFilterOutActive ?? false) : (FilterVM?.IsMainFilterOutActive ?? false);
-            set
-            {
-                if (SelectedTabIndex == AppConstants.TAB_APP)
-                {
-                    ToggleFilterState(value,
-                        () => FilterVM?.IsAppFilterOutActive ?? false,
-                        v => FilterVM.IsAppFilterOutActive = v,
-                        () => FilterVM?.HasAppStoredFilterOut ?? false,
-                        () => ApplyAppLogsFilter());
-                }
-                else
-                {
-                    ToggleFilterState(value,
-                        () => FilterVM?.IsMainFilterOutActive ?? false,
-                        v => FilterVM.IsMainFilterOutActive = v,
-                        () => FilterVM?.HasMainStoredFilterOut ?? false,
-                        () => UpdateMainLogsFilter(FilterVM.IsMainFilterActive));
-                }
-            }
-        }
-
-        /// <summary>
-        /// Shared helper for filter toggle logic: saves scroll position, toggles filter,
-        /// applies changes, and restores scroll position.
-        /// </summary>
-        private void ToggleFilterState(bool value, Func<bool> getCurrent, Action<bool> setCurrent,
-            Func<bool> hasStoredFilter, Action applyFilter)
-        {
-            if (FilterVM == null || getCurrent() == value) return;
-            if (value && !hasStoredFilter()) return;
-
-            var savedSelectedLog = SelectedLog;
-            if (savedSelectedLog != null)
-                SaveScrollPosition(savedSelectedLog);
-
-            setCurrent(value);
-            OnPropertyChanged(nameof(IsFilterActive));
-            OnPropertyChanged(nameof(IsFilterOutActive));
-            applyFilter();
-
-            if (savedSelectedLog != null)
-            {
-                var logToRestore = savedSelectedLog;
-                Application.Current.Dispatcher.BeginInvoke(
-                    System.Windows.Threading.DispatcherPriority.ContextIdle,
-                    new Action(() =>
-                    {
-                        SelectedLog = logToRestore;
-                        ScrollToLogPreservePosition(logToRestore);
-                    }));
-            }
-        }
-
+        // ── Font & appearance ──
 
         private string _selectedFont = "Segoe UI";
         public string SelectedFont
@@ -819,6 +274,54 @@ namespace IndiLogs_3._0.ViewModels
             set { _selectedTimeUnit = value; OnPropertyChanged(); }
         }
 
+        // ── Panel visibility ──
+
+        private bool _isLeftPanelVisible = true;
+        public bool IsLeftPanelVisible
+        {
+            get => _isLeftPanelVisible;
+            set { _isLeftPanelVisible = value; OnPropertyChanged(); }
+        }
+
+        private bool _isRightPanelVisible = true;
+        public bool IsRightPanelVisible
+        {
+            get => _isRightPanelVisible;
+            set { _isRightPanelVisible = value; OnPropertyChanged(); }
+        }
+
+        private bool _isBottomPanelVisible = true;
+        public bool IsBottomPanelVisible
+        {
+            get => _isBottomPanelVisible;
+            set { _isBottomPanelVisible = value; OnPropertyChanged(); }
+        }
+
+        public ICommand ToggleLeftPanelCommand { get; }
+        public ICommand ToggleRightPanelCommand { get; }
+
+        public ObservableCollection<string> AvailableFonts { get; set; }
+        public ObservableCollection<string> TimeUnits { get; } = new ObservableCollection<string> { "Seconds", "Minutes" };
+
+        // ── Scroll requests ──
+
+        public event Action<LogEntry> RequestScrollToLog;
+        public event Action<LogEntry, bool> RequestScrollToLogPreservePosition;
+        public event Action<LogEntry> RequestSaveScrollPosition;
+        public event Action<string> RequestScrollToBottom;
+
+        public void ScrollToLog(LogEntry log) => RequestScrollToLog?.Invoke(log);
+        public void ScrollToLogPreservePosition(LogEntry log) => RequestScrollToLogPreservePosition?.Invoke(log, true);
+        public void SaveScrollPosition(LogEntry log) => RequestSaveScrollPosition?.Invoke(log);
+        public void ScrollTabToBottom(string tabName) => RequestScrollToBottom?.Invoke(tabName);
+
+        // ── Filter computed properties (delegated, bindings from XAML) ──
+
+        public bool HasRangeStart => FilterVM?.HasRangeStart ?? false;
+        public List<Models.ActiveFilterItem> ActiveFilters => FilterVM?.GetActiveFilters() ?? new List<Models.ActiveFilterItem>();
+        public bool HasActiveFilters => ActiveFilters.Count > 0;
+        public ICommand ClearActiveFilterCommand { get; private set; }
+        public ICommand AddBackComponentCommand { get; private set; }
 
         // --- Commands ---
         public ICommand LoadCommand { get; }
@@ -851,10 +354,6 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand StartRangeCommand { get; }
         public ICommand EndRangeCommand { get; }
         public ICommand ClearRangeCommand { get; }
-        public bool HasRangeStart => FilterVM?.HasRangeStart ?? false;
-        public List<Models.ActiveFilterItem> ActiveFilters => FilterVM?.GetActiveFilters() ?? new List<Models.ActiveFilterItem>();
-        public bool HasActiveFilters => ActiveFilters.Count > 0;
-        public ICommand ClearActiveFilterCommand { get; private set; }
         public ICommand ToggleThemeCommand { get; }
         public ICommand ZoomInCommand { get; }
         public ICommand ZoomOutCommand { get; }
@@ -1059,31 +558,7 @@ namespace IndiLogs_3._0.ViewModels
             LoadUserDefaults();
         }
 
-        private void OnSearchTimerTick(object sender, EventArgs e)
-        {
-            // Save the currently selected log and its scroll position BEFORE toggling filter
-            var savedSelectedLog = SelectedLog;
-            if (savedSelectedLog != null)
-            {
-                SaveScrollPosition(savedSelectedLog);
-            }
-
-            ToggleFilterView(IsFilterActive);
-
-            // Restore the selected log and scroll to it, preserving visual position
-            // Use Dispatcher to ensure UI has fully updated before scrolling
-            if (savedSelectedLog != null)
-            {
-                var logToRestore = savedSelectedLog;
-                Application.Current.Dispatcher.BeginInvoke(
-                    System.Windows.Threading.DispatcherPriority.ContextIdle,
-                    new Action(() =>
-                    {
-                        SelectedLog = logToRestore;
-                        ScrollToLogPreservePosition(logToRestore);
-                    }));
-            }
-        }
+        // ── Visual mode ──
 
         private void InitializeVisualMode()
         {
@@ -1091,57 +566,47 @@ namespace IndiLogs_3._0.ViewModels
             var logsToUse = FilterVM.IsGlobalTimeRangeActive ? SessionVM.Logs : (SessionVM.AllLogsCache ?? SessionVM.Logs);
             if (VisualTimelineVM != null)
             {
-                // S4-5 (binary APP): skip Events on timeline — user only needs states + errors
+                // S4-5 (binary APP): skip Events on timeline
                 var eventsToShow = HasBinaryAppLogs ? null : SessionVM?.Events;
                 VisualTimelineVM.LoadData(logsToUse.ToList(), eventsToShow);
             }
         }
 
-        public void ProcessFiles(string[] filePaths, Action<LogSessionData> onLoadComplete = null)
-            => SessionVM?.ProcessFiles(filePaths, onLoadComplete);
-
-
-        // --- NEW ANNOTATION LOGIC ---
+        // ── Annotation logic ──
 
         private void ToggleAnnotation(object parameter)
         {
             if (parameter is LogEntry log && log.HasAnnotation)
                 log.IsAnnotationExpanded = !log.IsAnnotationExpanded;
         }
+
         private void ToggleAllAnnotations(object obj)
         {
             IEnumerable<LogEntry> targetList = null;
 
-            if (SelectedTabIndex == AppConstants.TAB_APP) // APP Tab
-            {
+            if (SelectedTabIndex == AppConstants.TAB_APP)
                 targetList = SessionVM?.AllAppLogsCache;
-            }
-            else // PLC Tab
-            {
+            else
                 targetList = SessionVM?.AllLogsCache;
-            }
 
             if (targetList == null || !targetList.Any()) return;
 
-            // Get only logs with annotations
             var logsWithAnnotations = targetList.Where(l => l.HasAnnotation).ToList();
             if (!logsWithAnnotations.Any()) return;
 
-            // Check if any is expanded to determine direction
             bool anyExpanded = logsWithAnnotations.Any(l => l.IsAnnotationExpanded);
             bool newState = !anyExpanded;
 
-            // Update all annotations
             foreach (var log in logsWithAnnotations)
-            {
                 log.IsAnnotationExpanded = newState;
-            }
 
             if (CaseVM != null) CaseVM.ShowAllAnnotations = newState;
-            SessionVM.StatusMessage =newState ? "All annotations expanded" : "All annotations collapsed";
+            SessionVM.StatusMessage = newState ? "All annotations expanded" : "All annotations collapsed";
         }
 
         private void CloseAnnotation(object parameter) => CaseVM?.CloseAnnotationCommand.Execute(parameter);
+
+        // ── SQLite content loading ──
 
         private string LoadSqliteContent(byte[] dbBytes)
         {
@@ -1212,14 +677,13 @@ namespace IndiLogs_3._0.ViewModels
             return sb.ToString();
         }
 
-        /// <summary>
-        /// Escapes a SQL identifier for safe use in bracket-quoted context ([identifier]).
-        /// </summary>
         private static string EscapeSqlBracketId(string identifier)
         {
             if (string.IsNullOrEmpty(identifier)) return identifier;
             return identifier.Replace("]", "]]");
         }
+
+        // ── Live monitoring ──
 
         private void LiveClear(object obj)
         {
@@ -1288,7 +752,6 @@ namespace IndiLogs_3._0.ViewModels
                 SessionVM.Logs = new List<LogEntry>();
 
                 ConfigVM?.ClearConfigurationFiles();
-                // ConfigVM properties refresh automatically via their own PropertyChanged
 
                 SetupInfo = "";
                 OnPropertyChanged(nameof(SetupInfo));
@@ -1326,491 +789,17 @@ namespace IndiLogs_3._0.ViewModels
                 SessionVM.StatusMessage =$"Clear failed: {ex.Message}";
             }
         }
-        private void OpenStatesWindow(object obj)
-        {
-            if (IsAnalysisRunning)
-            {
-                _dialogService.ShowInfo("Still analyzing data in background...\nPlease wait until the process finishes.", "Processing");
-                return;
-            }
-
-            if (SessionVM.SelectedSession == null) { _dialogService.ShowInfo("No logs loaded."); return; }
-
-            if (SessionVM.SelectedSession.CachedStates != null && SessionVM.SelectedSession.CachedStates.Count > 0)
-            {
-                if (_statesWindow != null && _statesWindow.IsVisible) { WindowManager.ActivateWindow(_statesWindow); return; }
-
-                _statesWindow = new StatesWindow(SessionVM.SelectedSession.CachedStates, this);
-                _statesWindow.Closed += (s, e) => _statesWindow = null;
-                WindowManager.OpenWindow(_statesWindow);
-            }
-            else
-            {
-                _dialogService.ShowInfo("No states detected in this session.");
-            }
-        }
-
-        private void ResetTimeFocus(object obj)
-        {
-            if (VisualTimelineVM != null)
-            {
-                VisualTimelineVM.ViewScale = 1.0;
-                VisualTimelineVM.ViewOffset = 0;
-                VisualTimelineVM.SelectedState = null;
-            }
-
-            FilterVM.IsTimeFocusActive = false;
-            FilterVM.IsAppTimeFocusActive = false;
-            FilterVM.LastFilteredCache?.Clear();
-            FilterVM.LastFilteredAppCache = null;
-            FilterVM.SavedFilterRoot = null;
-            FilterVM.SearchText = string.Empty;
-            FilterVM.IsMainFilterActive = false;
-            FilterVM.IsAppFilterActive = false;
-            FilterVM.IsMainFilterOutActive = false;
-            FilterVM.IsAppFilterOutActive = false;
-            FilterVM.ActiveThreadFilters.Clear();
-            FilterVM.NegativeFilters.Clear();
-            ResetTreeFilters();
-
-            OnPropertyChanged(nameof(IsFilterActive));
-            OnPropertyChanged(nameof(IsFilterOutActive));
-
-            UpdateMainLogsFilter(false);
-            ApplyAppLogsFilter();
-
-            InitializeVisualMode();
-
-            SessionVM.StatusMessage ="Filter reset. Showing all data.";
-        }
-
-        private void RunAnalysis(object obj)
-        {
-            if (SessionVM.SelectedSession == null)
-            {
-                _dialogService.ShowInfo("No logs loaded.");
-                return;
-            }
-
-            if (IsAnalysisRunning)
-            {
-                _dialogService.ShowInfo("Analysis is still running in the background.\nPlease wait a moment and try again.", "Processing");
-                return;
-            }
-
-            // S4-5: go directly to Statistics (no Failures analysis available)
-            if (HasBinaryAppLogs)
-            {
-                ShowStatisticsAnalysis();
-                return;
-            }
-
-            // S6: Show analysis menu with Failures / Statistics choices
-            var menuWindow = new Views.AnalysisMenuWindow();
-            menuWindow.Owner = Application.Current.MainWindow;
-
-            if (menuWindow.ShowDialog() == true)
-            {
-                switch (menuWindow.SelectedChoice)
-                {
-                    case Views.AnalysisMenuWindow.AnalysisChoice.Failures:
-                        ShowFailuresAnalysis();
-                        break;
-                    case Views.AnalysisMenuWindow.AnalysisChoice.Statistics:
-                        ShowStatisticsAnalysis();
-                        break;
-                }
-            }
-        }
-
-        private void ShowFailuresAnalysis()
-        {
-            if (_analysisWindow != null && _analysisWindow.IsVisible)
-            {
-                _analysisWindow.Activate();
-                return;
-            }
-
-            if (SessionVM.SelectedSession.CachedAnalysis != null && SessionVM.SelectedSession.CachedAnalysis.Any())
-            {
-                OpenAnalysisWindow(SessionVM.SelectedSession.CachedAnalysis);
-            }
-            else
-            {
-                _dialogService.ShowInfo("Great news! No critical state failures were detected in this session.", "Analysis Result");
-            }
-        }
-
-        private void ShowStatisticsAnalysis()
-        {
-            var plcLogs = SessionVM?.AllLogsCache;
-            var appLogs = SessionVM?.AllAppLogsCache;
-
-            // Check if there is any data to display
-            bool hasPlc = plcLogs != null && plcLogs.Any();
-            bool hasApp = appLogs != null && appLogs.Any();
-
-            if (!hasPlc && !hasApp)
-            {
-                _dialogService.ShowWarning("No logs available for analysis.", "No Data");
-                return;
-            }
-
-            // Create the window with both parameters and a callback for filtering
-            var statsWindow = new Views.StatsWindow(plcLogs, appLogs, ApplyChartDrillDownFilter, NavigateToLogFromStats, IsDarkMode, HasBinaryAppLogs);
-            statsWindow.Title = "Log Statistics Dashboard";
-            WindowManager.OpenWindow(statsWindow);
-        }
-
-        private void ApplyChartDrillDownFilter(string filterType, string filterValue)
-        {
-            try
-            {
-                if (filterType == "Logger")
-                {
-                    // Filter by Logger field - search for the logger name in the message
-                    FilterVM.SearchText = filterValue;
-                    FilterVM.IsMainFilterActive = true;
-                    FilterVM.ApplyMainLogsFilter();
-
-                    // Switch to PLC tab to show filtered results
-                    SelectedTabIndex = AppConstants.TAB_PLC;
-
-                    int logCount = SessionVM?.Logs?.Count() ?? 0;
-                    _dialogService.ShowInfo($"Filter applied: Logger = {filterValue}\n\nShowing {logCount} matching logs.", "Logger Filter Applied");
-                }
-                else if (filterType == "State")
-                {
-                    // Filter by STATE - search for the state name
-                    FilterVM.SearchText = filterValue;
-                    FilterVM.IsMainFilterActive = true;
-                    FilterVM.ApplyMainLogsFilter();
-
-                    // Switch to PLC tab to show filtered results
-                    SelectedTabIndex = AppConstants.TAB_PLC;
-
-                    int logCount = SessionVM?.Logs?.Count() ?? 0;
-                    _dialogService.ShowInfo($"Filter applied: STATE = {filterValue}\n\nShowing {logCount} matching logs.", "State Filter Applied");
-                }
-            }
-            catch (Exception ex)
-            {
-                _dialogService.ShowError($"Error applying filter: {ex.Message}", "Filter Error");
-            }
-        }
-
-        private void NavigateToLogFromStats(LogEntry log)
-        {
-            if (log == null) return;
-            try
-            {
-                // Determine which tab to switch to based on log type
-                bool isAppLog = !string.IsNullOrEmpty(log.Logger) && !log.Logger.Contains("E1.PLC");
-                SelectedTabIndex = isAppLog ? AppConstants.TAB_APP : AppConstants.TAB_PLC;
-
-                SelectedLog = log;
-                ScrollToLog(log);
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error("NavigateToLogFromStats failed", ex);
-            }
-        }
-
-        private void FilterToState(object obj)
-        {
-            if (obj is StateEntry state)
-            {
-                SessionVM.IsBusy = true;
-                SessionVM.StatusMessage =$"Focusing state: {state.StateName}...";
-
-                Task.Run(() =>
-                {
-                    DateTime start = state.StartTime;
-                    DateTime end = state.EndTime ?? DateTime.MaxValue;
-
-                    if (SessionVM.AllLogsCache != null)
-                    {
-                        var timeSlice = SessionVM.AllLogsCache.Where(l => l.Date >= start && l.Date <= end).OrderByDescending(l => l.Date).ToList();
-                        var smartFiltered = timeSlice.Where(l => IsDefaultLog(l)).ToList();
-
-                        Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            FilterVM.LastFilteredCache = timeSlice;
-                            FilterVM.SavedFilterRoot = null;
-                            FilterVM.IsTimeFocusActive = true;
-                            FilterVM.IsMainFilterActive = true;
-                            SelectedTabIndex = AppConstants.TAB_PLC;
-                            UpdateMainLogsFilter(true);
-                            if (FilterVM?.FilteredLogs != null)
-                            {
-                                FilterVM.FilteredLogs.ReplaceAll(smartFiltered);
-                                if (FilterVM.FilteredLogs.Count > 0) SelectedLog = FilterVM.FilteredLogs[0];
-                            }
-                            OnPropertyChanged(nameof(IsFilterActive));
-                            SessionVM.StatusMessage =$"State: {state.StateName} | Main: {timeSlice.Count}, Filtered: {smartFiltered.Count}";
-
-                            if (IsVisualMode && VisualTimelineVM != null)
-                            {
-                                // Use filtered logs if time range is active
-                                var logsForVisual = FilterVM.IsGlobalTimeRangeActive ? SessionVM.Logs : SessionVM.AllLogsCache.ToList();
-                                var eventsToShow = HasBinaryAppLogs ? null : SessionVM?.Events;
-                                VisualTimelineVM.LoadData(logsForVisual, eventsToShow);
-                                VisualTimelineVM.FocusOnState(state.StateName);
-                            }
-
-                            SessionVM.IsBusy =false;
-                        });
-                    }
-                    else
-                    {
-                        SessionVM.IsBusy =false;
-                    }
-                });
-            }
-        }
-        private void FilterAppErrors(object obj)
-        {
-            if (SessionVM.AllAppLogsCache == null || !SessionVM.AllAppLogsCache.Any()) return;
-            SessionVM.IsBusy = true;
-            SessionVM.StatusMessage ="Filtering App Errors...";
-            Task.Run(() =>
-            {
-                var errors = SessionVM.AllAppLogsCache.Where(l => l.Level != null && l.Level.Equals("Error", StringComparison.OrdinalIgnoreCase)).OrderByDescending(l => l.Date).ToList();
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    FilterVM?.AppDevLogsFiltered?.ReplaceAll(errors);
-                    SessionVM.IsBusy =false;
-                    SessionVM.StatusMessage =$"Showing {errors.Count} Errors";
-                    FilterVM.IsAppErrorFilterActive = true;
-                    FilterVM.IsAppFilterActive = true;
-                    OnPropertyChanged(nameof(IsFilterActive));
-                    OnPropertyChanged(nameof(ActiveFilters));
-                    OnPropertyChanged(nameof(HasActiveFilters));
-                });
-            });
-        }
-        private void OpenIndigoInvaders(object obj)
-        {
-            var invadersWindow = new IndiLogs_3._0.Views.IndigoInvadersWindow();
-            invadersWindow.Owner = Application.Current.MainWindow;
-            invadersWindow.ShowDialog();
-        }
-
-        private void BuildLoggerTree(IEnumerable<LogEntry> logs) => FilterVM?.BuildLoggerTree(logs);
-                   
-        public void ResetTreeFilters()
-        {
-            FilterVM.TreeHiddenLoggers.Clear();
-            FilterVM.TreeHiddenPrefixes.Clear();
-            FilterVM.TreeShowOnlyLogger = null;
-            FilterVM.TreeShowOnlyPrefix = null;
-            if (FilterVM?.LoggerTreeRoot != null)
-                foreach (var node in FilterVM.LoggerTreeRoot) ResetVisualHiddenState(node);
-        }
-        private void ResetVisualHiddenState(LoggerNode node)
-        {
-            node.IsHidden = false;
-            node.IsActive = false;
-            foreach (var child in node.Children) ResetVisualHiddenState(child);
-        }
-        private void ViewLogDetails(object parameter)
-        {
-            if (parameter is LogEntry log)
-            {
-                WindowManager.OpenWindow(new LogDetailsWindow(log));
-            }
-        }
-        public async Task SortAppLogs(string sortBy, bool ascending)
-        {
-            try
-            {
-            if (FilterVM?.AppDevLogsFiltered == null || FilterVM.AppDevLogsFiltered.Count == 0) return;
-            SessionVM.IsBusy = true;
-            SessionVM.StatusMessage ="Sorting...";
-            await Task.Run(() =>
-            {
-                List<LogEntry> sorted = null;
-                var source = FilterVM.AppDevLogsFiltered.ToList();
-                switch (sortBy)
-                {
-                    case "Time": sorted = ascending ? source.OrderBy(x => x.Date).ToList() : source.OrderByDescending(x => x.Date).ToList(); break;
-                    case "Level": sorted = ascending ? source.OrderBy(x => x.Level).ToList() : source.OrderByDescending(x => x.Level).ToList(); break;
-                    case "Logger": sorted = ascending ? source.OrderBy(x => x.Logger).ToList() : source.OrderByDescending(x => x.Logger).ToList(); break;
-                    case "Thread": sorted = ascending ? source.OrderBy(x => x.ThreadName).ToList() : source.OrderByDescending(x => x.ThreadName).ToList(); break;
-                    default: sorted = source; break;
-                }
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    FilterVM.AppDevLogsFiltered.ReplaceAll(sorted);
-                    SessionVM.IsBusy =false;
-                    SessionVM.StatusMessage ="Sorted.";
-                });
-            });
-            }
-            catch (Exception ex) { AppLogger.Error("SortAppLogs failed", ex); }
-        }
-
-        private void ToggleFilterView(bool show) => FilterVM?.ToggleFilterView(show);
-        private void UpdateMainLogsFilter(bool show) => FilterVM?.ApplyMainLogsFilter();
-        private void ApplyAppLogsFilter() => FilterVM?.ApplyAppLogsFilter();
 
         private void StartLiveMonitoring(string path) => LiveVM?.StartLiveMonitoring(path);
         private void StopLiveMonitoring() => LiveVM?.StopLiveMonitoring();
-
         private void LivePlay(object obj) => LiveVM?.LivePlayCommand.Execute(obj);
         private void LivePause(object obj) => LiveVM?.LivePauseCommand.Execute(obj);
-        private async Task LoadFile(object obj)
-        {
-            try
-            {
-            var dialog = new OpenFileDialog { Multiselect = true, Filter = "All Supported|*.zip;*.log;*.csv|Log Files (*.log)|*.log|Log Archives (*.zip)|*.zip|CPR Data (*.csv)|*.csv|All files (*.*)|*.*" };
-            if (dialog.ShowDialog() == true)
-            {
-                // Route CSV files to CPR tab instead of log processing
-                var csvFiles = dialog.FileNames.Where(f => System.IO.Path.GetExtension(f).ToLower() == ".csv").ToArray();
-                var logFiles = dialog.FileNames.Where(f => System.IO.Path.GetExtension(f).ToLower() != ".csv").ToArray();
 
-                if (csvFiles.Length > 0)
-                {
-                    // Load the first CSV into CPR
-                    SelectedTabIndex = AppConstants.TAB_CPR; // CPR tab
-                    CprVM?.LoadFileDirect(csvFiles[0]);
-                }
+        // ── Configuration management ──
 
-                if (logFiles.Length > 0)
-                {
-                    // For single non-session files, try routing to Different Logs tab
-                    if (logFiles.Length == 1 && DifferentLogsVM != null)
-                    {
-                        var ext = System.IO.Path.GetExtension(logFiles[0]).ToLower();
-                        bool isKnownSessionExt = ext == ".zip" || ext == ".log" || ext == ".file";
-                        if (!isKnownSessionExt)
-                        {
-                            bool handled = await DifferentLogsVM.LoadFileAsync(logFiles[0]);
-                            if (handled)
-                            {
-                                SelectedTabIndex = AppConstants.TAB_DIFFERENT_LOGS; // DIFFERENT LOGS tab
-                                return;
-                            }
-                        }
-                    }
-                    ProcessFiles(logFiles);
-                }
-            }
-            }
-            catch (Exception ex) { AppLogger.Error("LoadFile failed", ex); }
-        }
-        private async Task OpenFilterWindow(object obj)
-        {
-            try
-            {
-            var win = new FilterWindow();
-            bool isAppTab = SelectedTabIndex == AppConstants.TAB_APP;
-            var currentRoot = isAppTab ? FilterVM.AppFilterRoot : FilterVM.MainFilterRoot;
-
-            if (currentRoot != null) { win.ViewModel.RootNodes.Clear(); win.ViewModel.RootNodes.Add(currentRoot.DeepClone()); }
-
-            if (win.ShowDialog() == true)
-            {
-                var newRoot = win.ViewModel.RootNodes.FirstOrDefault();
-                bool hasAdvanced = newRoot != null && newRoot.Children.Count > 0;
-                SessionVM.IsBusy = true;
-                await Task.Run(() =>
-                {
-                    if (isAppTab) FilterVM.AppFilterRoot = newRoot;
-                    else
-                    {
-                        FilterVM.MainFilterRoot = newRoot;
-                        if (hasAdvanced)
-                        {
-                            List<LogEntry> cacheCopy;
-                            lock (_collectionLock)
-                            {
-                                cacheCopy = _allLogsCache.ToList();
-                            }
-                            var res = cacheCopy.Where(l => EvaluateFilterNode(l, FilterVM.MainFilterRoot)).ToList();
-                            FilterVM.LastFilteredCache = res;
-                        }
-                        else FilterVM.LastFilteredCache.Clear();
-                    }
-                });
-
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    if (isAppTab) { FilterVM.IsAppFilterActive = hasAdvanced; ApplyAppLogsFilter(); }
-                    else { FilterVM.IsMainFilterActive = hasAdvanced || FilterVM.ActiveThreadFilters.Any(); UpdateMainLogsFilter(FilterVM.IsMainFilterActive); }
-                    OnPropertyChanged(nameof(IsFilterActive));
-                    SessionVM.IsBusy =false;
-                });
-            }
-            }
-            catch (Exception ex) { AppLogger.Error("OpenFilterWindow failed", ex); }
-        }
-
-        private bool EvaluateFilterNode(LogEntry log, FilterNode node) => FilterVM?.EvaluateFilterNode(log, node) ?? true;
-        private async Task ExportParsedData(object obj)
-        {
-            try
-            {
-            if (SessionVM.SelectedSession == null)
-            {
-                _dialogService.ShowInfo("No logs loaded.");
-                return;
-            }
-
-            var selectedSession = SessionVM.SelectedSession;
-            // S4-5 (binary APP): allow export even without parsed PLC logs — IO data comes from CSV
-            bool hasLogs = selectedSession.Logs != null && selectedSession.Logs.Any();
-            bool hasIoCsv = selectedSession.HasBinaryAppLogs &&
-                            ((selectedSession.TerminalCsvBytes != null && selectedSession.TerminalCsvBytes.Keys.Any(k => System.IO.Path.GetFileName(k).StartsWith("Io-", StringComparison.OrdinalIgnoreCase))) ||
-                             (selectedSession.TerminalLogFiles != null && selectedSession.TerminalLogFiles.Keys.Any(k => System.IO.Path.GetFileName(k).StartsWith("Io-", StringComparison.OrdinalIgnoreCase))));
-
-            if (!hasLogs && !hasIoCsv)
-            {
-                _dialogService.ShowInfo("No logs loaded.");
-                return;
-            }
-
-            if (_exportConfigWindow != null && _exportConfigWindow.IsLoaded)
-            {
-                WindowManager.ActivateWindow(_exportConfigWindow);
-                return;
-            }
-
-            _exportConfigWindow = new ExportConfigurationWindow();
-            var viewModel = new ExportConfigurationViewModel(selectedSession, _csvService, _dialogService);
-            _exportConfigWindow.DataContext = viewModel;
-            _exportConfigWindow.Closed += (s, e) => _exportConfigWindow = null;
-            WindowManager.OpenWindow(_exportConfigWindow);
-            }
-            catch (Exception ex) { AppLogger.Error("ExportParsedData failed", ex); }
-        }
-        private void OpenAnalysisWindow(List<AnalysisResult> results)
-        {
-            _analysisWindow = new AnalysisReportWindow(results, log => JumpToLog(log));
-            _analysisWindow.Closed += (s, e) => _analysisWindow = null;
-            WindowManager.OpenWindow(_analysisWindow);
-        }
-
-        private async Task OnSelectedSessionChangedAsync(LogSessionData session)
-        {
-            if (session != null && session.HasBinaryAppLogs &&
-                !string.IsNullOrEmpty(session.FilePath) && File.Exists(session.FilePath))
-                await StepRecorderVM.LoadFromZipAsync(session.FilePath);
-            else
-                StepRecorderVM.Clear();
-        }
-        private void OpenSnakeGame(object obj)
-        {
-            var snakeWindow = new IndiLogs_3._0.Views.SnakeWindow();
-            WindowManager.ShowDialog(snakeWindow);
-        }
         private void LoadSavedConfigurations()
         {
-            // Ensure built-in default config files exist on disk, but don't show them yet.
-            // The saved configs list stays empty until a log is loaded.
-            string path = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IndiLogs3.0", "Configs");
+            string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IndiLogs3.0", "Configs");
             CaseVM?.EnsureDefaultConfigsOnDisk(path);
         }
 
@@ -1832,21 +821,18 @@ namespace IndiLogs_3._0.ViewModels
         {
             var config = new Models.DefaultConfiguration();
 
-            // Save PLC Filtered default filter from current state
             if (FilterVM.DefaultPlcFilter != null)
             {
                 config.PlcFilteredDefaultFilter = FilterVM.DefaultPlcFilter.DeepClone();
                 config.HasCustomPlcFilter = true;
             }
 
-            // Save Main coloring rules
             if (CaseVM?.MainColoringRules != null && CaseVM.MainColoringRules.Count > 0)
             {
                 config.MainDefaultColoringRules = CaseVM.MainColoringRules.Select(r => r.Clone()).ToList();
                 config.HasCustomMainColoring = true;
             }
 
-            // Save App coloring rules
             if (CaseVM?.AppColoringRules != null && CaseVM.AppColoringRules.Count > 0)
             {
                 config.AppDefaultColoringRules = CaseVM.AppColoringRules.Select(r => r.Clone()).ToList();
@@ -1855,7 +841,6 @@ namespace IndiLogs_3._0.ViewModels
 
             _defaultConfigService.Save(config);
 
-            // Update live state
             _coloringService.UserDefaultMainRules = config.MainDefaultColoringRules;
             _coloringService.UserDefaultAppRules = config.AppDefaultColoringRules;
 
@@ -1877,322 +862,12 @@ namespace IndiLogs_3._0.ViewModels
         private void SaveConfiguration(object obj) => CaseVM?.SaveConfigCommand.Execute(obj);
         private void LoadConfigurationFromFile(object obj) => CaseVM?.LoadConfigCommand.Execute(obj);
 
+        // ── Case management delegates ──
+
         private void MarkRow(object obj) => CaseVM?.MarkLogCommand.Execute(obj);
         private void GoToNextMarked(object obj) => CaseVM?.GoToNextMarkedCommand.Execute(obj);
         private void GoToPrevMarked(object obj) => CaseVM?.GoToPrevMarkedCommand.Execute(obj);
         private void JumpToLog(object obj) { if (obj is LogEntry log) { SelectedLog = log; RequestScrollToLog?.Invoke(log); } }
-        private void OpenSettingsWindow(object obj)
-        {
-            var win = new SettingsWindow { DataContext = this };
-            win.WindowStartupLocation = WindowStartupLocation.Manual;
-
-            if (obj is FrameworkElement button)
-            {
-                // Get DPI scale factor for accurate positioning
-                var source = PresentationSource.FromVisual(button);
-                double dpiScale = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
-
-                // Position below the button, aligned to its left edge
-                Point buttonPosition = button.PointToScreen(new Point(0, 0));
-                double buttonHeight = button.ActualHeight * dpiScale;
-
-                // Get screen bounds to ensure window stays on screen
-                var screen = System.Windows.Forms.Screen.FromPoint(
-                    new System.Drawing.Point((int)buttonPosition.X, (int)buttonPosition.Y));
-                var workingArea = screen.WorkingArea;
-
-                // Position below the button
-                double left = buttonPosition.X / dpiScale;
-                double top = (buttonPosition.Y + buttonHeight + 5) / dpiScale;
-
-                // Ensure window doesn't go off the right edge
-                if (left + win.Width > workingArea.Right / dpiScale)
-                {
-                    left = workingArea.Right / dpiScale - win.Width - 10;
-                }
-
-                // Ensure window doesn't go off the bottom - if so, show above button
-                double estimatedHeight = 350;
-                if (top + estimatedHeight > workingArea.Bottom / dpiScale)
-                {
-                    top = buttonPosition.Y / dpiScale - estimatedHeight - 5;
-                }
-
-                win.Left = left;
-                win.Top = top;
-
-                // Show the window directly instead of using WindowManager
-                // to preserve our manual positioning
-                win.Show();
-                win.Activate();
-                win.Focus();
-            }
-            else
-            {
-                // Fallback: use WindowManager for centering
-                WindowManager.OpenWindow(win);
-            }
-        }
-        private void OpenFontsWindow(object obj) { WindowManager.ShowDialog(new FontsWindow { DataContext = this }); }
-
-        private void OpenMarkedLogsWindow(object obj) => CaseVM?.OpenMarkedWindowCommand.Execute(obj);
-
-        private void OpenGlobalGrepWindow()
-        {
-            // Create an empty collection if no sessions are loaded, to allow the window to open
-            var sessions = SessionVM?.LoadedSessions ?? new ObservableCollection<LogSessionData>();
-
-            var viewModel = new GlobalGrepViewModel(sessions, _dialogService);
-
-            var window = new GlobalGrepWindow(viewModel, NavigateToGrepResult, LoadMultipleFiles);
-            WindowManager.OpenWindow(window);
-        }
-
-        private void OpenComparisonWindow()
-        {
-            var comparisonWindow = WindowManager.GetOrCreate<Views.ComparisonWindow>(
-                () => new Views.ComparisonWindow(new LogComparisonViewModel(
-                    SessionVM.AllLogsCache,
-                    SessionVM.AllAppLogsCache,
-                    this
-                )),
-                Application.Current.MainWindow
-            );
-        }
-
-        private async Task OpenStripeAnalysisWindow()
-        {
-            try
-            {
-            var logs = FilterVM?.AppDevLogsFiltered?.ToList();
-
-            if (logs == null || !logs.Any())
-            {
-                _dialogService.ShowInfo(
-                    "No APP logs loaded.\n\nPlease load a session with APP logs first, or switch to the APP tab.",
-                    "Stripe Analysis");
-                return;
-            }
-
-            // Quick pre-check: do we have any stripe data?
-            bool hasStripeData = logs.Any(l =>
-                (!string.IsNullOrEmpty(l.Data) && l.Data.Contains("stripeDescriptor")) ||
-                (!string.IsNullOrEmpty(l.Message) && l.Message.Contains("stripeDescriptor")));
-
-            if (!hasStripeData)
-            {
-                _dialogService.ShowInfo(
-                    "No stripe data found in APP logs.\n\n" +
-                    "This feature requires logs containing stripeDescriptor JSON data.",
-                    "Stripe Analysis");
-                return;
-            }
-
-            var window = new StripeAnalysisWindow();
-            WindowManager.OpenWindow(window);
-
-            // Load data asynchronously after window is shown
-            await Task.Run(() => { }).ContinueWith(_ =>
-            {
-                _ = window.LoadFromLogs(logs);
-            }, TaskScheduler.FromCurrentSynchronizationContext());
-            }
-            catch (Exception ex) { AppLogger.Error("OpenStripeAnalysisWindow failed", ex); }
-        }
-
-        internal void NavigateToGrepResult(GrepResult result)
-        {
-            if (result == null) return;
-
-            // If we have a direct reference to the log entry (in-memory search)
-            if (result.ReferencedLogEntry != null && result.SessionIndex >= 0)
-            {
-                // Navigate to the loaded session
-                if (result.SessionIndex < SessionVM.LoadedSessions.Count)
-                {
-                    SessionVM.SelectedSession = SessionVM.LoadedSessions[result.SessionIndex];
-
-                    // Switch to the appropriate tab (0 for PLC, 1 for APP)
-                    SelectedTabIndex = (result.LogType == "APP") ? 1 : 0;
-
-                    // Wait for UI to update, then scroll to the log entry
-                    Application.Current.Dispatcher.BeginInvoke(
-                        System.Windows.Threading.DispatcherPriority.Background,
-                        new Action(() => RequestScrollToLog?.Invoke(result.ReferencedLogEntry)));
-                }
-                return;
-            }
-
-            // If we don't have a direct reference (external file search)
-            if (string.IsNullOrEmpty(result.FilePath)) return;
-
-            // Check if the file is already loaded
-            var session = SessionVM.LoadedSessions.FirstOrDefault(s => s.FilePath == result.FilePath);
-
-            if (session != null)
-            {
-                SessionVM.SelectedSession = session;
-                JumpByTime(result, session);
-            }
-            else
-            {
-                // Load the file if not already loaded
-                ProcessFiles(new[] { result.FilePath }, (loadedSession) =>
-                {
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        SessionVM.SelectedSession = loadedSession;
-                        JumpByTime(result, loadedSession);
-                    });
-                });
-            }
-        }
-
-        private void JumpByTime(GrepResult result, LogSessionData session)
-        {
-            // Switch to the appropriate tab (0 for PLC, 1 for APP)
-            SelectedTabIndex = (result.LogType == "APP") ? 1 : 0;
-
-            // Get the appropriate log collection
-            var logs = (result.LogType == "APP") ? session.AppDevLogs : session.Logs;
-
-            // Find the exact log entry by Timestamp and Message
-            var target = logs?.FirstOrDefault(l =>
-                l.Date == result.Timestamp &&
-                l.Message == result.ReferencedLogEntry?.Message &&
-                l.ThreadName == result.ReferencedLogEntry?.ThreadName)
-                ?? logs?.FirstOrDefault(l => l.Date == result.Timestamp && l.Message == result.ReferencedLogEntry?.Message)
-                ?? logs?.FirstOrDefault(l => l.Date == result.Timestamp);
-
-            if (target != null)
-            {
-                // Wait for UI to update, then scroll to the log entry
-                Application.Current.Dispatcher.BeginInvoke(
-                    System.Windows.Threading.DispatcherPriority.Background,
-                    new Action(() => RequestScrollToLog?.Invoke(target)));
-            }
-        }
-
-        internal void LoadMultipleFiles(List<(string FilePath, string SessionName)> fileList)
-        {
-            if (fileList == null || fileList.Count == 0) return;
-
-            // Get list of already loaded files
-            var loadedFilePaths = SessionVM.LoadedSessions.Select(s => s.FilePath).ToList();
-
-            // Show file selection window
-            var fileSelectionWindow = new Views.FileSelectionWindow(fileList, loadedFilePaths);
-            fileSelectionWindow.Owner = Application.Current.MainWindow;
-
-            if (fileSelectionWindow.ShowDialog() == true)
-            {
-                var filesToLoad = fileSelectionWindow.FilesToLoad;
-
-                if (filesToLoad != null && filesToLoad.Count > 0)
-                {
-                    // Load all files using ProcessFiles
-                    ProcessFiles(filesToLoad.ToArray(), null);
-
-                    _dialogService.ShowInfo($"Loaded {filesToLoad.Count} file(s).", "Open All Files");
-                }
-            }
-        }
-
-        private bool IsDefaultLog(LogEntry l) => FilterVM?.IsDefaultLog(l) ?? false;
-        private void OpenUrl(string url)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(url)) return;
-                if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
-                    (uri.Scheme != "https" && uri.Scheme != "http" && uri.Scheme != "mailto"))
-                {
-                    AppLogger.Warn($"OpenUrl blocked unsafe or invalid URI: '{url}'");
-                    return;
-                }
-                Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
-            }
-            catch (Exception ex) { AppLogger.Error($"OpenUrl failed for '{url}'", ex); }
-        }
-        private void OpenOutlook(object obj) { try { Process.Start("outlook.exe", "/c ipm.note"); } catch (Exception) { OpenUrl("mailto:"); } }
-        /// <summary>
-        /// Opens Kibana in the default browser, pre-filling the machine name from the loaded ZIP.
-        /// </summary>
-        private void OpenKibana(object obj)
-        {
-            string zipPath = SessionVM?.SelectedSession?.FilePath ?? string.Empty;
-            string machineName = string.Empty;
-
-            if (!string.IsNullOrEmpty(zipPath))
-            {
-                string fileName = Path.GetFileNameWithoutExtension(zipPath);
-                int underscoreIdx = fileName.IndexOf('_');
-                machineName = underscoreIdx > 0 ? fileName.Substring(0, underscoreIdx) : fileName;
-            }
-
-            if (string.IsNullOrEmpty(machineName))
-            {
-                OpenUrl("http://localhost/");
-                return;
-            }
-
-            string escapedMachineName = Uri.EscapeDataString(machineName);
-            string nextParam = Uri.EscapeDataString($"/{escapedMachineName}/app/home");
-            string url = $"http://localhost/{escapedMachineName}/login?next={nextParam}";
-            OpenUrl(url);
-        }
-
-        private void CopyTableName(object parameter)
-        {
-            if (parameter is DbTreeNode node && !string.IsNullOrEmpty(node.Name))
-            {
-                try
-                {
-                    Clipboard.SetText(node.Name);
-                }
-                catch (Exception ex) { AppLogger.Error("Clipboard copy failed", ex); }
-            }
-        }
-        public async Task OnFilesDropped(string[] files)
-        {
-            try
-            {
-            if (files == null || files.Length == 0) return;
-
-            // Check if any CSV files should be routed to CPR instead of log processing
-            if (files.Length == 1)
-            {
-                var ext = System.IO.Path.GetExtension(files[0]).ToLower();
-                var fileName = System.IO.Path.GetFileName(files[0]).ToLower();
-
-                // Route CSV files to CPR — EXCEPT event CSV files which are log events
-                bool isEventCsv = fileName.StartsWith("event-history__from") || fileName.StartsWith("pressevents.");
-                if (ext == ".csv" && !isEventCsv)
-                {
-                    // Switch to CPR tab and load
-                    SelectedTabIndex = AppConstants.TAB_CPR; // CPR tab
-                    CprVM?.LoadFileDirect(files[0]);
-                    return;
-                }
-
-                // For single files that are NOT known session types (.zip, .log, .file),
-                // try routing to Different Logs tab via plugin detection
-                bool isKnownSessionExt = ext == ".zip" || ext == ".log" || ext == ".file";
-                if (!isKnownSessionExt && DifferentLogsVM != null)
-                {
-                    bool handled = await DifferentLogsVM.LoadFileAsync(files[0]);
-                    if (handled)
-                    {
-                        SelectedTabIndex = AppConstants.TAB_DIFFERENT_LOGS; // DIFFERENT LOGS tab
-                        return;
-                    }
-                }
-            }
-
-            ProcessFiles(files);
-            }
-            catch (Exception ex) { AppLogger.Error("OnFilesDropped failed", ex); }
-        }
 
         public LogAnnotation GetAnnotation(LogEntry log) => CaseVM?.GetAnnotation(log);
         private void AddAnnotation(object parameter) => CaseVM?.AddAnnotationCommand.Execute(parameter);
@@ -2200,7 +875,32 @@ namespace IndiLogs_3._0.ViewModels
         private void SaveCase(object parameter) => CaseVM?.SaveCaseCommand.Execute(parameter);
         private void LoadCase(object parameter) => CaseVM?.LoadCaseCommand.Execute(parameter);
 
-        // ── Child VM PropertyChanged handlers (named, so Dispose can unsubscribe) ──
+        // ── Clipboard ──
+
+        private void CopyTableName(object parameter)
+        {
+            if (parameter is DbTreeNode node && !string.IsNullOrEmpty(node.Name))
+            {
+                try
+                {
+                    System.Windows.Clipboard.SetText(node.Name);
+                }
+                catch (Exception ex) { AppLogger.Error("Clipboard copy failed", ex); }
+            }
+        }
+
+        // ── Session changes ──
+
+        private async Task OnSelectedSessionChangedAsync(LogSessionData session)
+        {
+            if (session != null && session.HasBinaryAppLogs &&
+                !string.IsNullOrEmpty(session.FilePath) && File.Exists(session.FilePath))
+                await StepRecorderVM.LoadFromZipAsync(session.FilePath);
+            else
+                StepRecorderVM.Clear();
+        }
+
+        // ── Child VM PropertyChanged handlers ──
 
         private void SessionVM_PropertyChanged(object s, PropertyChangedEventArgs e)
         {
@@ -2262,13 +962,12 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
-        // ── Dispose ─────────────────────────────────────────────────────
+        // ── Dispose ──
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                // Unsubscribe child VM events
                 if (SessionVM != null) SessionVM.PropertyChanged -= SessionVM_PropertyChanged;
                 if (FilterVM != null) FilterVM.PropertyChanged -= FilterVM_PropertyChanged;
                 if (LiveVM != null) LiveVM.PropertyChanged -= LiveVM_PropertyChanged;
