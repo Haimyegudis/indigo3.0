@@ -1,3 +1,4 @@
+#nullable disable
 /*
  * IoTerminalDataService — IndiLogs 3.0
  * =====================================

@@ -1,3 +1,4 @@
+#nullable disable
 using System.Windows.Media;
 
 namespace IndiLogs_3._0.Models

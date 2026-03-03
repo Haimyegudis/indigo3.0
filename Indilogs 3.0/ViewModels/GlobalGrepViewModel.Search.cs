@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,7 +32,7 @@ namespace IndiLogs_3._0.ViewModels
 
             try
             {
-                Application.Current.Dispatcher.Invoke(() =>
+                Application.Current.Dispatcher.BeginInvoke(() =>
                 {
                     Results.AddRange(batch);
                     OnPropertyChanged(nameof(ResultCount));
@@ -134,7 +135,7 @@ namespace IndiLogs_3._0.ViewModels
                 FlushResultsToUI(null);
 
                 sw.Stop();
-                Application.Current.Dispatcher.Invoke(() =>
+                Application.Current.Dispatcher.BeginInvoke(() =>
                 {
                     OnPropertyChanged(nameof(ResultCount));
                     SearchDuration = $"({sw.ElapsedMilliseconds:N0}ms)";

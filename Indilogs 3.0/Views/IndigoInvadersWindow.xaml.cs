@@ -1,3 +1,4 @@
+#nullable disable
 ﻿// BILINGUAL-HEADER-START
 // EN: File: IndigoInvadersWindow.xaml.cs - Auto-added bilingual header.
 // HE: File: IndigoInvadersWindow.xaml.cs - Auto-added bilingual header.

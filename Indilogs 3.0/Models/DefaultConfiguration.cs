@@ -1,3 +1,4 @@
+#nullable disable
 using System.Collections.Generic;
 
 namespace IndiLogs_3._0.Models

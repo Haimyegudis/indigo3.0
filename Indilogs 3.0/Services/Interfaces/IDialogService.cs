@@ -1,3 +1,4 @@
+#nullable disable
 using System.Windows;
 
 namespace IndiLogs_3._0.Services.Interfaces

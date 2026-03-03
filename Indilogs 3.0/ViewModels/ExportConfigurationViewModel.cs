@@ -1,3 +1,4 @@
+#nullable disable
 using IndiLogs_3._0;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Charts;
@@ -399,7 +400,7 @@ namespace IndiLogs_3._0.ViewModels
                     _ioDevices = svc.ParseIoFiles(_sessionData.TerminalLogFiles, _sessionData.TerminalCsvBytes);
                     var items = svc.GetAllComponents(_ioDevices);
 
-                    Application.Current.Dispatcher.Invoke(() =>
+                    Application.Current.Dispatcher.BeginInvoke(() =>
                     {
                         IOComponents.Clear();
                         foreach (var item in items)

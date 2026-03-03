@@ -1,3 +1,4 @@
+#nullable disable
 using IndiLogs_3._0.ViewModels;
 using System.Windows;
 

@@ -1,3 +1,4 @@
+#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Analysis;
@@ -110,7 +111,7 @@ namespace IndiLogs_3._0.ViewModels
                 finally
                 {
                     IsAnalysisRunning = false;
-                    Application.Current.Dispatcher.Invoke(() =>
+                    Application.Current.Dispatcher.BeginInvoke(() =>
                     {
                         if (SessionVM?.SelectedSession == session)
                             SessionVM.StatusMessage = "Background Analysis Complete.";

@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.ComponentModel;
 using IndiLogs_3._0.Controls.Charts;

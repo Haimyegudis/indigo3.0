@@ -1,3 +1,4 @@
+#nullable disable
 
 
 using Indigo.Infra.ICL.Core.Logging;

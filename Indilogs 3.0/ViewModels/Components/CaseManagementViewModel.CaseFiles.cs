@@ -1,3 +1,4 @@
+#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Views;
@@ -175,7 +176,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         _parent.ProcessFiles(logFilesToLoad.ToArray(), session =>
                         {
                             // Callback called after logs are loaded successfully
-                            Application.Current.Dispatcher.Invoke(() =>
+                            Application.Current.Dispatcher.BeginInvoke(() =>
                             {
                                 _sessionVM.StatusMessage = "Applying case settings...";
                                 _ = ApplyCaseSettings(caseFile);
@@ -316,7 +317,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
 
             // 4. Refresh view
-            Application.Current.Dispatcher.Invoke(() =>
+            Application.Current.Dispatcher.BeginInvoke(() =>
             {
                 _filterVM.ApplyMainLogsFilter();
                 _filterVM.ApplyAppLogsFilter();

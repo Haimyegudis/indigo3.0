@@ -1,3 +1,4 @@
+#nullable disable
 /*
  * GenericTextLogPlugin — IndiLogs 3.0 Built-in Parser
  * =====================================================

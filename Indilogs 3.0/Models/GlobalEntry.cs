@@ -1,3 +1,4 @@
+#nullable disable
 namespace IndiLogs_3._0.Models
 {
     public class GlobalEntry

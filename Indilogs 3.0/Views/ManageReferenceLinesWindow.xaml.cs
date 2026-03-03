@@ -1,3 +1,4 @@
+#nullable disable
 using System.Collections.ObjectModel;
 using System.Windows;
 using IndiLogs_3._0.Models.Charts;

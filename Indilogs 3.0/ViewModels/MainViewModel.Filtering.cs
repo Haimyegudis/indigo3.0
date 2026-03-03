@@ -1,3 +1,4 @@
+#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using System;
@@ -219,7 +220,7 @@ namespace IndiLogs_3._0.ViewModels
                     }
                 });
 
-                Application.Current.Dispatcher.Invoke(() =>
+                Application.Current.Dispatcher.BeginInvoke(() =>
                 {
                     if (isAppTab) { FilterVM.IsAppFilterActive = hasAdvanced; ApplyAppLogsFilter(); }
                     else { FilterVM.IsMainFilterActive = hasAdvanced || FilterVM.ActiveThreadFilters.Any(); UpdateMainLogsFilter(FilterVM.IsMainFilterActive); }
@@ -290,7 +291,7 @@ namespace IndiLogs_3._0.ViewModels
                         var timeSlice = SessionVM.AllLogsCache.Where(l => l.Date >= start && l.Date <= end).OrderByDescending(l => l.Date).ToList();
                         var smartFiltered = timeSlice.Where(l => IsDefaultLog(l)).ToList();
 
-                        Application.Current.Dispatcher.Invoke(() =>
+                        Application.Current.Dispatcher.BeginInvoke(() =>
                         {
                             FilterVM.LastFilteredCache = timeSlice;
                             FilterVM.SavedFilterRoot = null;
@@ -334,7 +335,7 @@ namespace IndiLogs_3._0.ViewModels
             Task.Run(() =>
             {
                 var errors = SessionVM.AllAppLogsCache.Where(l => l.Level != null && l.Level.Equals("Error", StringComparison.OrdinalIgnoreCase)).OrderByDescending(l => l.Date).ToList();
-                Application.Current.Dispatcher.Invoke(() =>
+                Application.Current.Dispatcher.BeginInvoke(() =>
                 {
                     FilterVM?.AppDevLogsFiltered?.ReplaceAll(errors);
                     SessionVM.IsBusy =false;
@@ -455,7 +456,7 @@ namespace IndiLogs_3._0.ViewModels
                     case "Thread": sorted = ascending ? source.OrderBy(x => x.ThreadName).ToList() : source.OrderByDescending(x => x.ThreadName).ToList(); break;
                     default: sorted = source; break;
                 }
-                Application.Current.Dispatcher.Invoke(() =>
+                Application.Current.Dispatcher.BeginInvoke(() =>
                 {
                     FilterVM.AppDevLogsFiltered.ReplaceAll(sorted);
                     SessionVM.IsBusy =false;
@@ -507,7 +508,7 @@ namespace IndiLogs_3._0.ViewModels
                 // Load the file if not already loaded
                 ProcessFiles(new[] { result.FilePath }, (loadedSession) =>
                 {
-                    Application.Current.Dispatcher.Invoke(() =>
+                    Application.Current.Dispatcher.BeginInvoke(() =>
                     {
                         SessionVM.SelectedSession = loadedSession;
                         JumpByTime(result, loadedSession);

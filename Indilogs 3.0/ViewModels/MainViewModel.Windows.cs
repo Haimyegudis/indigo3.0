@@ -1,3 +1,4 @@
+#nullable disable
 using IndiLogs.PluginAPI;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Analysis;
@@ -267,7 +268,11 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
-        private void OpenUrl(string url)
+        /// <summary>
+        /// Opens a URL in the default browser with scheme validation.
+        /// Shared utility used by both MainViewModel and ToolsViewModel.
+        /// </summary>
+        internal static void OpenUrl(string url)
         {
             try
             {

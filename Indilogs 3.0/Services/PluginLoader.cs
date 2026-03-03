@@ -1,3 +1,4 @@
+#nullable disable
 using IndiLogs.PluginAPI;
 using IndiLogs_3._0.Services.BuiltInPlugins;
 using IndiLogs_3._0.Services.Interfaces;

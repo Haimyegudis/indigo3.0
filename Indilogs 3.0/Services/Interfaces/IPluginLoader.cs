@@ -1,3 +1,4 @@
+#nullable disable
 using IndiLogs.PluginAPI;
 using System.Collections.Generic;
 

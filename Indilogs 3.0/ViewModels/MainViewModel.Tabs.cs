@@ -1,3 +1,4 @@
+#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.ViewModels.Components;
 using System.Collections.Generic;

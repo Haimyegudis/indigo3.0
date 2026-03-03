@@ -1,3 +1,4 @@
+#nullable disable
 using Indigo.Infra.ICL.Core.Logging;
 using IndiLogs.PluginAPI;
 using IndiLogs_3._0.Models;

@@ -1,3 +1,4 @@
+#nullable disable
 using IndiLogs_3._0;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
@@ -117,7 +118,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     // Run filter on background thread then update UI
                     await Task.Run(() =>
                     {
-                        Application.Current.Dispatcher.Invoke(() => FilterDbTreeNodes());
+                        Application.Current.Dispatcher.BeginInvoke(() => FilterDbTreeNodes());
                     }, token);
                 }
             }
@@ -325,7 +326,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         _ = Task.Run(() =>
                         {
                             var view = ParseCsvToDataView(terminalContent);
-                            Application.Current.Dispatcher.Invoke(() => CsvDataView = view);
+                            Application.Current.Dispatcher.BeginInvoke(() => CsvDataView = view);
                         });
                     }
                     else
@@ -580,7 +581,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 });
 
                 // Update UI on main thread
-                Application.Current.Dispatcher.Invoke(() =>
+                Application.Current.Dispatcher.BeginInvoke(() =>
                 {
                     DbTreeNodes.Add(tablesRoot);
                     _allDbTreeNodes.Add(tablesRoot);
@@ -588,7 +589,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
             catch (Exception ex)
             {
-                Application.Current.Dispatcher.Invoke(() =>
+                Application.Current.Dispatcher.BeginInvoke(() =>
                 {
                     DbTreeNodes.Add(new DbTreeNode { Name = $"Error: {ex.Message}", NodeType = "Error" });
                 });

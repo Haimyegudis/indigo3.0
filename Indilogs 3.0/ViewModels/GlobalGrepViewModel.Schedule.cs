@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -118,7 +119,7 @@ namespace IndiLogs_3._0.ViewModels
                 var reportPath = await _schedulerService.RunNowAsync(schedule);
                 AppLogger.Info($"[Grep] Scheduled search '{scheduleName}' completed: {schedule.LastRunStatus}");
 
-                Application.Current.Dispatcher.Invoke(() =>
+                Application.Current.Dispatcher.BeginInvoke(() =>
                 {
                     ScheduledRunCompleted?.Invoke(scheduleName, reportPath);
                 });
@@ -126,7 +127,7 @@ namespace IndiLogs_3._0.ViewModels
             catch (OperationCanceledException)
             {
                 AppLogger.Info($"[Grep] Scheduled search '{scheduleName}' cancelled");
-                Application.Current.Dispatcher.Invoke(() =>
+                Application.Current.Dispatcher.BeginInvoke(() =>
                 {
                     ScheduledRunCompleted?.Invoke(scheduleName, null);
                 });
@@ -134,7 +135,7 @@ namespace IndiLogs_3._0.ViewModels
             catch (Exception ex)
             {
                 AppLogger.Error($"[Grep] Scheduled search '{scheduleName}' failed", ex);
-                Application.Current.Dispatcher.Invoke(() =>
+                Application.Current.Dispatcher.BeginInvoke(() =>
                 {
                     ScheduledRunCompleted?.Invoke(scheduleName, null);
                 });

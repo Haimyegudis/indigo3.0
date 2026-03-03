@@ -1,3 +1,4 @@
+#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using System;
@@ -64,7 +65,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                     await Task.Run(() =>
                     {
-                        Application.Current.Dispatcher.Invoke(() =>
+                        Application.Current.Dispatcher.BeginInvoke(() =>
                         {
                             // Clear all filters for the current tab
                             if (isAppTab)
@@ -91,7 +92,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         });
                     });
 
-                    Application.Current.Dispatcher.Invoke(() =>
+                    Application.Current.Dispatcher.BeginInvoke(() =>
                     {
                         if (isAppTab)
                             ApplyAppLogsFilter();
@@ -144,7 +145,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     }
                 });
 
-                Application.Current.Dispatcher.Invoke(() =>
+                Application.Current.Dispatcher.BeginInvoke(() =>
                 {
                     if (isAppTab)
                     {
@@ -229,7 +230,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                             .Where(l => EvaluateFilterNode(l, newRoot))
                             .ToList();
 
-                        Application.Current.Dispatcher.Invoke(() =>
+                        Application.Current.Dispatcher.BeginInvoke(() =>
                         {
                             diffVM.FilteredEntries = new ObservableCollection<LogEntry>(filtered);
                         });
@@ -617,7 +618,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     if (_sessionVM.AllAppLogsCache != null)
                     {
                         var contextLogs = _sessionVM.AllAppLogsCache.Where(l => l.Date >= startTime && l.Date <= endTime).OrderBy(l => l.Date).ToList();
-                        Application.Current.Dispatcher.Invoke(() =>
+                        Application.Current.Dispatcher.BeginInvoke(() =>
                         {
                             LastFilteredAppCache = contextLogs;
                             IsAppTimeFocusActive = true;
@@ -634,7 +635,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     if (_sessionVM.AllLogsCache != null)
                     {
                         var contextLogs = _sessionVM.AllLogsCache.Where(l => l.Date >= startTime && l.Date <= endTime).OrderBy(l => l.Date).ToList();
-                        Application.Current.Dispatcher.Invoke(() =>
+                        Application.Current.Dispatcher.BeginInvoke(() =>
                         {
                             LastFilteredCache = contextLogs;
                             SavedFilterRoot = null;
@@ -690,7 +691,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                             // Fallback to time-based range
                             rangedLogs = _sessionVM.AllAppLogsCache.Where(l => l.Date >= startTime && l.Date <= endTime).ToList();
                         }
-                        Application.Current.Dispatcher.Invoke(() =>
+                        Application.Current.Dispatcher.BeginInvoke(() =>
                         {
                             LastFilteredAppCache = rangedLogs;
                             IsAppTimeFocusActive = true;
@@ -721,7 +722,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                             // Fallback to time-based range
                             rangedLogs = _sessionVM.AllLogsCache.Where(l => l.Date >= startTime && l.Date <= endTime).ToList();
                         }
-                        Application.Current.Dispatcher.Invoke(() =>
+                        Application.Current.Dispatcher.BeginInvoke(() =>
                         {
                             LastFilteredCache = rangedLogs;
                             SavedFilterRoot = null;

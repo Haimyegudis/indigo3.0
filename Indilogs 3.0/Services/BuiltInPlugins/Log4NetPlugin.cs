@@ -1,3 +1,4 @@
+#nullable disable
 /*
  * Log4NetPlugin — IndiLogs 3.0 Built-in Parser
  * =============================================

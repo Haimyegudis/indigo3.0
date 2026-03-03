@@ -1,3 +1,4 @@
+#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Analysis;
 using IndiLogs_3._0.Services;
@@ -102,21 +103,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         #region External Tools
 
-        public void OpenUrl(string url)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(url)) return;
-                if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
-                    (uri.Scheme != "https" && uri.Scheme != "http" && uri.Scheme != "mailto"))
-                {
-                    AppLogger.Warn($"OpenUrl blocked unsafe or invalid URI: '{url}'");
-                    return;
-                }
-                Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
-            }
-            catch (Exception ex) { AppLogger.Error("OpenUrl failed", ex); }
-        }
+        public void OpenUrl(string url) => MainViewModel.OpenUrl(url);
 
         private void OpenOutlook(object obj)
         {
