@@ -88,6 +88,10 @@ namespace IndiLogs_3._0
 
         protected override void OnClosed(EventArgs e)
         {
+            // Unsubscribe singleton events to prevent memory leaks
+            ChartDataTransferService.Instance.OnSwitchToChartsRequested -= SwitchToChartsTab;
+            ChartDataTransferService.Instance.OnChartTimeSelected -= OnChartTimeSelected;
+
             // Save column settings (widths, order, visibility) before closing
             try
             {
@@ -883,6 +887,9 @@ namespace IndiLogs_3._0
 
                     if (!string.IsNullOrEmpty(gridName))
                     {
+                        // Guard: skip if same ScrollViewer already subscribed (prevents duplicate event handlers)
+                        if (_scrollViewerCache.TryGetValue(gridName, out var existingSv) && existingSv == scrollViewer)
+                            return;
                         _scrollViewerCache[gridName] = scrollViewer;
                     }
 

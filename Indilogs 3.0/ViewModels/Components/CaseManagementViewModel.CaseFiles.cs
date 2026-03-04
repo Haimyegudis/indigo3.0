@@ -240,7 +240,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             if (caseFile.Annotations != null && _sessionVM.AllLogsCache != null)
             {
-                var allLogs = _sessionVM.AllLogsCache.ToList();
+                var allLogs = _sessionVM.AllLogsCache;
                 foreach (var annotation in caseFile.Annotations)
                 {
                     var matchingLog = FindLogByTarget(annotation.TargetLog, allLogs);

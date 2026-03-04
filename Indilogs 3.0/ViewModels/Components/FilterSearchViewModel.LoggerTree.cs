@@ -1,4 +1,5 @@
 using IndiLogs_3._0.Models;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -12,16 +13,17 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// </summary>
         public void BuildLoggerTree(IEnumerable<LogEntry> logs)
         {
-            if (logs == null || !logs.Any())
+            var logsList = logs as IList<LogEntry> ?? logs?.ToList() ?? (IList<LogEntry>)Array.Empty<LogEntry>();
+            if (logsList.Count == 0)
             {
                 LoggerTreeRoot = new ObservableCollection<LoggerNode>();
                 return;
             }
 
-            int totalCount = logs.Count();
+            int totalCount = logsList.Count;
             var rootNode = new LoggerNode { Name = "All Loggers", FullPath = "", IsExpanded = true, Count = totalCount };
 
-            var loggerGroups = logs.GroupBy(l => l.Logger)
+            var loggerGroups = logsList.GroupBy(l => l.Logger)
                                    .Select(g => new { Name = g.Key, Count = g.Count() })
                                    .ToList();
 
@@ -40,16 +42,17 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// </summary>
         public void BuildPlcLoggerTree(IEnumerable<LogEntry> logs)
         {
-            if (logs == null || !logs.Any())
+            var logsList = logs as IList<LogEntry> ?? logs?.ToList() ?? (IList<LogEntry>)Array.Empty<LogEntry>();
+            if (logsList.Count == 0)
             {
                 PlcLoggerTreeRoot = new ObservableCollection<LoggerNode>();
                 return;
             }
 
-            int totalCount = logs.Count();
+            int totalCount = logsList.Count;
             var rootNode = new LoggerNode { Name = "All Loggers", FullPath = "", IsExpanded = true, Count = totalCount };
 
-            var loggerGroups = logs.GroupBy(l => l.Logger)
+            var loggerGroups = logsList.GroupBy(l => l.Logger)
                                    .Select(g => new { Name = g.Key, Count = g.Count() })
                                    .ToList();
 

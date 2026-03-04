@@ -55,13 +55,13 @@ namespace IndiLogs_3._0.Services
                         if (!isAppLog && log.SystemDefaultColor.HasValue)
                             log.CustomColor = log.SystemDefaultColor.Value;
                     });
-                });
-                await ApplyCustomColoringAsync(logs, userRules);
+                }).ConfigureAwait(false);
+                await ApplyCustomColoringAsync(logs, userRules).ConfigureAwait(false);
             }
             else
             {
                 // No user defaults — use factory hardcoded logic (also sets SystemDefaultColor)
-                await ApplyFactoryDefaultColorsAsync(logs, isAppLog);
+                await ApplyFactoryDefaultColorsAsync(logs, isAppLog).ConfigureAwait(false);
             }
             AppLogger.Info($"[Coloring] Default colors applied ({(isAppLog ? "APP" : "PLC")}) — {colorSw.ElapsedMilliseconds}ms");
         }
@@ -75,7 +75,7 @@ namespace IndiLogs_3._0.Services
             {
                 Parallel.ForEach(logs, log =>
                 {
-                    // 1. Reset existing colors
+                    // Reset existing colors
                     log.CustomColor = null;
                     log.SystemDefaultColor = null;
                     log.IsErrorOrEvents = false;
@@ -135,7 +135,7 @@ namespace IndiLogs_3._0.Services
                         log.SystemDefaultColor = Color.FromRgb(173, 216, 230);
                     }
                 });
-            });
+            }).ConfigureAwait(false);
         }
 
         public async Task ApplyCustomColoringAsync(IEnumerable<LogEntry> logs, List<ColoringCondition> conditions)
@@ -158,7 +158,7 @@ namespace IndiLogs_3._0.Services
                         }
                     }
                 });
-            });
+            }).ConfigureAwait(false);
             AppLogger.Info($"[Coloring] Custom rules ({conditions.Count} rules) applied — {colorSw.ElapsedMilliseconds}ms");
         }
 

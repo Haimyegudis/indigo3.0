@@ -755,7 +755,7 @@ namespace IndiLogs_3._0.Services
                                 pipeline.Add(item);
                         }
                         pipeline.CompleteAdding();
-                        await parseTask;
+                        await parseTask.ConfigureAwait(false);
                     }
 
                     progress?.Report((90, "Merging results..."));
@@ -837,7 +837,7 @@ namespace IndiLogs_3._0.Services
                     AppLogger.Error($"ReloadComponentAsync({componentName}) failed", ex);
                     throw;
                 }
-            });
+            }).ConfigureAwait(false);
         }
 
         // Helper method to identify special terminal files (files located outside the TerminalLogs folder but belonging to terminals)

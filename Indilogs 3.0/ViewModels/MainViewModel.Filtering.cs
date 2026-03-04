@@ -207,12 +207,12 @@ namespace IndiLogs_3._0.ViewModels
                         FilterVM.MainFilterRoot = newRoot;
                         if (hasAdvanced)
                         {
-                            List<LogEntry> cacheCopy;
+                            IList<LogEntry> cacheRef;
                             lock (_collectionLock)
                             {
-                                cacheCopy = _allLogsCache.ToList();
+                                cacheRef = _allLogsCache;
                             }
-                            var res = cacheCopy.Where(l => EvaluateFilterNode(l, FilterVM.MainFilterRoot)).ToList();
+                            var res = cacheRef.Where(l => EvaluateFilterNode(l, FilterVM.MainFilterRoot)).ToList();
                             FilterVM.LastFilteredCache = res;
                         }
                         else FilterVM.LastFilteredCache.Clear();
@@ -309,7 +309,7 @@ namespace IndiLogs_3._0.ViewModels
                             if (IsVisualMode && VisualTimelineVM != null)
                             {
                                 // Use filtered logs if time range is active
-                                var logsForVisual = FilterVM.IsGlobalTimeRangeActive ? SessionVM.Logs : SessionVM.AllLogsCache.ToList();
+                                var logsForVisual = FilterVM.IsGlobalTimeRangeActive ? SessionVM.Logs : (IEnumerable<LogEntry>)SessionVM.AllLogsCache;
                                 var eventsToShow = HasBinaryAppLogs ? null : SessionVM?.Events;
                                 VisualTimelineVM.LoadData(logsForVisual, eventsToShow);
                                 VisualTimelineVM.FocusOnState(state.StateName);
@@ -362,7 +362,7 @@ namespace IndiLogs_3._0.ViewModels
                     // Switch to PLC tab to show filtered results
                     SelectedTabIndex = AppConstants.TAB_PLC;
 
-                    int logCount = SessionVM?.Logs?.Count() ?? 0;
+                    int logCount = (SessionVM?.Logs as ICollection<LogEntry>)?.Count ?? 0;
                     _dialogService.ShowInfo($"Filter applied: Logger = {filterValue}\n\nShowing {logCount} matching logs.", "Logger Filter Applied");
                 }
                 else if (filterType == "State")
@@ -375,7 +375,7 @@ namespace IndiLogs_3._0.ViewModels
                     // Switch to PLC tab to show filtered results
                     SelectedTabIndex = AppConstants.TAB_PLC;
 
-                    int logCount = SessionVM?.Logs?.Count() ?? 0;
+                    int logCount = (SessionVM?.Logs as ICollection<LogEntry>)?.Count ?? 0;
                     _dialogService.ShowInfo($"Filter applied: STATE = {filterValue}\n\nShowing {logCount} matching logs.", "State Filter Applied");
                 }
             }
@@ -445,16 +445,16 @@ namespace IndiLogs_3._0.ViewModels
             SessionVM.StatusMessage ="Sorting...";
             await Task.Run(() =>
             {
-                List<LogEntry> sorted = null;
-                var source = FilterVM.AppDevLogsFiltered.ToList();
-                switch (sortBy)
+                var sorted = FilterVM.AppDevLogsFiltered.ToList();
+                Comparison<LogEntry> cmp = sortBy switch
                 {
-                    case "Time": sorted = ascending ? source.OrderBy(x => x.Date).ToList() : source.OrderByDescending(x => x.Date).ToList(); break;
-                    case "Level": sorted = ascending ? source.OrderBy(x => x.Level).ToList() : source.OrderByDescending(x => x.Level).ToList(); break;
-                    case "Logger": sorted = ascending ? source.OrderBy(x => x.Logger).ToList() : source.OrderByDescending(x => x.Logger).ToList(); break;
-                    case "Thread": sorted = ascending ? source.OrderBy(x => x.ThreadName).ToList() : source.OrderByDescending(x => x.ThreadName).ToList(); break;
-                    default: sorted = source; break;
-                }
+                    "Time" => (a, b) => ascending ? a.Date.CompareTo(b.Date) : b.Date.CompareTo(a.Date),
+                    "Level" => (a, b) => ascending ? string.Compare(a.Level, b.Level, StringComparison.Ordinal) : string.Compare(b.Level, a.Level, StringComparison.Ordinal),
+                    "Logger" => (a, b) => ascending ? string.Compare(a.Logger, b.Logger, StringComparison.Ordinal) : string.Compare(b.Logger, a.Logger, StringComparison.Ordinal),
+                    "Thread" => (a, b) => ascending ? string.Compare(a.ThreadName, b.ThreadName, StringComparison.Ordinal) : string.Compare(b.ThreadName, a.ThreadName, StringComparison.Ordinal),
+                    _ => null!,
+                };
+                if (cmp != null) sorted.Sort(cmp);
                 Application.Current.Dispatcher.BeginInvoke(() =>
                 {
                     FilterVM.AppDevLogsFiltered.ReplaceAll(sorted);

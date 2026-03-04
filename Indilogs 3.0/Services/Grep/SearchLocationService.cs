@@ -62,7 +62,7 @@ namespace IndiLogs_3._0.Services.Grep
                 {
                     using (var ping = new Ping())
                     {
-                        var reply = await ping.SendPingAsync(location.Address, 3000);
+                        var reply = await ping.SendPingAsync(location.Address, 3000).ConfigureAwait(false);
                         if (reply.Status != IPStatus.Success)
                         {
                             location.ConnectionStatus = ConnectionStatus.Disconnected;
@@ -74,7 +74,7 @@ namespace IndiLogs_3._0.Services.Grep
                 // 2. Check if the path exists
                 if (!string.IsNullOrWhiteSpace(location.BasePath))
                 {
-                    bool exists = await Task.Run(() => Directory.Exists(location.BasePath));
+                    bool exists = await Task.Run(() => Directory.Exists(location.BasePath)).ConfigureAwait(false);
                     location.ConnectionStatus = exists ? ConnectionStatus.Connected : ConnectionStatus.Disconnected;
                     if (exists) location.LastAccessed = DateTime.Now;
                     return location.ConnectionStatus;

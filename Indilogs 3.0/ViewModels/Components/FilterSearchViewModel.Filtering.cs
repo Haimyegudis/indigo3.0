@@ -1023,7 +1023,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
             else
             {
-                var plcCount = (_sessionVM?.Logs?.Count()) ?? 0;
+                var plcCount = (_sessionVM?.Logs as ICollection<LogEntry>)?.Count ?? 0;
                 var appCount = (AppDevLogsFiltered?.Count) ?? 0;
                 var filteredCount = (FilteredLogs?.Count) ?? 0;
                 var eventsCount = (_sessionVM?.Events?.Count) ?? 0;

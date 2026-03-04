@@ -140,7 +140,7 @@ namespace IndiLogs_3._0.Services
                         ParseLogEntry(logsList[i]);
                     }
                 });
-            });
+            }).ConfigureAwait(false);
         }
 
     }

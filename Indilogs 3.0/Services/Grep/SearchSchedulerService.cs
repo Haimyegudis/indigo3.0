@@ -88,7 +88,7 @@ namespace IndiLogs_3._0.Services.Grep
         /// </summary>
         public async Task<string> RunNowAsync(ScheduledSearch schedule, CancellationToken ct = default)
         {
-            return await ExecuteScheduledSearchAsync(schedule, ct);
+            return await ExecuteScheduledSearchAsync(schedule, ct).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -111,7 +111,7 @@ namespace IndiLogs_3._0.Services.Grep
                 {
                     if (ShouldRun(schedule, now))
                     {
-                        await ExecuteScheduledSearchAsync(schedule, CancellationToken.None);
+                        await ExecuteScheduledSearchAsync(schedule, CancellationToken.None).ConfigureAwait(false);
                     }
                 }
             }
@@ -350,7 +350,7 @@ namespace IndiLogs_3._0.Services.Grep
                 if (doSearch)
                 {
                     results = await _grepService.SearchMultiLocationAsync(
-                        criteria, activeLocations, null, ct);
+                        criteria, activeLocations, null, ct).ConfigureAwait(false);
                     AppLogger.Info($"[Scheduler] Search phase done: {results.Count:N0} result(s)");
                 }
 
@@ -359,7 +359,7 @@ namespace IndiLogs_3._0.Services.Grep
                 {
                     AppLogger.Info($"[Scheduler] Starting statistics computation...");
                     var (plcLogs, appLogs, hasBinary) = await Task.Run(() =>
-                        LogStatisticsService.ParseLogsFromLocations(activeLocations, criteria, null, ct));
+                        LogStatisticsService.ParseLogsFromLocations(activeLocations, criteria, null, ct)).ConfigureAwait(false);
 
                     stats = LogStatisticsService.ComputeStatistics(plcLogs, appLogs, hasBinary);
                     AppLogger.Info($"[Scheduler] Statistics computed: {stats.TotalPlcLogs:N0} PLC + {stats.TotalAppLogs:N0} APP logs, {stats.TotalPlcErrors + stats.TotalAppErrors:N0} errors");

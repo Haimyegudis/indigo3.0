@@ -244,6 +244,12 @@ namespace IndiLogs_3._0.Views
             }
         }
 
+        protected override void OnClosed(EventArgs e)
+        {
+            _timer.Stop();
+            base.OnClosed(e);
+        }
+
         private void EndGame()
         {
             _isGameOver = true;

@@ -97,7 +97,7 @@ namespace IndiLogs_3._0.Services.Grep
                         ConfigureSmtpAuth(client, config);
                         client.Timeout = 15_000;
 
-                        await client.SendMailAsync(msg);
+                        await client.SendMailAsync(msg).ConfigureAwait(false);
                     }
                 }
                 return (true, "Test email sent successfully.");
@@ -135,7 +135,7 @@ namespace IndiLogs_3._0.Services.Grep
                         ConfigureSmtpAuth(client, config);
                         client.Timeout = 30_000;
 
-                        await client.SendMailAsync(msg);
+                        await client.SendMailAsync(msg).ConfigureAwait(false);
                     }
                 }
                 AppLogger.Info($"[Email] Sent notification for \"{scheduleName}\" to {config.Recipients.Count} recipient(s)");

@@ -889,7 +889,7 @@ namespace IndiLogs_3._0.Services
                                         pipeline.Add(item);
                                 }
                                 pipeline.CompleteAdding();
-                                await parseTask;
+                                await parseTask.ConfigureAwait(false);
 
                                 // Merge — then release intermediate bags to reduce GC pressure
                                 AppLogger.Info($"[Load] Parallel parsing done: {loadSw.Elapsed.TotalSeconds:F1}s elapsed");

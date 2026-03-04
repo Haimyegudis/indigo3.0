@@ -55,10 +55,10 @@ namespace IndiLogs_3._0.Services
         {
             if (preset != null)
             {
-                return await ExportLogsWithPresetAsync(logs, defaultFileName, preset);
+                return await ExportLogsWithPresetAsync(logs, defaultFileName, preset).ConfigureAwait(false);
             }
 
-            return await ExportLogsOriginalAsync(logs, defaultFileName);
+            return await ExportLogsOriginalAsync(logs, defaultFileName).ConfigureAwait(false);
         }
 
         private async Task<string?> ExportLogsOriginalAsync(IEnumerable<LogEntry> logs, string defaultFileName)

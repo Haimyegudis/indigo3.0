@@ -25,7 +25,7 @@ namespace IndiLogs_3._0.Services
             {
                 try
                 {
-                    await MonitorLoop(filePath, token);
+                    await MonitorLoop(filePath, token).ConfigureAwait(false);
                 }
                 catch (TaskCanceledException)
                 {
@@ -34,7 +34,7 @@ namespace IndiLogs_3._0.Services
                 catch (Exception ex)
                 {
                     OnStatusChanged?.Invoke($"Error: {ex.Message}. Retrying in 2s...");
-                    await Task.Delay(2000, token);
+                    await Task.Delay(2000, token).ConfigureAwait(false);
                 }
             }
         }
@@ -155,7 +155,7 @@ namespace IndiLogs_3._0.Services
                         }
                     }
 
-                    await Task.Delay(1000, token);
+                    await Task.Delay(1000, token).ConfigureAwait(false);
                 }
             }
         }

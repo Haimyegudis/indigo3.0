@@ -296,7 +296,7 @@ namespace IndiLogs_3._0.Services
                 }
 
                 progress?.Report(100.0);
-            }, ct);
+            }, ct).ConfigureAwait(false);
         }
 
         // ── Helpers ─────────────────────────────────────────────────────────

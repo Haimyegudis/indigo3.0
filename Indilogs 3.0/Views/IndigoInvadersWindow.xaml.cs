@@ -90,6 +90,13 @@ namespace IndiLogs_3._0.Views
             UpdateUI();
         }
 
+        protected override void OnClosed(EventArgs e)
+        {
+            _gameRunning = false;
+            _gameTimer.Stop();
+            base.OnClosed(e);
+        }
+
         private void GameOver()
         {
             _gameRunning = false;

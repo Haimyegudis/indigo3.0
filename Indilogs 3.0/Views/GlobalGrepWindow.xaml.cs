@@ -174,6 +174,13 @@ namespace IndiLogs_3._0.Views
             }
         }
 
+        protected override void OnClosed(EventArgs e)
+        {
+            _viewModel.RequestCloseForScheduledRun -= OnRequestCloseForScheduledRun;
+            _viewModel.ScheduledRunCompleted -= OnScheduledRunCompleted;
+            base.OnClosed(e);
+        }
+
         private void OpenAllFiles()
         {
             var uniqueFiles = _viewModel.GetUniqueFiles();

@@ -57,7 +57,7 @@ namespace IndiLogs_3._0.Services
 
                     progress?.Report((sessionIndex + 1, totalSessions, $"Searching: {sessionName}"));
                 }
-            });
+            }).ConfigureAwait(false);
 
             return results;
         }
@@ -163,7 +163,7 @@ namespace IndiLogs_3._0.Services
                         AppLogger.Info($"[Grep] APP logs in '{sessionName}': {session.AppDevLogs.Count} entries, {matchCount} matches");
                     }
                 }
-            });
+            }).ConfigureAwait(false);
 
             if (cancellationToken.IsCancellationRequested)
                 AppLogger.Info($"[Grep] SearchLoadedSessionsWithCriteria cancelled — {totalMatches} results found before cancel");
@@ -185,7 +185,7 @@ namespace IndiLogs_3._0.Services
             await Task.Run(() => {
                 if (isZip) SearchZipFile(path, searchQuery, regex, useRegex, searchPLC, searchAPP, results, progress, cancellationToken);
                 else if (Directory.Exists(path)) SearchDirectory(path, searchQuery, regex, useRegex, searchPLC, searchAPP, results, progress, cancellationToken);
-            }, cancellationToken);
+            }, cancellationToken).ConfigureAwait(false);
 
             return results.OrderBy(r => r.Timestamp).ToList();
         }
@@ -315,7 +315,7 @@ namespace IndiLogs_3._0.Services
 
         private Func<string, bool> CreateMatchPredicate(string q, bool useReg)
         {
-            if (useReg) { try { var r = new Regex(q, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(2)); return t => !string.IsNullOrEmpty(t) && r.IsMatch(t); } catch (Exception ex) { AppLogger.Warn($"Invalid regex pattern '{q}': {ex.Message}"); } }
+            if (useReg) { try { var r = new Regex(q, RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(2)); return t => !string.IsNullOrEmpty(t) && r.IsMatch(t); } catch (Exception ex) { AppLogger.Warn($"Invalid regex pattern '{q}': {ex.Message}"); } }
             if (QueryParserService.HasBooleanOperators(query: q)) { var node = _queryParser.Parse(q, out _); return t => !string.IsNullOrEmpty(t) && EvaluateQueryOnText(t, node); }
             return t => !string.IsNullOrEmpty(t) && t.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
         }
