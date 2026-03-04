@@ -160,9 +160,9 @@ namespace IndiLogs_3._0.Views
                     try
                     {
                         if (File.Exists(result.FilePath))
-                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"/select,\"{result.FilePath}\"") { UseShellExecute = true });
+                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"/select,\"{result.FilePath.Replace("\"", "")}\"") { UseShellExecute = true });
                         else if (Directory.Exists(Path.GetDirectoryName(result.FilePath)))
-                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{Path.GetDirectoryName(result.FilePath)}\"") { UseShellExecute = true });
+                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{Path.GetDirectoryName(result.FilePath)?.Replace("\"", "")}\"") { UseShellExecute = true });
                         else
                             MessageBox.Show($"Path not found: {result.FilePath}", "File Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }

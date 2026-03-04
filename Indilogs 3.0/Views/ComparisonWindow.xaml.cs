@@ -184,9 +184,9 @@ namespace IndiLogs_3._0.Views
                     return log;
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Fall back to offset calculation
+                AppLogger.Warn($"Visual tree lookup failed: {ex.Message}");
             }
 
             // Method 2: Estimate based on scroll offset
@@ -244,8 +244,9 @@ namespace IndiLogs_3._0.Views
                             return row;
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        AppLogger.Warn($"Row visibility check failed: {ex.Message}");
                         continue;
                     }
                 }
@@ -296,9 +297,9 @@ namespace IndiLogs_3._0.Views
                                 }
                             }
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // Ignore transform errors
+                            AppLogger.Warn($"Scroll transform error: {ex.Message}");
                         }
                         finally
                         {
@@ -315,8 +316,9 @@ namespace IndiLogs_3._0.Views
                     _isProgrammaticScroll = false;
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Warn($"Scroll sync failed: {ex.Message}");
                 _isProgrammaticScroll = false;
             }
         }

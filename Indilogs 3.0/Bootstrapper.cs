@@ -45,13 +45,17 @@ namespace IndiLogs_3._0
             var defaultConfigService = new DefaultConfigurationService();
             Register<IDefaultConfigurationService>(defaultConfigService);
 
-            Register<IWindowManager>(new WindowManagerAdapter());
+            var windowManager = new WindowManagerAdapter();
+            Register<IWindowManager>(windowManager);
 
             var viewFactory = new ViewFactory();
             Register<IViewFactory>(viewFactory);
 
+            var windowOwner = new WpfWindowOwnerProvider();
+            Register<IWindowOwnerProvider>(windowOwner);
+
             // --- ViewModels ---
-            var mainVM = new MainViewModel(logFileService, coloringService, csvService, defaultConfigService, dialogService, viewFactory, dispatcher);
+            var mainVM = new MainViewModel(logFileService, coloringService, csvService, defaultConfigService, dialogService, viewFactory, dispatcher, windowOwner, windowManager);
             Register<MainViewModel>(mainVM);
 
             _configured = true;

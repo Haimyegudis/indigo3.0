@@ -39,7 +39,7 @@ namespace IndiLogs_3._0.Services.Charts
             }
 
             // Sort by time for binary search
-            _timeMap = _timeMap.OrderBy(x => x.Time).ToList();
+            _timeMap.Sort((a, b) => a.Time.CompareTo(b.Time));
 
             // Build reverse index for O(1) GetTimeForIndex
             _indexToTimeMap = new Dictionary<int, DateTime>(_timeMap.Count);
@@ -90,7 +90,7 @@ namespace IndiLogs_3._0.Services.Charts
             }
 
             // Sort by time for binary search
-            _timeMap = _timeMap.OrderBy(x => x.Time).ToList();
+            _timeMap.Sort((a, b) => a.Time.CompareTo(b.Time));
 
             // Build reverse index for O(1) GetTimeForIndex
             _indexToTimeMap = new Dictionary<int, DateTime>(_timeMap.Count);
@@ -180,7 +180,7 @@ namespace IndiLogs_3._0.Services.Charts
             if (_timeMap.Count == 0)
                 return (DateTime.MinValue, DateTime.MinValue);
 
-            return (_timeMap.First().Time, _timeMap.Last().Time);
+            return (_timeMap[0].Time, _timeMap[_timeMap.Count - 1].Time);
         }
 
         /// <summary>

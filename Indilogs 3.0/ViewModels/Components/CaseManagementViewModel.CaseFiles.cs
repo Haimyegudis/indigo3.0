@@ -31,7 +31,8 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     Filter = "IndiLogs Case File (*.indi-case)|*.indi-case",
                     DefaultExt = ".indi-case",
-                    FileName = $"Investigation_{DateTime.Now:yyyyMMdd_HHmmss}.indi-case"
+                    FileName = $"Investigation_{DateTime.Now:yyyyMMdd_HHmmss}.indi-case",
+                    InitialDirectory = AppPaths.Root
                 };
 
                 if (dialog.ShowDialog() == true)
@@ -103,13 +104,14 @@ namespace IndiLogs_3._0.ViewModels.Components
                 var dialog = new OpenFileDialog
                 {
                     Filter = "IndiLogs Case File (*.indi-case)|*.indi-case",
-                    DefaultExt = ".indi-case"
+                    DefaultExt = ".indi-case",
+                    InitialDirectory = AppPaths.Root
                 };
 
                 if (dialog.ShowDialog() == true)
                 {
                     var json = File.ReadAllText(dialog.FileName);
-                    var caseFile = JsonConvert.DeserializeObject<CaseFile>(json, new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth });
+                    var caseFile = JsonConvert.DeserializeObject<CaseFile>(json, AppConstants.SafeJsonSettings);
 
                     if (caseFile == null)
                     {

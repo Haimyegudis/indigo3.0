@@ -37,7 +37,7 @@ jobs:
         }
         [xml]$xml = Get-Content $coverageFile.FullName
         $lineRate = [double]$xml.coverage.'line-rate' * 100
-        $threshold = 40
+        $threshold = 50
         Write-Host "Line coverage: $([math]::Round($lineRate, 2))%  (threshold: ${threshold}%)"
         if ($lineRate -lt $threshold) {
           Write-Error "Coverage $([math]::Round($lineRate, 2))% is below threshold of ${threshold}%"

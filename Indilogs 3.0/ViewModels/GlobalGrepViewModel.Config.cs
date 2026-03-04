@@ -38,7 +38,8 @@ namespace IndiLogs_3._0.ViewModels
             var dlg = new OpenFileDialog
             {
                 Filter = "Search Profile (*.json)|*.json",
-                Title = "Load Search Profile"
+                Title = "Load Search Profile",
+                InitialDirectory = AppPaths.Root
             };
             if (dlg.ShowDialog() != true) return;
             var profile = _configService.LoadProfileFromFile(dlg.FileName);
@@ -71,7 +72,7 @@ namespace IndiLogs_3._0.ViewModels
 
         private void ImportProfile()
         {
-            var dlg = new OpenFileDialog { Filter = "Search Profile (*.json)|*.json", Title = "Import Profile" };
+            var dlg = new OpenFileDialog { Filter = "Search Profile (*.json)|*.json", Title = "Import Profile", InitialDirectory = AppPaths.Root };
             if (dlg.ShowDialog() != true) return;
             _configService.ImportProfile(dlg.FileName);
             RefreshSavedProfiles();
@@ -166,7 +167,7 @@ namespace IndiLogs_3._0.ViewModels
 
         private void ExportCsv()
         {
-            var dlg = new SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = $"grep_results_{DateTime.Now:yyyyMMdd_HHmmss}.csv" };
+            var dlg = new SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = $"grep_results_{DateTime.Now:yyyyMMdd_HHmmss}.csv", InitialDirectory = AppPaths.Root };
             if (dlg.ShowDialog() != true) return;
             using (var writer = new StreamWriter(dlg.FileName, false, System.Text.Encoding.UTF8))
             {
@@ -182,7 +183,7 @@ namespace IndiLogs_3._0.ViewModels
 
         private void ExportJson()
         {
-            var dlg = new SaveFileDialog { Filter = "JSON (*.json)|*.json", FileName = $"grep_results_{DateTime.Now:yyyyMMdd_HHmmss}.json" };
+            var dlg = new SaveFileDialog { Filter = "JSON (*.json)|*.json", FileName = $"grep_results_{DateTime.Now:yyyyMMdd_HHmmss}.json", InitialDirectory = AppPaths.Root };
             if (dlg.ShowDialog() != true) return;
             File.WriteAllText(dlg.FileName, JsonConvert.SerializeObject(Results.ToList(), Formatting.Indented));
             StatusMessage = $"Exported {Results.Count:N0} results to JSON.";
@@ -195,7 +196,8 @@ namespace IndiLogs_3._0.ViewModels
             var dlg = new SaveFileDialog
             {
                 Filter = "HTML Report (*.html)|*.html",
-                FileName = $"search_report_{DateTime.Now:yyyyMMdd_HHmmss}.html"
+                FileName = $"search_report_{DateTime.Now:yyyyMMdd_HHmmss}.html",
+                InitialDirectory = AppPaths.Root
             };
             if (dlg.ShowDialog() != true) return;
 

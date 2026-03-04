@@ -30,9 +30,7 @@ namespace IndiLogs_3._0.Views
         private const int SearchDebounceMs = 300;
 
         // Column order persistence
-        private static readonly string ColumnOrderFilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "IndiLogs", "stripe_column_order.json");
+        private static readonly string ColumnOrderFilePath = AppPaths.StripeColumnOrder;
 
         public StripeAnalysisWindow()
         {
@@ -299,7 +297,7 @@ namespace IndiLogs_3._0.Views
                     return;
 
                 var json = File.ReadAllText(ColumnOrderFilePath);
-                var savedSettings = JsonConvert.DeserializeObject<List<ColumnSettingsInfo>>(json, new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth });
+                var savedSettings = JsonConvert.DeserializeObject<List<ColumnSettingsInfo>>(json, AppConstants.SafeJsonSettings);
 
                 if (savedSettings == null || savedSettings.Count == 0)
                     return;

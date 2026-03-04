@@ -22,7 +22,7 @@ namespace IndiLogs_3._0.Services
                 string settingsPath = Path.Combine(exeDir, "appsettings.json");
                 if (File.Exists(settingsPath))
                 {
-                    using var doc = JsonDocument.Parse(File.ReadAllText(settingsPath));
+                    using var doc = JsonDocument.Parse(File.ReadAllText(settingsPath), AppConstants.SafeJsonDocumentOptions);
                     var root = doc.RootElement;
 
                     if (root.TryGetProperty("JiraUrl", out var jira) && !string.IsNullOrEmpty(jira.GetString()))
@@ -36,7 +36,7 @@ namespace IndiLogs_3._0.Services
                 string localPath = Path.Combine(exeDir, "appsettings.local.json");
                 if (File.Exists(localPath))
                 {
-                    using var localDoc = JsonDocument.Parse(File.ReadAllText(localPath));
+                    using var localDoc = JsonDocument.Parse(File.ReadAllText(localPath), AppConstants.SafeJsonDocumentOptions);
                     var localRoot = localDoc.RootElement;
 
                     if (localRoot.TryGetProperty("JiraUrl", out var lj) && !string.IsNullOrEmpty(lj.GetString()))

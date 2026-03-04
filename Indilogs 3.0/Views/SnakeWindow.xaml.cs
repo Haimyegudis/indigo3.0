@@ -30,7 +30,7 @@ namespace IndiLogs_3._0.Views
         private Queue<Point> _inputQueue = new(); // Movement instruction queue
 
         // High scores save path
-        private string _scoreFile = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IndiLogs", "snake_scores.json");
+        private string _scoreFile = AppPaths.SnakeScores;
 
         public SnakeWindow()
         {
@@ -277,7 +277,7 @@ namespace IndiLogs_3._0.Views
             {
                 List<int> scores = new List<int>();
                 if (File.Exists(_scoreFile))
-                    scores = JsonConvert.DeserializeObject<List<int>>(File.ReadAllText(_scoreFile), new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth }) ?? new List<int>();
+                    scores = JsonConvert.DeserializeObject<List<int>>(File.ReadAllText(_scoreFile), AppConstants.SafeJsonSettings) ?? new List<int>();
 
                 scores.Add(_score);
                 scores = scores.OrderByDescending(s => s).Take(3).ToList(); // Keep top 3
@@ -295,7 +295,7 @@ namespace IndiLogs_3._0.Views
             {
                 if (File.Exists(_scoreFile))
                 {
-                    var scores = JsonConvert.DeserializeObject<List<int>>(File.ReadAllText(_scoreFile), new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth });
+                    var scores = JsonConvert.DeserializeObject<List<int>>(File.ReadAllText(_scoreFile), AppConstants.SafeJsonSettings);
                     HighScoresText.Text = string.Join("\n", scores.Select((s, i) => $"#{i + 1} : {s}"));
                 }
             }

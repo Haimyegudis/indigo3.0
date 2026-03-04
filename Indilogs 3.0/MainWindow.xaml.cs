@@ -39,7 +39,7 @@ namespace IndiLogs_3._0
             WindowManager.Initialize(this);
 
             // Initialize TabTearOffManager
-            TabTearOffManager.Initialize(this, MainTabs);
+            TabTearOffManager.Initialize(this, MainTabs, Bootstrapper.Resolve<Services.Interfaces.IWindowManager>());
 
             // Setup drag-to-detach on tab headers
             MainTabs.PreviewMouseLeftButtonDown += MainTabs_PreviewMouseLeftButtonDown;

@@ -41,9 +41,9 @@ namespace IndiLogs_3._0.Models.Grep
                         byte[] decrypted = ProtectedData.Unprotect(encrypted, null, DataProtectionScope.CurrentUser);
                         return Encoding.UTF8.GetString(decrypted);
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        // Decryption failed (different user, corrupted data)
+                        Services.AppLogger.Warn($"DPAPI decrypt failed: {ex.Message}");
                         return null;
                     }
                 }
@@ -74,10 +74,11 @@ namespace IndiLogs_3._0.Models.Grep
                         byte[] encrypted = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
                         EncryptedSmtpPassword = Convert.ToBase64String(encrypted);
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        // If DPAPI fails, store nothing rather than plaintext
+                        Services.AppLogger.Warn($"DPAPI encrypt failed: {ex.Message}");
                         EncryptedSmtpPassword = null;
+                        SmtpPasswordLegacy = null; // Clear legacy plaintext even if encryption fails
                     }
                 }
                 SmtpPasswordLegacy = null; // Clear legacy field once encrypted

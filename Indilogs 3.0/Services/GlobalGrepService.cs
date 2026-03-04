@@ -509,10 +509,9 @@ namespace IndiLogs_3._0.Services
             Action<GrepResult>? onResult = null)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            var activeLocations = locations.Where(l => l.IsActive).ToList();
-
-            if (criteria.LocationIds != null && criteria.LocationIds.Count > 0)
-                activeLocations = activeLocations.Where(l => criteria.LocationIds.Contains(l.Id)).ToList();
+            var activeLocations = locations
+                .Where(l => l.IsActive && (criteria.LocationIds == null || criteria.LocationIds.Count == 0 || criteria.LocationIds.Contains(l.Id)))
+                .ToList();
 
             int totalLocations = activeLocations.Count;
             int completedLocations = 0;

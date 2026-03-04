@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using IndiLogs_3._0.Controls;
 using IndiLogs_3._0.Controls.Charts;
+using IndiLogs_3._0.Services.Interfaces;
 using IndiLogs_3._0.Views;
 
 namespace IndiLogs_3._0.Services
@@ -19,6 +20,7 @@ namespace IndiLogs_3._0.Services
         private static readonly Dictionary<string, DetachedTabInfo> _detachedTabs = new Dictionary<string, DetachedTabInfo>();
         private static TabControl? _mainTabControl;
         private static Window? _mainWindow;
+        private static IWindowManager? _windowManager;
 
         /// <summary>
         /// Information about a detached tab
@@ -35,10 +37,11 @@ namespace IndiLogs_3._0.Services
         /// <summary>
         /// Initialize with the main window and its TabControl
         /// </summary>
-        public static void Initialize(Window mainWindow, TabControl mainTabControl)
+        public static void Initialize(Window mainWindow, TabControl mainTabControl, IWindowManager? windowManager = null)
         {
             _mainWindow = mainWindow;
             _mainTabControl = mainTabControl;
+            _windowManager = windowManager;
         }
 
         /// <summary>
@@ -107,7 +110,10 @@ namespace IndiLogs_3._0.Services
             floatingWindow.RequestReattach += OnRequestReattach;
 
             // Show via WindowManager for proper multi-monitor handling
-            WindowManager.OpenWindow(floatingWindow);
+            if (_windowManager != null)
+                _windowManager.OpenWindow(floatingWindow);
+            else
+                WindowManager.OpenWindow(floatingWindow);
 
             // Select the next available tab in main window
             SelectNextAvailableTab(originalIndex);

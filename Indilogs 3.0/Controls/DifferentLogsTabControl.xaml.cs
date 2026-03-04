@@ -34,11 +34,8 @@ namespace IndiLogs_3._0.Controls
         /// <summary>Persistence key = plugin name or file extension → column settings.</summary>
         private string? _currentPluginKey;
 
-        private static readonly string SettingsDir =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                         "IndiLogs3.0");
-        private static readonly string SettingsFile =
-            Path.Combine(SettingsDir, "DifferentLogsColumnSettings.json");
+        private static readonly string SettingsDir = AppPaths.Root;
+        private static readonly string SettingsFile = AppPaths.DifferentLogsColumnSettings;
 
         public DifferentLogsTabControl()
         {
@@ -381,7 +378,7 @@ namespace IndiLogs_3._0.Controls
                 if (File.Exists(SettingsFile))
                 {
                     string json = File.ReadAllText(SettingsFile);
-                    return JsonConvert.DeserializeObject<Dictionary<string, DiffColumnSettings>>(json, new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth })
+                    return JsonConvert.DeserializeObject<Dictionary<string, DiffColumnSettings>>(json, AppConstants.SafeJsonSettings)
                            ?? new Dictionary<string, DiffColumnSettings>();
                 }
             }

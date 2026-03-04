@@ -29,8 +29,13 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     targetList.Add(currentLog);
                     var sorted = targetList.OrderByDescending(x => x.Date).ToList();
-                    targetList.Clear();
-                    foreach (var l in sorted) targetList.Add(l);
+                    if (targetList is ObservableRangeCollection<LogEntry> rangeList)
+                        rangeList.ReplaceAll(sorted);
+                    else
+                    {
+                        targetList.Clear();
+                        foreach (var l in sorted) targetList.Add(l);
+                    }
                 }
                 else
                 {
@@ -69,7 +74,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _combinedMarkedWindow = _viewFactory.Create<MarkedLogsWindow>(collectionToShow, "Marked Lines (Combined - Main & App)");
                 _combinedMarkedWindow.DataContext = _parent;
                 _combinedMarkedWindow.Closed += (s, e) => _combinedMarkedWindow = null;
-                WindowManager.OpenWindow(_combinedMarkedWindow);
+                _windowManager.OpenWindow(_combinedMarkedWindow);
             }
             else
             {
@@ -80,26 +85,26 @@ namespace IndiLogs_3._0.ViewModels.Components
                     // Show App logs marked window
                     if (_markedAppLogsWindow != null && _markedAppLogsWindow.IsVisible)
                     {
-                        WindowManager.ActivateWindow(_markedAppLogsWindow);
+                        _windowManager.ActivateWindow(_markedAppLogsWindow);
                         return;
                     }
                     _markedAppLogsWindow = _viewFactory.Create<MarkedLogsWindow>(MarkedAppLogs, "Marked Lines (APP)");
                     _markedAppLogsWindow.DataContext = _parent;
                     _markedAppLogsWindow.Closed += (s, e) => _markedAppLogsWindow = null;
-                    WindowManager.OpenWindow(_markedAppLogsWindow);
+                    _windowManager.OpenWindow(_markedAppLogsWindow);
                 }
                 else
                 {
                     // Show Main logs marked window
                     if (_markedMainLogsWindow != null && _markedMainLogsWindow.IsVisible)
                     {
-                        WindowManager.ActivateWindow(_markedMainLogsWindow);
+                        _windowManager.ActivateWindow(_markedMainLogsWindow);
                         return;
                     }
                     _markedMainLogsWindow = _viewFactory.Create<MarkedLogsWindow>(MarkedLogs, "Marked Lines (LOGS)");
                     _markedMainLogsWindow.DataContext = _parent;
                     _markedMainLogsWindow.Closed += (s, e) => _markedMainLogsWindow = null;
-                    WindowManager.OpenWindow(_markedMainLogsWindow);
+                    _windowManager.OpenWindow(_markedMainLogsWindow);
                 }
             }
         }

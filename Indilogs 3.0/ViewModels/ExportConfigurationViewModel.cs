@@ -839,7 +839,8 @@ namespace IndiLogs_3._0.ViewModels
                 SaveFileDialog saveDialog = new SaveFileDialog
                 {
                     Filter = "JSON Files (*.json)|*.json",
-                    FileName = "ExportPreset.json"
+                    FileName = "ExportPreset.json",
+                    InitialDirectory = AppPaths.Root
                 };
 
                 if (saveDialog.ShowDialog() == true)
@@ -861,13 +862,14 @@ namespace IndiLogs_3._0.ViewModels
             {
                 OpenFileDialog openDialog = new OpenFileDialog
                 {
-                    Filter = "JSON Files (*.json)|*.json"
+                    Filter = "JSON Files (*.json)|*.json",
+                    InitialDirectory = AppPaths.Root
                 };
 
                 if (openDialog.ShowDialog() == true)
                 {
                     string json = File.ReadAllText(openDialog.FileName, Encoding.UTF8);
-                    var preset = JsonConvert.DeserializeObject<ExportPreset>(json, new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth });
+                    var preset = JsonConvert.DeserializeObject<ExportPreset>(json, AppConstants.SafeJsonSettings);
 
                     if (preset != null)
                     {

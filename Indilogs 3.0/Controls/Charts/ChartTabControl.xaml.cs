@@ -166,8 +166,9 @@ namespace IndiLogs_3._0.Controls.Charts
                     ApplyThemeToCharts();
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Warn($"Theme detection failed: {ex.Message}");
                 _isLightTheme = false;
             }
         }

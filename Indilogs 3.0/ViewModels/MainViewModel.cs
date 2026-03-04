@@ -60,6 +60,8 @@ namespace IndiLogs_3._0.ViewModels
         private readonly IDialogService _dialogService;
         private readonly IViewFactory _viewFactory;
         private readonly IDispatcher _dispatcher;
+        private readonly IWindowOwnerProvider _windowOwner;
+        private readonly IWindowManager _windowManager;
         public IDefaultConfigurationService DefaultConfigService => _defaultConfigService;
         public ILogColoringService ColoringService => _coloringService;
 
@@ -400,7 +402,7 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand SetAsDefaultCommand { get; }
         public ICommand ResetDefaultsCommand { get; }
 
-        public MainViewModel(ILogFileService logService, ILogColoringService coloringService, ICsvExportService csvService, IDefaultConfigurationService defaultConfigService, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher)
+        public MainViewModel(ILogFileService logService, ILogColoringService coloringService, ICsvExportService csvService, IDefaultConfigurationService defaultConfigService, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher, IWindowOwnerProvider windowOwner, IWindowManager windowManager)
         {
             _logService = logService;
             _coloringService = coloringService;
@@ -409,17 +411,19 @@ namespace IndiLogs_3._0.ViewModels
             _dialogService = dialogService;
             _viewFactory = viewFactory;
             _dispatcher = dispatcher;
+            _windowOwner = windowOwner;
+            _windowManager = windowManager;
             _isTimeSyncEnabled = false;
 
             // Initialize child ViewModels
-            SessionVM = new LogSessionViewModel(this, _logService, _coloringService, _dialogService, _viewFactory, _dispatcher);
-            FilterVM = new FilterSearchViewModel(this, SessionVM, _dialogService, _viewFactory, _dispatcher);
-            CaseVM = new CaseManagementViewModel(this, SessionVM, FilterVM, _dialogService, _viewFactory, _dispatcher);
+            SessionVM = new LogSessionViewModel(this, _logService, _coloringService, _dialogService, _viewFactory, _dispatcher, _windowOwner);
+            FilterVM = new FilterSearchViewModel(this, SessionVM, _dialogService, _viewFactory, _dispatcher, _windowOwner);
+            CaseVM = new CaseManagementViewModel(this, SessionVM, FilterVM, _dialogService, _viewFactory, _dispatcher, _windowManager);
             LiveVM = new LiveMonitoringViewModel(this, SessionVM, FilterVM, CaseVM, _logService, _coloringService, _dispatcher);
-            ConfigVM = new ConfigExplorerViewModel(this, SessionVM, _dialogService, _viewFactory, _dispatcher);
+            ConfigVM = new ConfigExplorerViewModel(this, SessionVM, _dialogService, _viewFactory, _dispatcher, _windowOwner, _windowManager);
             ChartVM = new ChartTabViewModel(this);
             CprVM = new CprAnalysisViewModel(_dialogService);
-            DifferentLogsVM = new DifferentLogsViewModel(_logService.GetPluginLoader(), _dialogService, _viewFactory);
+            DifferentLogsVM = new DifferentLogsViewModel(_logService.GetPluginLoader(), _dialogService, _viewFactory, _windowOwner);
             DifferentLogsVM.GetCurrentZipPath = () => SessionVM?.SelectedSession?.FilePath;
             StepRecorderVM = new StepRecorderViewModel(_dialogService);
 
@@ -444,9 +448,10 @@ namespace IndiLogs_3._0.ViewModels
             OpenIndigoInvadersCommand = new RelayCommand(OpenIndigoInvaders);
 
             _allLogsCache = SessionVM.AllLogsCache;
-            AvailableFonts = new ObservableCollection<string>();
             if (Fonts.SystemFontFamilies != null)
-                foreach (var font in Fonts.SystemFontFamilies.OrderBy(f => f.Source)) AvailableFonts.Add(font.Source);
+                AvailableFonts = new ObservableCollection<string>(Fonts.SystemFontFamilies.OrderBy(f => f.Source).Select(f => f.Source));
+            else
+                AvailableFonts = new ObservableCollection<string>();
 
             ToggleExplorerMenuCommand = new RelayCommand(o => ConfigVM.IsExplorerMenuOpen = !ConfigVM.IsExplorerMenuOpen);
             ToggleConfigMenuCommand = new RelayCommand(o => ConfigVM.IsConfigMenuOpen = !ConfigVM.IsConfigMenuOpen);
@@ -516,8 +521,8 @@ namespace IndiLogs_3._0.ViewModels
             ToggleThemeCommand = new RelayCommand(o => IsDarkMode = !IsDarkMode);
             ToggleBoldCommand = new RelayCommand(o => IsBold = !IsBold);
             OpenSettingsCommand = new RelayCommand(OpenSettingsWindow);
-            OpenHelpCommand = new RelayCommand(o => WindowManager.OpenWindow(_viewFactory.Create<Views.HelpWindow>()));
-            OpenPluginTesterCommand = new RelayCommand(o => WindowManager.GetOrCreate<Views.PluginTesterWindow>(() => _viewFactory.Create<Views.PluginTesterWindow>()));
+            OpenHelpCommand = new RelayCommand(o => _windowManager.OpenWindow(_viewFactory.Create<Views.HelpWindow>()));
+            OpenPluginTesterCommand = new RelayCommand(o => _windowManager.GetOrCreate<Views.PluginTesterWindow>(() => _viewFactory.Create<Views.PluginTesterWindow>()));
             OpenFontsWindowCommand = new RelayCommand(OpenFontsWindow);
             OpenSnakeGameCommand = new RelayCommand(OpenSnakeGame);
 
@@ -803,7 +808,7 @@ namespace IndiLogs_3._0.ViewModels
 
         private void LoadSavedConfigurations()
         {
-            string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IndiLogs3.0", "Configs");
+            string path = AppPaths.Root;
             CaseVM?.EnsureDefaultConfigsOnDisk(path);
         }
 

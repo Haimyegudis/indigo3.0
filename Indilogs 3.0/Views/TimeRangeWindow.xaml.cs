@@ -1,3 +1,4 @@
+using IndiLogs_3._0.Services;
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -137,9 +138,9 @@ namespace IndiLogs_3._0.Views
                 if (this.Top < screen.Top)
                     this.Top = screen.Top;
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback - center on owner
+                AppLogger.Warn($"Window positioning failed: {ex.Message}");
                 if (this.Owner != null)
                 {
                     this.Left = this.Owner.Left + (this.Owner.Width - this.Width) / 2;

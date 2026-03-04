@@ -80,7 +80,7 @@ namespace IndiLogs_3._0.Models.Charts
         /// </summary>
         public static string GetName(int stateId)
         {
-            return StateNames.ContainsKey(stateId) ? StateNames[stateId] : stateId.ToString();
+            return StateNames.TryGetValue(stateId, out var name) ? name : stateId.ToString();
         }
 
         /// <summary>

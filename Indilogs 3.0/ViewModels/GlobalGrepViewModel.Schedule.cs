@@ -54,9 +54,7 @@ namespace IndiLogs_3._0.ViewModels
                 Criteria = new SearchCriteria { SearchPLC = true, SearchAPP = true },
                 ScheduleType = ScheduleType.Daily,
                 RunTime = new TimeSpan(8, 0, 0),
-                OutputDirectory = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                    "IndiLogs_GrepResults")
+                OutputDirectory = AppPaths.Root
             };
 
             if (!ShowScheduleDialog("New Scheduled Search", schedule)) return;

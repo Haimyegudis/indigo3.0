@@ -30,11 +30,11 @@ namespace IndiLogs_3._0.ViewModels
 
             if (SessionVM.SelectedSession.CachedStates != null && SessionVM.SelectedSession.CachedStates.Count > 0)
             {
-                if (_statesWindow != null && _statesWindow.IsVisible) { WindowManager.ActivateWindow(_statesWindow); return; }
+                if (_statesWindow != null && _statesWindow.IsVisible) { _windowManager.ActivateWindow(_statesWindow); return; }
 
                 _statesWindow = _viewFactory.Create<StatesWindow>(SessionVM.SelectedSession.CachedStates, this);
                 _statesWindow.Closed += (s, e) => _statesWindow = null;
-                WindowManager.OpenWindow(_statesWindow);
+                _windowManager.OpenWindow(_statesWindow);
             }
             else
             {
@@ -65,7 +65,7 @@ namespace IndiLogs_3._0.ViewModels
 
             // S6: Show analysis menu with Failures / Statistics choices
             var menuWindow = _viewFactory.Create<Views.AnalysisMenuWindow>();
-            menuWindow.Owner = Application.Current.MainWindow;
+            menuWindow.Owner = _windowOwner.GetOwner();
 
             if (menuWindow.ShowDialog() == true)
             {
@@ -117,14 +117,14 @@ namespace IndiLogs_3._0.ViewModels
             // Create the window with both parameters and a callback for filtering
             var statsWindow = _viewFactory.Create<Views.StatsWindow>(plcLogs, appLogs, (Action<string, string>)ApplyChartDrillDownFilter, (Action<LogEntry>)NavigateToLogFromStats, IsDarkMode, HasBinaryAppLogs);
             statsWindow.Title = "Log Statistics Dashboard";
-            WindowManager.OpenWindow(statsWindow);
+            _windowManager.OpenWindow(statsWindow);
         }
 
         private void OpenAnalysisWindow(List<AnalysisResult> results)
         {
             _analysisWindow = _viewFactory.Create<AnalysisReportWindow>(results, (Action<LogEntry>)(log => JumpToLog(log)));
             _analysisWindow.Closed += (s, e) => _analysisWindow = null;
-            WindowManager.OpenWindow(_analysisWindow);
+            _windowManager.OpenWindow(_analysisWindow);
         }
 
         private void OpenSettingsWindow(object obj)
@@ -177,11 +177,11 @@ namespace IndiLogs_3._0.ViewModels
             else
             {
                 // Fallback: use WindowManager for centering
-                WindowManager.OpenWindow(win);
+                _windowManager.OpenWindow(win);
             }
         }
 
-        private void OpenFontsWindow(object obj) { var w = _viewFactory.Create<FontsWindow>(); w.DataContext = this; WindowManager.ShowDialog(w); }
+        private void OpenFontsWindow(object obj) { var w = _viewFactory.Create<FontsWindow>(); w.DataContext = this; _windowManager.ShowDialog(w); }
 
         private void OpenMarkedLogsWindow(object obj) => CaseVM?.OpenMarkedWindowCommand.Execute(obj);
 
@@ -190,21 +190,22 @@ namespace IndiLogs_3._0.ViewModels
             // Create an empty collection if no sessions are loaded, to allow the window to open
             var sessions = SessionVM?.LoadedSessions ?? new ObservableCollection<LogSessionData>();
 
-            var viewModel = new GlobalGrepViewModel(sessions, _dialogService, _viewFactory, _dispatcher);
+            var viewModel = new GlobalGrepViewModel(sessions, _dialogService, _viewFactory, _dispatcher, _windowOwner);
 
             var window = _viewFactory.Create<GlobalGrepWindow>(viewModel, (Action<GrepResult>)NavigateToGrepResult, (Action<List<(string FilePath, string SessionName)>>)LoadMultipleFiles);
-            WindowManager.OpenWindow(window);
+            _windowManager.OpenWindow(window);
         }
 
         private void OpenComparisonWindow()
         {
-            var comparisonWindow = WindowManager.GetOrCreate<Views.ComparisonWindow>(
+            var comparisonWindow = _windowManager.GetOrCreate<Views.ComparisonWindow>(
                 () => _viewFactory.Create<Views.ComparisonWindow>(new LogComparisonViewModel(
                     SessionVM.AllLogsCache,
                     SessionVM.AllAppLogsCache,
-                    this
+                    this,
+                    _windowManager
                 )),
-                Application.Current.MainWindow
+                _windowOwner.GetOwner()
             );
         }
 
@@ -237,7 +238,7 @@ namespace IndiLogs_3._0.ViewModels
             }
 
             var window = _viewFactory.Create<StripeAnalysisWindow>();
-            WindowManager.OpenWindow(window);
+            _windowManager.OpenWindow(window);
 
             // Load data asynchronously after window is shown
             await Task.Run(() => { }).ContinueWith(_ =>
@@ -251,13 +252,13 @@ namespace IndiLogs_3._0.ViewModels
         private void OpenSnakeGame(object obj)
         {
             var snakeWindow = _viewFactory.Create<IndiLogs_3._0.Views.SnakeWindow>();
-            WindowManager.ShowDialog(snakeWindow);
+            _windowManager.ShowDialog(snakeWindow);
         }
 
         private void OpenIndigoInvaders(object obj)
         {
             var invadersWindow = _viewFactory.Create<IndiLogs_3._0.Views.IndigoInvadersWindow>();
-            invadersWindow.Owner = Application.Current.MainWindow;
+            invadersWindow.Owner = _windowOwner.GetOwner();
             invadersWindow.ShowDialog();
         }
 
@@ -265,7 +266,7 @@ namespace IndiLogs_3._0.ViewModels
         {
             if (parameter is LogEntry log)
             {
-                WindowManager.OpenWindow(_viewFactory.Create<LogDetailsWindow>(log));
+                _windowManager.OpenWindow(_viewFactory.Create<LogDetailsWindow>(log));
             }
         }
 
@@ -289,7 +290,7 @@ namespace IndiLogs_3._0.ViewModels
             catch (Exception ex) { AppLogger.Error($"OpenUrl failed for '{url}'", ex); }
         }
 
-        private void OpenOutlook(object obj) { try { Process.Start(new ProcessStartInfo("outlook.exe", "/c ipm.note") { UseShellExecute = true }); } catch (Exception) { OpenUrl("mailto:"); } }
+        private void OpenOutlook(object obj) { try { Process.Start(new ProcessStartInfo("outlook.exe", "/c ipm.note") { UseShellExecute = true }); } catch (Exception ex) { AppLogger.Warn($"Outlook launch failed: {ex.Message}"); OpenUrl("mailto:"); } }
 
         /// <summary>
         /// Opens Kibana in the default browser, pre-filling the machine name from the loaded ZIP.

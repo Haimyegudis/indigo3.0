@@ -149,9 +149,9 @@ namespace IndiLogs_3._0.Services
                 window.Activate();
                 window.Focus();
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to basic activation
+                AppLogger.Warn($"Window activation failed: {ex.Message}");
                 window.Activate();
                 window.Focus();
             }
@@ -266,9 +266,9 @@ namespace IndiLogs_3._0.Services
                     window.Top = refWindow.Top + 50;
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback: position relative to reference window if available
+                AppLogger.Warn($"Window positioning failed: {ex.Message}");
                 if (refWindow != null && refWindow.IsLoaded)
                 {
                     window.Left = refWindow.Left + 50;

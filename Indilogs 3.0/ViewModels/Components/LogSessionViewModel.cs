@@ -26,6 +26,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly IDialogService _dialogService;
         private readonly IViewFactory _viewFactory;
         private readonly IDispatcher _dispatcher;
+        private readonly IWindowOwnerProvider _windowOwner;
         private FilterSearchViewModel? _filterVM;
         private CaseManagementViewModel? _caseVM;
         private ConfigExplorerViewModel? _configVM;
@@ -201,7 +202,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand ClearCommand { get; }
         public ICommand RemoveSessionCommand { get; }
 
-        public LogSessionViewModel(MainViewModel parent, ILogFileService logService, ILogColoringService coloringService, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher)
+        public LogSessionViewModel(MainViewModel parent, ILogFileService logService, ILogColoringService coloringService, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher, IWindowOwnerProvider windowOwner)
         {
             _parent = parent;
             _logService = logService;
@@ -209,6 +210,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             _dialogService = dialogService;
             _viewFactory = viewFactory;
             _dispatcher = dispatcher;
+            _windowOwner = windowOwner;
 
             // Initialize collections
             _allLogsCache = new List<LogEntry>();
@@ -374,9 +376,9 @@ namespace IndiLogs_3._0.ViewModels.Components
                         // File is locked by another process - it's a live file
                         isLiveFile = true;
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Other errors (permissions etc.) - treat as static file
+                        AppLogger.Warn($"File access check failed: {ex.Message}");
                         isLiveFile = false;
                     }
 
@@ -401,7 +403,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                 // Show the dialog on the UI thread
                 var dialog = _viewFactory.Create<Views.TabSelectionWindow>(preScan);
-                dialog.Owner = Application.Current.MainWindow;
+                dialog.Owner = _windowOwner.GetOwner();
                 if (dialog.ShowDialog() != true)
                 {
                     // User cancelled — abort load

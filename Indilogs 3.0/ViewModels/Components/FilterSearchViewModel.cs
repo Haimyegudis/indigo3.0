@@ -15,27 +15,6 @@ using System.Windows.Threading;
 namespace IndiLogs_3._0.ViewModels.Components
 {
     /// <summary>
-    /// Debug helper list that tracks clearing operations for diagnostics.
-    /// </summary>
-    public class TrackedList<T> : List<T>, IList<T>
-    {
-        private readonly string _name;
-
-        public TrackedList(string name) { _name = name; }
-
-        public new void Clear()
-        {
-            base.Clear();
-        }
-
-        // Override ICollection<T>.Clear explicitly
-        void ICollection<T>.Clear()
-        {
-            base.Clear();
-        }
-    }
-
-    /// <summary>
     /// Manages log filtering, searching, and logger tree operations for PLC and APP log views.
     /// </summary>
     public partial class FilterSearchViewModel : ViewModelBase
@@ -45,6 +24,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly IDialogService _dialogService;
         private readonly IViewFactory _viewFactory;
         private readonly IDispatcher _dispatcher;
+        private readonly IWindowOwnerProvider _windowOwner;
 
         /// <summary>
         /// User-configurable default PLC filter applied when no explicit filters are active.
@@ -277,12 +257,12 @@ namespace IndiLogs_3._0.ViewModels.Components
         public List<string> AppNegativeFilters => _appNegativeFilters;
 
         // PLC thread filters
-        private TrackedList<string> _activeThreadFilters = new TrackedList<string>("ActiveThreadFilters");
-        public TrackedList<string> ActiveThreadFilters => _activeThreadFilters;
+        private List<string> _activeThreadFilters = new List<string>();
+        public List<string> ActiveThreadFilters => _activeThreadFilters;
 
         // APP thread filters (separate from PLC)
-        private TrackedList<string> _appActiveThreadFilters = new TrackedList<string>("AppActiveThreadFilters");
-        public TrackedList<string> AppActiveThreadFilters => _appActiveThreadFilters;
+        private List<string> _appActiveThreadFilters = new List<string>();
+        public List<string> AppActiveThreadFilters => _appActiveThreadFilters;
 
         // New Lists for independent column filtering
         private List<string> _activeLoggerFilters = new List<string>();
@@ -397,13 +377,14 @@ namespace IndiLogs_3._0.ViewModels.Components
             set { _hasRangeStart = value; OnPropertyChanged(); }
         }
 
-        public FilterSearchViewModel(MainViewModel parent, LogSessionViewModel sessionVM, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher)
+        public FilterSearchViewModel(MainViewModel parent, LogSessionViewModel sessionVM, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher, IWindowOwnerProvider windowOwner)
         {
             _parent = parent;
             _sessionVM = sessionVM;
             _dialogService = dialogService;
             _viewFactory = viewFactory;
             _dispatcher = dispatcher;
+            _windowOwner = windowOwner;
 
             _filteredLogs = new ObservableRangeCollection<LogEntry>();
             _appDevLogsFiltered = new ObservableRangeCollection<LogEntry>();

@@ -17,9 +17,7 @@ namespace IndiLogs_3._0.Services.Grep
     /// </summary>
     public class SearchSchedulerService : IDisposable
     {
-        private static readonly string ScheduleFile =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                         "IndiLogs3.0", "Configs", "search_schedules.json");
+        private static readonly string ScheduleFile = AppPaths.SearchSchedules;
 
         private readonly GlobalGrepService _grepService;
         private readonly SearchLocationService _locationService;

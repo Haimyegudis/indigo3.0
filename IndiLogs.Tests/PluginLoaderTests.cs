@@ -82,7 +82,6 @@ namespace IndiLogs.Tests
         public void PluginsFolder_ContainsIndiLogs()
         {
             Assert.Contains("IndiLogs3.0", PluginLoader.PluginsFolder);
-            Assert.Contains("Plugins", PluginLoader.PluginsFolder);
         }
 
         [Fact]

@@ -119,12 +119,12 @@ namespace IndiLogs_3._0.Services.Cpr
                 YAxisTo = filter.YAxisTo
             };
 
-            var columns = data.Select(r => (int)r.ElementLocationX).Distinct().OrderBy(x => x).ToArray();
+            var columnGroups = data.GroupBy(r => (int)r.ElementLocationX).OrderBy(g => g.Key).ToList();
 
-            for (int ci = 0; ci < columns.Length; ci++)
+            for (int ci = 0; ci < columnGroups.Count; ci++)
             {
-                int col = columns[ci];
-                var colData = data.Where(r => (int)r.ElementLocationX == col).ToList();
+                int col = columnGroups[ci].Key;
+                var colData = columnGroups[ci].ToList();
 
                 var grouped = colData
                     .Select(r => new { Y = r.ElementLocationY, Diff = GetStationDiff(r, axis, pair.TestStation, pair.RefStation) })
@@ -143,7 +143,7 @@ namespace IndiLogs_3._0.Services.Cpr
                 if (filter.SmoothingWindow > 1) yVals = RollingMean(yVals, filter.SmoothingWindow);
 
                 // Blue→Pink gradient
-                float t = columns.Length > 1 ? (float)ci / (columns.Length - 1) : 0;
+                float t = columnGroups.Count > 1 ? (float)ci / (columnGroups.Count - 1) : 0;
                 byte r2 = (byte)(25 + (204 - 25) * t);
                 byte g2 = (byte)(102 + (51 - 102) * t);
                 byte b2 = (byte)(204 + (102 - 204) * t);
@@ -178,14 +178,12 @@ namespace IndiLogs_3._0.Services.Cpr
                 YAxisTo = filter.YAxisTo
             };
 
-            var availableCycles = data.Select(r => r.CycleNumber).Distinct().ToHashSet();
+            var cycleGroups = data.GroupBy(r => r.CycleNumber).ToDictionary(g => g.Key, g => g.ToList());
 
             for (int i = 0; i < wantedCycles.Length; i++)
             {
                 int cycle = wantedCycles[i];
-                if (!availableCycles.Contains(cycle)) continue;
-
-                var cycleData = data.Where(r => r.CycleNumber == cycle).ToList();
+                if (!cycleGroups.TryGetValue(cycle, out var cycleData)) continue;
                 var grouped = cycleData
                     .Select(r => new { Y = r.ElementLocationY, Diff = GetStationDiff(r, axis, pair.TestStation, pair.RefStation) })
                     .Where(x => !IsInvalid(x.Diff))
@@ -286,16 +284,16 @@ namespace IndiLogs_3._0.Services.Cpr
             };
 
             // Replace -1000/-2000 with 1 (not NaN, to avoid division by zero in DFT)
-            var cycles = data.Select(r => r.CycleNumber).Distinct().OrderBy(x => x).ToArray();
+            var dftCycleGroups = data.GroupBy(r => r.CycleNumber).OrderBy(g => g.Key).ToList();
 
             // Frequency range
             int nFreq = 1000;
             double[] frequency = Linspace(0.0005, 0.015, nFreq);
 
-            for (int ci = 0; ci < cycles.Length; ci++)
+            for (int ci = 0; ci < dftCycleGroups.Count; ci++)
             {
-                int cycle = cycles[ci];
-                var cycleData = data.Where(r => r.CycleNumber == cycle).ToList();
+                int cycle = dftCycleGroups[ci].Key;
+                var cycleData = dftCycleGroups[ci].ToList();
 
                 var grouped = cycleData
                     .Select(r => new { Y = r.ElementLocationY, Diff = GetStationDiffForDft(r, axis, pair.TestStation, pair.RefStation) })
@@ -438,11 +436,12 @@ namespace IndiLogs_3._0.Services.Cpr
 
             var revTypes = new[] { ("One Only", "1 of 1"), ("First of Many", "1 of 2"), ("Last of Many", "2 of 2") };
             var colors = new[] { SKColor.Parse("#3B82F6"), SKColor.Parse("#EF4444"), SKColor.Parse("#10B981") };
+            var revGroups = allData.GroupBy(r => r.Revolution).ToDictionary(g => g.Key, g => g.ToList());
 
             for (int ri = 0; ri < revTypes.Length; ri++)
             {
                 var (revName, label) = revTypes[ri];
-                var revData = allData.Where(r => r.Revolution == revName).ToList();
+                if (!revGroups.TryGetValue(revName, out var revData)) continue;
 
                 var grouped = revData
                     .Select(r => new { Y = r.ElementLocationY, Val = GetStationValue(r, axis, pair.TestStation) })
@@ -975,7 +974,8 @@ namespace IndiLogs_3._0.Services.Cpr
         private static double Percentile(List<double> data, double percentile)
         {
             if (data.Count == 0) return 0;
-            var sorted = data.OrderBy(x => x).ToList();
+            var sorted = new List<double>(data);
+            sorted.Sort();
             double index = (percentile / 100.0) * (sorted.Count - 1);
             int lower = (int)Math.Floor(index);
             int upper = (int)Math.Ceiling(index);

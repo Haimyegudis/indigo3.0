@@ -209,8 +209,10 @@ namespace IndiLogs_3._0.Services.Grep
             }
 
             // Convert to sorted lists (needed for gap analysis and state detection)
-            var plcLogs = plcBag.OrderBy(e => e.Date).ToList();
-            var appLogs = appBag.OrderBy(e => e.Date).ToList();
+            var plcLogs = plcBag.ToList();
+            plcLogs.Sort((a, b) => a.Date.CompareTo(b.Date));
+            var appLogs = appBag.ToList();
+            appLogs.Sort((a, b) => a.Date.CompareTo(b.Date));
             bool hasBinary = hasBinaryFlag == 1;
 
             AppLogger.Info($"[Stats] Total parsed: {plcLogs.Count:N0} PLC + {appLogs.Count:N0} APP entries, binary={hasBinary}");

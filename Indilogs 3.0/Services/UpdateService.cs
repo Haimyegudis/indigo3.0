@@ -44,7 +44,7 @@ namespace IndiLogs_3._0.Services
                 string settingsPath = Path.Combine(exeDir, "appsettings.json");
                 if (File.Exists(settingsPath))
                 {
-                    using var doc = JsonDocument.Parse(File.ReadAllText(settingsPath));
+                    using var doc = JsonDocument.Parse(File.ReadAllText(settingsPath), AppConstants.SafeJsonDocumentOptions);
                     VersionFileUrl = doc.RootElement.TryGetProperty("UpdateVersionFile", out var vf) ? vf.GetString() ?? "" : "";
                     InstallerFolder = doc.RootElement.TryGetProperty("UpdateInstallerFolder", out var inf) ? inf.GetString() ?? "" : "";
                 }
@@ -53,7 +53,7 @@ namespace IndiLogs_3._0.Services
                 string localPath = Path.Combine(exeDir, "appsettings.local.json");
                 if (File.Exists(localPath))
                 {
-                    using var localDoc = JsonDocument.Parse(File.ReadAllText(localPath));
+                    using var localDoc = JsonDocument.Parse(File.ReadAllText(localPath), AppConstants.SafeJsonDocumentOptions);
                     if (localDoc.RootElement.TryGetProperty("UpdateVersionFile", out var lvf) && !string.IsNullOrEmpty(lvf.GetString()))
                         VersionFileUrl = lvf.GetString() ?? "";
                     if (localDoc.RootElement.TryGetProperty("UpdateInstallerFolder", out var linf) && !string.IsNullOrEmpty(linf.GetString()))
@@ -133,7 +133,7 @@ namespace IndiLogs_3._0.Services
 
                         if (result == DialogResult.Yes)
                         {
-                            DownloadAndInstallUpdate(serverVersion, serverVersionText);
+                            DownloadAndInstallUpdate(serverVersion);
                         }
                     }) ?? Task.CompletedTask);
                 }
@@ -152,13 +152,13 @@ namespace IndiLogs_3._0.Services
             }
         }
 
-        private void DownloadAndInstallUpdate(Version serverVersion, string versionText)
+        private void DownloadAndInstallUpdate(Version serverVersion)
         {
             try
             {
                 UpdateLogger.Log("[AUTO-UPDATE] Locating new exe on network share...");
 
-                string? serverExePath = FindExeOnServer(versionText);
+                string? serverExePath = FindExeOnServer(serverVersion);
                 if (string.IsNullOrEmpty(serverExePath))
                 {
                     UpdateLogger.Log("[ERROR] Could not find update exe on server");
@@ -175,7 +175,7 @@ namespace IndiLogs_3._0.Services
                 string? currentExeName = Path.GetFileName(currentExePath);
 
                 // Copy new exe to temp location next to current exe
-                string tempExePath = Path.Combine(currentDir!, $"IndiLogs3.0_update_{versionText}.tmp");
+                string tempExePath = Path.Combine(currentDir!, $"IndiLogs3.0_update_{serverVersion}.tmp");
                 UpdateLogger.Log($"[AUTO-UPDATE] Copying from server: {serverExePath}");
                 File.Copy(serverExePath, tempExePath, true);
                 UpdateLogger.Log($"[AUTO-UPDATE] Copied to: {tempExePath}");
@@ -224,10 +224,10 @@ namespace IndiLogs_3._0.Services
             }
         }
 
-        private string? FindExeOnServer(string versionText)
+        private string? FindExeOnServer(Version version)
         {
             // Try the known filename: IndiLogs3.0_{version}.exe
-            string expectedPath = Path.Combine(InstallerFolder, $"IndiLogs3.0_{versionText}.exe");
+            string expectedPath = Path.Combine(InstallerFolder, $"IndiLogs3.0_{version}.exe");
             if (File.Exists(expectedPath))
             {
                 UpdateLogger.Log($"[AUTO-UPDATE] Found exe by version: {expectedPath}");
@@ -382,11 +382,8 @@ namespace IndiLogs_3._0.Services
         {
             get
             {
-                string dir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "IndiLogs3.0");
-                Directory.CreateDirectory(dir);
-                return Path.Combine(dir, "update-credentials.dat");
+                Directory.CreateDirectory(AppPaths.Root);
+                return AppPaths.UpdateCredentials;
             }
         }
 

@@ -128,11 +128,12 @@ namespace IndiLogs_3._0.Services
 
             try
             {
-                using var doc = JsonDocument.Parse(json);
+                using var doc = JsonDocument.Parse(json, AppConstants.SafeJsonDocumentOptions);
                 return doc.RootElement.TryGetProperty("stripeDescriptor", out _);
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Warn($"Stripe JSON validation failed: {ex.Message}");
                 return false;
             }
         }
@@ -141,7 +142,7 @@ namespace IndiLogs_3._0.Services
         {
             var entries = new List<IndigoStripeEntry>();
 
-            using var doc = JsonDocument.Parse(jsonString);
+            using var doc = JsonDocument.Parse(jsonString, AppConstants.SafeJsonDocumentOptions);
             var root = doc.RootElement;
 
             // Get stripeDescriptor
@@ -428,8 +429,9 @@ namespace IndiLogs_3._0.Services
                     IlsScanSpeedUmSec = ilsScanSpeedUmSec
                 };
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                AppLogger.Warn($"Stripe entry parse failed: {ex.Message}");
                 return null;
             }
         }

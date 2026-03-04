@@ -149,11 +149,17 @@ namespace IndiLogs_3._0.Services
 
                 string stationIndex = $"{station}|{index}";
 
-                if (!topicGroups.ContainsKey(topic))
-                    topicGroups[topic] = new Dictionary<string, List<SystabEntry>>(StringComparer.OrdinalIgnoreCase);
+                if (!topicGroups.TryGetValue(topic, out var stationDict))
+                {
+                    stationDict = new Dictionary<string, List<SystabEntry>>(StringComparer.OrdinalIgnoreCase);
+                    topicGroups[topic] = stationDict;
+                }
 
-                if (!topicGroups[topic].ContainsKey(stationIndex))
-                    topicGroups[topic][stationIndex] = new List<SystabEntry>();
+                if (!stationDict.TryGetValue(stationIndex, out var entryList))
+                {
+                    entryList = new List<SystabEntry>();
+                    stationDict[stationIndex] = entryList;
+                }
 
                 savedEntries.TryGetValue((path, paramKey), out string? savedVal);
                 defaultEntries.TryGetValue((path, paramKey), out string? defaultVal);
@@ -170,7 +176,7 @@ namespace IndiLogs_3._0.Services
                     IsDifferent = !string.Equals(savedVal ?? string.Empty, defaultVal ?? string.Empty, StringComparison.Ordinal)
                 };
 
-                topicGroups[topic][stationIndex].Add(entry);
+                entryList.Add(entry);
             }
 
             // Build the tree: top level = Topics, children = Station|Index nodes

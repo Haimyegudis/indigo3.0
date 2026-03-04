@@ -380,8 +380,9 @@ namespace IndiLogs_3._0
                     _savedLogOffsetInViewport = -1;
                     _savedScrollOffset = -1;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    AppLogger.Warn($"Scroll position restore failed: {ex.Message}");
                     _isProgrammaticScroll = false;
                     _scrollPreserveRetryCount = 0;
                     MapsToLogRow(log); // Fallback to normal scrolling

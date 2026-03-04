@@ -1,3 +1,4 @@
+using IndiLogs_3._0.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -77,9 +78,9 @@ namespace IndiLogs_3._0.Views
                 if (this.Top < screen.Top)
                     this.Top = screen.Top;
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback - center on owner
+                AppLogger.Warn($"Window positioning failed: {ex.Message}");
                 if (this.Owner != null)
                 {
                     this.Left = this.Owner.Left + (this.Owner.Width - this.Width) / 2;
@@ -143,9 +144,9 @@ namespace IndiLogs_3._0.Views
                     this.Close();
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignore if already closing
+                AppLogger.Warn($"Window close failed: {ex.Message}");
             }
         }
     }

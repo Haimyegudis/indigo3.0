@@ -29,6 +29,8 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly IDialogService _dialogService;
         private readonly IViewFactory _viewFactory;
         private readonly IDispatcher _dispatcher;
+        private readonly IWindowOwnerProvider _windowOwner;
+        private readonly IWindowManager _windowManager;
 
         // Configuration file management
         public ObservableCollection<string> ConfigurationFiles { get; set; }
@@ -276,13 +278,15 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand RefreshConfigExplorerCommand { get; }
         public ICommand ClearConfigSearchCommand { get; }
 
-        public ConfigExplorerViewModel(MainViewModel parent, LogSessionViewModel sessionVM, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher)
+        public ConfigExplorerViewModel(MainViewModel parent, LogSessionViewModel sessionVM, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher, IWindowOwnerProvider windowOwner, IWindowManager windowManager)
         {
             _parent = parent;
             _sessionVM = sessionVM;
             _dialogService = dialogService;
             _viewFactory = viewFactory;
             _dispatcher = dispatcher;
+            _windowOwner = windowOwner;
+            _windowManager = windowManager;
 
             // Initialize collections
             ConfigurationFiles = new ObservableCollection<string>();
@@ -385,7 +389,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         content.TrimStart().StartsWith("{") ||
                         content.TrimStart().StartsWith("["))
                     {
-                        dynamic parsedJson = JsonConvert.DeserializeObject(content, new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth });
+                        dynamic parsedJson = JsonConvert.DeserializeObject(content, AppConstants.SafeJsonSettings);
                         ConfigFileContent = JsonConvert.SerializeObject(parsedJson, Formatting.Indented);
                     }
                     else
@@ -393,8 +397,9 @@ namespace IndiLogs_3._0.ViewModels.Components
                         ConfigFileContent = content;
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    AppLogger.Warn($"JSON pretty-print failed: {ex.Message}");
                     ConfigFileContent = content;
                 }
             }
@@ -444,9 +449,9 @@ namespace IndiLogs_3._0.ViewModels.Components
                 }
                 CsvDataView.RowFilter = string.Join(" OR ", conditions);
             }
-            catch
+            catch (Exception ex)
             {
-                // If filter expression fails, clear it
+                AppLogger.Warn($"CSV filter expression failed: {ex.Message}");
                 CsvDataView.RowFilter = "";
             }
         }
@@ -619,7 +624,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     var dbBytes = _sessionVM.SelectedSession.DatabaseFiles[node.DatabaseFileName];
                     var window = _viewFactory.Create<Views.BrowseTableWindow>(node.Name, dbBytes);
-                    window.Owner = Application.Current.MainWindow;
+                    window.Owner = _windowOwner.GetOwner();
 
                     // Ensure window opens in front
                     window.Loaded += (s, e) =>
@@ -628,7 +633,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         window.Focus();
                     };
 
-                    WindowManager.OpenWindow(window);
+                    _windowManager.OpenWindow(window);
 
                     // Force to front after a short delay
                     _dispatcher.Post(() =>
@@ -753,8 +758,9 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                 return dt.DefaultView;
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Warn($"DataView creation failed: {ex.Message}");
                 return null;
             }
         }

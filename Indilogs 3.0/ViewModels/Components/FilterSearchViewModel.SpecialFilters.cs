@@ -45,7 +45,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             // Position window near the button that was clicked
             if (obj is FrameworkElement buttonElement)
             {
-                win.Owner = Application.Current.MainWindow;
+                win.Owner = _windowOwner.GetOwner();
                 win.WindowStartupLocation = WindowStartupLocation.Manual;
                 win.PositionNearElement(buttonElement);
             }
@@ -192,7 +192,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             // Position near button
             if (obj is FrameworkElement buttonElement)
             {
-                win.Owner = Application.Current.MainWindow;
+                win.Owner = _windowOwner.GetOwner();
                 win.WindowStartupLocation = WindowStartupLocation.Manual;
                 win.PositionNearElement(buttonElement);
             }
@@ -317,7 +317,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             // Position window near the button that was clicked
             if (obj is FrameworkElement buttonElement)
             {
-                win.Owner = Application.Current.MainWindow;
+                win.Owner = _windowOwner.GetOwner();
                 win.WindowStartupLocation = WindowStartupLocation.Manual;
                 win.PositionNearElement(buttonElement);
             }
@@ -490,7 +490,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             // Position window near the button that was clicked
             if (obj is FrameworkElement buttonElement)
             {
-                win.Owner = Application.Current.MainWindow;
+                win.Owner = _windowOwner.GetOwner();
                 win.WindowStartupLocation = WindowStartupLocation.Manual;
                 win.PositionNearElement(buttonElement);
             }
@@ -539,7 +539,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             // Position window near the button that was clicked
             if (obj is FrameworkElement buttonElement)
             {
-                win.Owner = Application.Current.MainWindow;
+                win.Owner = _windowOwner.GetOwner();
                 win.WindowStartupLocation = WindowStartupLocation.Manual;
                 win.PositionNearElement(buttonElement);
             }
@@ -1010,7 +1010,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             // Position window near the button that was clicked
             if (obj is FrameworkElement buttonElement)
             {
-                window.Owner = Application.Current.MainWindow;
+                window.Owner = _windowOwner.GetOwner();
                 window.WindowStartupLocation = WindowStartupLocation.Manual;
                 window.PositionNearElement(buttonElement);
             }

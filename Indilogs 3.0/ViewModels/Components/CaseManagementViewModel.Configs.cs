@@ -23,13 +23,13 @@ namespace IndiLogs_3._0.ViewModels.Components
             var dlg = _viewFactory.Create<Views.SaveConfigWindow>(existingNames);
             if (dlg.ShowDialog() == true)
             {
-                string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IndiLogs3.0", "Configs");
+                string dir = AppPaths.Root;
                 Directory.CreateDirectory(dir);
                 var cfg = new SavedConfiguration
                 {
                     Name = dlg.ConfigName,
                     CreatedDate = DateTime.Now,
-                    FilePath = Path.Combine(dir, dlg.ConfigName + ".json"),
+                    FilePath = Path.Combine(dir, $"{AppPaths.ConfigPrefix}{dlg.ConfigName}.json"),
                     MainColoringRules = MainColoringRules ?? new List<ColoringCondition>(),
                     MainFilterRoot = _filterVM.MainFilterRoot,
                     AppColoringRules = AppColoringRules ?? new List<ColoringCondition>(),
@@ -46,7 +46,8 @@ namespace IndiLogs_3._0.ViewModels.Components
             var dlg = new OpenFileDialog
             {
                 Filter = "Config files|*.json;*.txt|JSON config|*.json|Text filter|*.txt",
-                Title  = "Load Configuration or Text Filter"
+                Title  = "Load Configuration or Text Filter",
+                InitialDirectory = AppPaths.Root
             };
             if (dlg.ShowDialog() != true) return;
 
@@ -62,9 +63,9 @@ namespace IndiLogs_3._0.ViewModels.Components
                     var    filterRoot = TextFilterParser.Parse(filterText);
                     string baseName  = Path.GetFileNameWithoutExtension(dlg.FileName);
 
-                    string dir      = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IndiLogs3.0", "Configs");
+                    string dir      = AppPaths.Root;
                     Directory.CreateDirectory(dir);
-                    string jsonPath = Path.Combine(dir, baseName + ".json");
+                    string jsonPath = Path.Combine(dir, $"{AppPaths.ConfigPrefix}{baseName}.json");
 
                     c = new SavedConfiguration
                     {
@@ -81,7 +82,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 else
                 {
                     // ── Normal JSON load ──────────────────────────────────────────────
-                    c          = JsonConvert.DeserializeObject<SavedConfiguration>(File.ReadAllText(dlg.FileName), new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth });
+                    c          = JsonConvert.DeserializeObject<SavedConfiguration>(File.ReadAllText(dlg.FileName), AppConstants.SafeJsonSettings);
                     c.FilePath = dlg.FileName;
                     _sessionVM.StatusMessage = $"Configuration '{c.Name}' loaded";
                 }
@@ -220,21 +221,19 @@ namespace IndiLogs_3._0.ViewModels.Components
         {
             var configSw = System.Diagnostics.Stopwatch.StartNew();
             SavedConfigs.Clear();
-            string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IndiLogs3.0", "Configs");
+            string path = AppPaths.Root;
 
             // Hide the non-matching built-in default (by file name stem)
-            string hideFileStem = hasBinaryAppLogs ? ConfigFileS6 : ConfigFileS45;
+            string hideFileStem = AppPaths.ConfigPrefix + (hasBinaryAppLogs ? ConfigFileS6 : ConfigFileS45);
 
             if (Directory.Exists(path))
             {
-                foreach (var f in Directory.GetFiles(path, "*.json"))
+                foreach (var f in Directory.GetFiles(path, $"{AppPaths.ConfigPrefix}*.json"))
                 {
-                    // Skip the defaults configuration file (managed by DefaultConfigurationService)
-                    if (Path.GetFileName(f).StartsWith("_")) continue;
 
                     try
                     {
-                        var c = JsonConvert.DeserializeObject<SavedConfiguration>(File.ReadAllText(f), new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth });
+                        var c = JsonConvert.DeserializeObject<SavedConfiguration>(File.ReadAllText(f), AppConstants.SafeJsonSettings);
                         c.FilePath = f;
 
                         // Hide the non-matching built-in default by file stem
@@ -244,9 +243,9 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                         SavedConfigs.Add(c);
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Ignore corrupted config files
+                        AppLogger.Warn($"Skipping corrupted config file: {ex.Message}");
                     }
                 }
             }
@@ -270,14 +269,18 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 string legacyBinary = Path.Combine(configDir, "APP_BINARY.json");
                 if (File.Exists(legacyBinary)) File.Delete(legacyBinary);
+                string legacyBinary2 = Path.Combine(configDir, $"{AppPaths.ConfigPrefix}APP_BINARY.json");
+                if (File.Exists(legacyBinary2)) File.Delete(legacyBinary2);
 
                 string legacyNotBinary = Path.Combine(configDir, "app_not_binary.json");
                 if (File.Exists(legacyNotBinary)) File.Delete(legacyNotBinary);
+                string legacyNotBinary2 = Path.Combine(configDir, $"{AppPaths.ConfigPrefix}app_not_binary.json");
+                if (File.Exists(legacyNotBinary2)) File.Delete(legacyNotBinary2);
             }
             catch (Exception ex) { AppLogger.Error("Legacy config cleanup failed", ex); }
 
             // S4-5: PLC_FILTERED config
-            string s45Path = Path.Combine(configDir, ConfigFileS45 + ".json");
+            string s45Path = Path.Combine(configDir, $"{AppPaths.ConfigPrefix}{ConfigFileS45}.json");
             if (!File.Exists(s45Path))
             {
                 var config = new SavedConfiguration
@@ -307,7 +310,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
 
             // S6: PLC_FILTERED config
-            string s6Path = Path.Combine(configDir, ConfigFileS6 + ".json");
+            string s6Path = Path.Combine(configDir, $"{AppPaths.ConfigPrefix}{ConfigFileS6}.json");
             if (!File.Exists(s6Path))
             {
                 var config = new SavedConfiguration

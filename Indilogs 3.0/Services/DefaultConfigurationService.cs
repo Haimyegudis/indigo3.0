@@ -11,9 +11,7 @@ namespace IndiLogs_3._0.Services
 {
     public class DefaultConfigurationService : Interfaces.IDefaultConfigurationService
     {
-        private static readonly string DefaultsFilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "IndiLogs3.0", "Configs", "_defaults.json");
+        private static readonly string DefaultsFilePath = AppPaths.DefaultConfig;
 
         private static FilterNode? _cachedFactoryPlcFilter;
 
@@ -26,7 +24,7 @@ namespace IndiLogs_3._0.Services
                 if (File.Exists(DefaultsFilePath))
                 {
                     var json = File.ReadAllText(DefaultsFilePath);
-                    CurrentDefaults = JsonConvert.DeserializeObject<DefaultConfiguration>(json, new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth }) ?? null;
+                    CurrentDefaults = JsonConvert.DeserializeObject<DefaultConfiguration>(json, AppConstants.SafeJsonSettings) ?? null;
                 }
             }
             catch (Exception ex)

@@ -84,7 +84,7 @@ namespace IndiLogs_3._0.ViewModels
 
             if (_exportConfigWindow != null && _exportConfigWindow.IsLoaded)
             {
-                WindowManager.ActivateWindow(_exportConfigWindow);
+                _windowManager.ActivateWindow(_exportConfigWindow);
                 return;
             }
 
@@ -92,7 +92,7 @@ namespace IndiLogs_3._0.ViewModels
             var viewModel = new ExportConfigurationViewModel(selectedSession, _csvService, _dialogService, _dispatcher);
             _exportConfigWindow.DataContext = viewModel;
             _exportConfigWindow.Closed += (s, e) => _exportConfigWindow = null;
-            WindowManager.OpenWindow(_exportConfigWindow);
+            _windowManager.OpenWindow(_exportConfigWindow);
             }
             catch (Exception ex) { AppLogger.Error("ExportParsedData failed", ex); }
         }
@@ -147,7 +147,7 @@ namespace IndiLogs_3._0.ViewModels
 
             // Show file selection window
             var fileSelectionWindow = _viewFactory.Create<Views.FileSelectionWindow>(fileList, loadedFilePaths);
-            fileSelectionWindow.Owner = Application.Current.MainWindow;
+            fileSelectionWindow.Owner = _windowOwner.GetOwner();
 
             if (fileSelectionWindow.ShowDialog() == true)
             {

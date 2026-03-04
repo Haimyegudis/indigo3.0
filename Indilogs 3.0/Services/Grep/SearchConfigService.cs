@@ -12,13 +12,9 @@ namespace IndiLogs_3._0.Services.Grep
     /// </summary>
     public class SearchConfigService
     {
-        private static readonly string ProfileDir =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                         "IndiLogs3.0", "Configs", "SearchProfiles");
-
         public SearchConfigService()
         {
-            Directory.CreateDirectory(ProfileDir);
+            Directory.CreateDirectory(AppPaths.Root);
         }
 
         public void SaveProfile(SearchProfile profile)
@@ -46,9 +42,9 @@ namespace IndiLogs_3._0.Services.Grep
 
         public List<string> ListProfiles()
         {
-            if (!Directory.Exists(ProfileDir)) return new List<string>();
-            return Directory.GetFiles(ProfileDir, "*.json")
-                .Select(Path.GetFileNameWithoutExtension)
+            if (!Directory.Exists(AppPaths.Root)) return new List<string>();
+            return Directory.GetFiles(AppPaths.Root, $"{AppPaths.SearchProfilePrefix}*.json")
+                .Select(f => Path.GetFileNameWithoutExtension(f).Substring(AppPaths.SearchProfilePrefix.Length))
                 .ToList();
         }
 
@@ -98,7 +94,7 @@ namespace IndiLogs_3._0.Services.Grep
             // Sanitize filename
             foreach (char c in Path.GetInvalidFileNameChars())
                 name = name.Replace(c, '_');
-            return Path.Combine(ProfileDir, name + ".json");
+            return Path.Combine(AppPaths.Root, $"{AppPaths.SearchProfilePrefix}{name}.json");
         }
     }
 }

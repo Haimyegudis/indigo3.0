@@ -295,8 +295,9 @@ namespace IndiLogs_3._0.Controls.Cpr
             {
                 window.Background = (Brush)FindResource("BgDark");
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Warn($"Theme resource lookup failed: {ex.Message}");
                 window.Background = System.Windows.Media.Brushes.Black;
             }
 
@@ -367,8 +368,9 @@ namespace IndiLogs_3._0.Controls.Cpr
             {
                 window.Background = (Brush)FindResource("BgDark");
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Warn($"Theme resource lookup failed: {ex.Message}");
                 window.Background = System.Windows.Media.Brushes.Black;
             }
 

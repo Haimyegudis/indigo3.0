@@ -63,7 +63,7 @@ namespace IndiLogs_3._0.Services.Cpr
             for (int i = 0; i < rawHeaders.Length; i++)
             {
                 string h = rawHeaders[i].Trim().Trim('"');
-                headers[i] = ColumnMapping.ContainsKey(h) ? ColumnMapping[h] : h;
+                headers[i] = ColumnMapping.TryGetValue(h, out var mapped) ? mapped : h;
             }
 
             // Build column index map
@@ -78,13 +78,13 @@ namespace IndiLogs_3._0.Services.Cpr
 
                 var rec = new CprRecord();
 
-                rec.SN = colMap.ContainsKey("sn") ? ParseInt(parts[colMap["sn"]]) : 0;
-                rec.IterationNum = colMap.ContainsKey("IterationNum") ? ParseInt(parts[colMap["IterationNum"]]) : 0;
-                rec.CycleNumber = colMap.ContainsKey("CycleNumber") ? ParseInt(parts[colMap["CycleNumber"]]) : 0;
-                rec.ElementLocationX = colMap.ContainsKey("ElementLocationX") ? ParseDouble(parts[colMap["ElementLocationX"]]) : 0;
-                rec.ElementLocationY = colMap.ContainsKey("ElementLocationY") ? ParseDouble(parts[colMap["ElementLocationY"]]) : 0;
-                rec.ElementLocationPixelX = colMap.ContainsKey("ElementLocationPixelX") ? ParseDouble(parts[colMap["ElementLocationPixelX"]]) : 0;
-                rec.ElementLocationPixelY = colMap.ContainsKey("ElementLocationPixelY") ? ParseDouble(parts[colMap["ElementLocationPixelY"]]) : 0;
+                rec.SN = colMap.TryGetValue("sn", out int snIdx) ? ParseInt(parts[snIdx]) : 0;
+                rec.IterationNum = colMap.TryGetValue("IterationNum", out int iterIdx) ? ParseInt(parts[iterIdx]) : 0;
+                rec.CycleNumber = colMap.TryGetValue("CycleNumber", out int cycIdx) ? ParseInt(parts[cycIdx]) : 0;
+                rec.ElementLocationX = colMap.TryGetValue("ElementLocationX", out int elxIdx) ? ParseDouble(parts[elxIdx]) : 0;
+                rec.ElementLocationY = colMap.TryGetValue("ElementLocationY", out int elyIdx) ? ParseDouble(parts[elyIdx]) : 0;
+                rec.ElementLocationPixelX = colMap.TryGetValue("ElementLocationPixelX", out int elpxIdx) ? ParseDouble(parts[elpxIdx]) : 0;
+                rec.ElementLocationPixelY = colMap.TryGetValue("ElementLocationPixelY", out int elpyIdx) ? ParseDouble(parts[elpyIdx]) : 0;
 
                 // Station data: X0=0 (reference), X1-X6
                 rec.StationX[0] = 0;
@@ -93,17 +93,17 @@ namespace IndiLogs_3._0.Services.Cpr
                 {
                     string kx = "RegistrationDataStationX" + s;
                     string ky = "RegistrationDataStationY" + s;
-                    rec.StationX[s] = colMap.ContainsKey(kx) ? ParseDouble(parts[colMap[kx]]) : 0;
-                    rec.StationY[s] = colMap.ContainsKey(ky) ? ParseDouble(parts[colMap[ky]]) : 0;
+                    rec.StationX[s] = colMap.TryGetValue(kx, out int sxIdx) ? ParseDouble(parts[sxIdx]) : 0;
+                    rec.StationY[s] = colMap.TryGetValue(ky, out int syIdx) ? ParseDouble(parts[syIdx]) : 0;
                 }
 
                 // Revolution
-                string revRaw = colMap.ContainsKey("RevolutionIndex") ? parts[colMap["RevolutionIndex"]].Trim().Trim('"') : "";
+                string revRaw = colMap.TryGetValue("RevolutionIndex", out int revIdx) ? parts[revIdx].Trim().Trim('"') : "";
                 rec.RevolutionIndex = revRaw;
-                rec.Revolution = RevolutionMapping.ContainsKey(revRaw) ? RevolutionMapping[revRaw] : revRaw;
+                rec.Revolution = RevolutionMapping.TryGetValue(revRaw, out var revMapped) ? revMapped : revRaw;
 
                 // Calibration time
-                string timeRaw = colMap.ContainsKey("StartCalibrationTime") ? parts[colMap["StartCalibrationTime"]].Trim().Trim('"') : "";
+                string timeRaw = colMap.TryGetValue("StartCalibrationTime", out int timeIdx) ? parts[timeIdx].Trim().Trim('"') : "";
                 rec.StartCalibrationTime = FormatCalibrationTime(timeRaw);
 
                 _allRecords.Add(rec);

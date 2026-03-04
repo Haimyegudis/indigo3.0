@@ -8,6 +8,7 @@ using System.Windows.Media;
 using Newtonsoft.Json;
 using IndiLogs_3._0;
 using IndiLogs_3._0.Models;
+using IndiLogs_3._0.Services;
 
 namespace IndiLogs_3._0.Controls
 {
@@ -24,10 +25,7 @@ namespace IndiLogs_3._0.Controls
         protected virtual string GridSettingsKey => "PLC";
 
         protected const string SettingsFileName = "GridColumnSettings.json";
-        protected string SettingsFilePath => Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "IndiLogs3.0",
-            SettingsFileName);
+        protected string SettingsFilePath => AppPaths.GridColumnSettings;
 
         /// <summary>
         /// Call from derived constructor after InitializeComponent to wire up shared events.
@@ -252,9 +250,9 @@ namespace IndiLogs_3._0.Controls
                 string json = JsonConvert.SerializeObject(gridSettings, Formatting.Indented);
                 File.WriteAllText(SettingsFilePath, json);
             }
-            catch
+            catch (Exception ex)
             {
-                // Settings save failure is non-critical
+                AppLogger.Warn($"Settings save failed: {ex.Message}");
             }
         }
 
@@ -283,9 +281,9 @@ namespace IndiLogs_3._0.Controls
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Settings load failure is non-critical
+                AppLogger.Warn($"Settings load failed: {ex.Message}");
             }
         }
 
@@ -296,10 +294,11 @@ namespace IndiLogs_3._0.Controls
                 try
                 {
                     string json = File.ReadAllText(SettingsFilePath);
-                    return JsonConvert.DeserializeObject<GridSettings>(json, new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth });
+                    return JsonConvert.DeserializeObject<GridSettings>(json, AppConstants.SafeJsonSettings);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    AppLogger.Warn($"Failed to load grid settings: {ex.Message}");
                     return new GridSettings();
                 }
             }

@@ -25,9 +25,7 @@ namespace IndiLogs_3._0.Services
 
         static AppLogger()
         {
-            _logDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "IndiLogs3", "Logs");
+            _logDir = AppPaths.Root;
             try
             {
                 Directory.CreateDirectory(_logDir);

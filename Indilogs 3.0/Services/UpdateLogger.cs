@@ -5,7 +5,7 @@ namespace IndiLogs_3._0.Services
 {
     public static class UpdateLogger
     {
-        private static string LogPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IndiLogs", "update_debug.log");
+        private static string LogPath => AppPaths.UpdateLog;
 
         public static void Log(string message)
         {

@@ -14,12 +14,8 @@ namespace IndiLogs_3._0.Services.Grep
     /// </summary>
     public class SearchLocationService
     {
-        private static readonly string ConfigDir =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                         "IndiLogs3.0", "Configs");
-
-        private static readonly string LocationsFile =
-            Path.Combine(ConfigDir, "search_locations.json");
+        private static readonly string ConfigDir = AppPaths.Root;
+        private static readonly string LocationsFile = AppPaths.SearchLocations;
 
         private List<SearchLocation> _locations = new List<SearchLocation>();
 
@@ -83,8 +79,9 @@ namespace IndiLogs_3._0.Services.Grep
                 location.ConnectionStatus = ConnectionStatus.Connected;
                 return ConnectionStatus.Connected;
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Warn($"Connection test failed for {location.Name}: {ex.Message}");
                 location.ConnectionStatus = ConnectionStatus.Disconnected;
                 return ConnectionStatus.Disconnected;
             }

@@ -103,9 +103,9 @@ namespace IndiLogs_3._0.Services
                     var device = ParseOneCsvFile(entry.fileName, entry.getContent());
                     if (device != null) devices.Add(device);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Skip malformed files
+                    AppLogger.Warn($"Skipping malformed IO terminal file: {ex.Message}");
                 }
             });
 
@@ -374,8 +374,9 @@ namespace IndiLogs_3._0.Services
                 var dt = DateTimeOffset.FromUnixTimeSeconds(secUs).LocalDateTime;
                 return $"{dt:HH:mm:ss}.{subUs:D6}";
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Warn($"IO timestamp conversion failed: {ex.Message}");
                 return rawTimeNs.ToString();
             }
         }

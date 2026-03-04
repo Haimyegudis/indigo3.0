@@ -1,4 +1,6 @@
 using IndiLogs_3._0.Models;
+using IndiLogs_3._0.Services;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows;
@@ -124,8 +126,9 @@ namespace IndiLogs_3._0.Views
                     // Simple JSON formatting
                     return FormatJson(data);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    AppLogger.Warn($"JSON format failed: {ex.Message}");
                     return data;
                 }
             }

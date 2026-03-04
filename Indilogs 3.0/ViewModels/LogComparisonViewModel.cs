@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
+using IndiLogs_3._0.Services.Interfaces;
 using IndiLogs_3._0.ViewModels.Components;
 
 namespace IndiLogs_3._0.ViewModels
@@ -29,6 +30,7 @@ namespace IndiLogs_3._0.ViewModels
         #region Fields
 
         private readonly MainViewModel? _mainViewModel;
+        private readonly IWindowManager? _windowManager;
         private bool _showDiffs = true;
         private string? _ignoreMaskPattern;
         private bool _isSyncLocked = true;
@@ -42,9 +44,10 @@ namespace IndiLogs_3._0.ViewModels
 
         #region Constructor
 
-        public LogComparisonViewModel(IList<LogEntry> allPlcLogs, IList<LogEntry> allAppLogs, MainViewModel? mainViewModel = null)
+        public LogComparisonViewModel(IList<LogEntry> allPlcLogs, IList<LogEntry> allAppLogs, MainViewModel? mainViewModel = null, IWindowManager? windowManager = null)
         {
             _mainViewModel = mainViewModel;
+            _windowManager = windowManager;
 
             // Initialize child ViewModels
             LeftPane = new ComparisonPaneViewModel(allPlcLogs, allAppLogs);
@@ -257,7 +260,7 @@ namespace IndiLogs_3._0.ViewModels
             if (param is LogEntry log)
             {
                 RequestScrollToMainWindow?.Invoke(log);
-                WindowManager.ActivateMainWindow();
+                _windowManager?.ActivateMainWindow();
             }
         }
 

@@ -68,7 +68,8 @@ namespace IndiLogs_3._0.Services
             SaveFileDialog saveFileDialog = new SaveFileDialog
             {
                 Filter = "CSV File (*.csv)|*.csv",
-                FileName = $"{defaultFileName}_CombinedData.csv"
+                FileName = $"{defaultFileName}_CombinedData.csv",
+                InitialDirectory = AppPaths.Root
             };
 
             if (saveFileDialog.ShowDialog() != true) return null;
@@ -108,7 +109,8 @@ namespace IndiLogs_3._0.Services
             SaveFileDialog saveFileDialog = new SaveFileDialog
             {
                 Filter = "CSV File (*.csv)|*.csv",
-                FileName = $"{defaultFileName}_Filtered.csv"
+                FileName = $"{defaultFileName}_Filtered.csv",
+                InitialDirectory = AppPaths.Root
             };
 
             if (saveFileDialog.ShowDialog() != true) return null;
@@ -189,8 +191,9 @@ namespace IndiLogs_3._0.Services
 
                 return !string.IsNullOrEmpty(stateName);
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Warn($"StateChange parse failed: {ex.Message}");
                 return false;
             }
         }
@@ -257,8 +260,9 @@ namespace IndiLogs_3._0.Services
 
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Warn($"CHStep parse failed: {ex.Message}");
                 return false;
             }
         }
@@ -355,8 +359,9 @@ namespace IndiLogs_3._0.Services
 
                 return !string.IsNullOrEmpty(total);
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Warn($"LogStats parse failed: {ex.Message}");
                 return false;
             }
         }
@@ -466,9 +471,12 @@ namespace IndiLogs_3._0.Services
                                     if (rawPart.StartsWith("Trg=", StringComparison.OrdinalIgnoreCase))
                                     {
                                         string trigVal = rawPart.Substring(4).Trim();
-                                        if (!dataMatrix.ContainsKey(time))
-                                            dataMatrix[time] = new Dictionary<string, string>();
-                                        dataMatrix[time][$"{subsys}|{motor}|Trigger"] = trigVal;
+                                        if (!dataMatrix.TryGetValue(time, out var trigRow))
+                                        {
+                                            trigRow = new Dictionary<string, string>();
+                                            dataMatrix[time] = trigRow;
+                                        }
+                                        trigRow[$"{subsys}|{motor}|Trigger"] = trigVal;
                                     }
                                     else
                                     {
@@ -508,8 +516,11 @@ namespace IndiLogs_3._0.Services
                                     threadNameMap[key] = threadName;
                                 }
 
-                                if (!dataMatrix.ContainsKey(time))
-                                    dataMatrix[time] = new Dictionary<string, string>();
+                                if (!dataMatrix.TryGetValue(time, out var axmRow))
+                                {
+                                    axmRow = new Dictionary<string, string>();
+                                    dataMatrix[time] = axmRow;
+                                }
 
                                 for (int i = 2; i < parts.Length; i++)
                                 {
@@ -519,7 +530,7 @@ namespace IndiLogs_3._0.Services
                                     if (rawPart.StartsWith("LagE=", StringComparison.OrdinalIgnoreCase))
                                     {
                                         string lagVal = rawPart.Substring(5).Trim();
-                                        dataMatrix[time][$"{subsys}|{motor}|LagErr"] = lagVal;
+                                        axmRow[$"{subsys}|{motor}|LagErr"] = lagVal;
                                     }
                                     else if (rawPart.Contains("="))
                                     {
@@ -886,7 +897,7 @@ namespace IndiLogs_3._0.Services
                         foreach (var param in compEntry.Value)
                         {
                             string fullKey = $"{subEntry.Key}|{compName}|{param}";
-                            string thread = threadNameMap.ContainsKey(fullKey) ? threadNameMap[fullKey] : "";
+                            string thread = threadNameMap.TryGetValue(fullKey, out var tName) ? tName : "";
 
                             // Use - as separator between components
                             // Keep § for CHStep columns so import can detect them
@@ -932,8 +943,8 @@ namespace IndiLogs_3._0.Services
                 string lastState = "";
                 foreach (var time in allTimes)
                 {
-                    if (machineStates.ContainsKey(time))
-                        lastState = machineStates[time];
+                    if (machineStates.TryGetValue(time, out var state))
+                        lastState = state;
                     filledStates[time] = lastState;
                 }
 

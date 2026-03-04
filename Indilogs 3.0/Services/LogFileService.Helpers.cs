@@ -74,8 +74,9 @@ namespace IndiLogs_3._0.Services
             {
                 return new DateTime(year, month, day, hour, minute, second).AddTicks(ticks);
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Warn($"DateTime construction failed: {ex.Message}");
                 return DateTime.MinValue;
             }
         }
@@ -377,8 +378,9 @@ namespace IndiLogs_3._0.Services
             {
                 dtos = plugin.Parse(stream, context, progress: null, ct: CancellationToken.None);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                AppLogger.Warn($"Plugin parse failed: {ex.Message}");
                 return;
             }
 

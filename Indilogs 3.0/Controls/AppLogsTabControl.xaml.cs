@@ -20,10 +20,7 @@ namespace IndiLogs_3._0.Controls
         public DataGrid InnerDataGrid => AppLogsGrid;
 
         private const string SettingsFileName = "GridColumnSettings.json";
-        private string SettingsFilePath => Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "IndiLogs3.0",
-            SettingsFileName);
+        private string SettingsFilePath => AppPaths.GridColumnSettings;
 
         public AppLogsTabControl()
         {
@@ -364,10 +361,11 @@ namespace IndiLogs_3._0.Controls
                 try
                 {
                     string json = File.ReadAllText(SettingsFilePath);
-                    return JsonConvert.DeserializeObject<GridSettings>(json, new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth });
+                    return JsonConvert.DeserializeObject<GridSettings>(json, AppConstants.SafeJsonSettings);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    AppLogger.Warn($"Failed to load grid settings: {ex.Message}");
                     return new GridSettings();
                 }
             }

@@ -790,9 +790,9 @@ namespace IndiLogs_3._0.Services
                                                     var failures = result.Failures;
                                                     if (timeFilterActive)
                                                     {
-                                                        allLogs = allLogs.Where(e => e.Date >= tfStart && e.Date <= tfEnd).ToList();
-                                                        transitions = transitions.Where(e => e.Date >= tfStart && e.Date <= tfEnd).ToList();
-                                                        failures = failures.Where(e => e.Date >= tfStart && e.Date <= tfEnd).ToList();
+                                                        allLogs.RemoveAll(e => e.Date < tfStart || e.Date > tfEnd);
+                                                        transitions.RemoveAll(e => e.Date < tfStart || e.Date > tfEnd);
+                                                        failures.RemoveAll(e => e.Date < tfStart || e.Date > tfEnd);
                                                     }
                                                     localLogLists.Add(allLogs);
                                                     if (transitions.Count > 0) localTransLists.Add(transitions);
@@ -806,7 +806,7 @@ namespace IndiLogs_3._0.Services
                                                         log.ProcessName = stringPool.Intern("APP");
                                                     var allLogs = result.AllLogs;
                                                     if (timeFilterActive)
-                                                        allLogs = allLogs.Where(e => e.Date >= tfStart && e.Date <= tfEnd).ToList();
+                                                        allLogs.RemoveAll(e => e.Date < tfStart || e.Date > tfEnd);
                                                     if (allLogs.Count > 0) localAppLists.Add(allLogs);
                                                     AppLogger.Info($"[Load] BIN  {item.Name}: {allLogs.Count:N0} entries{(timeFilterActive ? " (filtered)" : "")}, {streamLen / 1048576.0:F1}MB, {fileSw.Elapsed.TotalSeconds:F1}s");
                                                 }
@@ -814,7 +814,7 @@ namespace IndiLogs_3._0.Services
                                                 {
                                                     var logs = ParseAppDevLogStream(item.Stream, stringPool);
                                                     if (timeFilterActive)
-                                                        logs = logs.Where(e => e.Date >= tfStart && e.Date <= tfEnd).ToList();
+                                                        logs.RemoveAll(e => e.Date < tfStart || e.Date > tfEnd);
                                                     if (logs.Count > 0) localAppLists.Add(logs);
                                                     AppLogger.Info($"[Load] APP  {item.Name}: {logs.Count:N0} entries{(timeFilterActive ? " (filtered)" : "")}, {streamLen / 1048576.0:F1}MB, {fileSw.Elapsed.TotalSeconds:F1}s");
                                                 }
@@ -834,7 +834,7 @@ namespace IndiLogs_3._0.Services
                                                     item.Stream.Position = 0;
                                                     var evts = ParseEventsCsv(item.Stream);
                                                     if (timeFilterActive)
-                                                        evts = evts.Where(e => e.Time >= tfStart && e.Time <= tfEnd).ToList();
+                                                        evts.RemoveAll(e => e.Time < tfStart || e.Time > tfEnd);
                                                     if (evts.Count > 0) localEvtLists.Add(evts);
                                                 }
                                                 else if (item.Type == FileType.Plugin && item.Plugin != null)

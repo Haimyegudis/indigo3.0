@@ -27,10 +27,7 @@ namespace IndiLogs_3._0.Services
         /// The folder scanned for plugin DLLs.
         /// Plugins copy their DLLs here to be picked up automatically.
         /// </summary>
-        public static readonly string PluginsFolder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "IndiLogs3.0",
-            "Plugins");
+        public static readonly string PluginsFolder = AppPaths.Root;
 
         private readonly List<ILogFilePlugin> _plugins  = new List<ILogFilePlugin>();
         // Maps each plugin instance to the DLL file it was loaded from
@@ -209,9 +206,9 @@ namespace IndiLogs_3._0.Services
                     AppLogger.Warn($"Plugin has strong name but token '{tokenHex}' is not whitelisted: {Path.GetFileName(dllPath)}");
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Cannot read assembly name
+                AppLogger.Warn($"Cannot read assembly name for '{Path.GetFileName(dllPath)}': {ex.Message}");
             }
 
             AppLogger.Warn($"REJECTED unsigned/unverified plugin: {Path.GetFileName(dllPath)}");

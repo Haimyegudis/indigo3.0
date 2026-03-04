@@ -25,6 +25,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly IDialogService _dialogService;
         private readonly IViewFactory _viewFactory;
         private readonly IDispatcher _dispatcher;
+        private readonly IWindowManager _windowManager;
 
         // Case management
         private CaseFile? _currentCase = null;
@@ -120,7 +121,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand LoadCaseCommand { get; }
         public ICommand OpenColoringWindowCommand { get; }
 
-        public CaseManagementViewModel(MainViewModel parent, LogSessionViewModel sessionVM, FilterSearchViewModel filterVM, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher)
+        public CaseManagementViewModel(MainViewModel parent, LogSessionViewModel sessionVM, FilterSearchViewModel filterVM, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher, IWindowManager windowManager)
         {
             _parent = parent;
             _sessionVM = sessionVM;
@@ -129,6 +130,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             _dialogService = dialogService;
             _viewFactory = viewFactory;
             _dispatcher = dispatcher;
+            _windowManager = windowManager;
 
             // Initialize collections
             MarkedLogs = new ObservableCollection<LogEntry>();
@@ -152,7 +154,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 try
                 {
-                    string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IndiLogs3.0", "Configs");
+                    string dir = AppPaths.Root;
                     Directory.CreateDirectory(dir);
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                     {

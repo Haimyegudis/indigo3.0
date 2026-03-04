@@ -570,8 +570,9 @@ namespace IndiLogs_3._0.ViewModels
                 foreach (var row in osRows)
                     OffsetSkewData.Add(row);
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Warn($"Offset/skew computation failed: {ex.Message}");
             }
         }
 

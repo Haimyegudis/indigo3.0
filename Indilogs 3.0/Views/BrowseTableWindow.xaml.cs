@@ -29,11 +29,7 @@ namespace IndiLogs_3._0.Views
         private bool _columnsGenerated = false;
         private HashSet<string> _jsonColumnNames = new HashSet<string>();
 
-        private static readonly string ColumnSettingsFolder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "IndiLogs3", "DbColumnSettings");
-
-        private string ColumnSettingsFilePath => Path.Combine(ColumnSettingsFolder, $"{SanitizeFileName(_tableName)}.json");
+        private string ColumnSettingsFilePath => Path.Combine(AppPaths.Root, $"{AppPaths.DbColumnPrefix}{SanitizeFileName(_tableName)}.json");
 
         public BrowseTableWindow(string tableName, byte[] dbBytes)
         {
@@ -84,9 +80,9 @@ namespace IndiLogs_3._0.Views
                         {
                             File.WriteAllBytes(tempPath, _dbBytes);
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // Clean up on failure
+                            AppLogger.Warn($"Failed to write temp DB file: {ex.Message}");
                             try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (Exception cleanupEx) { AppLogger.Warn($"Temp file cleanup failed: {cleanupEx.Message}"); }
                             throw;
                         }
@@ -278,9 +274,9 @@ namespace IndiLogs_3._0.Views
                                 {
                                     dataObj[col.ColumnName] = JToken.Load(new JsonTextReader(new System.IO.StringReader(strValue)) { MaxDepth = AppConstants.JsonMaxDepth });
                                 }
-                                catch
+                                catch (Exception ex)
                                 {
-                                    // If parsing fails, use as string
+                                    AppLogger.Warn($"JSON parse failed for column '{col.ColumnName}': {ex.Message}");
                                     dataObj[col.ColumnName] = JToken.FromObject(value);
                                 }
                             }
@@ -1159,7 +1155,7 @@ namespace IndiLogs_3._0.Views
                 }
 
                 var json = File.ReadAllText(ColumnSettingsFilePath);
-                var savedSettings = JsonConvert.DeserializeObject<List<DbColumnSettingsInfo>>(json, new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth });
+                var savedSettings = JsonConvert.DeserializeObject<List<DbColumnSettingsInfo>>(json, AppConstants.SafeJsonSettings);
 
                 if (savedSettings == null || savedSettings.Count == 0)
                     return;
@@ -1190,8 +1186,8 @@ namespace IndiLogs_3._0.Views
                 if (DataBrowserGrid.Columns.Count == 0)
                     return;
 
-                if (!Directory.Exists(ColumnSettingsFolder))
-                    Directory.CreateDirectory(ColumnSettingsFolder);
+                if (!Directory.Exists(AppPaths.Root))
+                    Directory.CreateDirectory(AppPaths.Root);
 
                 var columnSettings = DataBrowserGrid.Columns.Select(c => new DbColumnSettingsInfo
                 {

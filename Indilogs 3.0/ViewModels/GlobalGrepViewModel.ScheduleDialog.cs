@@ -16,7 +16,7 @@ namespace IndiLogs_3._0.ViewModels
             var window = _viewFactory.Create<Views.ScheduleEditorWindow>();
             window.DataContext = vm;
             window.Title = title;
-            window.Owner = Application.Current.MainWindow;
+            window.Owner = _windowOwner.GetOwner();
             return window.ShowDialog() == true;
         }
     }

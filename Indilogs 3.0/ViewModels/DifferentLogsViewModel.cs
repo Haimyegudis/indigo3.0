@@ -35,6 +35,7 @@ namespace IndiLogs_3._0.ViewModels
         private readonly IPluginLoader _pluginLoader;
         private readonly IDialogService _dialogService;
         private readonly IViewFactory _viewFactory;
+        private readonly IWindowOwnerProvider _windowOwner;
         /// <summary>
         /// Combined plugin list for manual file opening: external DLL plugins (highest priority)
         /// followed by AllForManualOpen (which includes IndigoAppLogPlugin).
@@ -134,11 +135,12 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand CloseFileCommand { get; }
 
         // ── Constructor ─────────────────────────────────────────────
-        public DifferentLogsViewModel(IPluginLoader pluginLoader, IDialogService dialogService, IViewFactory viewFactory)
+        public DifferentLogsViewModel(IPluginLoader pluginLoader, IDialogService dialogService, IViewFactory viewFactory, IWindowOwnerProvider windowOwner)
         {
             _pluginLoader = pluginLoader ?? throw new ArgumentNullException(nameof(pluginLoader));
             _dialogService = dialogService;
             _viewFactory = viewFactory;
+            _windowOwner = windowOwner;
 
             // Build combined plugin list: external DLL plugins first (highest priority),
             // then AllForManualOpen which includes IndigoAppLogPlugin.
@@ -167,7 +169,7 @@ namespace IndiLogs_3._0.ViewModels
                 File.Exists(zipPath))
             {
                 var picker = _viewFactory.Create<ZipBrowserWindow>(zipPath);
-                picker.Owner = Application.Current.MainWindow;
+                picker.Owner = _windowOwner.GetOwner();
                 var result = picker.ShowDialog();
 
                 if (picker.BrowseExternalRequested)
@@ -285,8 +287,9 @@ namespace IndiLogs_3._0.ViewModels
             {
                 sampleLines = ReadSampleLines(filePath, 30);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                AppLogger.Warn($"Failed to read sample lines from '{filePath}': {ex.Message}");
                 return false;
             }
 
@@ -352,8 +355,9 @@ namespace IndiLogs_3._0.ViewModels
                 StatusText = $"{_allLogEntries.Count:N0} entries  —  plugin: {plugin.Name}";
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                AppLogger.Warn($"File load failed: {ex.Message}");
                 StatusText = "Error loading file.";
                 return false;
             }
