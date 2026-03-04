@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using IndiLogs_3._0.Models.Grep;
@@ -481,7 +482,7 @@ namespace IndiLogs_3._0.ViewModels
             SelectAllLocationsCommand = new RelayCommand(_ => SetAllLocations(true));
             SelectNoLocationsCommand = new RelayCommand(_ => SetAllLocations(false));
             BrowseOutputCommand = new RelayCommand(_ => BrowseOutput());
-            SendTestEmailCommand = new RelayCommand(_ => SendTestEmail(), _ => !_isTestEmailRunning);
+            SendTestEmailCommand = new RelayCommand(_ => _ = SendTestEmailAsync(), _ => !_isTestEmailRunning);
             AddRecipientCommand = new RelayCommand(_ => AddRecipient());
             RemoveRecipientCommand = new RelayCommand(p => RemoveRecipient(p as string));
             SaveCommand = new RelayCommand(p => Save(p as Window));
@@ -647,7 +648,7 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         // ═══ Email ═══
-        private async void SendTestEmail()
+        private async Task SendTestEmailAsync()
         {
             if (Recipients.Count == 0)
             {

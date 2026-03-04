@@ -289,7 +289,7 @@ namespace IndiLogs_3._0.ViewModels
             catch (Exception ex) { AppLogger.Error($"OpenUrl failed for '{url}'", ex); }
         }
 
-        private void OpenOutlook(object obj) { try { Process.Start("outlook.exe", "/c ipm.note"); } catch (Exception) { OpenUrl("mailto:"); } }
+        private void OpenOutlook(object obj) { try { Process.Start(new ProcessStartInfo("outlook.exe", "/c ipm.note") { UseShellExecute = true }); } catch (Exception) { OpenUrl("mailto:"); } }
 
         /// <summary>
         /// Opens Kibana in the default browser, pre-filling the machine name from the loaded ZIP.

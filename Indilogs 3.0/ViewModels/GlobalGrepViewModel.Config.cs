@@ -211,7 +211,7 @@ namespace IndiLogs_3._0.ViewModels
             SearchReportService.GenerateHtmlReport(dlg.FileName, reportParams, Results.ToList());
             StatusMessage = $"Report saved to {Path.GetFileName(dlg.FileName)}.";
 
-            try { System.Diagnostics.Process.Start(dlg.FileName); }
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(dlg.FileName) { UseShellExecute = true }); }
             catch (Exception ex) { AppLogger.Warn($"Could not open report file: {ex.Message}"); }
         }
 

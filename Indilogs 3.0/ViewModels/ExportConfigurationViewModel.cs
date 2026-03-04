@@ -954,7 +954,12 @@ namespace IndiLogs_3._0.ViewModels
 
                 if (flowViewerPath != null && File.Exists(flowViewerPath))
                 {
-                    System.Diagnostics.Process.Start(Path.GetFullPath(flowViewerPath), $"\"{LastExportedFilePath}\"");
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = Path.GetFullPath(flowViewerPath),
+                        Arguments = $"\"{LastExportedFilePath}\"",
+                        UseShellExecute = true
+                    });
                 }
                 else
                 {
