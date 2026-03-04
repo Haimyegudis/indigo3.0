@@ -406,18 +406,9 @@ namespace IndiLogs_3._0.ViewModels.Components
                 // ── Update UI ─────────────────────────────────────────────────
                 if (newLogs != null && newLogs.Count > 0)
                 {
-                    // Apply coloring in background
+                    // Apply coloring in background (fire-and-forget)
                     var logsForColoring = newLogs;
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            await _coloringService.ApplyDefaultColorsAsync(logsForColoring, false);
-                            if (_caseVM.MainColoringRules != null && _caseVM.MainColoringRules.Any())
-                                await _coloringService.ApplyCustomColoringAsync(logsForColoring, _caseVM.MainColoringRules);
-                        }
-                        catch (Exception ex) { AppLogger.Error("Coloring failed", ex); }
-                    });
+                    _ = ApplyColoringInBackgroundAsync(logsForColoring);
 
                     var logsToAdd = newLogs;
                     var wasFirstRun = isFirstRun;
@@ -468,6 +459,17 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _isRefreshActive = false;
             }
+        }
+
+        private async Task ApplyColoringInBackgroundAsync(List<LogEntry> logs)
+        {
+            try
+            {
+                await _coloringService.ApplyDefaultColorsAsync(logs, false).ConfigureAwait(false);
+                if (_caseVM.MainColoringRules != null && _caseVM.MainColoringRules.Any())
+                    await _coloringService.ApplyCustomColoringAsync(logs, _caseVM.MainColoringRules).ConfigureAwait(false);
+            }
+            catch (Exception ex) { AppLogger.Error("Coloring failed", ex); }
         }
 
         /// <summary>
@@ -535,29 +537,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             // Pre-fill local cache in background to avoid blocking the UI thread.
             // The initial file read from network can take 20-30 seconds for large files.
             _liveCts = new CancellationTokenSource();
-            Task.Run(async () =>
-            {
-                try
-                {
-                    var sw = Stopwatch.StartNew();
-                    using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 262144))
-                    {
-                        _cachedStream = new MemoryStream((int)fs.Length + 1024 * 1024);
-                        fs.CopyTo(_cachedStream);
-                        _lastFileSize = fs.Length;
-                    }
-                    AppLogger.Info($"Cache pre-filled: {_lastFileSize:N0} bytes in {sw.ElapsedMilliseconds}ms");
-                }
-                catch (Exception ex)
-                {
-                    AppLogger.Error("Cache pre-fill error", ex);
-                    _lastFileSize = 0;
-                    // Cache will be built on first poll cycle instead
-                }
-
-                // Start polling after cache is ready
-                await PollingLoop(_liveCts.Token);
-            });
+            _ = PreFillCacheAndStartPollingAsync(filePath, _liveCts.Token);
 
             _sessionVM.StatusMessage = $"Auto-refresh active ({_liveLogsCollection.Count:N0} logs loaded, watching for new data...)";
         }
@@ -568,6 +548,30 @@ namespace IndiLogs_3._0.ViewModels.Components
         public void Cleanup()
         {
             StopLiveMonitoring();
+        }
+
+        private async Task PreFillCacheAndStartPollingAsync(string filePath, CancellationToken token)
+        {
+            try
+            {
+                var sw = Stopwatch.StartNew();
+                using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 262144))
+                {
+                    _cachedStream = new MemoryStream((int)fs.Length + 1024 * 1024);
+                    await fs.CopyToAsync(_cachedStream, token).ConfigureAwait(false);
+                    _lastFileSize = fs.Length;
+                }
+                AppLogger.Info($"Cache pre-filled: {_lastFileSize:N0} bytes in {sw.ElapsedMilliseconds}ms");
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Cache pre-fill error", ex);
+                _lastFileSize = 0;
+                // Cache will be built on first poll cycle instead
+            }
+
+            // Start polling after cache is ready
+            await PollingLoop(token).ConfigureAwait(false);
         }
 
         protected override void Dispose(bool disposing)

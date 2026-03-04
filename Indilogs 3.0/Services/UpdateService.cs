@@ -68,82 +68,86 @@ namespace IndiLogs_3._0.Services
 
         public async Task CheckForUpdatesSimpleAsync()
         {
-            await Task.Run(async () =>
+            try
             {
-                try
+                UpdateLogger.Log("========== UPDATE CHECK STARTED ==========");
+                UpdateLogger.Log($"Checking path: {VersionFileUrl}");
+
+                // Get current version from assembly
+                Version? currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
+                UpdateLogger.Log($"Current version: {currentVersion}");
+
+                // Offload network I/O to a thread-pool thread
+                var (serverVersionText, serverVersion) = await Task.Run(() =>
                 {
-                    UpdateLogger.Log("========== UPDATE CHECK STARTED ==========");
-                    UpdateLogger.Log($"Checking path: {VersionFileUrl}");
-
-                    // Get current version from assembly
-                    Version? currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
-                    UpdateLogger.Log($"Current version: {currentVersion}");
-
                     // Establish connection to the network share (needed for hidden admin shares)
                     EnsureShareConnection(InstallerFolder);
 
                     // Read version file directly — File.Exists() returns false on hidden
                     // admin shares (softwareqa$) even when the file is accessible.
-                    string serverVersionText;
+                    string versionText;
                     try
                     {
-                        serverVersionText = File.ReadAllText(VersionFileUrl).Trim();
+                        versionText = File.ReadAllText(VersionFileUrl).Trim();
                     }
                     catch (Exception readEx)
                     {
                         UpdateLogger.Log($"[ERROR] Cannot read version file: {readEx.Message}");
-                        return;
+                        return (null, (Version?)null);
                     }
-                    UpdateLogger.Log($"Server version text (raw): '{serverVersionText}'");
-                    UpdateLogger.Log($"Server version text length: {serverVersionText.Length}");
+                    UpdateLogger.Log($"Server version text (raw): '{versionText}'");
+                    UpdateLogger.Log($"Server version text length: {versionText.Length}");
 
-                    if (!Version.TryParse(serverVersionText, out Version? serverVersion))
+                    if (!Version.TryParse(versionText, out Version? parsed))
                     {
-                        UpdateLogger.Log($"[ERROR] Failed to parse server version: '{serverVersionText}'");
+                        UpdateLogger.Log($"[ERROR] Failed to parse server version: '{versionText}'");
                         UpdateLogger.Log("Expected format: X.X.X.X (e.g., 1.0.0.2)");
-                        return;
+                        return (null, (Version?)null);
                     }
+                    return (versionText, (Version?)parsed);
+                }).ConfigureAwait(false);
 
-                    UpdateLogger.Log($"Server version (parsed): {serverVersion}");
-                    UpdateLogger.Log($"Comparison: Server ({serverVersion}) > Current ({currentVersion}) = {serverVersion > currentVersion}");
+                if (serverVersionText == null || serverVersion == null) return;
 
-                    // Compare versions
-                    if (serverVersion > currentVersion)
+                UpdateLogger.Log($"Server version (parsed): {serverVersion}");
+                UpdateLogger.Log($"Comparison: Server ({serverVersion}) > Current ({currentVersion}) = {serverVersion > currentVersion}");
+
+                // Compare versions
+                if (serverVersion > currentVersion)
+                {
+                    UpdateLogger.Log($"[UPDATE AVAILABLE] New version: {serverVersion}");
+
+                    // Show dialog on UI thread
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        UpdateLogger.Log($"[UPDATE AVAILABLE] New version: {serverVersion}");
+                        var result = _dialogService != null
+                            ? _dialogService.ShowConfirm(
+                                $"A new version is available!\n\n" +
+                                $"Current version: {currentVersion}\n" +
+                                $"New version: {serverVersion}\n\n" +
+                                "Do you want to download and install the update now?",
+                                "IndiLogs Update Available")
+                            : DialogResult.No;
 
-                        // Show dialog on UI thread
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        if (result == DialogResult.Yes)
                         {
-                            var result = _dialogService != null
-                                ? _dialogService.ShowConfirm(
-                                    $"A new version is available!\n\n" +
-                                    $"Current version: {currentVersion}\n" +
-                                    $"New version: {serverVersion}\n\n" +
-                                    "Do you want to download and install the update now?",
-                                    "IndiLogs Update Available")
-                                : DialogResult.No;
-
-                            if (result == DialogResult.Yes)
-                            {
-                                DownloadAndInstallUpdate(serverVersion, serverVersionText);
-                            }
-                        });
-                    }
-                    else
-                    {
-                        UpdateLogger.Log($"[UP TO DATE] Already at latest version ({currentVersion})");
-                    }
+                            DownloadAndInstallUpdate(serverVersion, serverVersionText);
+                        }
+                    });
                 }
-                catch (Exception ex)
+                else
                 {
-                    UpdateLogger.Log("[EXCEPTION] Update check failed", ex);
+                    UpdateLogger.Log($"[UP TO DATE] Already at latest version ({currentVersion})");
                 }
-                finally
-                {
-                    UpdateLogger.Log("========== UPDATE CHECK COMPLETED ==========\n");
-                }
-            });
+            }
+            catch (Exception ex)
+            {
+                UpdateLogger.Log("[EXCEPTION] Update check failed", ex);
+            }
+            finally
+            {
+                UpdateLogger.Log("========== UPDATE CHECK COMPLETED ==========\n");
+            }
         }
 
         private void DownloadAndInstallUpdate(Version serverVersion, string versionText)

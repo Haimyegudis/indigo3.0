@@ -79,8 +79,8 @@ namespace IndiLogs_3._0.Services
 
             var progressReporter = new ProgressReporter(progressWindow);
 
-            // Run export in background - don't block
-            _ = Task.Run(async () =>
+            // Run export in background - don't block UI
+            _ = Task.Run(() =>
             {
                 try
                 {
@@ -119,8 +119,8 @@ namespace IndiLogs_3._0.Services
 
             var progressReporter = new ProgressReporter(progressWindow);
 
-            // Run export in background - don't block
-            _ = Task.Run(async () =>
+            // Run export in background - don't block UI
+            _ = Task.Run(() =>
             {
                 try
                 {

@@ -143,33 +143,21 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _parent.NotifyPropertyChanged(nameof(_parent.IsFilterOutActive));
             });
 
-            await Task.Run(async () =>
+            // Deep clone coloring rules so clearing doesn't affect the saved config
+            MainColoringRules = c.MainColoringRules?.Select(r => r.Clone()).ToList() ?? new List<ColoringCondition>();
+            if (_sessionVM.AllLogsCache != null && MainColoringRules.Any())
             {
-                // Deep clone coloring rules so clearing doesn't affect the saved config
-                MainColoringRules = c.MainColoringRules?.Select(r => r.Clone()).ToList() ?? new List<ColoringCondition>();
-                if (_sessionVM.AllLogsCache != null)
-                {
-                    // OPTIMIZATION: Only reapply default colors if there are custom rules
-                    // (otherwise default colors were already applied during initial load)
-                    if (MainColoringRules.Any())
-                    {
-                        await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllLogsCache, false);
-                        await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllLogsCache, MainColoringRules);
-                    }
-                }
+                await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllLogsCache, false).ConfigureAwait(false);
+                await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllLogsCache, MainColoringRules).ConfigureAwait(false);
+            }
 
-                // Deep clone coloring rules so clearing doesn't affect the saved config
-                AppColoringRules = c.AppColoringRules?.Select(r => r.Clone()).ToList() ?? new List<ColoringCondition>();
-                if (_sessionVM.AllAppLogsCache != null)
-                {
-                    // OPTIMIZATION: Only reapply default colors if there are custom rules
-                    if (AppColoringRules.Any())
-                    {
-                        await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllAppLogsCache, true);
-                        await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllAppLogsCache, AppColoringRules);
-                    }
-                }
-            });
+            // Deep clone coloring rules so clearing doesn't affect the saved config
+            AppColoringRules = c.AppColoringRules?.Select(r => r.Clone()).ToList() ?? new List<ColoringCondition>();
+            if (_sessionVM.AllAppLogsCache != null && AppColoringRules.Any())
+            {
+                await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllAppLogsCache, true).ConfigureAwait(false);
+                await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllAppLogsCache, AppColoringRules).ConfigureAwait(false);
+            }
 
             // Deep clone filter tree so clearing doesn't affect the saved config
             _filterVM.MainFilterRoot = c.MainFilterRoot?.DeepClone();
