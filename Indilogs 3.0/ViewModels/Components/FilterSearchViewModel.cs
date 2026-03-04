@@ -44,6 +44,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly LogSessionViewModel _sessionVM;
         private readonly IDialogService _dialogService;
         private readonly IViewFactory _viewFactory;
+        private readonly IDispatcher _dispatcher;
 
         /// <summary>
         /// User-configurable default PLC filter applied when no explicit filters are active.
@@ -396,12 +397,13 @@ namespace IndiLogs_3._0.ViewModels.Components
             set { _hasRangeStart = value; OnPropertyChanged(); }
         }
 
-        public FilterSearchViewModel(MainViewModel parent, LogSessionViewModel sessionVM, IDialogService dialogService, IViewFactory viewFactory)
+        public FilterSearchViewModel(MainViewModel parent, LogSessionViewModel sessionVM, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher)
         {
             _parent = parent;
             _sessionVM = sessionVM;
             _dialogService = dialogService;
             _viewFactory = viewFactory;
+            _dispatcher = dispatcher;
 
             _filteredLogs = new ObservableRangeCollection<LogEntry>();
             _appDevLogsFiltered = new ObservableRangeCollection<LogEntry>();
@@ -441,13 +443,11 @@ namespace IndiLogs_3._0.ViewModels.Components
                 if (savedSelectedLog != null)
                 {
                     var logToRestore = savedSelectedLog;
-                    Application.Current.Dispatcher.BeginInvoke(
-                        System.Windows.Threading.DispatcherPriority.ContextIdle,
-                        new Action(() =>
-                        {
-                            _parent.SelectedLog = logToRestore;
-                            _parent.ScrollToLogPreservePosition(logToRestore);
-                        }));
+                    _dispatcher.Post(() =>
+                    {
+                        _parent.SelectedLog = logToRestore;
+                        _parent.ScrollToLogPreservePosition(logToRestore);
+                    }, System.Windows.Threading.DispatcherPriority.ContextIdle);
                 }
             });
             OpenFilterWindowCommand = new RelayCommand(async o => await OpenFilterWindow(o));
@@ -497,13 +497,11 @@ namespace IndiLogs_3._0.ViewModels.Components
             if (savedSelectedLog != null)
             {
                 var logToRestore = savedSelectedLog;
-                Application.Current.Dispatcher.BeginInvoke(
-                    System.Windows.Threading.DispatcherPriority.ContextIdle,
-                    new Action(() =>
-                    {
-                        _parent.SelectedLog = logToRestore;
-                        _parent.ScrollToLogPreservePosition(logToRestore);
-                    }));
+                _dispatcher.Post(() =>
+                {
+                    _parent.SelectedLog = logToRestore;
+                    _parent.ScrollToLogPreservePosition(logToRestore);
+                }, System.Windows.Threading.DispatcherPriority.ContextIdle);
             }
         }
 

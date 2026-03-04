@@ -190,7 +190,7 @@ namespace IndiLogs_3._0.ViewModels
             // Create an empty collection if no sessions are loaded, to allow the window to open
             var sessions = SessionVM?.LoadedSessions ?? new ObservableCollection<LogSessionData>();
 
-            var viewModel = new GlobalGrepViewModel(sessions, _dialogService, _viewFactory);
+            var viewModel = new GlobalGrepViewModel(sessions, _dialogService, _viewFactory, _dispatcher);
 
             var window = _viewFactory.Create<GlobalGrepWindow>(viewModel, (Action<GrepResult>)NavigateToGrepResult, (Action<List<(string FilePath, string SessionName)>>)LoadMultipleFiles);
             WindowManager.OpenWindow(window);

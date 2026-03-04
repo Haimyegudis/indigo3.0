@@ -59,6 +59,7 @@ namespace IndiLogs_3._0.ViewModels
         private readonly IDefaultConfigurationService _defaultConfigService;
         private readonly IDialogService _dialogService;
         private readonly IViewFactory _viewFactory;
+        private readonly IDispatcher _dispatcher;
         public IDefaultConfigurationService DefaultConfigService => _defaultConfigService;
         public ILogColoringService ColoringService => _coloringService;
 
@@ -399,7 +400,7 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand SetAsDefaultCommand { get; }
         public ICommand ResetDefaultsCommand { get; }
 
-        public MainViewModel(ILogFileService logService, ILogColoringService coloringService, ICsvExportService csvService, IDefaultConfigurationService defaultConfigService, IDialogService dialogService, IViewFactory viewFactory)
+        public MainViewModel(ILogFileService logService, ILogColoringService coloringService, ICsvExportService csvService, IDefaultConfigurationService defaultConfigService, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher)
         {
             _logService = logService;
             _coloringService = coloringService;
@@ -407,14 +408,15 @@ namespace IndiLogs_3._0.ViewModels
             _defaultConfigService = defaultConfigService;
             _dialogService = dialogService;
             _viewFactory = viewFactory;
+            _dispatcher = dispatcher;
             _isTimeSyncEnabled = false;
 
             // Initialize child ViewModels
             SessionVM = new LogSessionViewModel(this, _logService, _coloringService, _dialogService, _viewFactory);
-            FilterVM = new FilterSearchViewModel(this, SessionVM, _dialogService, _viewFactory);
-            CaseVM = new CaseManagementViewModel(this, SessionVM, FilterVM, _dialogService, _viewFactory);
-            LiveVM = new LiveMonitoringViewModel(this, SessionVM, FilterVM, CaseVM, _logService, _coloringService);
-            ConfigVM = new ConfigExplorerViewModel(this, SessionVM, _dialogService, _viewFactory);
+            FilterVM = new FilterSearchViewModel(this, SessionVM, _dialogService, _viewFactory, _dispatcher);
+            CaseVM = new CaseManagementViewModel(this, SessionVM, FilterVM, _dialogService, _viewFactory, _dispatcher);
+            LiveVM = new LiveMonitoringViewModel(this, SessionVM, FilterVM, CaseVM, _logService, _coloringService, _dispatcher);
+            ConfigVM = new ConfigExplorerViewModel(this, SessionVM, _dialogService, _viewFactory, _dispatcher);
             ChartVM = new ChartTabViewModel(this);
             CprVM = new CprAnalysisViewModel(_dialogService);
             DifferentLogsVM = new DifferentLogsViewModel(_logService.GetPluginLoader(), _dialogService, _viewFactory);
@@ -691,7 +693,7 @@ namespace IndiLogs_3._0.ViewModels
         {
             LiveVM.IsRunning = false;
 
-            Application.Current.Dispatcher.BeginInvoke(() =>
+            _dispatcher.Post(() =>
             {
                 lock (_collectionLock)
                 {

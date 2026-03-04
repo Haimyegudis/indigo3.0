@@ -31,7 +31,7 @@ namespace IndiLogs_3._0.ViewModels
 
             try
             {
-                Application.Current.Dispatcher.BeginInvoke(() =>
+                _dispatcher.Post(() =>
                 {
                     Results.AddRange(batch);
                     OnPropertyChanged(nameof(ResultCount));
@@ -133,7 +133,7 @@ namespace IndiLogs_3._0.ViewModels
                 FlushResultsToUI(null);
 
                 sw.Stop();
-                Application.Current.Dispatcher.BeginInvoke(() =>
+                _dispatcher.Post(() =>
                 {
                     OnPropertyChanged(nameof(ResultCount));
                     SearchDuration = $"({sw.ElapsedMilliseconds:N0}ms)";

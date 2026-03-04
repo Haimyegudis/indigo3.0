@@ -29,6 +29,7 @@ namespace IndiLogs_3._0.ViewModels
         private readonly WindowsTaskSchedulerService _taskSchedulerService;
         private readonly IDialogService _dialogService;
         private readonly IViewFactory _viewFactory;
+        private readonly IDispatcher _dispatcher;
         private CancellationTokenSource? _cancellationTokenSource;
         private SearchReportParams? _lastSearchParams;
 
@@ -53,10 +54,11 @@ namespace IndiLogs_3._0.ViewModels
 
         #region Constructor
 
-        public GlobalGrepViewModel(IEnumerable<LogSessionData> loadedSessions, IDialogService dialogService, IViewFactory viewFactory)
+        public GlobalGrepViewModel(IEnumerable<LogSessionData> loadedSessions, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher)
         {
             _dialogService = dialogService;
             _viewFactory = viewFactory;
+            _dispatcher = dispatcher;
             _grepService = new GlobalGrepService();
             _locationService = new SearchLocationService();
             _configService = new SearchConfigService();

@@ -176,7 +176,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         _parent.ProcessFiles(logFilesToLoad.ToArray(), session =>
                         {
                             // Callback called after logs are loaded successfully
-                            Application.Current.Dispatcher.BeginInvoke(() =>
+                            _dispatcher.Post(() =>
                             {
                                 _sessionVM.StatusMessage = "Applying case settings...";
                                 _ = ApplyCaseSettings(caseFile);
@@ -314,7 +314,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
 
             // 4. Refresh view
-            Application.Current.Dispatcher.BeginInvoke(() =>
+            _dispatcher.Post(() =>
             {
                 _filterVM.ApplyMainLogsFilter();
                 _filterVM.ApplyAppLogsFilter();
@@ -381,7 +381,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         }
                     }
 
-                    Application.Current.Dispatcher.BeginInvoke(() =>
+                    _dispatcher.Post(() =>
                     {
                         // Notify Active Filters panel so coloring labels appear
                         _parent.NotifyPropertyChanged(nameof(_parent.ActiveFilters));

@@ -124,7 +124,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             _sessionVM.IsBusy = true;
             _sessionVM.StatusMessage = $"Loading config: {c.Name} (Overriding current state)...";
 
-            await Application.Current.Dispatcher.InvokeAsync(() =>
+            await _dispatcher.InvokeAsync(() =>
             {
                 _filterVM.SearchText = "";
                 _filterVM.IsSearchPanelVisible = false;
@@ -170,7 +170,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             // Deep clone filter tree so clearing doesn't affect the saved config
             _filterVM.AppFilterRoot = c.AppFilterRoot?.DeepClone();
 
-            Application.Current.Dispatcher.BeginInvoke(() =>
+            _dispatcher.Post(() =>
             {
                 if (_filterVM.AppFilterRoot != null && _filterVM.AppFilterRoot.Children.Count > 0)
                     _filterVM.IsAppFilterActive = true;

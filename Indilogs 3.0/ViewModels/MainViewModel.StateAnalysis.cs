@@ -110,7 +110,7 @@ namespace IndiLogs_3._0.ViewModels
                 finally
                 {
                     IsAnalysisRunning = false;
-                    Application.Current.Dispatcher.BeginInvoke(() =>
+                    _dispatcher.Post(() =>
                     {
                         if (SessionVM?.SelectedSession == session)
                             SessionVM.StatusMessage = "Background Analysis Complete.";

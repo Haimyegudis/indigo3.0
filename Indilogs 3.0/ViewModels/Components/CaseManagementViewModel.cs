@@ -24,6 +24,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly ILogColoringService _coloringService;
         private readonly IDialogService _dialogService;
         private readonly IViewFactory _viewFactory;
+        private readonly IDispatcher _dispatcher;
 
         // Case management
         private CaseFile? _currentCase = null;
@@ -119,7 +120,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand LoadCaseCommand { get; }
         public ICommand OpenColoringWindowCommand { get; }
 
-        public CaseManagementViewModel(MainViewModel parent, LogSessionViewModel sessionVM, FilterSearchViewModel filterVM, IDialogService dialogService, IViewFactory viewFactory)
+        public CaseManagementViewModel(MainViewModel parent, LogSessionViewModel sessionVM, FilterSearchViewModel filterVM, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher)
         {
             _parent = parent;
             _sessionVM = sessionVM;
@@ -127,6 +128,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             _coloringService = new LogColoringService();
             _dialogService = dialogService;
             _viewFactory = viewFactory;
+            _dispatcher = dispatcher;
 
             // Initialize collections
             MarkedLogs = new ObservableCollection<LogEntry>();

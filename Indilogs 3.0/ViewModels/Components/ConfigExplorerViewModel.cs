@@ -28,6 +28,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly LogSessionViewModel _sessionVM;
         private readonly IDialogService _dialogService;
         private readonly IViewFactory _viewFactory;
+        private readonly IDispatcher _dispatcher;
 
         // Configuration file management
         public ObservableCollection<string> ConfigurationFiles { get; set; }
@@ -118,7 +119,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     // Run filter on background thread then update UI
                     await Task.Run(() =>
                     {
-                        Application.Current.Dispatcher.BeginInvoke(() => FilterDbTreeNodes());
+                        _dispatcher.Post(() => FilterDbTreeNodes());
                     }, token);
                 }
             }
@@ -275,12 +276,13 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand RefreshConfigExplorerCommand { get; }
         public ICommand ClearConfigSearchCommand { get; }
 
-        public ConfigExplorerViewModel(MainViewModel parent, LogSessionViewModel sessionVM, IDialogService dialogService, IViewFactory viewFactory)
+        public ConfigExplorerViewModel(MainViewModel parent, LogSessionViewModel sessionVM, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher)
         {
             _parent = parent;
             _sessionVM = sessionVM;
             _dialogService = dialogService;
             _viewFactory = viewFactory;
+            _dispatcher = dispatcher;
 
             // Initialize collections
             ConfigurationFiles = new ObservableCollection<string>();
@@ -327,7 +329,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         _ = Task.Run(() =>
                         {
                             var view = ParseCsvToDataView(terminalContent);
-                            Application.Current.Dispatcher.BeginInvoke(() => CsvDataView = view);
+                            _dispatcher.Post(() => CsvDataView = view);
                         });
                     }
                     else
@@ -484,7 +486,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         private async Task LoadSqliteToTreeAsync(byte[] dbBytes)
         {
-            Application.Current.Dispatcher.BeginInvoke(() =>
+            _dispatcher.Post(() =>
             {
                 DbTreeNodes.Clear();
                 _allDbTreeNodes.Clear();
@@ -582,7 +584,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 });
 
                 // Update UI on main thread
-                Application.Current.Dispatcher.BeginInvoke(() =>
+                _dispatcher.Post(() =>
                 {
                     DbTreeNodes.Add(tablesRoot);
                     _allDbTreeNodes.Add(tablesRoot);
@@ -590,7 +592,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
             catch (Exception ex)
             {
-                Application.Current.Dispatcher.BeginInvoke(() =>
+                _dispatcher.Post(() =>
                 {
                     DbTreeNodes.Add(new DbTreeNode { Name = $"Error: {ex.Message}", NodeType = "Error" });
                 });
@@ -629,13 +631,11 @@ namespace IndiLogs_3._0.ViewModels.Components
                     WindowManager.OpenWindow(window);
 
                     // Force to front after a short delay
-                    Application.Current.Dispatcher.BeginInvoke(
-                        System.Windows.Threading.DispatcherPriority.Background,
-                        new Action(() =>
-                        {
-                            window.Activate();
-                            window.Focus();
-                        }));
+                    _dispatcher.Post(() =>
+                    {
+                        window.Activate();
+                        window.Focus();
+                    }, System.Windows.Threading.DispatcherPriority.Background);
                 }
                 catch (Exception ex)
                 {

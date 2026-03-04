@@ -89,7 +89,7 @@ namespace IndiLogs_3._0.ViewModels
             }
 
             _exportConfigWindow = _viewFactory.Create<ExportConfigurationWindow>();
-            var viewModel = new ExportConfigurationViewModel(selectedSession, _csvService, _dialogService);
+            var viewModel = new ExportConfigurationViewModel(selectedSession, _csvService, _dialogService, _dispatcher);
             _exportConfigWindow.DataContext = viewModel;
             _exportConfigWindow.Closed += (s, e) => _exportConfigWindow = null;
             WindowManager.OpenWindow(_exportConfigWindow);

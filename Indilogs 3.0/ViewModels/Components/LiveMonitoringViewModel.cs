@@ -29,6 +29,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly CaseManagementViewModel _caseVM;
         private readonly ILogFileService _logService;
         private readonly ILogColoringService _coloringService;
+        private readonly IDispatcher _dispatcher;
 
         // Live monitoring state
         private bool _isLiveMode;
@@ -98,7 +99,8 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         public LiveMonitoringViewModel(MainViewModel parent, LogSessionViewModel sessionVM,
             FilterSearchViewModel filterVM, CaseManagementViewModel caseVM,
-            ILogFileService logService, ILogColoringService coloringService)
+            ILogFileService logService, ILogColoringService coloringService,
+            IDispatcher dispatcher)
         {
             _parent = parent;
             _sessionVM = sessionVM;
@@ -106,6 +108,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             _caseVM = caseVM;
             _logService = logService;
             _coloringService = coloringService;
+            _dispatcher = dispatcher;
 
             LivePlayCommand = new RelayCommand(LivePlay);
             LivePauseCommand = new RelayCommand(LivePause);
@@ -413,7 +416,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     var logsToAdd = newLogs;
                     var wasFirstRun = isFirstRun;
 
-                    Application.Current.Dispatcher.InvokeAsync(() =>
+                    _dispatcher.Post(() =>
                     {
                         lock (_collectionLock)
                         {
@@ -445,7 +448,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 }
                 else if (isFirstRun)
                 {
-                    Application.Current.Dispatcher.InvokeAsync(() =>
+                    _dispatcher.Post(() =>
                     {
                         _sessionVM.StatusMessage = "Live: File loaded but 0 logs parsed. Watching for new data...";
                     });

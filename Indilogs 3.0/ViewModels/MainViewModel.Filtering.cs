@@ -172,13 +172,11 @@ namespace IndiLogs_3._0.ViewModels
             if (savedSelectedLog != null)
             {
                 var logToRestore = savedSelectedLog;
-                Application.Current.Dispatcher.BeginInvoke(
-                    System.Windows.Threading.DispatcherPriority.ContextIdle,
-                    new Action(() =>
+                _dispatcher.Post(new Action(() =>
                     {
                         SelectedLog = logToRestore;
                         ScrollToLogPreservePosition(logToRestore);
-                    }));
+                    }), System.Windows.Threading.DispatcherPriority.ContextIdle);
             }
         }
 
@@ -219,7 +217,7 @@ namespace IndiLogs_3._0.ViewModels
                     }
                 });
 
-                Application.Current.Dispatcher.BeginInvoke(() =>
+                _dispatcher.Post(() =>
                 {
                     if (isAppTab) { FilterVM.IsAppFilterActive = hasAdvanced; ApplyAppLogsFilter(); }
                     else { FilterVM.IsMainFilterActive = hasAdvanced || FilterVM.ActiveThreadFilters.Any(); UpdateMainLogsFilter(FilterVM.IsMainFilterActive); }
@@ -290,7 +288,7 @@ namespace IndiLogs_3._0.ViewModels
                         var timeSlice = SessionVM.AllLogsCache.Where(l => l.Date >= start && l.Date <= end).OrderByDescending(l => l.Date).ToList();
                         var smartFiltered = timeSlice.Where(l => IsDefaultLog(l)).ToList();
 
-                        Application.Current.Dispatcher.BeginInvoke(() =>
+                        _dispatcher.Post(() =>
                         {
                             FilterVM.LastFilteredCache = timeSlice;
                             FilterVM.SavedFilterRoot = null;
@@ -334,7 +332,7 @@ namespace IndiLogs_3._0.ViewModels
             Task.Run(() =>
             {
                 var errors = SessionVM.AllAppLogsCache.Where(l => l.Level != null && l.Level.Equals("Error", StringComparison.OrdinalIgnoreCase)).OrderByDescending(l => l.Date).ToList();
-                Application.Current.Dispatcher.BeginInvoke(() =>
+                _dispatcher.Post(() =>
                 {
                     FilterVM?.AppDevLogsFiltered?.ReplaceAll(errors);
                     SessionVM.IsBusy =false;
@@ -403,13 +401,11 @@ namespace IndiLogs_3._0.ViewModels
             if (savedSelectedLog != null)
             {
                 var logToRestore = savedSelectedLog;
-                Application.Current.Dispatcher.BeginInvoke(
-                    System.Windows.Threading.DispatcherPriority.ContextIdle,
-                    new Action(() =>
+                _dispatcher.Post(new Action(() =>
                     {
                         SelectedLog = logToRestore;
                         ScrollToLogPreservePosition(logToRestore);
-                    }));
+                    }), System.Windows.Threading.DispatcherPriority.ContextIdle);
             }
         }
 
@@ -455,7 +451,7 @@ namespace IndiLogs_3._0.ViewModels
                     _ => null!,
                 };
                 if (cmp != null) sorted.Sort(cmp);
-                Application.Current.Dispatcher.BeginInvoke(() =>
+                _dispatcher.Post(() =>
                 {
                     FilterVM.AppDevLogsFiltered.ReplaceAll(sorted);
                     SessionVM.IsBusy =false;
@@ -484,9 +480,8 @@ namespace IndiLogs_3._0.ViewModels
                     SelectedTabIndex = (result.LogType == "APP") ? 1 : 0;
 
                     // Wait for UI to update, then scroll to the log entry
-                    Application.Current.Dispatcher.BeginInvoke(
-                        System.Windows.Threading.DispatcherPriority.Background,
-                        new Action(() => RequestScrollToLog?.Invoke(result.ReferencedLogEntry)));
+                    _dispatcher.Post(new Action(() => RequestScrollToLog?.Invoke(result.ReferencedLogEntry)),
+                        System.Windows.Threading.DispatcherPriority.Background);
                 }
                 return;
             }
@@ -507,7 +502,7 @@ namespace IndiLogs_3._0.ViewModels
                 // Load the file if not already loaded
                 ProcessFiles(new[] { result.FilePath }, (loadedSession) =>
                 {
-                    Application.Current.Dispatcher.BeginInvoke(() =>
+                    _dispatcher.Post(() =>
                     {
                         SessionVM.SelectedSession = loadedSession;
                         JumpByTime(result, loadedSession);
@@ -535,9 +530,8 @@ namespace IndiLogs_3._0.ViewModels
             if (target != null)
             {
                 // Wait for UI to update, then scroll to the log entry
-                Application.Current.Dispatcher.BeginInvoke(
-                    System.Windows.Threading.DispatcherPriority.Background,
-                    new Action(() => RequestScrollToLog?.Invoke(target)));
+                _dispatcher.Post(new Action(() => RequestScrollToLog?.Invoke(target)),
+                    System.Windows.Threading.DispatcherPriority.Background);
             }
         }
 

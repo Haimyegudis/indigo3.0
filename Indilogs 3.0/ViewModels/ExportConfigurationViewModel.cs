@@ -26,6 +26,7 @@ namespace IndiLogs_3._0.ViewModels
         private readonly LogSessionData _sessionData;
         private readonly ICsvExportService _csvService;
         private readonly IDialogService _dialogService;
+        private readonly IDispatcher _dispatcher;
 
         // S4-5 mode: binary APP — hides AXIS, CHStep, Thread columns (show only IO)
         public bool IsBinaryApp { get; private set; }
@@ -333,11 +334,12 @@ namespace IndiLogs_3._0.ViewModels
 
         public bool CanOpenInViewer => !string.IsNullOrEmpty(LastExportedFilePath) && File.Exists(LastExportedFilePath);
 
-        public ExportConfigurationViewModel(LogSessionData sessionData, ICsvExportService csvService, IDialogService dialogService)
+        public ExportConfigurationViewModel(LogSessionData sessionData, ICsvExportService csvService, IDialogService dialogService, IDispatcher dispatcher)
         {
             _sessionData = sessionData;
             _csvService = csvService;
             _dialogService = dialogService;
+            _dispatcher = dispatcher;
 
             // S4-5: binary APP — only IO column visible in export window
             IsBinaryApp = sessionData?.HasBinaryAppLogs == true;
@@ -399,7 +401,7 @@ namespace IndiLogs_3._0.ViewModels
                     _ioDevices = svc.ParseIoFiles(_sessionData.TerminalLogFiles, _sessionData.TerminalCsvBytes);
                     var items = svc.GetAllComponents(_ioDevices);
 
-                    Application.Current.Dispatcher.BeginInvoke(() =>
+                    _dispatcher.Post(() =>
                     {
                         IOComponents.Clear();
                         foreach (var item in items)
@@ -445,11 +447,11 @@ namespace IndiLogs_3._0.ViewModels
                     if (current % 10000 == 0)
                     {
                         double pct = (double)current / totalLogs * 100;
-                        Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                        _dispatcher.Post(() =>
                         {
                             LoadingProgress = pct;
                             LoadingMessage = $"Scanning logs... {pct:F1}% ({current:N0} / {totalLogs:N0})";
-                        }));
+                        });
                     }
 
                     // Early filtering - skip lines that are definitely not relevant
@@ -652,10 +654,10 @@ namespace IndiLogs_3._0.ViewModels
                     AppLogger.Info($"[ComponentScan] Axis samples: {string.Join(", ", axisComponents.Keys.Take(5))}");
 
                 // Build lists (not yet added to ObservableCollection)
-                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                _dispatcher.Post(() =>
                 {
                     LoadingMessage = "Building component lists...";
-                }));
+                });
 
                 var ioList = ioComponents.Keys.OrderBy(x => x).Select(io =>
                 {
@@ -699,7 +701,7 @@ namespace IndiLogs_3._0.ViewModels
                     }).ToList();
 
                 // Add to UI on UI thread - NON-BLOCKING
-                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                _dispatcher.Post(() =>
                 {
                     LoadingMessage = "Populating UI...";
 
@@ -728,7 +730,7 @@ namespace IndiLogs_3._0.ViewModels
 
                     IsLoading = false;
                     LoadingMessage = $"Found {IOComponents.Count} IO, {AxisComponents.Count} Axis, {CHStepComponents.Count} CHSteps, {ThreadItems.Count} Threads";
-                }));
+                });
             });
             }
             catch (Exception ex) { AppLogger.Error("LoadComponentsAndThreads failed", ex); }

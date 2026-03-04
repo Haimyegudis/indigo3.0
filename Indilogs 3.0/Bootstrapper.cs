@@ -47,8 +47,11 @@ namespace IndiLogs_3._0
             var viewFactory = new ViewFactory();
             Register<IViewFactory>(viewFactory);
 
+            var dispatcher = new WpfDispatcher();
+            Register<IDispatcher>(dispatcher);
+
             // --- ViewModels ---
-            var mainVM = new MainViewModel(logFileService, coloringService, csvService, defaultConfigService, dialogService, viewFactory);
+            var mainVM = new MainViewModel(logFileService, coloringService, csvService, defaultConfigService, dialogService, viewFactory, dispatcher);
             Register<MainViewModel>(mainVM);
 
             _configured = true;
