@@ -161,7 +161,7 @@ namespace IndiLogs_3._0.Services.Grep
             }
         }
 
-        private bool ShouldRun(ScheduledSearch schedule, DateTime now)
+        internal bool ShouldRun(ScheduledSearch schedule, DateTime now)
         {
             if (!schedule.IsEnabled) return false;
 
