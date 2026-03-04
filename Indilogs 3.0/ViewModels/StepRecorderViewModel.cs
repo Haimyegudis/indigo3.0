@@ -336,7 +336,7 @@ namespace IndiLogs_3._0.ViewModels
                 File.WriteAllBytes(destPath, frame.ImageData);
 
                 // Open Explorer with the file selected
-                System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{destPath}\"");
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"/select,\"{destPath}\"") { UseShellExecute = true });
             }
             catch (Exception ex)
             {

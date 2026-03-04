@@ -125,7 +125,9 @@ namespace IndiLogs_3._0.Services.Grep
             }
         }
 
-        private async void OnTimerElapsed(object sender, ElapsedEventArgs e)
+        private void OnTimerElapsed(object sender, ElapsedEventArgs e) => _ = OnTimerElapsedAsync();
+
+        private async Task OnTimerElapsedAsync()
         {
             if (_isRunning)
             {
@@ -145,7 +147,7 @@ namespace IndiLogs_3._0.Services.Grep
                 {
                     if (ShouldRun(schedule, now))
                     {
-                        await ExecuteScheduledSearchAsync(schedule, CancellationToken.None);
+                        await ExecuteScheduledSearchAsync(schedule, CancellationToken.None).ConfigureAwait(false);
                     }
                 }
             }

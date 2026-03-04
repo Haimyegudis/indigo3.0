@@ -394,7 +394,9 @@ namespace IndiLogs_3._0.Services.Grep
             return sb.ToString();
         }
 
-        private async void OnDeferredTimerElapsed(object sender, ElapsedEventArgs e)
+        private void OnDeferredTimerElapsed(object sender, ElapsedEventArgs e) => _ = OnDeferredTimerElapsedAsync();
+
+        private async Task OnDeferredTimerElapsedAsync()
         {
             try
             {
@@ -421,7 +423,7 @@ namespace IndiLogs_3._0.Services.Grep
                 foreach (var item in toSend)
                 {
                     await SendEmailAsync(item.Config, item.Subject,
-                        item.PlainTextBody, item.HtmlReportPath, item.ScheduleName);
+                        item.PlainTextBody, item.HtmlReportPath, item.ScheduleName).ConfigureAwait(false);
                 }
             }
             catch (Exception ex)

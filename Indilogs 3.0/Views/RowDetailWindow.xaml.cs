@@ -211,7 +211,7 @@ namespace IndiLogs_3._0.Views
 
                 if (!string.IsNullOrEmpty(notepadPlusPlusPath) && File.Exists(notepadPlusPlusPath))
                 {
-                    Process.Start(notepadPlusPlusPath, $"\"{tempFile}\"");
+                    Process.Start(new ProcessStartInfo(notepadPlusPlusPath, $"\"{tempFile}\"") { UseShellExecute = true });
                 }
                 else
                 {

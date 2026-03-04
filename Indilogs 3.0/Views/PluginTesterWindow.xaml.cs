@@ -48,7 +48,7 @@ namespace IndiLogs_3._0.Views
             try
             {
                 Directory.CreateDirectory(PluginLoader.PluginsFolder);
-                Process.Start("explorer.exe", PluginLoader.PluginsFolder);
+                Process.Start(new ProcessStartInfo("explorer.exe", PluginLoader.PluginsFolder) { UseShellExecute = true });
             }
             catch (Exception ex)
             {
