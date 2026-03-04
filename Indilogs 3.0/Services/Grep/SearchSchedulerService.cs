@@ -484,7 +484,7 @@ namespace IndiLogs_3._0.Services.Grep
             try
             {
                 if (File.Exists(ScheduleFile))
-                    Schedules = JsonConvert.DeserializeObject<List<ScheduledSearch>>(File.ReadAllText(ScheduleFile))
+                    Schedules = JsonConvert.DeserializeObject<List<ScheduledSearch>>(File.ReadAllText(ScheduleFile), AppConstants.SafeJsonSettings)
                                 ?? new List<ScheduledSearch>();
             }
             catch (Exception ex)

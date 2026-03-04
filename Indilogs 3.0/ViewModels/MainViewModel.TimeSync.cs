@@ -174,14 +174,14 @@ namespace IndiLogs_3._0.ViewModels
                         _pendingSyncLog = nearestLog;
                         _pendingSyncTabIndex = targetTabIndex;
 
-                        Application.Current?.Dispatcher?.Invoke(() =>
+                        _dispatcher.Post(() =>
                         {
                             SessionVM.StatusMessage =$"\ud83d\udd17 Synced to {targetGrid} @ {nearestLog.Date:HH:mm:ss.ffffff} (\u00b1{timeDiff.TotalSeconds:F1}s) - switch tab to see";
                         });
                     }
                     else
                     {
-                        Application.Current?.Dispatcher?.Invoke(() =>
+                        _dispatcher.Post(() =>
                         {
                             SessionVM.StatusMessage =$"\u26a0 No correlated logs within 60s (closest: {timeDiff.TotalSeconds:F0}s)";
                         });

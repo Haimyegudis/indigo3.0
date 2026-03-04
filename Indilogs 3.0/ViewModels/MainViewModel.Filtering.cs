@@ -176,7 +176,7 @@ namespace IndiLogs_3._0.ViewModels
                     {
                         SelectedLog = logToRestore;
                         ScrollToLogPreservePosition(logToRestore);
-                    }), System.Windows.Threading.DispatcherPriority.ContextIdle);
+                    }), Services.Interfaces.DispatchPriority.ContextIdle);
             }
         }
 
@@ -405,7 +405,7 @@ namespace IndiLogs_3._0.ViewModels
                     {
                         SelectedLog = logToRestore;
                         ScrollToLogPreservePosition(logToRestore);
-                    }), System.Windows.Threading.DispatcherPriority.ContextIdle);
+                    }), Services.Interfaces.DispatchPriority.ContextIdle);
             }
         }
 
@@ -481,7 +481,7 @@ namespace IndiLogs_3._0.ViewModels
 
                     // Wait for UI to update, then scroll to the log entry
                     _dispatcher.Post(new Action(() => RequestScrollToLog?.Invoke(result.ReferencedLogEntry)),
-                        System.Windows.Threading.DispatcherPriority.Background);
+                        Services.Interfaces.DispatchPriority.Background);
                 }
                 return;
             }
@@ -531,7 +531,7 @@ namespace IndiLogs_3._0.ViewModels
             {
                 // Wait for UI to update, then scroll to the log entry
                 _dispatcher.Post(new Action(() => RequestScrollToLog?.Invoke(target)),
-                    System.Windows.Threading.DispatcherPriority.Background);
+                    Services.Interfaces.DispatchPriority.Background);
             }
         }
 

@@ -18,6 +18,12 @@ namespace IndiLogs_3._0
         public const int JsonMaxDepth = 64;
 
         /// <summary>
+        /// Shared Newtonsoft.Json settings with depth limit to prevent stack overflow attacks.
+        /// </summary>
+        public static readonly Newtonsoft.Json.JsonSerializerSettings SafeJsonSettings =
+            new Newtonsoft.Json.JsonSerializerSettings { MaxDepth = JsonMaxDepth };
+
+        /// <summary>
         /// ZIP file extension (case-insensitive comparisons should use OrdinalIgnoreCase).
         /// </summary>
         public const string ZipExtension = ".zip";

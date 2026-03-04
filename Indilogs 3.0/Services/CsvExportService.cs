@@ -14,10 +14,12 @@ namespace IndiLogs_3._0.Services
     public class CsvExportService : Interfaces.ICsvExportService
     {
         private readonly Interfaces.IDialogService? _dialogService;
+        private readonly Interfaces.IDispatcher? _dispatcher;
 
-        public CsvExportService(Interfaces.IDialogService? dialogService = null)
+        public CsvExportService(Interfaces.IDialogService? dialogService = null, Interfaces.IDispatcher? dispatcher = null)
         {
             _dialogService = dialogService;
+            _dispatcher = dispatcher;
         }
 
         private readonly string[] _axisParams = new[] { "SetP", "ActP", "SetV", "ActV", "Trq", "LagErr", "Trigger" };
@@ -851,8 +853,8 @@ namespace IndiLogs_3._0.Services
             if (schema.Count == 0 && machineStates.Count == 0 && threadMessages.Count == 0)
             {
                 progress?.Report(100, "No data found", "No parsable data in logs");
-                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                    _dialogService?.ShowWarning("No parsable data found.", "Export")));
+                _dispatcher?.Post(() =>
+                    _dialogService?.ShowWarning("No parsable data found.", "Export"));
                 return;
             }
 

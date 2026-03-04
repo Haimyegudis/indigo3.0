@@ -1,5 +1,6 @@
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
+using IndiLogs_3._0.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -109,7 +110,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                             {
                                 _parent.SelectedLog = logToRestore;
                                 _parent.ScrollToLogPreservePosition(logToRestore);
-                            }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                            }, DispatchPriority.ContextIdle);
                         }
                     });
                     return;

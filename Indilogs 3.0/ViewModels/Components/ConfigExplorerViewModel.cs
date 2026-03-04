@@ -88,7 +88,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     // Use debounce for DB tree filtering to avoid lag
                     if (IsDbFileSelected)
                     {
-                        DebouncedFilterDbTree();
+                        _ = DebouncedFilterDbTree();
                     }
                     else if (IsCsvFileSelected)
                     {
@@ -96,13 +96,13 @@ namespace IndiLogs_3._0.ViewModels.Components
                     }
                     else
                     {
-                        DebouncedFilterConfigContent();
+                        _ = DebouncedFilterConfigContent();
                     }
                 }
             }
         }
 
-        private async void DebouncedFilterDbTree()
+        private async Task DebouncedFilterDbTree()
         {
             // Cancel previous search
             _searchDebounceToken?.Cancel();
@@ -133,7 +133,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private async void DebouncedFilterConfigContent()
+        private async Task DebouncedFilterConfigContent()
         {
             _searchDebounceToken?.Cancel();
             _searchDebounceToken = new CancellationTokenSource();
@@ -635,7 +635,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     {
                         window.Activate();
                         window.Focus();
-                    }, System.Windows.Threading.DispatcherPriority.Background);
+                    }, DispatchPriority.Background);
                 }
                 catch (Exception ex)
                 {

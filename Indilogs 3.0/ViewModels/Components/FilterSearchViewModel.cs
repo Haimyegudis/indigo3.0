@@ -447,7 +447,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     {
                         _parent.SelectedLog = logToRestore;
                         _parent.ScrollToLogPreservePosition(logToRestore);
-                    }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                    }, DispatchPriority.ContextIdle);
                 }
             });
             OpenFilterWindowCommand = new RelayCommand(async o => await OpenFilterWindow(o));
@@ -501,7 +501,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     _parent.SelectedLog = logToRestore;
                     _parent.ScrollToLogPreservePosition(logToRestore);
-                }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+                }, DispatchPriority.ContextIdle);
             }
         }
 

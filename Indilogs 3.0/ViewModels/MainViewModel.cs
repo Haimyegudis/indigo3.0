@@ -412,7 +412,7 @@ namespace IndiLogs_3._0.ViewModels
             _isTimeSyncEnabled = false;
 
             // Initialize child ViewModels
-            SessionVM = new LogSessionViewModel(this, _logService, _coloringService, _dialogService, _viewFactory);
+            SessionVM = new LogSessionViewModel(this, _logService, _coloringService, _dialogService, _viewFactory, _dispatcher);
             FilterVM = new FilterSearchViewModel(this, SessionVM, _dialogService, _viewFactory, _dispatcher);
             CaseVM = new CaseManagementViewModel(this, SessionVM, FilterVM, _dialogService, _viewFactory, _dispatcher);
             LiveVM = new LiveMonitoringViewModel(this, SessionVM, FilterVM, CaseVM, _logService, _coloringService, _dispatcher);

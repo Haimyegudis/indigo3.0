@@ -1,8 +1,8 @@
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services.Charts;
+using IndiLogs_3._0.Services.Interfaces;
 using System;
 using System.Collections.Generic;
-using System.Windows;
 using System.Windows.Input;
 
 namespace IndiLogs_3._0.ViewModels.Components
@@ -15,6 +15,7 @@ namespace IndiLogs_3._0.ViewModels.Components
     public class TabOrchestrationViewModel : ViewModelBase
     {
         private readonly MainViewModel _parent;
+        private readonly IDispatcher _dispatcher;
 
         // Time-Sync state
         private bool _isTimeSyncEnabled;
@@ -58,9 +59,10 @@ namespace IndiLogs_3._0.ViewModels.Components
             set => _pendingSyncTabIndex = value;
         }
 
-        public TabOrchestrationViewModel(MainViewModel parent)
+        public TabOrchestrationViewModel(MainViewModel parent, IDispatcher dispatcher)
         {
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
+            _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
             ToggleTimeSyncCommand = new RelayCommand(o => IsTimeSyncEnabled = !IsTimeSyncEnabled);
         }
 
@@ -114,14 +116,14 @@ namespace IndiLogs_3._0.ViewModels.Components
                         _pendingSyncLog = nearestLog;
                         _pendingSyncTabIndex = targetTabIndex;
 
-                        Application.Current?.Dispatcher?.Invoke(() =>
+                        _dispatcher.Post(() =>
                         {
                             _parent.SessionVM.StatusMessage =$"🔗 Synced to {targetGrid} @ {nearestLog.Date:HH:mm:ss.ffffff} (±{timeDiff.TotalSeconds:F1}s) - switch tab to see";
                         });
                     }
                     else
                     {
-                        Application.Current?.Dispatcher?.Invoke(() =>
+                        _dispatcher.Post(() =>
                         {
                             _parent.SessionVM.StatusMessage =$"⚠ No correlated logs within 60s (closest: {timeDiff.TotalSeconds:F0}s)";
                         });
@@ -171,9 +173,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 var logToScroll = _pendingSyncLog;
                 _pendingSyncLog = null;
                 _pendingSyncTabIndex = -1;
-                Application.Current?.Dispatcher?.BeginInvoke(
-                    System.Windows.Threading.DispatcherPriority.Loaded,
-                    new Action(() => scrollAction?.Invoke(logToScroll)));
+                _dispatcher.Post(() => scrollAction?.Invoke(logToScroll), DispatchPriority.Loaded);
             }
         }
 

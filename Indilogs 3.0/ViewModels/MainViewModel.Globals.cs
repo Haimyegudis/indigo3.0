@@ -57,7 +57,7 @@ namespace IndiLogs_3._0.ViewModels
                 {
                     _globalsSearchText = value;
                     OnPropertyChanged();
-                    DebouncedFilterGlobals();
+                    _ = DebouncedFilterGlobals();
                 }
             }
         }
@@ -80,7 +80,7 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
-        private async void DebouncedFilterGlobals()
+        private async Task DebouncedFilterGlobals()
         {
             _globalsSearchDebounce?.Cancel();
             _globalsSearchDebounce = new CancellationTokenSource();

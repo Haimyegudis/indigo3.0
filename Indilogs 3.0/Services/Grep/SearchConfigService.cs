@@ -35,13 +35,13 @@ namespace IndiLogs_3._0.Services.Grep
         {
             string path = GetProfilePath(name);
             if (!File.Exists(path)) return null;
-            return JsonConvert.DeserializeObject<SearchProfile>(File.ReadAllText(path));
+            return JsonConvert.DeserializeObject<SearchProfile>(File.ReadAllText(path), AppConstants.SafeJsonSettings);
         }
 
         public SearchProfile? LoadProfileFromFile(string filePath)
         {
             if (!File.Exists(filePath)) return null;
-            return JsonConvert.DeserializeObject<SearchProfile>(File.ReadAllText(filePath));
+            return JsonConvert.DeserializeObject<SearchProfile>(File.ReadAllText(filePath), AppConstants.SafeJsonSettings);
         }
 
         public List<string> ListProfiles()
@@ -87,7 +87,7 @@ namespace IndiLogs_3._0.Services.Grep
         /// </summary>
         public SearchProfile? ImportProfile(string filePath)
         {
-            var profile = JsonConvert.DeserializeObject<SearchProfile>(File.ReadAllText(filePath));
+            var profile = JsonConvert.DeserializeObject<SearchProfile>(File.ReadAllText(filePath), AppConstants.SafeJsonSettings);
             if (profile != null)
                 SaveProfile(profile);
             return profile;

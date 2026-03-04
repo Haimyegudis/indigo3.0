@@ -616,7 +616,7 @@ namespace IndiLogs_3._0.Services
                         var dates = new List<DateTime>();
                         foreach (var f in Directory.GetFiles(location.BasePath, "*.*", SearchOption.AllDirectories).Take(20))
                         {
-                            try { dates.Add(File.GetLastWriteTime(f)); } catch (Exception) { /* file access error during diagnostics */ }
+                            try { dates.Add(File.GetLastWriteTime(f)); } catch (Exception ex) { AppLogger.Warn($"[Grep] File date access failed: {ex.Message}"); }
                         }
                         if (dates.Count > 0)
                         {
@@ -888,7 +888,7 @@ namespace IndiLogs_3._0.Services
                 {
                     // Fallback to file modification date
                     try { fileTime = File.GetLastWriteTime(f); }
-                    catch (Exception) { return true; } // Include file if we can't determine its time
+                    catch (Exception ex) { AppLogger.Warn($"[Grep] Cannot read file time for {f}: {ex.Message}"); return true; }
                 }
 
                 if (filter.From.HasValue && fileTime < filter.From.Value) return false;
@@ -994,7 +994,7 @@ namespace IndiLogs_3._0.Services
                     return text.EndsWith(value, StringComparison.OrdinalIgnoreCase);
                 case SearchOperator.Regex:
                     try { return Regex.IsMatch(text, value, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(2)); }
-                    catch (Exception) { return false; }
+                    catch (Exception ex) { AppLogger.Warn($"[Grep] Regex match failed for pattern '{value}': {ex.Message}"); return false; }
                 default:
                     return false;
             }

@@ -36,7 +36,10 @@ namespace IndiLogs_3._0
             var coloringService = new LogColoringService();
             Register<ILogColoringService>(coloringService);
 
-            var csvService = new CsvExportService(dialogService);
+            var dispatcher = new WpfDispatcher();
+            Register<IDispatcher>(dispatcher);
+
+            var csvService = new CsvExportService(dialogService, dispatcher);
             Register<ICsvExportService>(csvService);
 
             var defaultConfigService = new DefaultConfigurationService();
@@ -46,9 +49,6 @@ namespace IndiLogs_3._0
 
             var viewFactory = new ViewFactory();
             Register<IViewFactory>(viewFactory);
-
-            var dispatcher = new WpfDispatcher();
-            Register<IDispatcher>(dispatcher);
 
             // --- ViewModels ---
             var mainVM = new MainViewModel(logFileService, coloringService, csvService, defaultConfigService, dialogService, viewFactory, dispatcher);

@@ -16,14 +16,24 @@ namespace IndiLogs_3._0.Services
             Application.Current.Dispatcher.BeginInvoke(action);
         }
 
-        public void Post(Action action, DispatcherPriority priority)
+        public void Post(Action action, DispatchPriority priority)
         {
-            Application.Current.Dispatcher.BeginInvoke(priority, action);
+            Application.Current.Dispatcher.BeginInvoke(MapPriority(priority), action);
         }
 
         public Task InvokeAsync(Action action)
         {
             return Application.Current.Dispatcher.InvokeAsync(action).Task;
         }
+
+        private static DispatcherPriority MapPriority(DispatchPriority priority) => priority switch
+        {
+            DispatchPriority.Background => DispatcherPriority.Background,
+            DispatchPriority.ContextIdle => DispatcherPriority.ContextIdle,
+            DispatchPriority.ApplicationIdle => DispatcherPriority.ApplicationIdle,
+            DispatchPriority.DataBind => DispatcherPriority.DataBind,
+            DispatchPriority.Loaded => DispatcherPriority.Loaded,
+            _ => DispatcherPriority.Normal,
+        };
     }
 }

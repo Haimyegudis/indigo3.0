@@ -444,7 +444,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                                 AppLogger.Error("UI update error", ex);
                             }
                         }
-                    }, System.Windows.Threading.DispatcherPriority.DataBind);
+                    }, DispatchPriority.DataBind);
                 }
                 else if (isFirstRun)
                 {

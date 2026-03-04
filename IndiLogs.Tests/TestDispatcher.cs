@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Windows.Threading;
 using IndiLogs_3._0.Services.Interfaces;
 
 namespace IndiLogs.Tests
@@ -21,7 +20,7 @@ namespace IndiLogs.Tests
             if (ExecuteImmediately) action();
         }
 
-        public void Post(Action action, DispatcherPriority priority)
+        public void Post(Action action, DispatchPriority priority)
         {
             PostedActions.Add(action);
             if (ExecuteImmediately) action();

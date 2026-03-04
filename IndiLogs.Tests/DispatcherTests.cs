@@ -29,7 +29,7 @@ namespace IndiLogs.Tests
         {
             var dispatcher = new TestDispatcher();
             bool executed = false;
-            dispatcher.Post(() => executed = true, System.Windows.Threading.DispatcherPriority.Background);
+            dispatcher.Post(() => executed = true, IndiLogs_3._0.Services.Interfaces.DispatchPriority.Background);
             Assert.True(executed);
         }
 

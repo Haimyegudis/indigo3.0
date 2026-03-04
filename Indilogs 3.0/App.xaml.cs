@@ -65,7 +65,9 @@ namespace IndiLogs_3._0
             // Check for updates in the background
             try
             {
-                var updateService = new UpdateService(Bootstrapper.Resolve<Services.Interfaces.IDialogService>());
+                var updateService = new UpdateService(
+                    Bootstrapper.Resolve<Services.Interfaces.IDialogService>(),
+                    Bootstrapper.Resolve<Services.Interfaces.IDispatcher>());
                 await updateService.CheckForUpdatesSimpleAsync();
             }
             catch (Exception ex)

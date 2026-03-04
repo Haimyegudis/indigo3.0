@@ -777,7 +777,7 @@ namespace IndiLogs_3._0.Services.Grep
                 else
                 {
                     try { fileTime = File.GetLastWriteTime(f); }
-                    catch (Exception) { return true; }
+                    catch (Exception ex) { AppLogger.Warn($"[Stats] Cannot read file time for {f}: {ex.Message}"); return true; }
                 }
 
                 if (filter.From.HasValue && fileTime < filter.From.Value) return false;

@@ -25,6 +25,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly ILogColoringService _coloringService;
         private readonly IDialogService _dialogService;
         private readonly IViewFactory _viewFactory;
+        private readonly IDispatcher _dispatcher;
         private FilterSearchViewModel? _filterVM;
         private CaseManagementViewModel? _caseVM;
         private ConfigExplorerViewModel? _configVM;
@@ -200,13 +201,14 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand ClearCommand { get; }
         public ICommand RemoveSessionCommand { get; }
 
-        public LogSessionViewModel(MainViewModel parent, ILogFileService logService, ILogColoringService coloringService, IDialogService dialogService, IViewFactory viewFactory)
+        public LogSessionViewModel(MainViewModel parent, ILogFileService logService, ILogColoringService coloringService, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher)
         {
             _parent = parent;
             _logService = logService;
             _coloringService = coloringService;
             _dialogService = dialogService;
             _viewFactory = viewFactory;
+            _dispatcher = dispatcher;
 
             // Initialize collections
             _allLogsCache = new List<LogEntry>();
@@ -654,14 +656,12 @@ namespace IndiLogs_3._0.ViewModels.Components
                 // Use ApplicationIdle priority to ensure DataGrid virtualization is fully rendered
                 // Use ScrollTabToBottom (not ScrollToLog) to directly target each grid,
                 // because FindGridForLog always matches PLC first for shared log objects
-                Application.Current?.Dispatcher?.BeginInvoke(
-                    System.Windows.Threading.DispatcherPriority.ApplicationIdle,
-                    new Action(() =>
+                _dispatcher.Post(() =>
                     {
                         _parent.ScrollTabToBottom("PLC");
                         _parent.ScrollTabToBottom("FILTERED");
                         _parent.ScrollTabToBottom("APP");
-                    }));
+                    }, DispatchPriority.ApplicationIdle);
 
                 CurrentProgress = 100;
                 StatusMessage = $"Logs Loaded ({newSession.Logs.Count:N0} PLC logs). Running Analysis in Background...";

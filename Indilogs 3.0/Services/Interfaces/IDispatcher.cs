@@ -4,6 +4,20 @@ using System.Threading.Tasks;
 namespace IndiLogs_3._0.Services.Interfaces
 {
     /// <summary>
+    /// Platform-agnostic dispatcher priority levels.
+    /// Maps to WPF DispatcherPriority in production; ignored in tests.
+    /// </summary>
+    public enum DispatchPriority
+    {
+        Normal,
+        Background,
+        ContextIdle,
+        ApplicationIdle,
+        DataBind,
+        Loaded
+    }
+
+    /// <summary>
     /// Abstracts UI thread dispatching so ViewModels don't depend on WPF's Dispatcher.
     /// Enables unit testing with a synchronous test implementation.
     /// </summary>
@@ -17,7 +31,7 @@ namespace IndiLogs_3._0.Services.Interfaces
         /// <summary>
         /// Posts an action to the UI thread with a specific priority.
         /// </summary>
-        void Post(Action action, System.Windows.Threading.DispatcherPriority priority);
+        void Post(Action action, DispatchPriority priority);
 
         /// <summary>
         /// Invokes an action on the UI thread and returns a Task that completes when done.

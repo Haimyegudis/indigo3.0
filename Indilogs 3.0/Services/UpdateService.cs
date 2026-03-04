@@ -22,10 +22,12 @@ namespace IndiLogs_3._0.Services
         private const string ExePattern = "IndiLogs3.0_*.exe";
 
         private readonly Interfaces.IDialogService? _dialogService;
+        private readonly Interfaces.IDispatcher? _dispatcher;
 
-        public UpdateService(Interfaces.IDialogService? dialogService = null)
+        public UpdateService(Interfaces.IDialogService? dialogService = null, Interfaces.IDispatcher? dispatcher = null)
         {
             _dialogService = dialogService;
+            _dispatcher = dispatcher;
         }
 
         static UpdateService()
@@ -118,7 +120,7 @@ namespace IndiLogs_3._0.Services
                     UpdateLogger.Log($"[UPDATE AVAILABLE] New version: {serverVersion}");
 
                     // Show dialog on UI thread
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    await (_dispatcher?.InvokeAsync(() =>
                     {
                         var result = _dialogService != null
                             ? _dialogService.ShowConfirm(
@@ -133,7 +135,7 @@ namespace IndiLogs_3._0.Services
                         {
                             DownloadAndInstallUpdate(serverVersion, serverVersionText);
                         }
-                    });
+                    }) ?? Task.CompletedTask);
                 }
                 else
                 {
@@ -182,7 +184,7 @@ namespace IndiLogs_3._0.Services
                 if (!VerifyAuthenticode(tempExePath))
                 {
                     UpdateLogger.Log("[AUTO-UPDATE] BLOCKED: Update binary has no valid Authenticode signature. Aborting update.");
-                    try { File.Delete(tempExePath); } catch { }
+                    try { File.Delete(tempExePath); } catch (Exception ex) { AppLogger.Warn($"Failed to delete temp update file: {ex.Message}"); }
                     return;
                 }
 
@@ -207,7 +209,7 @@ namespace IndiLogs_3._0.Services
                 };
                 Process.Start(startInfo);
 
-                Application.Current.Dispatcher.BeginInvoke(() =>
+                _dispatcher?.Post(() =>
                 {
                     Application.Current.Shutdown();
                 });

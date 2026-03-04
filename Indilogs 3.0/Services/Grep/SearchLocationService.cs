@@ -107,7 +107,7 @@ namespace IndiLogs_3._0.Services.Grep
                 if (File.Exists(LocationsFile))
                 {
                     var json = File.ReadAllText(LocationsFile);
-                    _locations = JsonConvert.DeserializeObject<List<SearchLocation>>(json) ?? new List<SearchLocation>();
+                    _locations = JsonConvert.DeserializeObject<List<SearchLocation>>(json, AppConstants.SafeJsonSettings) ?? new List<SearchLocation>();
                 }
             }
             catch (Exception ex)
