@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -33,7 +32,7 @@ namespace IndiLogs_3._0.Controls
         };
 
         /// <summary>Persistence key = plugin name or file extension → column settings.</summary>
-        private string _currentPluginKey;
+        private string? _currentPluginKey;
 
         private static readonly string SettingsDir =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -49,7 +48,7 @@ namespace IndiLogs_3._0.Controls
         }
 
         // ── Double-click → open details window ──
-        private void LogGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        private void LogGrid_MouseDoubleClick(object? sender, MouseButtonEventArgs e)
         {
             if (LogGrid.SelectedItem is LogEntry log)
             {
@@ -61,7 +60,7 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+        private void OnDataContextChanged(object? sender, DependencyPropertyChangedEventArgs e)
         {
             if (e.OldValue is DifferentLogsViewModel oldVm)
                 oldVm.PropertyChanged -= OnVmPropertyChanged;
@@ -74,9 +73,9 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private void OnVmPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            var vm = (DifferentLogsViewModel)sender;
+            if (sender is not DifferentLogsViewModel vm) return;
 
             if (e.PropertyName == nameof(DifferentLogsViewModel.Columns))
             {
@@ -105,7 +104,7 @@ namespace IndiLogs_3._0.Controls
 
         // ── Column rebuild ──────────────────────────────────────────
 
-        private void RebuildColumns(IReadOnlyList<PluginColumnDef> columns)
+        private void RebuildColumns(IReadOnlyList<PluginColumnDef>? columns)
         {
             LogGrid.Columns.Clear();
             LogGrid.ColumnReordered -= LogGrid_ColumnReordered;
@@ -202,7 +201,7 @@ namespace IndiLogs_3._0.Controls
             }));
         }
 
-        private void LogGrid_ColumnReordered(object sender, DataGridColumnEventArgs e)
+        private void LogGrid_ColumnReordered(object? sender, DataGridColumnEventArgs e)
         {
             SaveColumnSettings();
         }
@@ -230,7 +229,7 @@ namespace IndiLogs_3._0.Controls
                 var capturedHeader = header;
                 item.Click += (s, e) =>
                 {
-                    capturedCol.Visibility = ((MenuItem)s).IsChecked ? Visibility.Visible : Visibility.Collapsed;
+                    capturedCol.Visibility = ((MenuItem)s!).IsChecked ? Visibility.Visible : Visibility.Collapsed;
                     SaveColumnSettings();
                 };
 
@@ -260,7 +259,7 @@ namespace IndiLogs_3._0.Controls
 
         // ── Column persistence ──────────────────────────────────────
 
-        private string DerivePluginKey(DifferentLogsViewModel vm)
+        private string? DerivePluginKey(DifferentLogsViewModel? vm)
         {
             // Use the plugin name from StatusText (e.g., "30 entries  —  plugin: JSON Test Log Plugin")
             if (!string.IsNullOrEmpty(vm?.StatusText))
@@ -399,9 +398,9 @@ namespace IndiLogs_3._0.Controls
         // ── Settings model ──────────────────────────────────────────
         private class DiffColumnSettings
         {
-            public Dictionary<string, double> ColumnWidths { get; set; }
-            public Dictionary<string, int> ColumnOrders { get; set; }
-            public Dictionary<string, bool> ColumnVisibility { get; set; }
+            public Dictionary<string, double>? ColumnWidths { get; set; }
+            public Dictionary<string, int>? ColumnOrders { get; set; }
+            public Dictionary<string, bool>? ColumnVisibility { get; set; }
         }
     }
 }

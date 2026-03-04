@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Services;
 using System;
 using System.Collections.Generic;
@@ -16,10 +15,10 @@ namespace IndiLogs_3._0.Views
 {
     public partial class TransposeViewWindow : Window
     {
-        private DataTable _transposeTable;
-        private DataTable _displayTable; // Filtered table for display
-        private List<IndigoStripeEntry> _allEntries;
-        private List<IndigoStripeEntry> _filteredEntries;
+        private DataTable? _transposeTable;
+        private DataTable? _displayTable; // Filtered table for display
+        private List<IndigoStripeEntry> _allEntries = new();
+        private List<IndigoStripeEntry> _filteredEntries = new();
         private HashSet<string> _hiddenProperties;
         private HashSet<int> _availableSpreads;
 
@@ -265,12 +264,12 @@ namespace IndiLogs_3._0.Views
 
         #region Spread Filter
 
-        private void BtnApplySpreadFilter_Click(object sender, RoutedEventArgs e)
+        private void BtnApplySpreadFilter_Click(object? sender, RoutedEventArgs e)
         {
             ApplySpreadFilter();
         }
 
-        private void BtnShowAll_Click(object sender, RoutedEventArgs e)
+        private void BtnShowAll_Click(object? sender, RoutedEventArgs e)
         {
             TxtSpreadFrom.Text = "";
             TxtSpreadTo.Text = "";
@@ -331,7 +330,7 @@ namespace IndiLogs_3._0.Views
 
         #region Row Visibility (Hide Rows)
 
-        private void BtnManageRows_Click(object sender, RoutedEventArgs e)
+        private void BtnManageRows_Click(object? sender, RoutedEventArgs e)
         {
             // Create a simple dialog to select which rows to hide
             var dialog = new Window
@@ -436,7 +435,7 @@ namespace IndiLogs_3._0.Views
 
         #region Export
 
-        private void BtnExportTranspose_Click(object sender, RoutedEventArgs e)
+        private void BtnExportTranspose_Click(object? sender, RoutedEventArgs e)
         {
             if (_transposeTable == null || _transposeTable.Rows.Count == 0)
             {
@@ -511,7 +510,7 @@ namespace IndiLogs_3._0.Views
 
         #endregion
 
-        private void BtnClose_Click(object sender, RoutedEventArgs e)
+        private void BtnClose_Click(object? sender, RoutedEventArgs e)
         {
             Close();
         }

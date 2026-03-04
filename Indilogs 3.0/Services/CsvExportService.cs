@@ -1,4 +1,3 @@
-#nullable disable
 ﻿using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Views;
 using Microsoft.Win32;
@@ -14,9 +13,9 @@ namespace IndiLogs_3._0.Services
 {
     public class CsvExportService : Interfaces.ICsvExportService
     {
-        private readonly Interfaces.IDialogService _dialogService;
+        private readonly Interfaces.IDialogService? _dialogService;
 
-        public CsvExportService(Interfaces.IDialogService dialogService = null)
+        public CsvExportService(Interfaces.IDialogService? dialogService = null)
         {
             _dialogService = dialogService;
         }
@@ -52,7 +51,7 @@ namespace IndiLogs_3._0.Services
             bool IsCancelled { get; }
         }
 
-        public async Task<string> ExportLogsToCsvAsync(IEnumerable<LogEntry> logs, string defaultFileName, ExportPreset preset = null)
+        public async Task<string?> ExportLogsToCsvAsync(IEnumerable<LogEntry> logs, string defaultFileName, ExportPreset? preset = null)
         {
             if (preset != null)
             {
@@ -62,7 +61,7 @@ namespace IndiLogs_3._0.Services
             return await ExportLogsOriginalAsync(logs, defaultFileName);
         }
 
-        private async Task<string> ExportLogsOriginalAsync(IEnumerable<LogEntry> logs, string defaultFileName)
+        private async Task<string?> ExportLogsOriginalAsync(IEnumerable<LogEntry> logs, string defaultFileName)
         {
             SaveFileDialog saveFileDialog = new SaveFileDialog
             {
@@ -85,7 +84,7 @@ namespace IndiLogs_3._0.Services
             {
                 try
                 {
-                    ExportWithForwardFill(logs, filePath, null, progressReporter);
+                    ExportWithForwardFill(logs, filePath, preset: null, progressReporter);
                     progressWindow.Complete(true, $"Saved to:\n{Path.GetFileName(filePath)}");
                 }
                 catch (OperationCanceledException)
@@ -102,7 +101,7 @@ namespace IndiLogs_3._0.Services
             return filePath;
         }
 
-        private async Task<string> ExportLogsWithPresetAsync(IEnumerable<LogEntry> logs, string defaultFileName, ExportPreset preset)
+        private async Task<string?> ExportLogsWithPresetAsync(IEnumerable<LogEntry> logs, string defaultFileName, ExportPreset preset)
         {
             SaveFileDialog saveFileDialog = new SaveFileDialog
             {
@@ -147,7 +146,7 @@ namespace IndiLogs_3._0.Services
         // ===================================================================
 
         // Fast PlcMngr state parsing
-        private static bool TryParsePlcMngrState(string msg, out string stateName)
+        private static bool TryParsePlcMngrState(string msg, out string? stateName)
         {
             stateName = null;
             // CHStep: PlcMngr, STATE_NAME, ...
@@ -195,8 +194,8 @@ namespace IndiLogs_3._0.Services
         }
 
         // Fast CHStep parsing - replaces complex Regex
-        private static bool TryParseCHStep(string msg, out string chName, out string stepMessage, out string stateId,
-            out string chParentName, out string subsysID, out string prevStepNo, out string diffTime, out string subStepNo, out string chObjType)
+        private static bool TryParseCHStep(string msg, out string? chName, out string? stepMessage, out string? stateId,
+            out string? chParentName, out string? subsysID, out string? prevStepNo, out string? diffTime, out string? subStepNo, out string? chObjType)
         {
             chName = stepMessage = stateId = chParentName = subsysID = prevStepNo = diffTime = subStepNo = chObjType = null;
 
@@ -263,8 +262,8 @@ namespace IndiLogs_3._0.Services
         }
 
         // Fast LogStats parsing - replaces multiple Regex
-        private static bool TryParseLogStats(string msg, out string total, out string isReady, out string semTotal,
-            out string semMult, out string lost, out string bufFull, out string maxNum, out string maxCat)
+        private static bool TryParseLogStats(string msg, out string? total, out string? isReady, out string? semTotal,
+            out string? semMult, out string? lost, out string? bufFull, out string? maxNum, out string? maxCat)
         {
             total = isReady = semTotal = semMult = lost = bufFull = maxNum = maxCat = null;
 
@@ -367,7 +366,7 @@ namespace IndiLogs_3._0.Services
         // - Progress reporting every 1%
         // ===================================================================
 
-        private void ExportWithForwardFill(IEnumerable<LogEntry> logs, string filePath, ExportPreset preset, IProgress progress = null)
+        private void ExportWithForwardFill(IEnumerable<LogEntry> logs, string filePath, ExportPreset? preset, IProgress? progress = null)
         {
             progress?.Report(0, "Initializing...", "Preparing data structures");
 

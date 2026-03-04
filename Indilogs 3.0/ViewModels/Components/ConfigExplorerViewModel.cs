@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
@@ -28,13 +27,14 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly MainViewModel _parent;
         private readonly LogSessionViewModel _sessionVM;
         private readonly IDialogService _dialogService;
+        private readonly IViewFactory _viewFactory;
 
         // Configuration file management
         public ObservableCollection<string> ConfigurationFiles { get; set; }
         private Dictionary<string, string> _configFilesPathMap = new Dictionary<string, string>();
 
-        private string _selectedConfigFile;
-        public string SelectedConfigFile
+        private string? _selectedConfigFile;
+        public string? SelectedConfigFile
         {
             get => _selectedConfigFile;
             set
@@ -48,8 +48,8 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private string _configFileContent;
-        public string ConfigFileContent
+        private string? _configFileContent;
+        public string? ConfigFileContent
         {
             get => _configFileContent;
             set
@@ -61,8 +61,8 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private string _filteredConfigContent;
-        public string FilteredConfigContent
+        private string? _filteredConfigContent;
+        public string? FilteredConfigContent
         {
             get => _filteredConfigContent;
             set
@@ -200,7 +200,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private ObservableCollection<DbTreeNode> _allDbTreeNodes = new ObservableCollection<DbTreeNode>();
 
         // Debounce for search
-        private CancellationTokenSource _searchDebounceToken;
+        private CancellationTokenSource? _searchDebounceToken;
         private const int SearchDebounceMs = 300;
 
         private bool _isDbFileSelected;
@@ -225,8 +225,8 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private DataView _csvDataView;
-        public DataView CsvDataView
+        private DataView? _csvDataView;
+        public DataView? CsvDataView
         {
             get => _csvDataView;
             set
@@ -275,11 +275,12 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand RefreshConfigExplorerCommand { get; }
         public ICommand ClearConfigSearchCommand { get; }
 
-        public ConfigExplorerViewModel(MainViewModel parent, LogSessionViewModel sessionVM, IDialogService dialogService)
+        public ConfigExplorerViewModel(MainViewModel parent, LogSessionViewModel sessionVM, IDialogService dialogService, IViewFactory viewFactory)
         {
             _parent = parent;
             _sessionVM = sessionVM;
             _dialogService = dialogService;
+            _viewFactory = viewFactory;
 
             // Initialize collections
             ConfigurationFiles = new ObservableCollection<string>();
@@ -615,7 +616,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 try
                 {
                     var dbBytes = _sessionVM.SelectedSession.DatabaseFiles[node.DatabaseFileName];
-                    var window = new Views.BrowseTableWindow(node.Name, dbBytes);
+                    var window = _viewFactory.Create<Views.BrowseTableWindow>(node.Name, dbBytes);
                     window.Owner = Application.Current.MainWindow;
 
                     // Ensure window opens in front

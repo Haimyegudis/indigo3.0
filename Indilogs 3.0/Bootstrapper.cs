@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Interfaces;
 using IndiLogs_3._0.ViewModels;
@@ -45,8 +44,11 @@ namespace IndiLogs_3._0
 
             Register<IWindowManager>(new WindowManagerAdapter());
 
+            var viewFactory = new ViewFactory();
+            Register<IViewFactory>(viewFactory);
+
             // --- ViewModels ---
-            var mainVM = new MainViewModel(logFileService, coloringService, csvService, defaultConfigService, dialogService);
+            var mainVM = new MainViewModel(logFileService, coloringService, csvService, defaultConfigService, dialogService, viewFactory);
             Register<MainViewModel>(mainVM);
 
             _configured = true;

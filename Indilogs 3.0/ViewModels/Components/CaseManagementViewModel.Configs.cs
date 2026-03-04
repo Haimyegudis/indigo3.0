@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Interfaces;
@@ -21,7 +20,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private void SaveConfig(object obj)
         {
             var existingNames = SavedConfigs.Select(c => c.Name).ToList();
-            var dlg = new Views.SaveConfigWindow(existingNames);
+            var dlg = _viewFactory.Create<Views.SaveConfigWindow>(existingNames);
             if (dlg.ShowDialog() == true)
             {
                 string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IndiLogs3.0", "Configs");
@@ -183,7 +182,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             // Deep clone filter tree so clearing doesn't affect the saved config
             _filterVM.AppFilterRoot = c.AppFilterRoot?.DeepClone();
 
-            Application.Current.Dispatcher.Invoke(() =>
+            Application.Current.Dispatcher.BeginInvoke(() =>
             {
                 if (_filterVM.AppFilterRoot != null && _filterVM.AppFilterRoot.Children.Count > 0)
                     _filterVM.IsAppFilterActive = true;

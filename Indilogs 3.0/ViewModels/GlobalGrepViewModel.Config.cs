@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -189,7 +188,7 @@ namespace IndiLogs_3._0.ViewModels
             StatusMessage = $"Exported {Results.Count:N0} results to JSON.";
         }
 
-        private static string Esc(string s) => s?.Replace("\"", "\"\"") ?? "";
+        private static string Esc(string? s) => s?.Replace("\"", "\"\"") ?? "";
 
         private void ExportReport()
         {
@@ -230,7 +229,7 @@ namespace IndiLogs_3._0.ViewModels
             return parts.Count > 0 ? string.Join($" {SelectedGroupOperator} ", parts) : "";
         }
 
-        private static string FormatTimeRange(DateTime? from, DateTime? to)
+        private static string? FormatTimeRange(DateTime? from, DateTime? to)
         {
             if (!from.HasValue && !to.HasValue) return null;
             string f = from?.ToString("yyyy-MM-dd") ?? "...";

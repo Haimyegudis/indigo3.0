@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Interfaces;
@@ -223,20 +222,17 @@ namespace IndiLogs_3._0.ViewModels.Components
             AppColoringRules = caseFile.AppColoringRules ?? new List<ColoringCondition>();
 
             // Apply colors to all logs (OPTIMIZATION: Only if custom rules exist)
-            await Task.Run(async () =>
+            if (_sessionVM.AllLogsCache != null && MainColoringRules.Any())
             {
-                if (_sessionVM.AllLogsCache != null && MainColoringRules.Any())
-                {
-                    await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllLogsCache, false);
-                    await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllLogsCache, MainColoringRules);
-                }
+                await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllLogsCache, false);
+                await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllLogsCache, MainColoringRules);
+            }
 
-                if (_sessionVM.AllAppLogsCache != null && AppColoringRules.Any())
-                {
-                    await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllAppLogsCache, true);
-                    await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllAppLogsCache, AppColoringRules);
-                }
-            });
+            if (_sessionVM.AllAppLogsCache != null && AppColoringRules.Any())
+            {
+                await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllAppLogsCache, true);
+                await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllAppLogsCache, AppColoringRules);
+            }
 
             // 2. Restore annotations (re-bind to actual log entries)
             LogAnnotations.Clear();
@@ -354,7 +350,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             try
             {
-                var win = new ColoringWindow();
+                var win = _viewFactory.Create<ColoringWindow>();
                 bool isAppTab = _parent.SelectedTabIndex == 1;
                 var currentRulesSource = isAppTab ? AppColoringRules : MainColoringRules;
                 var rulesCopy = currentRulesSource.Select(r => r.Clone()).ToList();
@@ -366,27 +362,24 @@ namespace IndiLogs_3._0.ViewModels.Components
                     _sessionVM.IsBusy = true;
                     _sessionVM.StatusMessage = isAppTab ? "Applying APP Colors..." : "Applying Main Colors...";
 
-                    await Task.Run(async () =>
+                    if (isAppTab)
                     {
-                        if (isAppTab)
+                        AppColoringRules = newRules;
+                        if (_sessionVM.AllAppLogsCache != null)
                         {
-                            AppColoringRules = newRules;
-                            if (_sessionVM.AllAppLogsCache != null)
-                            {
-                                await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllAppLogsCache, true);
-                                await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllAppLogsCache, AppColoringRules);
-                            }
+                            await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllAppLogsCache, true);
+                            await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllAppLogsCache, AppColoringRules);
                         }
-                        else
+                    }
+                    else
+                    {
+                        MainColoringRules = newRules;
+                        if (_sessionVM.AllLogsCache != null)
                         {
-                            MainColoringRules = newRules;
-                            if (_sessionVM.AllLogsCache != null)
-                            {
-                                await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllLogsCache, false);
-                                await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllLogsCache, MainColoringRules);
-                            }
+                            await _coloringService.ApplyDefaultColorsAsync(_sessionVM.AllLogsCache, false);
+                            await _coloringService.ApplyCustomColoringAsync(_sessionVM.AllLogsCache, MainColoringRules);
                         }
-                    });
+                    }
 
                     Application.Current.Dispatcher.BeginInvoke(() =>
                     {
@@ -422,7 +415,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     diffVM.BuildAvailableFields();
 
                 // Create window with dynamic fields from plugin columns
-                var win = new ColoringWindow(diffVM.AvailableFields);
+                var win = _viewFactory.Create<ColoringWindow>(diffVM.AvailableFields);
 
                 // Load existing rules if any
                 var rulesCopy = diffVM.ColoringRules.Select(r => r.Clone()).ToList();
@@ -436,17 +429,13 @@ namespace IndiLogs_3._0.ViewModels.Components
                     _sessionVM.IsBusy = true;
                     _sessionVM.StatusMessage = "Applying Colors to Different Logs...";
 
-                    int coloredCount = 0;
-                    await Task.Run(async () =>
-                    {
-                        // Reset colors first, then apply custom rules
-                        foreach (var entry in diffVM.AllLogEntries)
-                            entry.CustomColor = null;
+                    // Reset colors first, then apply custom rules
+                    foreach (var entry in diffVM.AllLogEntries)
+                        entry.CustomColor = null;
 
-                        await _coloringService.ApplyCustomColoringAsync(diffVM.AllLogEntries, newRules);
+                    await _coloringService.ApplyCustomColoringAsync(diffVM.AllLogEntries, newRules);
 
-                        coloredCount = diffVM.AllLogEntries.Count(e => e.CustomColor.HasValue);
-                    });
+                    int coloredCount = diffVM.AllLogEntries.Count(e => e.CustomColor.HasValue);
 
                     // Re-create the collection on the UI thread so WPF sees the
                     // new RowBackground values via fresh DataGridRow containers.

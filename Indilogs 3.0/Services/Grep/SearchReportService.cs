@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,12 +15,12 @@ namespace IndiLogs_3._0.Services.Grep
     public class SearchReportParams
     {
         public List<string> LocationNames { get; set; } = new List<string>();
-        public string QueryText { get; set; }
-        public string CriteriaSummary { get; set; }
-        public string SearchDuration { get; set; }
-        public string LogTypes { get; set; }
-        public string FileTimeRange { get; set; }
-        public string ResultTimeRange { get; set; }
+        public string QueryText { get; set; } = "";
+        public string CriteriaSummary { get; set; } = "";
+        public string SearchDuration { get; set; } = "";
+        public string LogTypes { get; set; } = "";
+        public string FileTimeRange { get; set; } = "";
+        public string ResultTimeRange { get; set; } = "";
     }
 
     /// <summary>
@@ -56,7 +55,7 @@ namespace IndiLogs_3._0.Services.Grep
             File.WriteAllText(outputPath, html, Encoding.UTF8);
         }
 
-        private static string BuildHtml(SearchReportParams p, List<GrepResult> results, LogStatisticsResult stats)
+        private static string BuildHtml(SearchReportParams p, List<GrepResult>? results, LogStatisticsResult? stats)
         {
             var sb = new StringBuilder(64 * 1024);
             bool hasResults = results != null && results.Count > 0;
@@ -350,7 +349,7 @@ namespace IndiLogs_3._0.Services.Grep
             }
         }
 
-        private static void AppendStatCard(StringBuilder sb, string label, string value, string variant = null)
+        private static void AppendStatCard(StringBuilder sb, string label, string value, string? variant = null)
         {
             string cls = variant == "error" ? "stat-card stat-error" : "stat-card";
             sb.AppendLine($"<div class=\"{cls}\"><div class=\"stat-value\">{value}</div><div class=\"stat-label\">{label}</div></div>");
@@ -395,7 +394,7 @@ namespace IndiLogs_3._0.Services.Grep
             sb.AppendLine($"<tr><td class=\"label\">{Enc(label)}</td><td>{Enc(value)}</td></tr>");
         }
 
-        private static string Enc(string s)
+        private static string Enc(string? s)
         {
             if (string.IsNullOrEmpty(s)) return "";
             return s.Replace("&", "&amp;").Replace("<", "&lt;")

@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Services.Interfaces;
 using System.Windows;
 

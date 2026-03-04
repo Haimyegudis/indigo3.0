@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services.Charts;
 using System;
@@ -43,7 +42,7 @@ namespace IndiLogs_3._0.ViewModels
         // An int would round a 1.7s offset to 1s, causing a visible ~0.7s search error.
         private double _timeSyncOffsetSeconds = 0;
         // Pending sync: stores the log to scroll to when user switches to target tab
-        private LogEntry _pendingSyncLog;
+        private LogEntry? _pendingSyncLog;
         private int _pendingSyncTabIndex = -1;
 
         public double TimeSyncOffsetSeconds

@@ -1,4 +1,3 @@
-#nullable disable
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
@@ -230,7 +229,7 @@ namespace IndiLogs_3._0.ViewModels
             return result;
         }
 
-        private string PromptInput(string title, string prompt, string defaultValue)
+        private string? PromptInput(string title, string prompt, string defaultValue)
         {
             var bgDark = (System.Windows.Media.Brush)Application.Current.FindResource("BgDark");
             var bgCard = (System.Windows.Media.Brush)Application.Current.FindResource("BgCard");
@@ -252,7 +251,7 @@ namespace IndiLogs_3._0.ViewModels
             var btnPanel = new System.Windows.Controls.StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 10, 0, 0) };
             var okBtn = new System.Windows.Controls.Button { Content = "OK", Width = 70, Margin = new Thickness(0, 0, 5, 0), IsDefault = true };
             var cancelBtn = new System.Windows.Controls.Button { Content = "Cancel", Width = 70, IsCancel = true };
-            string result = null;
+            string? result = null;
             okBtn.Click += (s, e) => { result = textBox.Text; dialog.Close(); };
             cancelBtn.Click += (s, e) => dialog.Close();
             btnPanel.Children.Add(okBtn);

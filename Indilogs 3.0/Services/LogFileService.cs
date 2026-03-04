@@ -1,4 +1,3 @@
-#nullable disable
 using Indigo.Infra.ICL.Core.Logging;
 using IndiLogs.PluginAPI;
 using IndiLogs_3._0.Models;
@@ -23,9 +22,9 @@ namespace IndiLogs_3._0.Services
         // Plugin loader — injected via DI; null-safe (no plugins = graceful skip)
         // -----------------------------------------------------------------------
         private readonly IPluginLoader _pluginLoader;
-        private readonly Interfaces.IDialogService _dialogService;
+        private readonly Interfaces.IDialogService? _dialogService;
 
-        public LogFileService(IPluginLoader pluginLoader, Interfaces.IDialogService dialogService = null)
+        public LogFileService(IPluginLoader pluginLoader, Interfaces.IDialogService? dialogService = null)
         {
             _pluginLoader = pluginLoader;
             _dialogService = dialogService;
@@ -82,7 +81,7 @@ namespace IndiLogs_3._0.Services
 
         private readonly Regex _dateStartPattern = new Regex(@"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3,7}", RegexOptions.Compiled, TimeSpan.FromSeconds(2));
 
-        public async Task<LogSessionData> LoadSessionAsync(string[] filePaths, IProgress<(double, string)> progress, TabSelectionConfig tabSelection = null)
+        public async Task<LogSessionData> LoadSessionAsync(string[] filePaths, IProgress<(double, string)> progress, TabSelectionConfig? tabSelection = null)
         {
             return await Task.Run(async () =>
             {

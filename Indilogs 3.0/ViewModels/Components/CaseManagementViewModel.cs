@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
@@ -24,10 +23,11 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly FilterSearchViewModel _filterVM;
         private readonly ILogColoringService _coloringService;
         private readonly IDialogService _dialogService;
+        private readonly IViewFactory _viewFactory;
 
         // Case management
-        private CaseFile _currentCase = null;
-        private string _currentCaseFilePath = null;
+        private CaseFile? _currentCase = null;
+        private string? _currentCaseFilePath = null;
         private bool _isLoadingCase = false;
 
         /// <summary>
@@ -61,12 +61,12 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// </summary>
         public ObservableCollection<SavedConfiguration> SavedConfigs { get; set; }
 
-        private MarkedLogsWindow _markedMainLogsWindow;
-        private MarkedLogsWindow _markedAppLogsWindow;
-        private MarkedLogsWindow _combinedMarkedWindow;
+        private MarkedLogsWindow? _markedMainLogsWindow;
+        private MarkedLogsWindow? _markedAppLogsWindow;
+        private MarkedLogsWindow? _combinedMarkedWindow;
 
-        private SavedConfiguration _selectedConfig;
-        public SavedConfiguration SelectedConfig
+        private SavedConfiguration? _selectedConfig;
+        public SavedConfiguration? SelectedConfig
         {
             get => _selectedConfig;
             set
@@ -119,13 +119,14 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand LoadCaseCommand { get; }
         public ICommand OpenColoringWindowCommand { get; }
 
-        public CaseManagementViewModel(MainViewModel parent, LogSessionViewModel sessionVM, FilterSearchViewModel filterVM, IDialogService dialogService)
+        public CaseManagementViewModel(MainViewModel parent, LogSessionViewModel sessionVM, FilterSearchViewModel filterVM, IDialogService dialogService, IViewFactory viewFactory)
         {
             _parent = parent;
             _sessionVM = sessionVM;
             _filterVM = filterVM;
             _coloringService = new LogColoringService();
             _dialogService = dialogService;
+            _viewFactory = viewFactory;
 
             // Initialize collections
             MarkedLogs = new ObservableCollection<LogEntry>();
@@ -205,7 +206,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             if (log == null) return;
 
             // Prompt user for comment
-            var window = new Views.AnnotationWindow(GetAnnotation(log)?.Content ?? "");
+            var window = _viewFactory.Create<Views.AnnotationWindow>(GetAnnotation(log)?.Content ?? "");
             if (window.ShowDialog() == true)
             {
                 // Save custom color if exists, otherwise use default yellow

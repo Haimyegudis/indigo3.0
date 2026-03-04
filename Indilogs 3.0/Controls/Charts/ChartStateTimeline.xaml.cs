@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,8 +13,8 @@ namespace IndiLogs_3._0.Controls.Charts
 {
     public partial class ChartStateTimeline : UserControl
     {
-        public event Action<int> OnTimelineClicked;
-        public event Action<int, int> OnStateClicked; // start, end indices for state time window
+        public event Action<int>? OnTimelineClicked;
+        public event Action<int, int>? OnStateClicked; // start, end indices for state time window
 
         private List<StateInterval> _states = new List<StateInterval>();
         private int _totalDataLength = 0;
@@ -103,7 +102,7 @@ namespace IndiLogs_3._0.Controls.Charts
             }
         }
 
-        private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
+        private void OnPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
         {
             var canvas = e.Surface.Canvas;
             var info = e.Info;

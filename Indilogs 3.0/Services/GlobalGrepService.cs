@@ -1,4 +1,3 @@
-#nullable disable
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -72,7 +71,7 @@ namespace IndiLogs_3._0.Services
             SearchCriteria criteria,
             IProgress<(int current, int total, string status)> progress,
             CancellationToken cancellationToken,
-            Action<GrepResult> onResult = null)
+            Action<GrepResult>? onResult = null)
         {
             var sessionsList = loadedSessions.ToList();
             int totalSessions = sessionsList.Count;
@@ -80,7 +79,7 @@ namespace IndiLogs_3._0.Services
 
             // If no streaming callback, collect results
             var collectList = onResult == null ? new List<GrepResult>() : null;
-            Action<GrepResult> effectiveCallback = onResult ?? (r => collectList.Add(r));
+            Action<GrepResult> effectiveCallback = onResult ?? (r => collectList!.Add(r));
 
             AppLogger.Info($"[Grep] SearchLoadedSessionsWithCriteria: {totalSessions} session(s), PLC={criteria.SearchPLC}, APP={criteria.SearchAPP}");
 
@@ -507,7 +506,7 @@ namespace IndiLogs_3._0.Services
             IReadOnlyList<SearchLocation> locations,
             IProgress<(int current, int total, string status)> progress,
             CancellationToken cancellationToken,
-            Action<GrepResult> onResult = null)
+            Action<GrepResult>? onResult = null)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
             var activeLocations = locations.Where(l => l.IsActive).ToList();
@@ -561,7 +560,7 @@ namespace IndiLogs_3._0.Services
                 }
             }));
 
-            await Task.WhenAll(tasks);
+            await Task.WhenAll(tasks).ConfigureAwait(false);
 
             var resultList = collectBag?.OrderBy(r => r.Timestamp).ToList() ?? new List<GrepResult>();
             int count = onResult != null ? totalMatches : resultList.Count;

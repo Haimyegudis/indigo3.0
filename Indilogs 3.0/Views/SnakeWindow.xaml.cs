@@ -1,5 +1,4 @@
-#nullable disable
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -18,17 +17,17 @@ namespace IndiLogs_3._0.Views
     public partial class SnakeWindow : Window
     {
         private const int Size = 20; // Cell size
-        private DispatcherTimer _timer;
+        private DispatcherTimer _timer = null!;
 
         // Game variables
-        private List<Point> _snake;
+        private List<Point> _snake = new();
         private Point _food;
         private int _score;
         private bool _isGameOver;
 
         // Smart movement management (to prevent bugs)
         private Point _currentDirection;
-        private Queue<Point> _inputQueue; // Movement instruction queue
+        private Queue<Point> _inputQueue = new(); // Movement instruction queue
 
         // High scores save path
         private string _scoreFile = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "IndiLogs", "snake_scores.json");
@@ -82,7 +81,7 @@ namespace IndiLogs_3._0.Views
         }
 
         // Game loop - runs every X milliseconds
-        private void GameLoop(object sender, EventArgs e)
+        private void GameLoop(object? sender, EventArgs e)
         {
             if (_isGameOver) return;
 
@@ -140,7 +139,7 @@ namespace IndiLogs_3._0.Views
         }
 
         // Using PreviewKeyDown ensures the window receives the key before other controls
-        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        private void Window_PreviewKeyDown(object? sender, KeyEventArgs e)
         {
             if (_isGameOver)
             {
@@ -255,9 +254,9 @@ namespace IndiLogs_3._0.Views
             Overlay.Visibility = Visibility.Visible;
         }
 
-        private void RestartBtn_Click(object sender, RoutedEventArgs e) => StartNewGame();
+        private void RestartBtn_Click(object? sender, RoutedEventArgs e) => StartNewGame();
 
-        private void DifficultySelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void DifficultySelector_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
             // If the game is running and difficulty is changed, restart
             if (_timer != null) StartNewGame();

@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,9 +19,9 @@ namespace IndiLogs_3._0.Controls.Charts
         private static readonly SKTypeface s_consolas = SKTypeface.FromFamilyName("Consolas");
         private static readonly SKTypeface s_consolasBold = SKTypeface.FromFamilyName("Consolas", SKFontStyle.Bold);
 
-        public event Action<int> OnTimeClicked;
-        public event Action<int, int> OnViewRangeChanged;
-        public event Action<int> OnCursorMoved;
+        public event Action<int>? OnTimeClicked;
+        public event Action<int, int>? OnViewRangeChanged;
+        public event Action<int>? OnCursorMoved;
 
         // Support for multiple threads (like INDICHARTSUIT)
         private Dictionary<string, List<ThreadMessageData>> _threadGroups = new Dictionary<string, List<ThreadMessageData>>();
@@ -43,7 +42,7 @@ namespace IndiLogs_3._0.Controls.Charts
         private Point _lastMousePos;
 
         // For X-axis labels
-        public Func<int, string> GetXAxisLabel { get; set; }
+        public Func<int, string>? GetXAxisLabel { get; set; }
 
         // Layout constants - match ChartGraphView for perfect alignment
         private const float ROW_HEIGHT = 24f;
@@ -75,10 +74,10 @@ namespace IndiLogs_3._0.Controls.Charts
             SKColor.Parse("#607D8B"), // Blue Gray
         };
 
-        private SKPaint _borderPaint;
-        private SKPaint _textPaint;
+        private SKPaint? _borderPaint;
+        private SKPaint? _textPaint;
         private SKPaint _cursorPaint = new SKPaint { Color = CursorColor, StrokeWidth = 2, Style = SKPaintStyle.Stroke };
-        private SKPaint _gridPaint;
+        private SKPaint? _gridPaint;
 
         // Cached paints for render-loop (avoid per-frame allocations)
         private readonly SKPaint _centerLinePaint = new SKPaint { StrokeWidth = 1, Style = SKPaintStyle.Stroke };
@@ -92,9 +91,9 @@ namespace IndiLogs_3._0.Controls.Charts
         private readonly SKPaint _axisPaint = new SKPaint { TextSize = 9, IsAntialias = true };
 
         // Event marker support
-        private List<EventMarker> _chartEventMarkers;
-        private SKPaint _eventDotPaint;
-        private SKPaint _eventDotBorderPaint;
+        private List<EventMarker>? _chartEventMarkers;
+        private SKPaint? _eventDotPaint;
+        private SKPaint? _eventDotBorderPaint;
         private const float EVENT_DOT_RADIUS = 5f;
         private int _hoveredEventDotIndex = -1;
         private Point _eventHoverPos;
@@ -192,7 +191,7 @@ namespace IndiLogs_3._0.Controls.Charts
             SkiaCanvas.InvalidateVisual();
         }
 
-        public void SetEventMarkers(List<EventMarker> markers)
+        public void SetEventMarkers(List<EventMarker>? markers)
         {
             _chartEventMarkers = markers;
             SkiaCanvas.InvalidateVisual();
@@ -227,7 +226,7 @@ namespace IndiLogs_3._0.Controls.Charts
             SkiaCanvas.InvalidateVisual();
         }
 
-        private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
+        private void OnPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
         {
             var canvas = e.Surface.Canvas;
             var info = e.Info;
@@ -264,10 +263,10 @@ namespace IndiLogs_3._0.Controls.Charts
                 // Draw thread name label - truncate to fit LEFT_MARGIN
                 string label = threadName;
                 if (label.Length > 7) label = label.Substring(0, 7) + "..";
-                canvas.DrawText(label, 5, rowCenter + 4, _textPaint);
+                canvas.DrawText(label, 5, rowCenter + 4, _textPaint!);
 
                 // Draw horizontal grid line
-                canvas.DrawLine(chartLeft, rowBottom + PADDING / 2, chartRight, rowBottom + PADDING / 2, _gridPaint);
+                canvas.DrawLine(chartLeft, rowBottom + PADDING / 2, chartRight, rowBottom + PADDING / 2, _gridPaint!);
 
                 // Draw horizontal center line for this row
                 _centerLinePaint.Color = threadColor.WithAlpha(80);
@@ -330,8 +329,8 @@ namespace IndiLogs_3._0.Controls.Charts
 
                     float ex = chartLeft + (float)((evt.Index - start) / (double)count * chartWidth);
 
-                    canvas.DrawCircle(ex, eventY, EVENT_DOT_RADIUS, _eventDotPaint);
-                    canvas.DrawCircle(ex, eventY, EVENT_DOT_RADIUS, _eventDotBorderPaint);
+                    canvas.DrawCircle(ex, eventY, EVENT_DOT_RADIUS, _eventDotPaint!);
+                    canvas.DrawCircle(ex, eventY, EVENT_DOT_RADIUS, _eventDotBorderPaint!);
 
                     // Hover detection
                     {
@@ -380,13 +379,13 @@ namespace IndiLogs_3._0.Controls.Charts
             }
 
             // Draw border
-            canvas.DrawRect(new SKRect(chartLeft, 0, chartRight, chartBottom), _borderPaint);
+            canvas.DrawRect(new SKRect(chartLeft, 0, chartRight, chartBottom), _borderPaint!);
         }
 
         /// <summary>
         /// Gets a short label for the message (first character or abbreviated)
         /// </summary>
-        private string GetMessageLabel(string message)
+        private string GetMessageLabel(string? message)
         {
             if (string.IsNullOrEmpty(message)) return "?";
 
@@ -433,7 +432,7 @@ namespace IndiLogs_3._0.Controls.Charts
             float chartWidth = chartRight - chartLeft;
 
             // Draw X-axis line
-            canvas.DrawLine(chartLeft, chartBottom, chartRight, chartBottom, _borderPaint);
+            canvas.DrawLine(chartLeft, chartBottom, chartRight, chartBottom, _borderPaint!);
 
             // Calculate how many labels to show (about 5-7 labels)
             int labelCount = 5;
@@ -448,7 +447,7 @@ namespace IndiLogs_3._0.Controls.Charts
                     float x = chartLeft + (float)((index - start) / (double)count * chartWidth);
 
                     // Draw tick
-                    canvas.DrawLine(x, chartBottom, x, chartBottom + 4, _borderPaint);
+                    canvas.DrawLine(x, chartBottom, x, chartBottom + 4, _borderPaint!);
 
                     // Draw label
                     string label = GetXAxisLabel?.Invoke(index) ?? index.ToString();
@@ -460,7 +459,7 @@ namespace IndiLogs_3._0.Controls.Charts
             }
         }
 
-        private void OnMouseMove(object sender, MouseEventArgs e)
+        private void OnMouseMove(object? sender, MouseEventArgs e)
         {
             if (_threadNames.Count == 0 && !_isDragging) return;
 
@@ -566,7 +565,7 @@ namespace IndiLogs_3._0.Controls.Charts
             }
         }
 
-        private void OnMouseLeave(object sender, MouseEventArgs e)
+        private void OnMouseLeave(object? sender, MouseEventArgs e)
         {
             _hoveredMessageIndex = -1;
             HideTooltip();
@@ -585,7 +584,7 @@ namespace IndiLogs_3._0.Controls.Charts
             MessageTooltip.IsOpen = false;
         }
 
-        private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void OnMouseLeftButtonDown(object? sender, MouseButtonEventArgs e)
         {
             if (_totalDataLength == 0) return;
 
@@ -613,13 +612,13 @@ namespace IndiLogs_3._0.Controls.Charts
             SkiaCanvas.InvalidateVisual();
         }
 
-        private void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        private void OnMouseLeftButtonUp(object? sender, MouseButtonEventArgs e)
         {
             _isDragging = false;
             SkiaCanvas.ReleaseMouseCapture();
         }
 
-        private void OnMouseWheel(object sender, MouseWheelEventArgs e)
+        private void OnMouseWheel(object? sender, MouseWheelEventArgs e)
         {
             if (_totalDataLength == 0) return;
 
@@ -659,7 +658,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
         private class MessageHitArea
         {
-            public ThreadMessageData Message;
+            public ThreadMessageData Message { get; set; } = null!;
             public float X;
             public float Top;
             public float Bottom;

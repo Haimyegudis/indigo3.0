@@ -1,4 +1,3 @@
-#nullable disable
 using System.Linq;
 using System.Windows;
 using IndiLogs_3._0.Models.Grep;
@@ -14,7 +13,9 @@ namespace IndiLogs_3._0.ViewModels
         private bool ShowScheduleDialog(string title, ScheduledSearch schedule)
         {
             var vm = new ScheduleEditorViewModel(schedule, Locations.ToList(), BuildFullCriteria(), _dialogService);
-            var window = new Views.ScheduleEditorWindow { DataContext = vm, Title = title };
+            var window = _viewFactory.Create<Views.ScheduleEditorWindow>();
+            window.DataContext = vm;
+            window.Title = title;
             window.Owner = Application.Current.MainWindow;
             return window.ShowDialog() == true;
         }

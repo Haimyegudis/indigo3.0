@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using System;
 using System.Windows;
@@ -13,7 +12,7 @@ namespace IndiLogs_3._0.Views
         /// <summary>
         /// The resulting configuration. Null if the user cancelled.
         /// </summary>
-        public TabSelectionConfig ResultConfig { get; private set; }
+        public TabSelectionConfig? ResultConfig { get; private set; }
 
         private readonly TabSelectionConfig _preScanConfig;
 
@@ -90,7 +89,7 @@ namespace IndiLogs_3._0.Views
         }
 
         // ─── Window dragging ───
-        private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void TitleBar_MouseLeftButtonDown(object? sender, MouseButtonEventArgs e)
         {
             if (e.ChangedButton == MouseButton.Left)
             {
@@ -98,14 +97,14 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        private void CloseButton_Click(object? sender, RoutedEventArgs e)
         {
             DialogResult = false;
             Close();
         }
 
         // ─── Time filter toggle ───
-        private void ChkTimeFilter_Changed(object sender, RoutedEventArgs e)
+        private void ChkTimeFilter_Changed(object? sender, RoutedEventArgs e)
         {
             if (TimeSegmentsPanel == null) return;
             bool enabled = ChkTimeFilter.IsChecked == true;
@@ -114,14 +113,14 @@ namespace IndiLogs_3._0.Views
         }
 
         // ─── Time segment mouse scroll ───
-        private void TimeSegment_MouseWheel(object sender, MouseWheelEventArgs e)
+        private void TimeSegment_MouseWheel(object? sender, MouseWheelEventArgs e)
         {
             if (ChkTimeFilter.IsChecked != true) return;
             var border = sender as Border;
             if (border?.Tag == null) return;
 
             int delta = e.Delta > 0 ? 1 : -1;
-            string tag = border.Tag.ToString();
+            string? tag = border.Tag.ToString();
 
             switch (tag)
             {
@@ -148,21 +147,21 @@ namespace IndiLogs_3._0.Views
         }
 
         // ─── Time segment hover glow ───
-        private void TimeSegment_MouseEnter(object sender, MouseEventArgs e)
+        private void TimeSegment_MouseEnter(object? sender, MouseEventArgs e)
         {
             if (sender is Border b && ChkTimeFilter.IsChecked == true)
                 b.BorderBrush = (Brush)FindResource("PrimaryColor");
         }
 
-        private void TimeSegment_MouseLeave(object sender, MouseEventArgs e)
+        private void TimeSegment_MouseLeave(object? sender, MouseEventArgs e)
         {
             if (sender is Border b)
                 b.BorderBrush = Brushes.Transparent;
         }
 
         // ─── Select All / Deselect All ───
-        private void SelectAll_Click(object sender, RoutedEventArgs e) => SetAllCheckboxes(true);
-        private void DeselectAll_Click(object sender, RoutedEventArgs e) => SetAllCheckboxes(false);
+        private void SelectAll_Click(object? sender, RoutedEventArgs e) => SetAllCheckboxes(true);
+        private void DeselectAll_Click(object? sender, RoutedEventArgs e) => SetAllCheckboxes(false);
 
         private void SetAllCheckboxes(bool isChecked)
         {
@@ -174,7 +173,7 @@ namespace IndiLogs_3._0.Views
         }
 
         // ─── OK / Cancel ───
-        private void OkButton_Click(object sender, RoutedEventArgs e)
+        private void OkButton_Click(object? sender, RoutedEventArgs e)
         {
             ResultConfig = new TabSelectionConfig
             {
@@ -242,7 +241,7 @@ namespace IndiLogs_3._0.Views
             return null;
         }
 
-        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        private void CancelButton_Click(object? sender, RoutedEventArgs e)
         {
             DialogResult = false;
             Close();

@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.ViewModels;
 using System.Windows;
 
@@ -12,7 +11,7 @@ namespace IndiLogs_3._0.Views
             Loaded += ExportConfigurationWindow_Loaded;
         }
 
-        private void ExportConfigurationWindow_Loaded(object sender, RoutedEventArgs e)
+        private void ExportConfigurationWindow_Loaded(object? sender, RoutedEventArgs e)
         {
             // Wire up the CloseWindow action for In-Memory transfer
             if (DataContext is ExportConfigurationViewModel vm)

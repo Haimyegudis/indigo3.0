@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -25,7 +24,7 @@ namespace IndiLogs_3._0.Services
             if (string.IsNullOrEmpty(content))
                 return entries;
 
-            string currentPath = null;
+            string? currentPath = null;
             var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
             foreach (var rawLine in lines)
@@ -84,7 +83,7 @@ namespace IndiLogs_3._0.Services
         /// Path pattern: ...\Indigo\Unicorn\{Mode}\{Station}\{Topic}\{Index}
         /// Returns (topic, station, index) or (null, null, null) if no match.
         /// </summary>
-        public static (string Topic, string Station, string Index) ExtractTopicInfo(string path)
+        public static (string? Topic, string? Station, string? Index) ExtractTopicInfo(string path)
         {
             if (string.IsNullOrEmpty(path))
                 return (null, null, null);
@@ -121,15 +120,15 @@ namespace IndiLogs_3._0.Services
                 parsedFiles[kvp.Key] = ParseRegContent(kvp.Value);
             }
 
-            parsedFiles.TryGetValue("saved", out var savedEntries);
-            parsedFiles.TryGetValue("default", out var defaultEntries);
-            parsedFiles.TryGetValue("minimum", out var minimumEntries);
-            parsedFiles.TryGetValue("maximum", out var maximumEntries);
+            parsedFiles.TryGetValue("saved", out var savedEntriesRaw);
+            parsedFiles.TryGetValue("default", out var defaultEntriesRaw);
+            parsedFiles.TryGetValue("minimum", out var minimumEntriesRaw);
+            parsedFiles.TryGetValue("maximum", out var maximumEntriesRaw);
 
-            savedEntries = savedEntries ?? new Dictionary<(string Path, string Key), string>();
-            defaultEntries = defaultEntries ?? new Dictionary<(string Path, string Key), string>();
-            minimumEntries = minimumEntries ?? new Dictionary<(string Path, string Key), string>();
-            maximumEntries = maximumEntries ?? new Dictionary<(string Path, string Key), string>();
+            var savedEntries = savedEntriesRaw ?? new Dictionary<(string Path, string Key), string>();
+            var defaultEntries = defaultEntriesRaw ?? new Dictionary<(string Path, string Key), string>();
+            var minimumEntries = minimumEntriesRaw ?? new Dictionary<(string Path, string Key), string>();
+            var maximumEntries = maximumEntriesRaw ?? new Dictionary<(string Path, string Key), string>();
 
             // Collect all unique (path, key) pairs from all files
             var allKeys = new HashSet<(string Path, string Key)>();
@@ -156,10 +155,10 @@ namespace IndiLogs_3._0.Services
                 if (!topicGroups[topic].ContainsKey(stationIndex))
                     topicGroups[topic][stationIndex] = new List<SystabEntry>();
 
-                savedEntries.TryGetValue((path, paramKey), out string savedVal);
-                defaultEntries.TryGetValue((path, paramKey), out string defaultVal);
-                minimumEntries.TryGetValue((path, paramKey), out string minVal);
-                maximumEntries.TryGetValue((path, paramKey), out string maxVal);
+                savedEntries.TryGetValue((path, paramKey), out string? savedVal);
+                defaultEntries.TryGetValue((path, paramKey), out string? defaultVal);
+                minimumEntries.TryGetValue((path, paramKey), out string? minVal);
+                maximumEntries.TryGetValue((path, paramKey), out string? maxVal);
 
                 var entry = new SystabEntry
                 {

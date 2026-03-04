@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,14 +11,14 @@ namespace IndiLogs_3._0.Views
     /// <summary>
     /// Dialog that shows the contents of a ZIP archive and lets the user pick a file to open.
     /// Returns the selected entry name via <see cref="SelectedEntryName"/>.
-    /// If the user clicks "Browse Files…", <see cref="BrowseExternalRequested"/> is set to true.
+    /// If the user clicks "Browse Files...", <see cref="BrowseExternalRequested"/> is set to true.
     /// </summary>
     public partial class ZipBrowserWindow : Window
     {
         private readonly List<string> _allEntries;
 
         /// <summary>The full entry name (path inside ZIP) of the selected file, or null.</summary>
-        public string SelectedEntryName { get; private set; }
+        public string? SelectedEntryName { get; private set; }
 
         /// <summary>If true, the caller should fall back to an OpenFileDialog.</summary>
         public bool BrowseExternalRequested { get; private set; }
@@ -90,22 +89,22 @@ namespace IndiLogs_3._0.Views
                 FileList.SelectedIndex = 0;
         }
 
-        private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        private void SearchBox_TextChanged(object? sender, TextChangedEventArgs e)
         {
             ApplyFilter(SearchBox.Text);
         }
 
-        private void FileList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void FileList_MouseDoubleClick(object? sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             AcceptSelection();
         }
 
-        private void OpenButton_Click(object sender, RoutedEventArgs e)
+        private void OpenButton_Click(object? sender, RoutedEventArgs e)
         {
             AcceptSelection();
         }
 
-        private void BrowseExternalButton_Click(object sender, RoutedEventArgs e)
+        private void BrowseExternalButton_Click(object? sender, RoutedEventArgs e)
         {
             BrowseExternalRequested = true;
             DialogResult = false;

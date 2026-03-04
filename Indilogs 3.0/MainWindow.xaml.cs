@@ -1,5 +1,4 @@
-#nullable disable
-﻿using IndiLogs_3._0.Interfaces;
+using IndiLogs_3._0.Interfaces;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Charts;
@@ -18,7 +17,7 @@ namespace IndiLogs_3._0
 {
     public partial class MainWindow : Window, ITabHost
     {
-        public ObservableCollection<LogEntry> MarkedAppLogs { get; set; }
+        public ObservableCollection<LogEntry>? MarkedAppLogs { get; set; }
         private Point _lastMousePosition;
         private bool _isDragging;
         private Dictionary<string, ScrollViewer> _scrollViewerCache = new Dictionary<string, ScrollViewer>();
@@ -50,8 +49,8 @@ namespace IndiLogs_3._0
         // Drag-to-detach support
         private Point _tabDragStartPoint;
         private bool _isTabDragging;
-        private TabItem _draggingTabItem;
-        private System.Windows.Controls.Primitives.Popup _dragPopup;
+        private TabItem? _draggingTabItem;
+        private System.Windows.Controls.Primitives.Popup? _dragPopup;
 
         public MainWindow()
         {
@@ -122,7 +121,7 @@ namespace IndiLogs_3._0
         //  Drag-to-Detach Tab Handlers
         // ============================================
 
-        private void MainTabs_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void MainTabs_PreviewMouseLeftButtonDown(object? sender, MouseButtonEventArgs e)
         {
             // Only start drag if clicking on a TabItem header area
             var tabItem = FindTabItemFromPoint(e);
@@ -134,7 +133,7 @@ namespace IndiLogs_3._0
             _isTabDragging = false;
         }
 
-        private void MainTabs_PreviewMouseMove(object sender, MouseEventArgs e)
+        private void MainTabs_PreviewMouseMove(object? sender, MouseEventArgs e)
         {
             if (_draggingTabItem == null || e.LeftButton != MouseButtonState.Pressed)
             {
@@ -179,7 +178,7 @@ namespace IndiLogs_3._0
             }
         }
 
-        private void MainTabs_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        private void MainTabs_PreviewMouseLeftButtonUp(object? sender, MouseButtonEventArgs e)
         {
             CleanupDrag();
         }
@@ -241,10 +240,10 @@ namespace IndiLogs_3._0
             }
         }
 
-        private TabItem FindTabItemFromPoint(MouseButtonEventArgs e)
+        private TabItem? FindTabItemFromPoint(MouseButtonEventArgs e)
         {
             // Walk up the visual tree from the click source to find a TabItem
-            DependencyObject source = e.OriginalSource as DependencyObject;
+            DependencyObject? source = e.OriginalSource as DependencyObject;
             while (source != null && !(source is TabItem))
             {
                 // Stop if we've gone past the tab header into content
@@ -266,7 +265,7 @@ namespace IndiLogs_3._0
         /// <summary>
         /// "+" button click: builds context menu with skipped components and shows it.
         /// </summary>
-        private void AddBackButton_Click(object sender, RoutedEventArgs e)
+        private void AddBackButton_Click(object? sender, RoutedEventArgs e)
         {
             if (DataContext is IndiLogs_3._0.ViewModels.MainViewModel vm)
             {
@@ -296,7 +295,7 @@ namespace IndiLogs_3._0
         /// <summary>
         /// Detach button click handler (called from tab header buttons)
         /// </summary>
-        public void DetachTab_Click(object sender, RoutedEventArgs e)
+        public void DetachTab_Click(object? sender, RoutedEventArgs e)
         {
             // Find the TabItem that contains this button
             if (sender is Button button)
@@ -310,7 +309,7 @@ namespace IndiLogs_3._0
             }
         }
 
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
             if (DataContext is MainViewModel vm)
             {
@@ -359,7 +358,7 @@ namespace IndiLogs_3._0
 
         }
 
-        private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             // Sync column widths with ViewModel panel visibility
             if (e.PropertyName == nameof(MainViewModel.IsLeftPanelVisible))
@@ -428,7 +427,7 @@ namespace IndiLogs_3._0
             }
         }
 
-        private void Window_Drop(object sender, DragEventArgs e)
+        private void Window_Drop(object? sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
@@ -441,7 +440,7 @@ namespace IndiLogs_3._0
         /// Finds the DataGrid containing a specific log entry, searching both
         /// local (attached) tabs and detached floating windows.
         /// </summary>
-        private DataGrid FindGridForLog(LogEntry log)
+        private DataGrid? FindGridForLog(LogEntry log)
         {
             if (log == null) return null;
 
@@ -796,7 +795,7 @@ namespace IndiLogs_3._0
             }
         }
 
-        public void DataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+        public void DataGrid_LoadingRow(object? sender, DataGridRowEventArgs e)
         {
             if (e.Row.Item is LogEntry log)
             {
@@ -808,7 +807,7 @@ namespace IndiLogs_3._0
             }
         }
 
-        private void DataGrid_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs e)
+        private void DataGrid_RequestBringIntoView(object? sender, RequestBringIntoViewEventArgs e)
         {
             // If this event wasn't triggered by our code (MapsToLogRow), suppress it.
             // This stops the DataGrid from jumping to the end of the line when clicking a long message.
@@ -819,7 +818,7 @@ namespace IndiLogs_3._0
         }
 
         // Additional handler for Cells and Rows - more aggressive prevention
-        private void DataGrid_Cell_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs e)
+        private void DataGrid_Cell_RequestBringIntoView(object? sender, RequestBringIntoViewEventArgs e)
         {
             // ALWAYS suppress RequestBringIntoView from cells and rows unless it's our code
             if (!_isProgrammaticScroll)
@@ -829,7 +828,7 @@ namespace IndiLogs_3._0
         }
 
         // Prevent horizontal scroll on cell click
-        private void DataGrid_Cell_MouseDown(object sender, MouseButtonEventArgs e)
+        private void DataGrid_Cell_MouseDown(object? sender, MouseButtonEventArgs e)
         {
             // When user clicks a cell, prevent auto-scrolling by keeping focus on the row, not cell
             if (sender is DataGridCell cell)
@@ -851,7 +850,7 @@ namespace IndiLogs_3._0
         }
 
         // Helper to find parent in visual tree
-        private T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+        private T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
         {
             var parentObject = VisualTreeHelper.GetParent(child);
             if (parentObject == null) return null;
@@ -863,7 +862,7 @@ namespace IndiLogs_3._0
         private double _lastUserHorizontalOffset = 0;
         private bool _isUserScrolling = false;
 
-        public void DataGrid_Loaded(object sender, RoutedEventArgs e)
+        public void DataGrid_Loaded(object? sender, RoutedEventArgs e)
         {
             if (sender is DataGrid grid)
             {
@@ -953,7 +952,7 @@ namespace IndiLogs_3._0
         }
 
         // Helper to find child in visual tree
-        private T FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        private T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
         {
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
             {
@@ -970,7 +969,7 @@ namespace IndiLogs_3._0
 
 
         // --- Copy Logic ---
-        public void MainLogsGrid_PreviewKeyDown(object sender, KeyEventArgs e)
+        public void MainLogsGrid_PreviewKeyDown(object? sender, KeyEventArgs e)
         {
             if (e.Key == Key.C && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
@@ -1007,12 +1006,12 @@ namespace IndiLogs_3._0
             catch (Exception ex) { AppLogger.Error("CopySelectedLogsToClipboard failed", ex); }
         }
 
-        private void SearchTextBox_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        private void SearchTextBox_IsVisibleChanged(object? sender, DependencyPropertyChangedEventArgs e)
         {
             if (sender is TextBox tb && tb.Visibility == Visibility.Visible) { tb.Focus(); tb.SelectAll(); }
         }
 
-        private void TreeViewItem_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        private void TreeViewItem_PreviewMouseRightButtonDown(object? sender, MouseButtonEventArgs e)
         {
             TreeViewItem treeViewItem = VisualUpwardSearch(e.OriginalSource as DependencyObject);
             if (treeViewItem != null) { treeViewItem.Focus(); e.Handled = true; }
@@ -1024,7 +1023,7 @@ namespace IndiLogs_3._0
             return source as TreeViewItem;
         }
 
-        public void AppLogsGrid_Sorting(object sender, DataGridSortingEventArgs e)
+        public void AppLogsGrid_Sorting(object? sender, DataGridSortingEventArgs e)
         {
             e.Handled = true;
             if (DataContext is MainViewModel vm)
@@ -1041,7 +1040,7 @@ namespace IndiLogs_3._0
 
         private ScrollViewer GetScreenshotScrollViewer() => this.FindName("ScreenshotScrollViewer") as ScrollViewer;
 
-        private void OnScreenshotMouseWheel(object sender, MouseWheelEventArgs e)
+        private void OnScreenshotMouseWheel(object? sender, MouseWheelEventArgs e)
         {
             if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control && DataContext is MainViewModel vm)
             {
@@ -1052,7 +1051,7 @@ namespace IndiLogs_3._0
             }
         }
 
-        private void OnImageMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void OnImageMouseLeftButtonDown(object? sender, MouseButtonEventArgs e)
         {
             var scrollViewer = GetScreenshotScrollViewer();
             if (scrollViewer == null) return;
@@ -1067,7 +1066,7 @@ namespace IndiLogs_3._0
             scrollViewer.Cursor = Cursors.SizeAll;
         }
 
-        private void OnImageMouseMove(object sender, MouseEventArgs e)
+        private void OnImageMouseMove(object? sender, MouseEventArgs e)
         {
             if (!_isDragging) return;
             var scrollViewer = GetScreenshotScrollViewer();
@@ -1084,7 +1083,7 @@ namespace IndiLogs_3._0
             _lastMousePosition = currentPos;
         }
 
-        private void OnImageMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        private void OnImageMouseLeftButtonUp(object? sender, MouseButtonEventArgs e)
         {
             var scrollViewer = GetScreenshotScrollViewer();
             if (scrollViewer == null) return;
@@ -1097,7 +1096,7 @@ namespace IndiLogs_3._0
             scrollViewer.PanningMode = PanningMode.Both;
         }
 
-        private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void TabControl_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
             if (sender is TabControl tabControl && e.Source == tabControl)
             {
@@ -1160,10 +1159,10 @@ namespace IndiLogs_3._0
                 }
             }
         }
-        private void GraphsView_Loaded(object sender, RoutedEventArgs e) { }
-        private void Button_Click(object sender, RoutedEventArgs e) { }
+        private void GraphsView_Loaded(object? sender, RoutedEventArgs e) { }
+        private void Button_Click(object? sender, RoutedEventArgs e) { }
 
-        private void SystabTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        private void SystabTree_SelectedItemChanged(object? sender, RoutedPropertyChangedEventArgs<object> e)
         {
             var vm = DataContext as ViewModels.MainViewModel;
             if (vm != null && e.NewValue is Models.SystabTopicNode node)
@@ -1174,14 +1173,14 @@ namespace IndiLogs_3._0
 
         // --- Log Details Panel: Auto-hide behavior ---
         // Use ClearValue to remove local overrides so XAML DataTriggers can control visibility
-        private void LogDetailsLabel_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+        private void LogDetailsLabel_MouseEnter(object? sender, System.Windows.Input.MouseEventArgs e)
         {
             LogDetailsContent.Visibility = Visibility.Visible;
             LogDetailsAutoHideLabel.Visibility = Visibility.Collapsed;
             LogDetailsContent.MouseLeave += LogDetailsContent_MouseLeave;
         }
 
-        private void LogDetailsContent_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+        private void LogDetailsContent_MouseLeave(object? sender, System.Windows.Input.MouseEventArgs e)
         {
             var vm = DataContext as ViewModels.MainViewModel;
             if (vm != null && !vm.IsLogDetailsPinned)
@@ -1191,7 +1190,7 @@ namespace IndiLogs_3._0
             LogDetailsContent.MouseLeave -= LogDetailsContent_MouseLeave;
         }
 
-        private void LogDetailsClose_Click(object sender, RoutedEventArgs e)
+        private void LogDetailsClose_Click(object? sender, RoutedEventArgs e)
         {
             var vm = DataContext as ViewModels.MainViewModel;
             if (vm != null)
@@ -1211,7 +1210,7 @@ namespace IndiLogs_3._0
             LogDetailsAutoHideLabel.ClearValue(VisibilityProperty);
         }
 
-        private void LogDetailsFieldSelector_Changed(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        private void LogDetailsFieldSelector_Changed(object? sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
             UpdateLogDetailsField();
         }
@@ -1232,7 +1231,7 @@ namespace IndiLogs_3._0
             }
         }
 
-        private void PlcLogsTab_Loaded(object sender, RoutedEventArgs e)
+        private void PlcLogsTab_Loaded(object? sender, RoutedEventArgs e)
         {
             // Wire up log selection to chart sync
             if (sender is Controls.PlcLogsTabControl plcTab && plcTab.LogsGrid?.InnerDataGrid != null)
@@ -1248,7 +1247,7 @@ namespace IndiLogs_3._0
         }
 
         // Panel toggle button handlers - require double-click to prevent accidental toggles
-        private void LeftPanelHideButton_Click(object sender, MouseButtonEventArgs e)
+        private void LeftPanelHideButton_Click(object? sender, MouseButtonEventArgs e)
         {
             // Only respond to double-click to prevent accidental panel closing while scrolling
             if (e.ClickCount != 2) return;
@@ -1260,7 +1259,7 @@ namespace IndiLogs_3._0
             }
         }
 
-        private void LeftPanelShowButton_Click(object sender, MouseButtonEventArgs e)
+        private void LeftPanelShowButton_Click(object? sender, MouseButtonEventArgs e)
         {
             // Only respond to double-click to prevent accidental panel opening while scrolling
             if (e.ClickCount != 2) return;
@@ -1272,7 +1271,7 @@ namespace IndiLogs_3._0
             }
         }
 
-        private void ActiveFilterItem_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void ActiveFilterItem_MouseLeftButtonDown(object? sender, MouseButtonEventArgs e)
         {
             if (e.ClickCount != 2) return;
 
@@ -1282,7 +1281,7 @@ namespace IndiLogs_3._0
             }
         }
 
-        private void RightPanelHideButton_Click(object sender, MouseButtonEventArgs e)
+        private void RightPanelHideButton_Click(object? sender, MouseButtonEventArgs e)
         {
             // Only respond to double-click to prevent accidental panel closing while scrolling
             if (e.ClickCount != 2) return;
@@ -1294,7 +1293,7 @@ namespace IndiLogs_3._0
             }
         }
 
-        private void RightPanelShowButton_Click(object sender, MouseButtonEventArgs e)
+        private void RightPanelShowButton_Click(object? sender, MouseButtonEventArgs e)
         {
             // Only respond to double-click to prevent accidental panel opening while scrolling
             if (e.ClickCount != 2) return;
@@ -1306,7 +1305,7 @@ namespace IndiLogs_3._0
             }
         }
 
-        private void PanelShowButton_MouseEnter(object sender, MouseEventArgs e)
+        private void PanelShowButton_MouseEnter(object? sender, MouseEventArgs e)
         {
             if (sender is Border border)
             {
@@ -1314,7 +1313,7 @@ namespace IndiLogs_3._0
             }
         }
 
-        private void PanelShowButton_MouseLeave(object sender, MouseEventArgs e)
+        private void PanelShowButton_MouseLeave(object? sender, MouseEventArgs e)
         {
             if (sender is Border border)
             {

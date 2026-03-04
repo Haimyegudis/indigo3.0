@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.ViewModels;
@@ -24,7 +23,7 @@ namespace IndiLogs_3._0.Views
             VersionText.Text = $"IndiLogs v{version.Major}.{version.Minor}.{version.Build}.{version.Revision}";
         }
 
-        private void SettingsWindow_Deactivated(object sender, System.EventArgs e)
+        private void SettingsWindow_Deactivated(object? sender, System.EventArgs e)
         {
             // Don't close if a child dialog (like Fonts) is open or already closing
             if (!_isChildDialogOpen && IsLoaded)
@@ -33,26 +32,26 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private void Button_Click(object? sender, RoutedEventArgs e)
         {
             Close();
         }
 
-        private void OpenHelp_Click(object sender, RoutedEventArgs e)
+        private void OpenHelp_Click(object? sender, RoutedEventArgs e)
         {
             _isChildDialogOpen = true;
             WindowManager.OpenWindow(new HelpWindow());
             Close();
         }
 
-        private void OpenFonts_Click(object sender, RoutedEventArgs e)
+        private void OpenFonts_Click(object? sender, RoutedEventArgs e)
         {
             _isChildDialogOpen = true;
             WindowManager.ShowDialog(new FontsWindow { DataContext = this.DataContext });
             _isChildDialogOpen = false;
         }
 
-        private void EditDefaultFilter_Click(object sender, RoutedEventArgs e)
+        private void EditDefaultFilter_Click(object? sender, RoutedEventArgs e)
         {
             var vm = DataContext as MainViewModel;
             if (vm == null) return;
@@ -97,7 +96,7 @@ namespace IndiLogs_3._0.Views
             _isChildDialogOpen = false;
         }
 
-        private void EditDefaultColoring_Click(object sender, RoutedEventArgs e)
+        private void EditDefaultColoring_Click(object? sender, RoutedEventArgs e)
         {
             var vm = DataContext as MainViewModel;
             if (vm == null) return;
@@ -144,7 +143,7 @@ namespace IndiLogs_3._0.Views
             _isChildDialogOpen = false;
         }
 
-        private void ResetDefaults_Click(object sender, RoutedEventArgs e)
+        private void ResetDefaults_Click(object? sender, RoutedEventArgs e)
         {
             var vm = DataContext as MainViewModel;
             if (vm == null) return;

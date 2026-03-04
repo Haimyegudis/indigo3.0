@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Charts;
 using IndiLogs_3._0.ViewModels;
@@ -79,8 +78,8 @@ namespace IndiLogs_3._0.Views
         private readonly SKPaint _cachedTooltipBorderPaint = new SKPaint { Style = SKPaintStyle.Stroke, StrokeWidth = 1, IsAntialias = true };
 
         public StatsWindow(IEnumerable<LogEntry> plcLogs, IEnumerable<LogEntry> appLogs,
-            Action<string, string> applyFilterCallback = null,
-            Action<LogEntry> navigateToLogCallback = null,
+            Action<string, string>? applyFilterCallback = null,
+            Action<LogEntry>? navigateToLogCallback = null,
             bool isDarkMode = true, bool hasBinaryAppLogs = false)
         {
             InitializeComponent();
@@ -220,7 +219,7 @@ namespace IndiLogs_3._0.Views
         // ==========================================
         //  BUTTON HANDLERS
         // ==========================================
-        private void Export_Click(object sender, RoutedEventArgs e)
+        private void Export_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
@@ -242,12 +241,12 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void Close_Click(object sender, RoutedEventArgs e) => Close();
+        private void Close_Click(object? sender, RoutedEventArgs e) => Close();
 
         // ==========================================
         //  BAR CHART (SkiaSharp)
         // ==========================================
-        private void BarChartCanvas_PaintSurface(object sender, SKPaintSurfaceEventArgs e)
+        private void BarChartCanvas_PaintSurface(object? sender, SKPaintSurfaceEventArgs e)
         {
             var canvas = e.Surface.Canvas;
             var info = e.Info;
@@ -316,7 +315,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void BarChartCanvas_MouseMove(object sender, MouseEventArgs e)
+        private void BarChartCanvas_MouseMove(object? sender, MouseEventArgs e)
         {
             var pos = e.GetPosition(BarChartCanvas);
             float dpi = (float)VisualTreeHelper.GetDpi(BarChartCanvas).DpiScaleX;
@@ -324,14 +323,14 @@ namespace IndiLogs_3._0.Views
             BarChartCanvas.InvalidateVisual();
         }
 
-        private void BarChartCanvas_MouseLeave(object sender, MouseEventArgs e)
+        private void BarChartCanvas_MouseLeave(object? sender, MouseEventArgs e)
         {
             _barChartMouse = new SKPoint(-1, -1);
             _hoveredBarIndex = -1;
             BarChartCanvas.InvalidateVisual();
         }
 
-        private void BarChartCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void BarChartCanvas_MouseLeftButtonDown(object? sender, MouseButtonEventArgs e)
         {
             if (_hoveredBarIndex >= 0)
                 _vm.NavigateBarChartItem(_hoveredBarIndex);
@@ -340,7 +339,7 @@ namespace IndiLogs_3._0.Views
         // ==========================================
         //  PIE CHART (SkiaSharp)
         // ==========================================
-        private void PieChartCanvas_PaintSurface(object sender, SKPaintSurfaceEventArgs e)
+        private void PieChartCanvas_PaintSurface(object? sender, SKPaintSurfaceEventArgs e)
         {
             var canvas = e.Surface.Canvas;
             var info = e.Info;
@@ -456,7 +455,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void PieChartCanvas_MouseMove(object sender, MouseEventArgs e)
+        private void PieChartCanvas_MouseMove(object? sender, MouseEventArgs e)
         {
             var pos = e.GetPosition(PieChartCanvas);
             float dpi = (float)VisualTreeHelper.GetDpi(PieChartCanvas).DpiScaleX;
@@ -464,14 +463,14 @@ namespace IndiLogs_3._0.Views
             PieChartCanvas.InvalidateVisual();
         }
 
-        private void PieChartCanvas_MouseLeave(object sender, MouseEventArgs e)
+        private void PieChartCanvas_MouseLeave(object? sender, MouseEventArgs e)
         {
             _pieChartMouse = new SKPoint(-1, -1);
             _hoveredPieIndex = -1;
             PieChartCanvas.InvalidateVisual();
         }
 
-        private void PieChartCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void PieChartCanvas_MouseLeftButtonDown(object? sender, MouseButtonEventArgs e)
         {
             if (_hoveredPieIndex >= 0)
                 _vm.NavigatePieChartItem(_hoveredPieIndex);
@@ -480,7 +479,7 @@ namespace IndiLogs_3._0.Views
         // ==========================================
         //  TIMELINE CHART (SkiaSharp)
         // ==========================================
-        private void TimelineChartCanvas_PaintSurface(object sender, SKPaintSurfaceEventArgs e)
+        private void TimelineChartCanvas_PaintSurface(object? sender, SKPaintSurfaceEventArgs e)
         {
             var canvas = e.Surface.Canvas;
             var info = e.Info;
@@ -699,7 +698,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void TimelineChartCanvas_MouseMove(object sender, MouseEventArgs e)
+        private void TimelineChartCanvas_MouseMove(object? sender, MouseEventArgs e)
         {
             var pos = e.GetPosition(TimelineChartCanvas);
             float dpi = (float)VisualTreeHelper.GetDpi(TimelineChartCanvas).DpiScaleX;
@@ -707,14 +706,14 @@ namespace IndiLogs_3._0.Views
             TimelineChartCanvas.InvalidateVisual();
         }
 
-        private void TimelineChartCanvas_MouseLeave(object sender, MouseEventArgs e)
+        private void TimelineChartCanvas_MouseLeave(object? sender, MouseEventArgs e)
         {
             _timelineMouse = new SKPoint(-1, -1);
             _hoveredTimelineBucket = -1;
             TimelineChartCanvas.InvalidateVisual();
         }
 
-        private void TimelineChartCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
+        private void TimelineChartCanvas_MouseWheel(object? sender, MouseWheelEventArgs e)
         {
             bool isShift = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
             _vm.ZoomTimeline(e.Delta, isShift, _hoveredTimelineBucket);
@@ -722,7 +721,7 @@ namespace IndiLogs_3._0.Views
             TimelineChartCanvas.InvalidateVisual();
         }
 
-        private void TimelineChartCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void TimelineChartCanvas_MouseLeftButtonDown(object? sender, MouseButtonEventArgs e)
         {
             if (_hoveredTimelineBucket >= 0)
                 _vm.NavigateTimelineBucket(_hoveredTimelineBucket);
@@ -771,21 +770,21 @@ namespace IndiLogs_3._0.Views
 
     public class LoadStat
     {
-        public string Name { get; set; }
-        public string FullName { get; set; }
+        public string Name { get; set; } = "";
+        public string FullName { get; set; } = "";
         public int Count { get; set; }
         public double Percentage { get; set; }
-        public string DisplayText { get; set; }
+        public string DisplayText { get; set; } = "";
         public double BarWidth { get; set; }
     }
 
     public class ErrorStat
     {
-        public string Name { get; set; }
-        public string FullName { get; set; }
-        public string Message { get; set; }
+        public string Name { get; set; } = "";
+        public string FullName { get; set; } = "";
+        public string Message { get; set; } = "";
         public int Count { get; set; }
-        public string DisplayText { get; set; }
+        public string DisplayText { get; set; } = "";
         public double BarWidth { get; set; }
     }
 }

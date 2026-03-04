@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -8,7 +7,7 @@ namespace IndiLogs_3._0.Views
 {
     public partial class TimeRangeWindow : Window, INotifyPropertyChanged
     {
-        private FrameworkElement _anchorElement;
+        private FrameworkElement? _anchorElement;
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
 
@@ -40,7 +39,7 @@ namespace IndiLogs_3._0.Views
             set { _logEndTime = value; OnPropertyChanged(); }
         }
 
-        private string _totalDuration;
+        private string _totalDuration = "";
         public string TotalDuration
         {
             get => _totalDuration;
@@ -86,7 +85,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void TimeRangeWindow_Loaded(object sender, RoutedEventArgs e)
+        private void TimeRangeWindow_Loaded(object? sender, RoutedEventArgs e)
         {
             // Position after loaded
             if (_anchorElement != null)
@@ -149,7 +148,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void ApplyButton_Click(object sender, RoutedEventArgs e)
+        private void ApplyButton_Click(object? sender, RoutedEventArgs e)
         {
             if (!ValidateAndBuildDateTime())
                 return;
@@ -158,13 +157,13 @@ namespace IndiLogs_3._0.Views
             Close();
         }
 
-        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        private void CancelButton_Click(object? sender, RoutedEventArgs e)
         {
             DialogResult = false;
             Close();
         }
 
-        private void ClearButton_Click(object sender, RoutedEventArgs e)
+        private void ClearButton_Click(object? sender, RoutedEventArgs e)
         {
             ShouldClear = true;
             DialogResult = true;
@@ -204,8 +203,8 @@ namespace IndiLogs_3._0.Views
             return true;
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string name = null)
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

@@ -1,5 +1,4 @@
-#nullable disable
-﻿using IndiLogs_3._0.Models;
+using IndiLogs_3._0.Models;
 using IndiLogs_3._0.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -14,7 +13,7 @@ namespace IndiLogs_3._0.Views
     {
         public FilterEditorViewModel ViewModel { get; private set; }
         public bool ShouldClearAllFilters { get; private set; }
-        private FrameworkElement _anchorElement;
+        private FrameworkElement? _anchorElement;
 
         public FilterWindow()
         {
@@ -24,10 +23,10 @@ namespace IndiLogs_3._0.Views
             this.Loaded += FilterWindow_Loaded;
         }
 
-        public FilterWindow(IEnumerable<string> availableThreads, IEnumerable<string> availableLoggers)
+        public FilterWindow(IEnumerable<string>? availableThreads, IEnumerable<string>? availableLoggers)
             : this(availableThreads, availableLoggers, null) { }
 
-        public FilterWindow(IEnumerable<string> availableThreads, IEnumerable<string> availableLoggers, IEnumerable<string> customFields)
+        public FilterWindow(IEnumerable<string>? availableThreads, IEnumerable<string>? availableLoggers, IEnumerable<string>? customFields)
         {
             InitializeComponent();
             ViewModel = new FilterEditorViewModel();
@@ -47,7 +46,7 @@ namespace IndiLogs_3._0.Views
             this.Loaded += FilterWindow_Loaded;
         }
 
-        private void FilterWindow_Loaded(object sender, RoutedEventArgs e)
+        private void FilterWindow_Loaded(object? sender, RoutedEventArgs e)
         {
             // Position after loaded
             if (_anchorElement != null)
@@ -110,13 +109,13 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void Apply_Click(object sender, RoutedEventArgs e)
+        private void Apply_Click(object? sender, RoutedEventArgs e)
         {
             DialogResult = true;
             Close();
         }
 
-        private void Clear_Click(object sender, RoutedEventArgs e)
+        private void Clear_Click(object? sender, RoutedEventArgs e)
         {
             // Clear the filter tree and signal to clear all filters
             ViewModel.RootNodes.Clear();
@@ -126,13 +125,13 @@ namespace IndiLogs_3._0.Views
             Close();
         }
 
-        private void Cancel_Click(object sender, RoutedEventArgs e)
+        private void Cancel_Click(object? sender, RoutedEventArgs e)
         {
             DialogResult = false;
             Close();
         }
 
-        private void OperatorTextBlock_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        private void OperatorTextBlock_MouseLeftButtonUp(object? sender, MouseButtonEventArgs e)
         {
             if (sender is TextBlock textBlock && textBlock.ContextMenu != null)
             {

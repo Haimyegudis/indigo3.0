@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -23,13 +22,13 @@ namespace IndiLogs_3._0.Controls.Charts
     public partial class ChartTabControl : UserControl
     {
         // Events for log synchronization
-        public event Action<DateTime> OnChartTimeClicked;
+        public event Action<DateTime>? OnChartTimeClicked;
 
         private ChartDataService _dataService;
         private ChartSyncService _syncService;
         private ObservableCollection<ChartViewModel> _charts = new ObservableCollection<ChartViewModel>();
         private List<StateInterval> _globalStates = new List<StateInterval>();
-        private string[] _timeData;
+        private string[]? _timeData;
 
         private int _viewStartIndex = 0;
         private int _viewEndIndex = 0;
@@ -38,7 +37,7 @@ namespace IndiLogs_3._0.Controls.Charts
         private bool _showStates = true;
 
         // Playback
-        private DispatcherTimer _playbackTimer;
+        private DispatcherTimer _playbackTimer = null!;
         private bool _isPlaying = false;
         private double _playbackSpeed = 1.0;
 
@@ -60,7 +59,7 @@ namespace IndiLogs_3._0.Controls.Charts
         private bool _isSignalPanelVisible = true;
         private bool _isGridLayout = false;
         private bool _isLightTheme = false;
-        private ChartViewModel _selectedChart = null;
+        private ChartViewModel? _selectedChart = null;
 
         public ChartTabControl()
         {
@@ -122,7 +121,7 @@ namespace IndiLogs_3._0.Controls.Charts
             IsVisibleChanged += ChartTabControl_IsVisibleChanged;
         }
 
-        private void ChartTabControl_Loaded(object sender, RoutedEventArgs e)
+        private void ChartTabControl_Loaded(object? sender, RoutedEventArgs e)
         {
             // Re-subscribe to events (may have been removed in Unloaded during tab switch)
             var svc = ChartDataTransferService.Instance;
@@ -140,14 +139,14 @@ namespace IndiLogs_3._0.Controls.Charts
             SyncThemeFromSettings();
         }
 
-        private void ChartTabControl_Unloaded(object sender, RoutedEventArgs e)
+        private void ChartTabControl_Unloaded(object? sender, RoutedEventArgs e)
         {
             _playbackTimer?.Stop();
             ChartDataTransferService.Instance.OnDataReady -= OnInMemoryDataReady;
             ChartDataTransferService.Instance.OnLogTimeSelected -= OnLogTimeSelected;
         }
 
-        private void ChartTabControl_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        private void ChartTabControl_IsVisibleChanged(object? sender, DependencyPropertyChangedEventArgs e)
         {
             // Re-sync theme every time the Charts tab becomes visible
             if (e.NewValue is bool isVisible && isVisible)
@@ -210,15 +209,15 @@ namespace IndiLogs_3._0.Controls.Charts
         public bool HasData => _dataService?.IsLoaded == true || _inMemoryDataLoaded;
 
         private bool _inMemoryDataLoaded = false;
-        private ChartDataPackage _currentDataPackage;
+        private ChartDataPackage? _currentDataPackage;
         private List<ThreadMessageData> _threadMessages = new List<ThreadMessageData>();
         private List<StateData> _chStepStates = new List<StateData>();
         private List<EventMarkerData> _eventMarkers = new List<EventMarkerData>();
         private List<GapRegion> _timeGapRegions = new List<GapRegion>();
 
         // EM Statistics data (parsed once, displayed on demand via signal list double-click)
-        private List<StateData> _emStatisticsStates;
-        private DateTime[] _emTimestamps;
+        private List<StateData>? _emStatisticsStates;
+        private DateTime[]? _emTimestamps;
         private int _emTotalLength;
 
         /// <summary>
@@ -245,7 +244,7 @@ namespace IndiLogs_3._0.Controls.Charts
             }));
         }
 
-        private void RemoveChartButton_Click(object sender, RoutedEventArgs e)
+        private void RemoveChartButton_Click(object? sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.Tag is ChartViewModel chart)
             {
@@ -258,7 +257,7 @@ namespace IndiLogs_3._0.Controls.Charts
             }
         }
 
-        private void ChartResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
+        private void ChartResizeThumb_DragDelta(object? sender, DragDeltaEventArgs e)
         {
             if (sender is Thumb thumb && thumb.Tag is ChartViewModel chart)
             {
@@ -492,7 +491,7 @@ namespace IndiLogs_3._0.Controls.Charts
         // Tracks detached chart windows: ChartViewModel -> Window
         private Dictionary<ChartViewModel, Window> _detachedWindows = new Dictionary<ChartViewModel, Window>();
 
-        private void DetachChartButton_Click(object sender, RoutedEventArgs e)
+        private void DetachChartButton_Click(object? sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.Tag is ChartViewModel chart)
             {
@@ -534,7 +533,7 @@ namespace IndiLogs_3._0.Controls.Charts
             }
 
             // Create the appropriate chart view for the floating window
-            UIElement chartContent = null;
+            UIElement? chartContent = null;
 
             switch (chart.ViewType)
             {
@@ -677,7 +676,7 @@ namespace IndiLogs_3._0.Controls.Charts
             }
         }
 
-        private void ChartBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void ChartBorder_MouseLeftButtonDown(object? sender, MouseButtonEventArgs e)
         {
             if (sender is FrameworkElement element && element.Tag is ChartViewModel chart)
             {

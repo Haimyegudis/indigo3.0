@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs.PluginAPI;
 using IndiLogs_3._0.Services.BuiltInPlugins;
 using IndiLogs_3._0.Services.Interfaces;
@@ -52,10 +51,10 @@ namespace IndiLogs_3._0.Services
         public IReadOnlyList<ILogFilePlugin> Plugins => _plugins.AsReadOnly();
 
         /// <inheritdoc/>
-        public string GetDllPath(ILogFilePlugin plugin)
+        public string? GetDllPath(ILogFilePlugin plugin)
         {
             if (plugin == null) return null;
-            _dllPaths.TryGetValue(plugin, out string path);
+            _dllPaths.TryGetValue(plugin, out string? path);
             return path;
         }
 
@@ -78,9 +77,9 @@ namespace IndiLogs_3._0.Services
             Reload();
         }
 
-        private static Assembly RedirectAlreadyLoadedAssembly(object sender, ResolveEventArgs args)
+        private static Assembly? RedirectAlreadyLoadedAssembly(object? sender, ResolveEventArgs args)
         {
-            string shortName = new AssemblyName(args.Name).Name;
+            string? shortName = new AssemblyName(args.Name).Name;
             return AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(a => a.GetName().Name == shortName);
         }
@@ -161,7 +160,7 @@ namespace IndiLogs_3._0.Services
         private bool VerifyPluginAssembly(string dllPath)
         {
             // Allow unsigned plugins in development via environment variable
-            string allowUnsigned = Environment.GetEnvironmentVariable("INDILOGS_ALLOW_UNSIGNED_PLUGINS");
+            string? allowUnsigned = Environment.GetEnvironmentVariable("INDILOGS_ALLOW_UNSIGNED_PLUGINS");
             if (allowUnsigned == "1")
             {
                 AppLogger.Info($"Dev mode: allowing unsigned plugin {Path.GetFileName(dllPath)}");
@@ -198,7 +197,7 @@ namespace IndiLogs_3._0.Services
                 // Strong name alone is NOT sufficient — any developer can create a strong-named assembly.
                 // Only accept strong-named plugins whose public key token is in the allowed whitelist.
                 var asmName = AssemblyName.GetAssemblyName(dllPath);
-                byte[] publicKeyToken = asmName.GetPublicKeyToken();
+                byte[]? publicKeyToken = asmName.GetPublicKeyToken();
                 if (publicKeyToken != null && publicKeyToken.Length > 0)
                 {
                     string tokenHex = BitConverter.ToString(publicKeyToken).Replace("-", "").ToLowerInvariant();
@@ -233,7 +232,8 @@ namespace IndiLogs_3._0.Services
             {
                 try
                 {
-                    var plugin = (ILogFilePlugin)Activator.CreateInstance(type);
+                    var plugin = (ILogFilePlugin?)Activator.CreateInstance(type);
+                    if (plugin == null) continue;
                     _plugins.Add(plugin);
                     _dllPaths[plugin] = dllPath;
                 }

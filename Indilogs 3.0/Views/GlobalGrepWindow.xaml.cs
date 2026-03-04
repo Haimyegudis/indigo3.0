@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.IO;
 using System.Windows;
@@ -12,9 +11,9 @@ namespace IndiLogs_3._0.Views
     {
         private readonly GlobalGrepViewModel _viewModel;
         private readonly Action<GrepResult> _navigationCallback;
-        private readonly Action<System.Collections.Generic.List<(string FilePath, string SessionName)>> _openAllFilesCallback;
+        private readonly Action<System.Collections.Generic.List<(string FilePath, string SessionName)>>? _openAllFilesCallback;
 
-        public GlobalGrepWindow(GlobalGrepViewModel viewModel, Action<GrepResult> navigationCallback, Action<System.Collections.Generic.List<(string FilePath, string SessionName)>> openAllFilesCallback = null)
+        public GlobalGrepWindow(GlobalGrepViewModel viewModel, Action<GrepResult> navigationCallback, Action<System.Collections.Generic.List<(string FilePath, string SessionName)>>? openAllFilesCallback = null)
         {
             InitializeComponent();
             _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
@@ -74,11 +73,11 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void ResultsGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e) => JumpToSelectedLog();
-        private void JumpToLog_Click(object sender, RoutedEventArgs e) => JumpToSelectedLog();
-        private void OpenAllFiles_Click(object sender, RoutedEventArgs e) => OpenAllFiles();
+        private void ResultsGrid_MouseDoubleClick(object? sender, System.Windows.Input.MouseButtonEventArgs e) => JumpToSelectedLog();
+        private void JumpToLog_Click(object? sender, RoutedEventArgs e) => JumpToSelectedLog();
+        private void OpenAllFiles_Click(object? sender, RoutedEventArgs e) => OpenAllFiles();
 
-        private void HelpButton_Click(object sender, RoutedEventArgs e)
+        private void HelpButton_Click(object? sender, RoutedEventArgs e)
         {
             MessageBox.Show(
                 "HOW TO USE GLOBAL LOG SEARCH\n" +
@@ -152,7 +151,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void FileLink_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void FileLink_Click(object? sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             if (sender is System.Windows.Controls.TextBlock tb && tb.DataContext is GrepResult result)
             {

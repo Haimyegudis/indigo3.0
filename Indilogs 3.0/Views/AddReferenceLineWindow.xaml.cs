@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,7 +10,7 @@ namespace IndiLogs_3._0.Views
 {
     public partial class AddReferenceLineWindow : Window
     {
-        public ReferenceLine ResultLine { get; private set; }
+        public ReferenceLine? ResultLine { get; private set; }
         public bool IsConfirmed { get; private set; }
 
         private double _currentCursorValue;
@@ -29,7 +28,7 @@ namespace IndiLogs_3._0.Views
             ColorCombo.SelectionChanged += ColorCombo_SelectionChanged;
         }
 
-        private void LineType_Changed(object sender, RoutedEventArgs e)
+        private void LineType_Changed(object? sender, RoutedEventArgs e)
         {
             // Guard against calls during InitializeComponent before controls are ready
             if (ValueLabel == null || ValueTextBox == null) return;
@@ -46,7 +45,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void ColorCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ColorCombo_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
             if (ColorCombo.SelectedItem is ComboBoxItem item && item.Tag is string colorHex)
             {
@@ -58,7 +57,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void AddButton_Click(object sender, RoutedEventArgs e)
+        private void AddButton_Click(object? sender, RoutedEventArgs e)
         {
             if (!double.TryParse(ValueTextBox.Text, out double value))
             {
@@ -88,7 +87,7 @@ namespace IndiLogs_3._0.Views
             Close();
         }
 
-        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        private void CancelButton_Click(object? sender, RoutedEventArgs e)
         {
             IsConfirmed = false;
             DialogResult = false;

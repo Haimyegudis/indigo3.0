@@ -1,4 +1,3 @@
-#nullable disable
 /*
  * IoTerminalDataService — IndiLogs 3.0
  * =====================================
@@ -29,9 +28,9 @@ namespace IndiLogs_3._0.Services
 
     public class IoDeviceData
     {
-        public string DeviceName  { get; set; }   // e.g. "BIM[0]", "ECM", "PDC"
-        public string FileName    { get; set; }   // original filename key
-        public string[] Columns   { get; set; }   // non-standard IO columns only
+        public string DeviceName  { get; set; } = "";   // e.g. "BIM[0]", "ECM", "PDC"
+        public string FileName    { get; set; } = "";   // original filename key
+        public string[] Columns   { get; set; } = Array.Empty<string>();   // non-standard IO columns only
         public List<IoDataRow> Rows { get; set; } = new List<IoDataRow>();
     }
 
@@ -39,7 +38,7 @@ namespace IndiLogs_3._0.Services
     {
         public long     RawTime      { get; set; }   // rawTime (Unix ns) — used for sub-ms ordering
         public DateTime Timestamp    { get; set; }   // parsed from Timestamp column
-        public string   MachineState { get; set; }
+        public string   MachineState { get; set; } = "";
         public Dictionary<string, string> Values { get; set; } = new Dictionary<string, string>();
     }
 
@@ -60,7 +59,7 @@ namespace IndiLogs_3._0.Services
         /// Parsing is parallelized for multi-file scenarios.
         /// </summary>
         public List<IoDeviceData> ParseIoFiles(Dictionary<string, string> terminalLogFiles,
-                                                Dictionary<string, byte[]> terminalCsvBytes = null)
+                                                Dictionary<string, byte[]>? terminalCsvBytes = null)
         {
             var devices = new System.Collections.Concurrent.ConcurrentBag<IoDeviceData>();
 
@@ -113,13 +112,13 @@ namespace IndiLogs_3._0.Services
             return devices.OrderBy(d => d.DeviceName).ToList();
         }
 
-        private static IoDeviceData ParseOneCsvFile(string fileName, string csvContent)
+        private static IoDeviceData? ParseOneCsvFile(string fileName, string csvContent)
         {
             if (string.IsNullOrWhiteSpace(csvContent)) return null;
 
             using (var reader = new StringReader(csvContent))
             {
-                string headerLine = reader.ReadLine();
+                string? headerLine = reader.ReadLine();
                 if (string.IsNullOrEmpty(headerLine)) return null;
 
                 string[] headers = SplitCsv(headerLine);
@@ -327,14 +326,14 @@ namespace IndiLogs_3._0.Services
             return -1;
         }
 
-        private static string SafeGet(string[] parts, int idx)
+        private static string? SafeGet(string[] parts, int idx)
         {
             if (idx < 0 || idx >= parts.Length) return null;
             string v = parts[idx].Trim().Trim('"');
             return string.IsNullOrEmpty(v) ? null : v;
         }
 
-        private static long ParseLong(string raw)
+        private static long ParseLong(string? raw)
         {
             if (raw == null) return 0;
             return long.TryParse(raw, out long v) ? v : 0;
@@ -347,7 +346,7 @@ namespace IndiLogs_3._0.Services
             "HH:mm:ss", "H:mm:ss.fff", "H:mm:ss"
         };
 
-        private static DateTime ParseTimestamp(string raw)
+        private static DateTime ParseTimestamp(string? raw)
         {
             if (string.IsNullOrWhiteSpace(raw)) return DateTime.MinValue;
             if (DateTime.TryParseExact(raw.Trim(), _tsFmts,

@@ -1,5 +1,4 @@
-#nullable disable
-﻿using System.Linq;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using IndiLogs_3._0.Models;
@@ -27,7 +26,7 @@ namespace IndiLogs_3._0.Views
             DetailLogGrid.Focus();
         }
 
-        private void OnStateClicked(object sender, TimelineState e)
+        private void OnStateClicked(object? sender, TimelineState e)
         {
             if (DataContext is VisualTimelineViewModel vm)
             {
@@ -35,7 +34,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void OnMarkerClicked(object sender, TimelineMarker e)
+        private void OnMarkerClicked(object? sender, TimelineMarker e)
         {
             if (DataContext is VisualTimelineViewModel vm)
             {

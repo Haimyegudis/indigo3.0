@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0;
 using System;
 using System.Collections.Generic;
@@ -37,9 +36,9 @@ namespace IndiLogs_3._0.Controls
                 ctrl.EnsureMarkedLogsHook();
         }
 
-        public System.Collections.IEnumerable LogsSource
+        public System.Collections.IEnumerable? LogsSource
         {
-            get => (System.Collections.IEnumerable)GetValue(LogsSourceProperty);
+            get => (System.Collections.IEnumerable?)GetValue(LogsSourceProperty);
             set => SetValue(LogsSourceProperty, value);
         }
 
@@ -69,19 +68,19 @@ namespace IndiLogs_3._0.Controls
         /// When set to a non-null list IndiLogs replaces the DataGrid's static
         /// columns with plugin-defined ones.  Set to null to restore defaults.
         /// </summary>
-        public IReadOnlyList<PluginColumnDef> PluginColumns
+        public IReadOnlyList<PluginColumnDef>? PluginColumns
         {
-            get => (IReadOnlyList<PluginColumnDef>)GetValue(PluginColumnsProperty);
+            get => (IReadOnlyList<PluginColumnDef>?)GetValue(PluginColumnsProperty);
             set => SetValue(PluginColumnsProperty, value);
         }
 
         // Snapshot of the original XAML columns taken on first use
-        private List<DataGridColumn> _defaultColumns;
+        private List<DataGridColumn>? _defaultColumns;
 
         private static void OnPluginColumnsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
             => ((PlcLogsGridControl)d).ApplyColumns(e.NewValue as IReadOnlyList<PluginColumnDef>);
 
-        private void ApplyColumns(IReadOnlyList<PluginColumnDef> cols)
+        private void ApplyColumns(IReadOnlyList<PluginColumnDef>? cols)
         {
             // Wait until the DataGrid is actually loaded
             if (!LogsDataGrid.IsLoaded)
@@ -108,7 +107,7 @@ namespace IndiLogs_3._0.Controls
             foreach (var def in cols)
             {
                 Binding binding;
-                string  fmt = null;
+                string? fmt = null;
 
                 switch (def.Field)
                 {
@@ -166,7 +165,7 @@ namespace IndiLogs_3._0.Controls
                 HookColumnResizeHandlers();
             };
 
-            // ✅ FIX: Manual annotation expansion management
+            // FIX: Manual annotation expansion management
             LogsDataGrid.LoadingRow += OnRowLoading;
 
             // Connect heatmap scroll event
@@ -189,14 +188,16 @@ namespace IndiLogs_3._0.Controls
             };
         }
 
-        private void OnViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
+        private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
+            if (sender == null) return;
+
             if (e.PropertyName == "ShowSyncedTimeColumn")
             {
                 var prop = sender.GetType().GetProperty("ShowSyncedTimeColumn");
                 if (prop != null)
                 {
-                    bool show = (bool)prop.GetValue(sender);
+                    bool show = (bool)(prop.GetValue(sender) ?? false);
                     var syncCol = LogsDataGrid.Columns.FirstOrDefault(c => c.Header as string == "Synced Time");
                     if (syncCol != null)
                         syncCol.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
@@ -229,12 +230,12 @@ namespace IndiLogs_3._0.Controls
         }
 
         /// <summary>Redraw heat map when a log is marked or unmarked.</summary>
-        private void OnMarkedLogsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private void OnMarkedLogsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
             HeatmapControl.ScheduleRedraw();
         }
 
-        private INotifyCollectionChanged _hookedMarkedLogs;
+        private INotifyCollectionChanged? _hookedMarkedLogs;
 
         /// <summary>
         /// Ensures the MarkedLogs collection-changed handler is subscribed to the
@@ -286,13 +287,13 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private void Thumb_DragCompleted(object sender, DragCompletedEventArgs e)
+        private void Thumb_DragCompleted(object? sender, DragCompletedEventArgs e)
         {
             // Column resize finished — save settings
             SaveColumnSettings();
         }
 
-        private static T FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
         {
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
             {
@@ -317,8 +318,6 @@ namespace IndiLogs_3._0.Controls
 
         private void OnHeatmapRequestScrollToLog(LogEntry log)
         {
-            if (log == null) return;
-
             // Select and scroll to the log entry
             LogsDataGrid.SelectedItem = log;
             LogsDataGrid.ScrollIntoView(log);
@@ -327,8 +326,8 @@ namespace IndiLogs_3._0.Controls
             LogsDataGrid.Focus();
         }
 
-        // ✅ NEW: Handle annotation expansion manually (FIXED - no duplicate handlers)
-        private void OnRowLoading(object sender, DataGridRowEventArgs e)
+        // NEW: Handle annotation expansion manually (FIXED - no duplicate handlers)
+        private void OnRowLoading(object? sender, DataGridRowEventArgs e)
         {
             if (e.Row.Item is LogEntry log)
             {
@@ -345,7 +344,7 @@ namespace IndiLogs_3._0.Controls
         }
 
         // Separate method to avoid closure issues and duplicates
-        private void Log_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private void Log_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(LogEntry.IsAnnotationExpanded) && sender is LogEntry log)
             {
@@ -362,10 +361,8 @@ namespace IndiLogs_3._0.Controls
         }
 
         // Helper to find the DataGridRow for a specific LogEntry
-        private DataGridRow FindRowForLog(LogEntry log)
+        private DataGridRow? FindRowForLog(LogEntry log)
         {
-            if (log == null) return null;
-
             var itemsSource = LogsDataGrid.ItemsSource as System.Collections.IList;
             if (itemsSource == null) return null;
 
@@ -375,11 +372,9 @@ namespace IndiLogs_3._0.Controls
             return LogsDataGrid.ItemContainerGenerator.ContainerFromIndex(index) as DataGridRow;
         }
 
-        // ✅ NEW: Update row details visibility
+        // NEW: Update row details visibility
         private void UpdateRowDetailsVisibility(DataGridRow row, LogEntry log)
         {
-            if (row == null || log == null) return;
-
             var newVisibility = (log.HasAnnotation && log.IsAnnotationExpanded)
                 ? Visibility.Visible
                 : Visibility.Collapsed;
@@ -395,7 +390,7 @@ namespace IndiLogs_3._0.Controls
             LogsDataGrid.MouseRightButtonUp += DataGrid_MouseRightButtonUp;
         }
 
-        private void DataGrid_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        private void DataGrid_MouseRightButtonUp(object? sender, MouseButtonEventArgs e)
         {
             var depObj = e.OriginalSource as DependencyObject;
 
@@ -426,7 +421,7 @@ namespace IndiLogs_3._0.Controls
 
                 foreach (var column in LogsDataGrid.Columns)
                 {
-                    string headerText = GetColumnHeaderText(column);
+                    string? headerText = GetColumnHeaderText(column);
                     if (!string.IsNullOrEmpty(headerText))
                     {
                         var menuItem = new MenuItem
@@ -446,7 +441,7 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private void ColumnVisibilityMenuItem_Click(object sender, RoutedEventArgs e)
+        private void ColumnVisibilityMenuItem_Click(object? sender, RoutedEventArgs e)
         {
             if (sender is MenuItem menuItem && menuItem.Tag is DataGridColumn column)
             {
@@ -464,7 +459,7 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private void LogsDataGrid_PreviewKeyDown(object sender, KeyEventArgs e)
+        private void LogsDataGrid_PreviewKeyDown(object? sender, KeyEventArgs e)
         {
             var parent = Window.GetWindow(this) as ITabHost;
             parent?.MainLogsGrid_PreviewKeyDown(sender, e);
@@ -475,24 +470,24 @@ namespace IndiLogs_3._0.Controls
                 HeatmapControl.ScheduleRedraw();
         }
 
-        private void LogsDataGrid_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs e)
+        private void LogsDataGrid_RequestBringIntoView(object? sender, RequestBringIntoViewEventArgs e)
         {
             e.Handled = true;
         }
 
-        private void LogsDataGrid_Loaded(object sender, RoutedEventArgs e)
+        private void LogsDataGrid_Loaded(object? sender, RoutedEventArgs e)
         {
             var parent = Window.GetWindow(this) as ITabHost;
             parent?.DataGrid_Loaded(sender, e);
         }
 
-        private void LogsDataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+        private void LogsDataGrid_LoadingRow(object? sender, DataGridRowEventArgs e)
         {
             var parent = Window.GetWindow(this) as ITabHost;
             parent?.DataGrid_LoadingRow(sender, e);
         }
 
-        private void LogsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void LogsDataGrid_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
         }
 
@@ -500,14 +495,14 @@ namespace IndiLogs_3._0.Controls
         // DataGrid column headers live outside the normal visual tree, so Command
         // bindings with RelativeSource AncestorType=DataGrid fail silently.
         // Using Click handlers with manual DataContext resolution works reliably.
-        private void ThreadFilterButton_Click(object sender, RoutedEventArgs e)
+        private void ThreadFilterButton_Click(object? sender, RoutedEventArgs e)
         {
             var vm = DataContext as ViewModels.MainViewModel;
             vm?.OpenThreadFilterCommand?.Execute(sender as FrameworkElement);
             e.Handled = true;
         }
 
-        private void LogsDataGrid_ColumnReordered(object sender, DataGridColumnEventArgs e)
+        private void LogsDataGrid_ColumnReordered(object? sender, DataGridColumnEventArgs e)
         {
             SaveColumnSettings();
         }
@@ -521,7 +516,7 @@ namespace IndiLogs_3._0.Controls
 
                 foreach (var column in LogsDataGrid.Columns)
                 {
-                    string header = GetColumnHeaderText(column);
+                    string? header = GetColumnHeaderText(column);
                     if (!string.IsNullOrEmpty(header))
                     {
                         columnSettings.ColumnWidths[header] = column.ActualWidth;
@@ -539,7 +534,7 @@ namespace IndiLogs_3._0.Controls
                     gridSettings.PlcColumns = columnSettings;
                 }
 
-                Directory.CreateDirectory(Path.GetDirectoryName(SettingsFilePath));
+                Directory.CreateDirectory(Path.GetDirectoryName(SettingsFilePath)!);
                 string json = JsonConvert.SerializeObject(gridSettings, Formatting.Indented);
                 File.WriteAllText(SettingsFilePath, json);
             }
@@ -548,7 +543,7 @@ namespace IndiLogs_3._0.Controls
                 AppLogger.Error("Saving column settings failed", ex);
             }
         }
-        private string GetColumnHeaderText(DataGridColumn column)
+        private string? GetColumnHeaderText(DataGridColumn column)
         {
             if (column.Header == null)
                 return null;
@@ -570,7 +565,7 @@ namespace IndiLogs_3._0.Controls
             }
 
             // For other types, try ToString and extract the last part if it's a path
-            string headerText = column.Header.ToString();
+            string? headerText = column.Header.ToString();
 
             // Skip empty or type name strings
             if (string.IsNullOrEmpty(headerText) || headerText.StartsWith("System."))
@@ -596,7 +591,7 @@ namespace IndiLogs_3._0.Controls
 
                 foreach (var column in LogsDataGrid.Columns)
                 {
-                    string header = GetColumnHeaderText(column);
+                    string? header = GetColumnHeaderText(column);
                     if (!string.IsNullOrEmpty(header))
                     {
                         if (columnSettings.ColumnWidths.ContainsKey(header))
@@ -629,7 +624,8 @@ namespace IndiLogs_3._0.Controls
                 try
                 {
                     string json = File.ReadAllText(SettingsFilePath);
-                    return JsonConvert.DeserializeObject<GridSettings>(json, new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth });
+                    return JsonConvert.DeserializeObject<GridSettings>(json, new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth })
+                        ?? new GridSettings();
                 }
                 catch
                 {

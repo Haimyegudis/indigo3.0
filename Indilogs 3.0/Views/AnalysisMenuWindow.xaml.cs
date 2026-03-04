@@ -1,4 +1,3 @@
-#nullable disable
 using System.Windows;
 
 namespace IndiLogs_3._0.Views
@@ -19,21 +18,21 @@ namespace IndiLogs_3._0.Views
             InitializeComponent();
         }
 
-        private void Failures_Click(object sender, RoutedEventArgs e)
+        private void Failures_Click(object? sender, RoutedEventArgs e)
         {
             SelectedChoice = AnalysisChoice.Failures;
             DialogResult = true;
             Close();
         }
 
-        private void Stats_Click(object sender, RoutedEventArgs e)
+        private void Stats_Click(object? sender, RoutedEventArgs e)
         {
             SelectedChoice = AnalysisChoice.Statistics;
             DialogResult = true;
             Close();
         }
 
-        private void Cancel_Click(object sender, RoutedEventArgs e)
+        private void Cancel_Click(object? sender, RoutedEventArgs e)
         {
             SelectedChoice = AnalysisChoice.None;
             DialogResult = false;

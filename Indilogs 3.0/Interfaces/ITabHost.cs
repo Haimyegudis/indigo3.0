@@ -10,9 +10,9 @@ namespace IndiLogs_3._0.Interfaces
     /// </summary>
     public interface ITabHost
     {
-        void DataGrid_Loaded(object sender, RoutedEventArgs e);
-        void DataGrid_LoadingRow(object sender, DataGridRowEventArgs e);
-        void MainLogsGrid_PreviewKeyDown(object sender, KeyEventArgs e);
-        void AppLogsGrid_Sorting(object sender, DataGridSortingEventArgs e);
+        void DataGrid_Loaded(object? sender, RoutedEventArgs e);
+        void DataGrid_LoadingRow(object? sender, DataGridRowEventArgs e);
+        void MainLogsGrid_PreviewKeyDown(object? sender, KeyEventArgs e);
+        void AppLogsGrid_Sorting(object? sender, DataGridSortingEventArgs e);
     }
 }

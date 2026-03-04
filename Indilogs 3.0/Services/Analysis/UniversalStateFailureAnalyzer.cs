@@ -1,4 +1,3 @@
-#nullable disable
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,7 +33,7 @@ namespace IndiLogs_3._0.Services.Analysis
 
                 if (lastTransition != null)
                 {
-                    StateTransitionHelper.TryParseTransition(lastTransition.Message, out string fromState, out string targetState);
+                    StateTransitionHelper.TryParseTransition(lastTransition.Message, out string? fromState, out string? targetState);
                     if (targetState == null) targetState = "Unknown";
 
                     double duration = (failEvent.Date - lastTransition.Date).TotalSeconds;

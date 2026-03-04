@@ -1,4 +1,3 @@
-#nullable disable
 ﻿using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
@@ -74,7 +73,7 @@ namespace IndiLogs_3._0.Views
             ColorsGrid.ItemsSource = colorList;
         }
 
-        private void ColorButton_Click(object sender, RoutedEventArgs e)
+        private void ColorButton_Click(object? sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.Background is SolidColorBrush brush)
             {
@@ -84,7 +83,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void Cancel_Click(object sender, RoutedEventArgs e)
+        private void Cancel_Click(object? sender, RoutedEventArgs e)
         {
             DialogResult = false;
             Close();

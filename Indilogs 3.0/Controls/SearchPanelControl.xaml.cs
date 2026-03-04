@@ -1,4 +1,3 @@
-#nullable disable
 using System.Windows;
 using System.Windows.Controls;
 
@@ -11,7 +10,7 @@ namespace IndiLogs_3._0.Controls
             InitializeComponent();
         }
 
-        private void SearchTextBox_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        private void SearchTextBox_IsVisibleChanged(object? sender, DependencyPropertyChangedEventArgs e)
         {
             if (SearchTextBox.IsVisible)
             {
@@ -24,7 +23,7 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        private void SearchTextBox_TextChanged(object? sender, TextChangedEventArgs e)
         {
 
         }

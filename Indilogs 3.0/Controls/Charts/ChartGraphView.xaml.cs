@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,12 +22,12 @@ namespace IndiLogs_3._0.Controls.Charts
         private static readonly SKTypeface s_segoeBold = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold);
 
         // Events for synchronization
-        public event Action<int, int> OnViewRangeChanged;
-        public event Action<int> OnCursorMoved;
-        public event Action OnChartClicked;
-        public event Action<int> OnTimeClicked; // For log synchronization
+        public event Action<int, int>? OnViewRangeChanged;
+        public event Action<int>? OnCursorMoved;
+        public event Action? OnChartClicked;
+        public event Action<int>? OnTimeClicked; // For log synchronization
 
-        public Func<int, string> GetXAxisLabel { get; set; }
+        public Func<int, string>? GetXAxisLabel { get; set; }
 
         private bool _isSyncing = false;
         private bool _showStates = true;
@@ -59,32 +58,32 @@ namespace IndiLogs_3._0.Controls.Charts
         private SKColor _accentColor;
 
         // Paints
-        private SKPaint _gridLinePaint;
-        private SKPaint _axisLinePaint;
-        private SKPaint _textPaintLeft;
-        private SKPaint _textPaintRight;
-        private SKPaint _stateTextPaint;
-        private SKPaint _stateFillPaint;
-        private SKPaint _targetLinePaint;
-        private SKPaint _cursorLinePaint;
-        private SKPaint _measureFillPaint;
-        private SKPaint _measureBorderPaint;
+        private SKPaint _gridLinePaint = null!;
+        private SKPaint _axisLinePaint = null!;
+        private SKPaint _textPaintLeft = null!;
+        private SKPaint _textPaintRight = null!;
+        private SKPaint _stateTextPaint = null!;
+        private SKPaint _stateFillPaint = null!;
+        private SKPaint _targetLinePaint = null!;
+        private SKPaint _cursorLinePaint = null!;
+        private SKPaint _measureFillPaint = null!;
+        private SKPaint _measureBorderPaint = null!;
 
         private List<SignalSeries> _seriesList = new List<SignalSeries>();
-        private ObservableCollection<ReferenceLine> _referenceLines;
-        private List<StateInterval> _states;
+        private ObservableCollection<ReferenceLine>? _referenceLines;
+        private List<StateInterval>? _states;
         private List<ThreadMessageData> _threadMessages = new List<ThreadMessageData>();
         private Dictionary<string, SKColor> _threadColorMap = new Dictionary<string, SKColor>(StringComparer.OrdinalIgnoreCase);
         private readonly SKPaint _threadLinePaint = new SKPaint { StrokeWidth = 1.5f, Style = SKPaintStyle.Stroke, IsAntialias = true };
         private readonly SKPaint _threadTrianglePaint = new SKPaint { Style = SKPaintStyle.Fill, IsAntialias = true };
-        private SKPathEffect _threadDashEffect;
+        private SKPathEffect? _threadDashEffect;
         private List<EventMarkerData> _eventMarkers = new List<EventMarkerData>();
-        private List<EventMarker> _chartEventMarkers;
+        private List<EventMarker>? _chartEventMarkers;
         private List<GapRegion> _timeGaps = new List<GapRegion>();
 
         // Event marker paints and rendering
-        private SKPaint _eventDotPaint;
-        private SKPaint _eventDotBorderPaint;
+        private SKPaint _eventDotPaint = null!;
+        private SKPaint _eventDotBorderPaint = null!;
         private const float EVENT_DOT_RADIUS = 5f;
         private int _hoveredEventIndex = -1;
 
@@ -325,7 +324,7 @@ namespace IndiLogs_3._0.Controls.Charts
             SkiaCanvas.InvalidateVisual();
         }
 
-        private void Series_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private void Series_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             // Redraw when series properties change (like IsVisible, IsSmoothed)
             if (e.PropertyName == nameof(SignalSeries.IsVisible) ||
@@ -381,7 +380,7 @@ namespace IndiLogs_3._0.Controls.Charts
             OnChartClicked?.Invoke();
         }
 
-        private void UserControl_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        private void UserControl_PreviewMouseWheel(object? sender, MouseWheelEventArgs e)
         {
             // Handle zoom with mouse wheel - this is PreviewMouseWheel so it fires before ScrollViewer
             if (_totalDataLength == 0) return;
@@ -679,7 +678,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
         public int GetCurrentCursorIndex() => _globalCursorIndex;
 
-        private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
+        private void OnPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
         {
             var canvas = e.Surface.Canvas;
             var info = e.Info;

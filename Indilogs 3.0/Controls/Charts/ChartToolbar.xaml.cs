@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -9,20 +8,20 @@ namespace IndiLogs_3._0.Controls.Charts
 {
     public partial class ChartToolbar : UserControl
     {
-        public event Action<string> OnLoadCsvRequested;
-        public event Action OnPlayRequested;
-        public event Action OnStopRequested;
-        public event Action<double> OnSpeedChanged;
-        public event Action OnAddChartRequested;
-        public event Action OnRemoveChartRequested;
-        public event Action<bool> OnShowStatesChanged;
-        public event Action OnZoomFitRequested;
-        public event Action OnAddReferenceLineRequested;
-        public event Action<bool> OnTogglePanelRequested;
-        public event Action<bool> OnLayoutChanged; // true = grid, false = stack
-        public event Action<bool> OnSmoothChanged;
-        public event Action<int> OnSmoothWindowChanged;
-        public event Action OnExportCsvRequested;
+        public event Action<string>? OnLoadCsvRequested;
+        public event Action? OnPlayRequested;
+        public event Action? OnStopRequested;
+        public event Action<double>? OnSpeedChanged;
+        public event Action? OnAddChartRequested;
+        public event Action? OnRemoveChartRequested;
+        public event Action<bool>? OnShowStatesChanged;
+        public event Action? OnZoomFitRequested;
+        public event Action? OnAddReferenceLineRequested;
+        public event Action<bool>? OnTogglePanelRequested;
+        public event Action<bool>? OnLayoutChanged; // true = grid, false = stack
+        public event Action<bool>? OnSmoothChanged;
+        public event Action<int>? OnSmoothWindowChanged;
+        public event Action? OnExportCsvRequested;
 
         private bool _isPlaying = false;
         private bool _isPanelVisible = true;
@@ -42,7 +41,7 @@ namespace IndiLogs_3._0.Controls.Charts
             }
         }
 
-        private void LoadCsvButton_Click(object sender, RoutedEventArgs e)
+        private void LoadCsvButton_Click(object? sender, RoutedEventArgs e)
         {
             var dialog = new OpenFileDialog
             {
@@ -56,54 +55,54 @@ namespace IndiLogs_3._0.Controls.Charts
             }
         }
 
-        private void PlayButton_Click(object sender, RoutedEventArgs e)
+        private void PlayButton_Click(object? sender, RoutedEventArgs e)
         {
             OnPlayRequested?.Invoke();
         }
 
-        private void StopButton_Click(object sender, RoutedEventArgs e)
+        private void StopButton_Click(object? sender, RoutedEventArgs e)
         {
             OnStopRequested?.Invoke();
         }
 
-        private void SpeedCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void SpeedCombo_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
             if (SpeedCombo.SelectedItem is ComboBoxItem item)
             {
-                string speedText = item.Content.ToString().Replace("x", "");
-                if (double.TryParse(speedText, out double speed))
+                string? speedText = item.Content?.ToString()?.Replace("x", "");
+                if (speedText != null && double.TryParse(speedText, out double speed))
                 {
                     OnSpeedChanged?.Invoke(speed);
                 }
             }
         }
 
-        private void AddChartButton_Click(object sender, RoutedEventArgs e)
+        private void AddChartButton_Click(object? sender, RoutedEventArgs e)
         {
             OnAddChartRequested?.Invoke();
         }
 
-        private void RemoveChartButton_Click(object sender, RoutedEventArgs e)
+        private void RemoveChartButton_Click(object? sender, RoutedEventArgs e)
         {
             OnRemoveChartRequested?.Invoke();
         }
 
-        private void ShowStatesCheckBox_Changed(object sender, RoutedEventArgs e)
+        private void ShowStatesCheckBox_Changed(object? sender, RoutedEventArgs e)
         {
             OnShowStatesChanged?.Invoke(ShowStatesCheckBox.IsChecked == true);
         }
 
-        private void ZoomFitButton_Click(object sender, RoutedEventArgs e)
+        private void ZoomFitButton_Click(object? sender, RoutedEventArgs e)
         {
             OnZoomFitRequested?.Invoke();
         }
 
-        private void AddRefLineButton_Click(object sender, RoutedEventArgs e)
+        private void AddRefLineButton_Click(object? sender, RoutedEventArgs e)
         {
             OnAddReferenceLineRequested?.Invoke();
         }
 
-        private void GridLayoutToggle_Click(object sender, RoutedEventArgs e)
+        private void GridLayoutToggle_Click(object? sender, RoutedEventArgs e)
         {
             if (sender is ToggleButton toggle)
             {
@@ -111,7 +110,7 @@ namespace IndiLogs_3._0.Controls.Charts
             }
         }
 
-        private void TogglePanelButton_Click(object sender, RoutedEventArgs e)
+        private void TogglePanelButton_Click(object? sender, RoutedEventArgs e)
         {
             _isPanelVisible = !_isPanelVisible;
             // \uE90D = DockRight (panel open → click to close), \uE90C = DockLeft (panel closed → click to open)
@@ -119,17 +118,17 @@ namespace IndiLogs_3._0.Controls.Charts
             OnTogglePanelRequested?.Invoke(_isPanelVisible);
         }
 
-        private void ExportCsvButton_Click(object sender, RoutedEventArgs e)
+        private void ExportCsvButton_Click(object? sender, RoutedEventArgs e)
         {
             OnExportCsvRequested?.Invoke();
         }
 
-        private void SmoothCheckBox_Changed(object sender, RoutedEventArgs e)
+        private void SmoothCheckBox_Changed(object? sender, RoutedEventArgs e)
         {
             OnSmoothChanged?.Invoke(SmoothCheckBox.IsChecked == true);
         }
 
-        private void SmoothWindowSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        private void SmoothWindowSlider_ValueChanged(object? sender, RoutedPropertyChangedEventArgs<double> e)
         {
             int windowSize = (int)SmoothWindowSlider.Value;
             // Ensure odd window for symmetric smoothing

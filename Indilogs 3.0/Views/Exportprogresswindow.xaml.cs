@@ -1,4 +1,3 @@
-#nullable disable
 ﻿using System;
 using System.Windows;
 using System.Windows.Threading;
@@ -35,7 +34,7 @@ namespace IndiLogs_3._0.Views
             DetailsText.Text = details;
         }
 
-        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        private void CancelButton_Click(object? sender, RoutedEventArgs e)
         {
             if (_isCompleted)
             {

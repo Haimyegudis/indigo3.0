@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -17,10 +16,10 @@ namespace IndiLogs_3._0.Services
     {
         private static readonly object _lock = new object();
         private static readonly string _logDir;
-        private static string _currentLogFile;
+        private static string? _currentLogFile;
         private static DateTime _currentDate;
-        private static StreamWriter _writer;
-        private static Timer _flushTimer;
+        private static StreamWriter? _writer;
+        private static Timer? _flushTimer;
         private const long MaxLogFileSize = 10 * 1024 * 1024; // 10 MB
         private const int FlushIntervalMs = 500; // Flush every 500ms
 

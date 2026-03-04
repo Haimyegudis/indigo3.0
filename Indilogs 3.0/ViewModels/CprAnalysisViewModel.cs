@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -49,8 +48,8 @@ namespace IndiLogs_3._0.ViewModels
 
         #region Properties
 
-        private string _filePath;
-        public string FilePath
+        private string? _filePath;
+        public string? FilePath
         {
             get => _filePath;
             set { _filePath = value; OnPropertyChanged(); }
@@ -81,8 +80,8 @@ namespace IndiLogs_3._0.ViewModels
 
         // Calibration times
         public ObservableCollection<string> CalibrationTimes { get; } = new ObservableCollection<string>();
-        private string _selectedCalibTime;
-        public string SelectedCalibTime
+        private string? _selectedCalibTime;
+        public string? SelectedCalibTime
         {
             get => _selectedCalibTime;
             set { _selectedCalibTime = value; OnPropertyChanged(); OnCalibTimeChanged(); }
@@ -90,8 +89,8 @@ namespace IndiLogs_3._0.ViewModels
 
         // Revolutions
         public ObservableCollection<string> Revolutions { get; } = new ObservableCollection<string>();
-        private string _selectedRevolution;
-        public string SelectedRevolution
+        private string? _selectedRevolution;
+        public string? SelectedRevolution
         {
             get => _selectedRevolution;
             set { _selectedRevolution = value; OnPropertyChanged(); AutoApply(); }
@@ -237,8 +236,8 @@ namespace IndiLogs_3._0.ViewModels
         public bool IsHistoStationsVisible => _selectedGraphType == CprGraphType.Histogram;
 
         // Result data
-        private CprGraphResult _currentResult;
-        public CprGraphResult CurrentResult
+        private CprGraphResult? _currentResult;
+        public CprGraphResult? CurrentResult
         {
             get => _currentResult;
             set { _currentResult = value; OnPropertyChanged(); }
@@ -257,11 +256,11 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand SetRefCommand { get; }
 
         // Event to request file dialog from View
-        public event Action<Action<string>> RequestFileDialog;
+        public event Action<Action<string>>? RequestFileDialog;
         // Event to update chart
-        public event Action<CprGraphResult> GraphResultUpdated;
+        public event Action<CprGraphResult>? GraphResultUpdated;
         // Event to request export
-        public event Action<CprGraphResult> ExportRequested;
+        public event Action<CprGraphResult>? ExportRequested;
 
         #endregion
 
@@ -434,7 +433,7 @@ namespace IndiLogs_3._0.ViewModels
             Apply();
         }
 
-        public event Action StationPairsChanged;
+        public event Action? StationPairsChanged;
 
         /// <summary>
         /// Called from code-behind when station pair combos change

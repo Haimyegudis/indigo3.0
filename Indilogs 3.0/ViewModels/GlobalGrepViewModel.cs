@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -29,33 +28,35 @@ namespace IndiLogs_3._0.ViewModels
         private readonly SearchSchedulerService _schedulerService;
         private readonly WindowsTaskSchedulerService _taskSchedulerService;
         private readonly IDialogService _dialogService;
-        private CancellationTokenSource _cancellationTokenSource;
-        private SearchReportParams _lastSearchParams;
+        private readonly IViewFactory _viewFactory;
+        private CancellationTokenSource? _cancellationTokenSource;
+        private SearchReportParams? _lastSearchParams;
 
         // Streaming results: background threads enqueue, timer flushes to UI
         private readonly ConcurrentQueue<GrepResult> _resultQueue = new ConcurrentQueue<GrepResult>();
-        private System.Threading.Timer _flushTimer;
+        private System.Threading.Timer? _flushTimer;
 
         /// <summary>
         /// Raised when a scheduled "Run Now" wants to close the window.
         /// The string arg is the schedule name.
         /// </summary>
-        public event Action<string> RequestCloseForScheduledRun;
+        public event Action<string>? RequestCloseForScheduledRun;
 
         /// <summary>
         /// Raised when a scheduled "Run Now" background search completes.
         /// Args: schedule name, HTML report path (null if no report).
         /// </summary>
-        public event Action<string, string> ScheduledRunCompleted;
+        public event Action<string, string?>? ScheduledRunCompleted;
 
         // Kept for backward compat (in-memory loaded session search)
         private IEnumerable<LogSessionData> LoadedSessions { get; }
 
         #region Constructor
 
-        public GlobalGrepViewModel(IEnumerable<LogSessionData> loadedSessions, IDialogService dialogService)
+        public GlobalGrepViewModel(IEnumerable<LogSessionData> loadedSessions, IDialogService dialogService, IViewFactory viewFactory)
         {
             _dialogService = dialogService;
+            _viewFactory = viewFactory;
             _grepService = new GlobalGrepService();
             _locationService = new SearchLocationService();
             _configService = new SearchConfigService();
@@ -157,8 +158,8 @@ namespace IndiLogs_3._0.ViewModels
         public int ResultCount => Results?.Count ?? 0;
 
         // --- Quick search ---
-        private string _searchQuery;
-        public string SearchQuery
+        private string? _searchQuery;
+        public string? SearchQuery
         {
             get => _searchQuery;
             set { if (_searchQuery != value) { _searchQuery = value; OnPropertyChanged(); } }
@@ -231,15 +232,15 @@ namespace IndiLogs_3._0.ViewModels
         }
         public bool IsNotSearching => !IsSearching;
 
-        private string _statusMessage;
-        public string StatusMessage
+        private string? _statusMessage;
+        public string? StatusMessage
         {
             get => _statusMessage;
             set { if (_statusMessage != value) { _statusMessage = value; OnPropertyChanged(); } }
         }
 
-        private string _searchDuration;
-        public string SearchDuration
+        private string? _searchDuration;
+        public string? SearchDuration
         {
             get => _searchDuration;
             set { if (_searchDuration != value) { _searchDuration = value; OnPropertyChanged(); } }
@@ -259,8 +260,8 @@ namespace IndiLogs_3._0.ViewModels
             set { if (_progressTotal != value) { _progressTotal = value; OnPropertyChanged(); } }
         }
 
-        private GrepResult _selectedResult;
-        public GrepResult SelectedResult
+        private GrepResult? _selectedResult;
+        public GrepResult? SelectedResult
         {
             get => _selectedResult;
             set { if (_selectedResult != value) { _selectedResult = value; OnPropertyChanged(); } }
@@ -269,8 +270,8 @@ namespace IndiLogs_3._0.ViewModels
         // --- Locations ---
         public ObservableCollection<SearchLocation> Locations { get; }
 
-        private SearchLocation _selectedLocation;
-        public SearchLocation SelectedLocation
+        private SearchLocation? _selectedLocation;
+        public SearchLocation? SelectedLocation
         {
             get => _selectedLocation;
             set { if (_selectedLocation != value) { _selectedLocation = value; OnPropertyChanged(); CommandManager.InvalidateRequerySuggested(); } }
@@ -310,15 +311,15 @@ namespace IndiLogs_3._0.ViewModels
             set { _savedProfiles = value; OnPropertyChanged(); }
         }
 
-        private string _selectedProfile;
-        public string SelectedProfile
+        private string? _selectedProfile;
+        public string? SelectedProfile
         {
             get => _selectedProfile;
             set { _selectedProfile = value; OnPropertyChanged(); UpdateProfilePreview(); CommandManager.InvalidateRequerySuggested(); }
         }
 
-        private string _profilePreview;
-        public string ProfilePreview
+        private string? _profilePreview;
+        public string? ProfilePreview
         {
             get => _profilePreview;
             set { _profilePreview = value; OnPropertyChanged(); }
@@ -327,16 +328,16 @@ namespace IndiLogs_3._0.ViewModels
         // --- Schedules ---
         public ObservableCollection<ScheduledSearch> Schedules { get; }
 
-        private ScheduledSearch _selectedSchedule;
-        public ScheduledSearch SelectedSchedule
+        private ScheduledSearch? _selectedSchedule;
+        public ScheduledSearch? SelectedSchedule
         {
             get => _selectedSchedule;
             set { if (_selectedSchedule != value) { _selectedSchedule = value; OnPropertyChanged(); CommandManager.InvalidateRequerySuggested(); } }
         }
 
         // --- Backward compat ---
-        private string _externalPath;
-        public string ExternalPath
+        private string? _externalPath;
+        public string? ExternalPath
         {
             get => _externalPath;
             set { if (_externalPath != value) { _externalPath = value; OnPropertyChanged(); } }
@@ -421,7 +422,7 @@ namespace IndiLogs_3._0.ViewModels
 
         public ObservableCollection<ConditionVM> Conditions { get; } = new ObservableCollection<ConditionVM>();
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
     }
 
     /// <summary>
@@ -443,8 +444,8 @@ namespace IndiLogs_3._0.ViewModels
             set { _operator = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Operator))); }
         }
 
-        private string _value;
-        public string Value
+        private string? _value;
+        public string? Value
         {
             get => _value;
             set { _value = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value))); }
@@ -457,7 +458,7 @@ namespace IndiLogs_3._0.ViewModels
             set { _negate = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Negate))); }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
     }
 
     #endregion

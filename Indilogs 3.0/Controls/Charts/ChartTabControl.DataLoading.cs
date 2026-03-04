@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -58,8 +57,8 @@ namespace IndiLogs_3._0.Controls.Charts
 
                 // ── Run ALL heavy work on background threads in parallel ──
                 var stamps = dataPackage.TimeStamps;
-                string[] timeArr = null;
-                List<GapRegion> gapRegions = null;
+                string[]? timeArr = null;
+                List<GapRegion>? gapRegions = null;
 
                 await System.Threading.Tasks.Task.Run(() =>
                 {
@@ -219,7 +218,7 @@ namespace IndiLogs_3._0.Controls.Charts
             "HH:mm:ss.ffffff", "HH:mm:ss.fff", "HH:mm:ss"
         };
 
-        private List<GapRegion> ComputeTimeGapRegionsFromStrings(string[] timeData)
+        private List<GapRegion> ComputeTimeGapRegionsFromStrings(string[]? timeData)
         {
             var regions = new List<GapRegion>();
             if (timeData == null || timeData.Length < 2) return regions;

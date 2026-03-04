@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -59,7 +58,7 @@ namespace IndiLogs_3._0.Views
             CountText.Text = $"{_filteredItems.Count} / {_allItems.Count} properties";
         }
 
-        private void FilterTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        private void FilterTextBox_TextChanged(object? sender, TextChangedEventArgs e)
         {
             string filter = FilterTextBox.Text?.Trim().ToLower() ?? "";
 
@@ -77,7 +76,7 @@ namespace IndiLogs_3._0.Views
             UpdateGrid();
         }
 
-        private void CopyAllButton_Click(object sender, RoutedEventArgs e)
+        private void CopyAllButton_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
@@ -92,7 +91,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        private void CloseButton_Click(object? sender, RoutedEventArgs e)
         {
             Close();
         }

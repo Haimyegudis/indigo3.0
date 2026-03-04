@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -18,13 +17,13 @@ namespace IndiLogs_3._0.Services
     public class UpdateService
     {
         // Server paths — read from appsettings.json (sits next to the exe)
-        private static readonly string VersionFileUrl;
-        private static readonly string InstallerFolder;
+        private static readonly string VersionFileUrl = "";
+        private static readonly string InstallerFolder = "";
         private const string ExePattern = "IndiLogs3.0_*.exe";
 
-        private readonly Interfaces.IDialogService _dialogService;
+        private readonly Interfaces.IDialogService? _dialogService;
 
-        public UpdateService(Interfaces.IDialogService dialogService = null)
+        public UpdateService(Interfaces.IDialogService? dialogService = null)
         {
             _dialogService = dialogService;
         }
@@ -44,8 +43,8 @@ namespace IndiLogs_3._0.Services
                 if (File.Exists(settingsPath))
                 {
                     using var doc = JsonDocument.Parse(File.ReadAllText(settingsPath));
-                    VersionFileUrl = doc.RootElement.TryGetProperty("UpdateVersionFile", out var vf) ? vf.GetString() : "";
-                    InstallerFolder = doc.RootElement.TryGetProperty("UpdateInstallerFolder", out var inf) ? inf.GetString() : "";
+                    VersionFileUrl = doc.RootElement.TryGetProperty("UpdateVersionFile", out var vf) ? vf.GetString() ?? "" : "";
+                    InstallerFolder = doc.RootElement.TryGetProperty("UpdateInstallerFolder", out var inf) ? inf.GetString() ?? "" : "";
                 }
 
                 // Local overrides (not committed to source control)
@@ -54,9 +53,9 @@ namespace IndiLogs_3._0.Services
                 {
                     using var localDoc = JsonDocument.Parse(File.ReadAllText(localPath));
                     if (localDoc.RootElement.TryGetProperty("UpdateVersionFile", out var lvf) && !string.IsNullOrEmpty(lvf.GetString()))
-                        VersionFileUrl = lvf.GetString();
+                        VersionFileUrl = lvf.GetString() ?? "";
                     if (localDoc.RootElement.TryGetProperty("UpdateInstallerFolder", out var linf) && !string.IsNullOrEmpty(linf.GetString()))
-                        InstallerFolder = linf.GetString();
+                        InstallerFolder = linf.GetString() ?? "";
                 }
             }
             catch (Exception ex)
@@ -69,7 +68,7 @@ namespace IndiLogs_3._0.Services
 
         public async Task CheckForUpdatesSimpleAsync()
         {
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 try
                 {
@@ -77,7 +76,7 @@ namespace IndiLogs_3._0.Services
                     UpdateLogger.Log($"Checking path: {VersionFileUrl}");
 
                     // Get current version from assembly
-                    Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
+                    Version? currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
                     UpdateLogger.Log($"Current version: {currentVersion}");
 
                     // Establish connection to the network share (needed for hidden admin shares)
@@ -98,7 +97,7 @@ namespace IndiLogs_3._0.Services
                     UpdateLogger.Log($"Server version text (raw): '{serverVersionText}'");
                     UpdateLogger.Log($"Server version text length: {serverVersionText.Length}");
 
-                    if (!Version.TryParse(serverVersionText, out Version serverVersion))
+                    if (!Version.TryParse(serverVersionText, out Version? serverVersion))
                     {
                         UpdateLogger.Log($"[ERROR] Failed to parse server version: '{serverVersionText}'");
                         UpdateLogger.Log("Expected format: X.X.X.X (e.g., 1.0.0.2)");
@@ -114,7 +113,7 @@ namespace IndiLogs_3._0.Services
                         UpdateLogger.Log($"[UPDATE AVAILABLE] New version: {serverVersion}");
 
                         // Show dialog on UI thread
-                        Application.Current.Dispatcher.Invoke(() =>
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
                             var result = _dialogService != null
                                 ? _dialogService.ShowConfirm(
@@ -153,7 +152,7 @@ namespace IndiLogs_3._0.Services
             {
                 UpdateLogger.Log("[AUTO-UPDATE] Locating new exe on network share...");
 
-                string serverExePath = FindExeOnServer(versionText);
+                string? serverExePath = FindExeOnServer(versionText);
                 if (string.IsNullOrEmpty(serverExePath))
                 {
                     UpdateLogger.Log("[ERROR] Could not find update exe on server");
@@ -165,12 +164,12 @@ namespace IndiLogs_3._0.Services
                 }
 
                 // Current exe path
-                string currentExePath = Environment.ProcessPath;
-                string currentDir = Path.GetDirectoryName(currentExePath);
-                string currentExeName = Path.GetFileName(currentExePath);
+                string? currentExePath = Environment.ProcessPath;
+                string? currentDir = Path.GetDirectoryName(currentExePath);
+                string? currentExeName = Path.GetFileName(currentExePath);
 
                 // Copy new exe to temp location next to current exe
-                string tempExePath = Path.Combine(currentDir, $"IndiLogs3.0_update_{versionText}.tmp");
+                string tempExePath = Path.Combine(currentDir!, $"IndiLogs3.0_update_{versionText}.tmp");
                 UpdateLogger.Log($"[AUTO-UPDATE] Copying from server: {serverExePath}");
                 File.Copy(serverExePath, tempExePath, true);
                 UpdateLogger.Log($"[AUTO-UPDATE] Copied to: {tempExePath}");
@@ -184,7 +183,7 @@ namespace IndiLogs_3._0.Services
                 }
 
                 // Write a small .cmd script that waits, replaces, and relaunches
-                string cmdPath = Path.Combine(currentDir, "update.cmd");
+                string cmdPath = Path.Combine(currentDir!, "update.cmd");
                 string cmdContent =
                     "@echo off\r\n" +
                     "echo Updating IndiLogs 3.0...\r\n" +
@@ -204,7 +203,7 @@ namespace IndiLogs_3._0.Services
                 };
                 Process.Start(startInfo);
 
-                Application.Current.Dispatcher.Invoke(() =>
+                Application.Current.Dispatcher.BeginInvoke(() =>
                 {
                     Application.Current.Shutdown();
                 });
@@ -219,7 +218,7 @@ namespace IndiLogs_3._0.Services
             }
         }
 
-        private string FindExeOnServer(string versionText)
+        private string? FindExeOnServer(string versionText)
         {
             // Try the known filename: IndiLogs3.0_{version}.exe
             string expectedPath = Path.Combine(InstallerFolder, $"IndiLogs3.0_{versionText}.exe");
@@ -258,7 +257,7 @@ namespace IndiLogs_3._0.Services
         /// <summary>
         /// Gets the current application version
         /// </summary>
-        public static Version GetCurrentVersion()
+        public static Version? GetCurrentVersion()
         {
             return Assembly.GetExecutingAssembly().GetName().Version;
         }
@@ -266,7 +265,7 @@ namespace IndiLogs_3._0.Services
         // ── Network share connection via Windows API ──
 
         [DllImport("mpr.dll", CharSet = CharSet.Unicode)]
-        private static extern int WNetAddConnection2(ref NETRESOURCE netResource, string password, string username, int flags);
+        private static extern int WNetAddConnection2(ref NETRESOURCE netResource, string? password, string? username, int flags);
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         private struct NETRESOURCE
@@ -275,10 +274,10 @@ namespace IndiLogs_3._0.Services
             public int dwType;
             public int dwDisplayType;
             public int dwUsage;
-            public string lpLocalName;
-            public string lpRemoteName;
-            public string lpComment;
-            public string lpProvider;
+            public string? lpLocalName;
+            public string? lpRemoteName;
+            public string? lpComment;
+            public string? lpProvider;
         }
 
         private const int RESOURCETYPE_DISK = 1;
@@ -405,7 +404,7 @@ namespace IndiLogs_3._0.Services
             }
         }
 
-        private static (string username, string password) LoadEncryptedCredentials()
+        private static (string? username, string? password) LoadEncryptedCredentials()
         {
             try
             {

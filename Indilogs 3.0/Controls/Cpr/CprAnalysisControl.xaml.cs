@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +13,7 @@ namespace IndiLogs_3._0.Controls.Cpr
 {
     public partial class CprAnalysisControl : UserControl
     {
-        private CprAnalysisViewModel _vm;
+        private CprAnalysisViewModel? _vm;
         private bool _isWired;
 
         // Station pair ComboBoxes (test + ref) for 6 pairs
@@ -22,7 +21,7 @@ namespace IndiLogs_3._0.Controls.Cpr
         private ComboBox[] _refCombos = new ComboBox[6];
 
         // Compare support
-        private CprAnalysisViewModel _compareVm;
+        private CprAnalysisViewModel? _compareVm;
         private bool _isCompareVisible;
         private bool _isSyncingToCompare; // guard to prevent re-entry
 
@@ -36,7 +35,7 @@ namespace IndiLogs_3._0.Controls.Cpr
             DataContextChanged += (s, e) => EnsureVmWired();
         }
 
-        private void OnLoaded(object sender, RoutedEventArgs e)
+        private void OnLoaded(object? sender, RoutedEventArgs e)
         {
             EnsureVmWired();
             UpdateChartTheme();
@@ -69,7 +68,7 @@ namespace IndiLogs_3._0.Controls.Cpr
 
         #region File Handling
 
-        private void ChooseFile_Click(object sender, RoutedEventArgs e)
+        private void ChooseFile_Click(object? sender, RoutedEventArgs e)
         {
             EnsureVmWired();
 
@@ -94,7 +93,7 @@ namespace IndiLogs_3._0.Controls.Cpr
             }
         }
 
-        private void CompareFile_Click(object sender, RoutedEventArgs e)
+        private void CompareFile_Click(object? sender, RoutedEventArgs e)
         {
             EnsureVmWired();
 
@@ -114,7 +113,7 @@ namespace IndiLogs_3._0.Controls.Cpr
             }
         }
 
-        private void RemoveCompare_Click(object sender, RoutedEventArgs e)
+        private void RemoveCompare_Click(object? sender, RoutedEventArgs e)
         {
             if (_compareVm != null)
             {
@@ -142,7 +141,7 @@ namespace IndiLogs_3._0.Controls.Cpr
                 File1StatsLabel.Visibility = Visibility.Visible;
 
                 // Bind compare stats grids to compare VM
-                CompareStatsGrid.ItemsSource = _compareVm.StatsData;
+                CompareStatsGrid.ItemsSource = _compareVm!.StatsData;
                 CompareOffsetSkewGrid.ItemsSource = _compareVm.OffsetSkewData;
 
                 UpdateChartTheme();
@@ -170,7 +169,7 @@ namespace IndiLogs_3._0.Controls.Cpr
 
         #region Export
 
-        private void ExportPlot_Click(object sender, RoutedEventArgs e)
+        private void ExportPlot_Click(object? sender, RoutedEventArgs e)
         {
             if (_vm?.CurrentResult != null)
                 OnExportRequested(_vm.CurrentResult);
@@ -186,7 +185,7 @@ namespace IndiLogs_3._0.Controls.Cpr
         /// </summary>
         private void SyncToCompare()
         {
-            if (_compareVm == null || !_isCompareVisible) return;
+            if (_compareVm == null || !_isCompareVisible || _vm == null) return;
             if (_isSyncingToCompare) return;
             _isSyncingToCompare = true;
             try
@@ -276,7 +275,7 @@ namespace IndiLogs_3._0.Controls.Cpr
 
         #region Detach
 
-        private void DetachChart_Click(object sender, RoutedEventArgs e)
+        private void DetachChart_Click(object? sender, RoutedEventArgs e)
         {
             if (_vm?.CurrentResult == null) return;
 
@@ -348,7 +347,7 @@ namespace IndiLogs_3._0.Controls.Cpr
             window.Show();
         }
 
-        private void DetachCompareChart_Click(object sender, RoutedEventArgs e)
+        private void DetachCompareChart_Click(object? sender, RoutedEventArgs e)
         {
             if (_compareVm?.CurrentResult == null) return;
 
@@ -540,13 +539,13 @@ namespace IndiLogs_3._0.Controls.Cpr
 
         #region Set Ref Station
 
-        private void RefStationCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void RefStationCombo_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
             if (_vm != null && RefStationCombo.SelectedItem is int val)
                 _vm.RefStationValue = val;
         }
 
-        private void SetRefStation_Click(object sender, RoutedEventArgs e)
+        private void SetRefStation_Click(object? sender, RoutedEventArgs e)
         {
             if (_vm == null) return;
 
@@ -572,7 +571,7 @@ namespace IndiLogs_3._0.Controls.Cpr
                     int refVal = _vm.StationRefSelections[i];
                     for (int j = 0; j < _refCombos[i].Items.Count; j++)
                     {
-                        if ((int)_refCombos[i].Items[j] == refVal)
+                        if ((int)_refCombos[i].Items[j]! == refVal)
                         {
                             _refCombos[i].SelectedIndex = j;
                             break;

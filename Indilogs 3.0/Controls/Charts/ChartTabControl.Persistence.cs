@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -98,7 +97,7 @@ namespace IndiLogs_3._0.Controls.Charts
             }
         }
 
-        private void ToggleAxisButton_Click(object sender, RoutedEventArgs e)
+        private void ToggleAxisButton_Click(object? sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.Tag is SignalSeries series)
             {
@@ -107,7 +106,7 @@ namespace IndiLogs_3._0.Controls.Charts
             }
         }
 
-        private void LegendItem_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        private void LegendItem_MouseDoubleClick(object? sender, MouseButtonEventArgs e)
         {
             if (e.ClickCount != 2) return;
 
@@ -135,7 +134,7 @@ namespace IndiLogs_3._0.Controls.Charts
         /// Captures the current chart state for session persistence.
         /// Returns null if no data is loaded (nothing to save).
         /// </summary>
-        public SessionChartState SaveChartState()
+        public SessionChartState? SaveChartState()
         {
             if (!HasData && _charts.Count == 0) return null;
 
@@ -180,7 +179,7 @@ namespace IndiLogs_3._0.Controls.Charts
         /// Restores a previously saved chart state.
         /// Returns true if state was restored, false if state was null (empty/new session).
         /// </summary>
-        public bool RestoreChartState(SessionChartState state)
+        public bool RestoreChartState(SessionChartState? state)
         {
             if (state == null)
             {

@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +19,7 @@ namespace IndiLogs_3._0.ViewModels
         /// Flushes queued results from background threads to the UI ObservableCollection.
         /// Called by a timer every 150ms during search.
         /// </summary>
-        private void FlushResultsToUI(object state)
+        private void FlushResultsToUI(object? state)
         {
             if (_resultQueue.IsEmpty) return;
 

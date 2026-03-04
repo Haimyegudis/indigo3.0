@@ -1,6 +1,3 @@
-#nullable disable
-
-
 using Indigo.Infra.ICL.Core.Logging;
 using System;
 using System.Collections.Generic;

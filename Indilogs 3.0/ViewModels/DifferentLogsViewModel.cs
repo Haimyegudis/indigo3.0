@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -35,6 +34,7 @@ namespace IndiLogs_3._0.ViewModels
 
         private readonly IPluginLoader _pluginLoader;
         private readonly IDialogService _dialogService;
+        private readonly IViewFactory _viewFactory;
         /// <summary>
         /// Combined plugin list for manual file opening: external DLL plugins (highest priority)
         /// followed by AllForManualOpen (which includes IndigoAppLogPlugin).
@@ -46,7 +46,7 @@ namespace IndiLogs_3._0.ViewModels
         /// Returns the FilePath of the currently selected session (the loaded ZIP path),
         /// or null if no session is loaded. Set by MainViewModel after construction.
         /// </summary>
-        public Func<string> GetCurrentZipPath { get; set; }
+        public Func<string>? GetCurrentZipPath { get; set; }
 
         // ── Observable data ─────────────────────────────────────────
         public ObservableCollection<LogEntryDto> Entries { get; } = new ObservableCollection<LogEntryDto>();
@@ -64,8 +64,8 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         // ── Filter state ─────────────────────────────────────────────
-        private FilterNode _filterRoot;
-        public FilterNode FilterRoot
+        private FilterNode? _filterRoot;
+        public FilterNode? FilterRoot
         {
             get => _filterRoot;
             set { _filterRoot = value; OnPropertyChanged(); }
@@ -94,16 +94,16 @@ namespace IndiLogs_3._0.ViewModels
             set { _availableFields = value; OnPropertyChanged(); }
         }
 
-        private IReadOnlyList<PluginColumnDef> _columns;
-        /// <summary>Raised via PropertyChanged when a new plugin is selected — code-behind rebuilds DataGrid columns.</summary>
-        public IReadOnlyList<PluginColumnDef> Columns
+        private IReadOnlyList<PluginColumnDef>? _columns;
+        /// <summary>Raised via PropertyChanged when a new plugin is selected -- code-behind rebuilds DataGrid columns.</summary>
+        public IReadOnlyList<PluginColumnDef>? Columns
         {
             get => _columns;
             private set { _columns = value; OnPropertyChanged(); }
         }
 
-        private string _currentFilePath;
-        public string CurrentFilePath
+        private string? _currentFilePath;
+        public string? CurrentFilePath
         {
             get => _currentFilePath;
             private set { _currentFilePath = value; OnPropertyChanged(); OnPropertyChanged(nameof(CurrentFileName)); OnPropertyChanged(nameof(HasFile)); }
@@ -134,10 +134,11 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand CloseFileCommand { get; }
 
         // ── Constructor ─────────────────────────────────────────────
-        public DifferentLogsViewModel(IPluginLoader pluginLoader, IDialogService dialogService)
+        public DifferentLogsViewModel(IPluginLoader pluginLoader, IDialogService dialogService, IViewFactory viewFactory)
         {
             _pluginLoader = pluginLoader ?? throw new ArgumentNullException(nameof(pluginLoader));
             _dialogService = dialogService;
+            _viewFactory = viewFactory;
 
             // Build combined plugin list: external DLL plugins first (highest priority),
             // then AllForManualOpen which includes IndigoAppLogPlugin.
@@ -165,7 +166,8 @@ namespace IndiLogs_3._0.ViewModels
                 zipPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) &&
                 File.Exists(zipPath))
             {
-                var picker = new ZipBrowserWindow(zipPath) { Owner = Application.Current.MainWindow };
+                var picker = _viewFactory.Create<ZipBrowserWindow>(zipPath);
+                picker.Owner = Application.Current.MainWindow;
                 var result = picker.ShowDialog();
 
                 if (picker.BrowseExternalRequested)

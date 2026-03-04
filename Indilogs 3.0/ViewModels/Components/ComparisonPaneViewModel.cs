@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -21,9 +20,9 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly IList<LogEntry> _allPlcLogs;
         private readonly IList<LogEntry> _allAppLogs;
         private SourceType _selectedSourceType = SourceType.AllPLC;
-        private string _selectedFilter;
-        private string _searchText;
-        private LogEntry _selectedLog;
+        private string? _selectedFilter;
+        private string? _searchText;
+        private LogEntry? _selectedLog;
         private int _topVisibleIndex;
 
         #endregion
@@ -108,7 +107,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// The currently selected filter value.
         /// </summary>
-        public string SelectedFilter
+        public string? SelectedFilter
         {
             get => _selectedFilter;
             set
@@ -125,7 +124,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// Search text for filtering within the current source.
         /// </summary>
-        public string SearchText
+        public string? SearchText
         {
             get => _searchText;
             set
@@ -147,7 +146,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// The currently selected log entry.
         /// </summary>
-        public LogEntry SelectedLog
+        public LogEntry? SelectedLog
         {
             get => _selectedLog;
             set

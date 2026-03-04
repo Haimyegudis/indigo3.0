@@ -1,5 +1,4 @@
-#nullable disable
-﻿using IndiLogs_3._0.Models;
+using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Interfaces;
 using System;
@@ -25,10 +24,11 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly ILogFileService _logService;
         private readonly ILogColoringService _coloringService;
         private readonly IDialogService _dialogService;
-        private FilterSearchViewModel _filterVM;
-        private CaseManagementViewModel _caseVM;
-        private ConfigExplorerViewModel _configVM;
-        private LiveMonitoringViewModel _liveVM;
+        private readonly IViewFactory _viewFactory;
+        private FilterSearchViewModel? _filterVM;
+        private CaseManagementViewModel? _caseVM;
+        private ConfigExplorerViewModel? _configVM;
+        private LiveMonitoringViewModel? _liveVM;
 
         /// <summary>
         /// Current PLC/main log entries bound to the UI DataGrid.
@@ -142,8 +142,8 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// Currently active log session; setting triggers session switch and data reload.
         /// </summary>
-        private LogSessionData _selectedSession;
-        public LogSessionData SelectedSession
+        private LogSessionData? _selectedSession;
+        public LogSessionData? SelectedSession
         {
             get => _selectedSession;
             set
@@ -173,8 +173,8 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private string _statusMessage;
-        public string StatusMessage
+        private string? _statusMessage;
+        public string? StatusMessage
         {
             get => _statusMessage;
             set
@@ -200,12 +200,13 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand ClearCommand { get; }
         public ICommand RemoveSessionCommand { get; }
 
-        public LogSessionViewModel(MainViewModel parent, ILogFileService logService, ILogColoringService coloringService, IDialogService dialogService)
+        public LogSessionViewModel(MainViewModel parent, ILogFileService logService, ILogColoringService coloringService, IDialogService dialogService, IViewFactory viewFactory)
         {
             _parent = parent;
             _logService = logService;
             _coloringService = coloringService;
             _dialogService = dialogService;
+            _viewFactory = viewFactory;
 
             // Initialize collections
             _allLogsCache = new List<LogEntry>();
@@ -397,7 +398,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 preScan = await Task.Run(() => _logService.PreScanZip(zipPath));
 
                 // Show the dialog on the UI thread
-                var dialog = new Views.TabSelectionWindow(preScan);
+                var dialog = _viewFactory.Create<Views.TabSelectionWindow>(preScan);
                 dialog.Owner = Application.Current.MainWindow;
                 if (dialog.ShowDialog() != true)
                 {

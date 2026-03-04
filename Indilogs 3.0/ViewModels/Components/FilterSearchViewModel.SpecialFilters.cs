@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using System;
@@ -39,7 +38,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             var threads = cache?.Select(l => l.ThreadName).Where(t => !string.IsNullOrEmpty(t)).Distinct().OrderBy(t => t).ToList() ?? new List<string>();
             var loggers = cache?.Select(l => l.Logger).Where(l => !string.IsNullOrEmpty(l)).Distinct().OrderBy(l => l).ToList() ?? new List<string>();
 
-            var win = new Views.FilterWindow(threads, loggers);
+            var win = _viewFactory.Create<Views.FilterWindow>(threads, loggers);
             var currentRoot = isAppTab ? AppFilterRoot : MainFilterRoot;
 
             // Position window near the button that was clicked
@@ -189,7 +188,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 .Where(l => !string.IsNullOrEmpty(l)).Distinct().OrderBy(l => l).ToList();
 
             // Create window with dynamic fields from plugin columns
-            var win = new Views.FilterWindow(threads, loggers, diffVM.AvailableFields);
+            var win = _viewFactory.Create<Views.FilterWindow>(threads, loggers, diffVM.AvailableFields);
 
             // Position near button
             if (obj is FrameworkElement buttonElement)
@@ -250,7 +249,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private void FilterOut(object p)
         {
             if (_parent.SelectedLog == null) return;
-            var w = new Views.FilterOutWindow(_parent.SelectedLog.Message);
+            var w = _viewFactory.Create<Views.FilterOutWindow>(_parent.SelectedLog.Message);
             if (w.ShowDialog() == true && !string.IsNullOrWhiteSpace(w.TextToRemove))
             {
                 bool isAppTab = _parent.SelectedTabIndex == 1;
@@ -271,7 +270,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private void FilterOutThread(object obj)
         {
             if (_parent.SelectedLog == null || string.IsNullOrEmpty(_parent.SelectedLog.ThreadName)) return;
-            var win = new Views.FilterOutWindow(_parent.SelectedLog.ThreadName);
+            var win = _viewFactory.Create<Views.FilterOutWindow>(_parent.SelectedLog.ThreadName);
             if (win.ShowDialog() == true && !string.IsNullOrWhiteSpace(win.TextToRemove))
             {
                 string filterKey = "THREAD:" + win.TextToRemove;
@@ -313,7 +312,8 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _parent.SaveScrollPosition(savedSelectedLog);
             }
 
-            var win = new Views.ThreadFilterWindow(threads) { Title = "Filter by Thread" };
+            var win = _viewFactory.Create<Views.ThreadFilterWindow>(threads);
+            win.Title = "Filter by Thread";
 
             // Position window near the button that was clicked
             if (obj is FrameworkElement buttonElement)
@@ -485,7 +485,8 @@ namespace IndiLogs_3._0.ViewModels.Components
             // Save the currently selected log BEFORE opening the dialog
             var savedSelectedLog = _parent.SelectedLog;
 
-            var win = new Views.ThreadFilterWindow(loggers) { Title = "Filter by Logger" };
+            var win = _viewFactory.Create<Views.ThreadFilterWindow>(loggers);
+            win.Title = "Filter by Logger";
 
             // Position window near the button that was clicked
             if (obj is FrameworkElement buttonElement)
@@ -533,7 +534,8 @@ namespace IndiLogs_3._0.ViewModels.Components
             // Save the currently selected log BEFORE opening the dialog
             var savedSelectedLog = _parent.SelectedLog;
 
-            var win = new Views.ThreadFilterWindow(methods) { Title = "Filter by Method" };
+            var win = _viewFactory.Create<Views.ThreadFilterWindow>(methods);
+            win.Title = "Filter by Method";
 
             // Position window near the button that was clicked
             if (obj is FrameworkElement buttonElement)
@@ -684,7 +686,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         {
                             int startIdx = Math.Min(idxA, idxB);
                             int endIdx = Math.Max(idxA, idxB);
-                            rangedLogs = _sessionVM.AllAppLogsCache.Skip(startIdx).Take(endIdx - startIdx + 1).ToList();
+                            rangedLogs = ((List<LogEntry>)_sessionVM.AllAppLogsCache).GetRange(startIdx, endIdx - startIdx + 1);
                         }
                         else
                         {
@@ -715,7 +717,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         {
                             int startIdx = Math.Min(idxA, idxB);
                             int endIdx = Math.Max(idxA, idxB);
-                            rangedLogs = _sessionVM.AllLogsCache.Skip(startIdx).Take(endIdx - startIdx + 1).ToList();
+                            rangedLogs = ((List<LogEntry>)_sessionVM.AllLogsCache).GetRange(startIdx, endIdx - startIdx + 1);
                         }
                         else
                         {
@@ -999,44 +1001,38 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             if (!earliestLog.HasValue || !latestLog.HasValue)
             {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    _dialogService.ShowInfo("No logs available to filter.", "No Logs");
-                });
+                _dialogService.ShowInfo("No logs available to filter.", "No Logs");
                 return;
             }
 
-            Application.Current.Dispatcher.Invoke(() =>
+            // Pass current filter values so the window shows the already-filtered range
+            var window = _viewFactory.Create<Views.TimeRangeWindow>(earliestLog.Value, latestLog.Value, GlobalTimeRangeStart, GlobalTimeRangeEnd);
+
+            // Position window near the button that was clicked
+            if (obj is FrameworkElement buttonElement)
             {
-                // Pass current filter values so the window shows the already-filtered range
-                var window = new Views.TimeRangeWindow(earliestLog.Value, latestLog.Value, GlobalTimeRangeStart, GlobalTimeRangeEnd);
+                window.Owner = Application.Current.MainWindow;
+                window.WindowStartupLocation = WindowStartupLocation.Manual;
+                window.PositionNearElement(buttonElement);
+            }
 
-                // Position window near the button that was clicked
-                if (obj is FrameworkElement buttonElement)
+            if (window.ShowDialog() == true)
+            {
+                if (window.ShouldClear)
                 {
-                    window.Owner = Application.Current.MainWindow;
-                    window.WindowStartupLocation = WindowStartupLocation.Manual;
-                    window.PositionNearElement(buttonElement);
+                    GlobalTimeRangeStart = null;
+                    GlobalTimeRangeEnd = null;
+                    OnPropertyChanged(nameof(IsGlobalTimeRangeActive));
+                    ApplyGlobalTimeRangeFilter();
                 }
-
-                if (window.ShowDialog() == true)
+                else if (window.ResultStartDateTime.HasValue && window.ResultEndDateTime.HasValue)
                 {
-                    if (window.ShouldClear)
-                    {
-                        GlobalTimeRangeStart = null;
-                        GlobalTimeRangeEnd = null;
-                        OnPropertyChanged(nameof(IsGlobalTimeRangeActive));
-                        ApplyGlobalTimeRangeFilter();
-                    }
-                    else if (window.ResultStartDateTime.HasValue && window.ResultEndDateTime.HasValue)
-                    {
-                        GlobalTimeRangeStart = window.ResultStartDateTime.Value;
-                        GlobalTimeRangeEnd = window.ResultEndDateTime.Value;
-                        OnPropertyChanged(nameof(IsGlobalTimeRangeActive));
-                        ApplyGlobalTimeRangeFilter();
-                    }
+                    GlobalTimeRangeStart = window.ResultStartDateTime.Value;
+                    GlobalTimeRangeEnd = window.ResultEndDateTime.Value;
+                    OnPropertyChanged(nameof(IsGlobalTimeRangeActive));
+                    ApplyGlobalTimeRangeFilter();
                 }
-            });
+            }
         }
     }
 }

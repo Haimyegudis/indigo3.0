@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,7 +37,7 @@ namespace IndiLogs_3._0.Views
         /// <summary>
         /// Event raised when the user closes this window (to trigger reattach)
         /// </summary>
-        public event Action<string> RequestReattach;
+        public event Action<string>? RequestReattach;
 
         public DetachedTabWindow(string tabHeader, object dataContext)
         {
@@ -59,7 +58,7 @@ namespace IndiLogs_3._0.Views
         /// <summary>
         /// Clears the content before reattaching to main window
         /// </summary>
-        public UIElement ClearContent()
+        public UIElement? ClearContent()
         {
             var content = ContentHost.Content as UIElement;
             ContentHost.Content = null;
@@ -91,7 +90,7 @@ namespace IndiLogs_3._0.Views
         //  (mirrors MainWindow logic for child controls)
         // ============================================
 
-        public void DataGrid_Loaded(object sender, RoutedEventArgs e)
+        public void DataGrid_Loaded(object? sender, RoutedEventArgs e)
         {
             if (sender is DataGrid grid)
             {
@@ -147,7 +146,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        public void DataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+        public void DataGrid_LoadingRow(object? sender, DataGridRowEventArgs e)
         {
             if (e.Row.Item is LogEntry log)
             {
@@ -157,7 +156,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        public void MainLogsGrid_PreviewKeyDown(object sender, KeyEventArgs e)
+        public void MainLogsGrid_PreviewKeyDown(object? sender, KeyEventArgs e)
         {
             if (e.Key == Key.C && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
@@ -166,7 +165,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        public void AppLogsGrid_Sorting(object sender, DataGridSortingEventArgs e)
+        public void AppLogsGrid_Sorting(object? sender, DataGridSortingEventArgs e)
         {
             e.Handled = true;
             if (DataContext is MainViewModel vm)
@@ -186,7 +185,7 @@ namespace IndiLogs_3._0.Views
 
         private void TriggerTimeSyncScroll(DataGrid sourceGrid, string gridName)
         {
-            if (!(DataContext is MainViewModel vm) || !vm.IsTimeSyncEnabled)
+            if (DataContext is not MainViewModel vm || !vm.IsTimeSyncEnabled)
                 return;
 
             var scrollViewer = FindVisualChild<ScrollViewer>(sourceGrid);
@@ -198,7 +197,7 @@ namespace IndiLogs_3._0.Views
                 return;
 
             var firstVisibleItem = sourceGrid.Items[firstVisibleIndex];
-            if (!(firstVisibleItem is LogEntry logEntry))
+            if (firstVisibleItem is not LogEntry logEntry)
                 return;
 
             string sourceType = "PLC";
@@ -208,7 +207,7 @@ namespace IndiLogs_3._0.Views
             vm.RequestSyncScroll(logEntry.Date, sourceType);
         }
 
-        private void CopySelectedLogsToClipboard(DataGrid grid)
+        private void CopySelectedLogsToClipboard(DataGrid? grid)
         {
             if (grid == null || grid.SelectedItems.Count == 0) return;
             var sb = new StringBuilder();
@@ -231,13 +230,13 @@ namespace IndiLogs_3._0.Views
         /// <summary>
         /// Gets a cached ScrollViewer for a grid name (used for cross-window sync)
         /// </summary>
-        public ScrollViewer GetCachedScrollViewer(string gridName)
+        public ScrollViewer? GetCachedScrollViewer(string gridName)
         {
             _scrollViewerCache.TryGetValue(gridName, out var sv);
             return sv;
         }
 
-        private T FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        private T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
         {
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
             {

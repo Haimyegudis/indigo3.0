@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,12 +14,12 @@ namespace IndiLogs_3._0.Views
         public List<AnalysisResult> AllResults { get; set; }
 
         /// <summary>Called when the user double-clicks a log row — navigates the PLC tab.</summary>
-        public Action<LogEntry> JumpToLog { get; private set; }
+        public Action<LogEntry>? JumpToLog { get; private set; }
 
         /// <summary>Bound by DataGrid MouseBinding in XAML to perform navigation.</summary>
         public ICommand JumpToLogFromFailuresCommand { get; private set; }
 
-        public AnalysisReportWindow(List<AnalysisResult> results, Action<LogEntry> jumpToLog = null)
+        public AnalysisReportWindow(List<AnalysisResult> results, Action<LogEntry>? jumpToLog = null)
         {
             InitializeComponent();
             AllResults = results;
@@ -42,7 +41,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void Close_Click(object sender, RoutedEventArgs e)
+        private void Close_Click(object? sender, RoutedEventArgs e)
         {
             Close();
         }
@@ -51,19 +50,19 @@ namespace IndiLogs_3._0.Views
     /// <summary>Local RelayCommand so the window doesn't need a reference to the ViewModels namespace.</summary>
     internal class FailuresRelayCommand : ICommand
     {
-        private readonly Action<object> _execute;
-        private readonly Func<object, bool> _canExecute;
+        private readonly Action<object?> _execute;
+        private readonly Func<object?, bool>? _canExecute;
 
-        public FailuresRelayCommand(Action<object> execute, Func<object, bool> canExecute = null)
+        public FailuresRelayCommand(Action<object?> execute, Func<object?, bool>? canExecute = null)
         {
             _execute    = execute    ?? throw new ArgumentNullException(nameof(execute));
             _canExecute = canExecute;
         }
 
-        public bool CanExecute(object parameter) => _canExecute?.Invoke(parameter) ?? true;
-        public void Execute(object parameter)    => _execute(parameter);
+        public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
+        public void Execute(object? parameter)    => _execute(parameter);
 
-        public event EventHandler CanExecuteChanged
+        public event EventHandler? CanExecuteChanged
         {
             add    => CommandManager.RequerySuggested += value;
             remove => CommandManager.RequerySuggested -= value;

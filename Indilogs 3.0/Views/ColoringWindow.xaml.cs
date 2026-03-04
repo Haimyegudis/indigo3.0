@@ -1,4 +1,3 @@
-#nullable disable
 ﻿using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using System.Collections.Generic;
@@ -18,16 +17,16 @@ namespace IndiLogs_3._0.Views
 
         private static readonly string[] _defaultFields = new[] { "Level", "Message", "ThreadName", "Logger", "Method", "Pattern", "Data", "Exception" };
 
-        public ColoringWindow() : this((IEnumerable<string>)null) { }
+        public ColoringWindow() : this((IEnumerable<string>?)null) { }
 
-        public ColoringWindow(IEnumerable<string> customFields)
+        public ColoringWindow(IEnumerable<string>? customFields)
         {
             InitializeComponent();
             _fields = customFields?.ToArray() ?? _defaultFields;
             ResultConditions = new List<ColoringCondition>();
         }
 
-        public void LoadSavedRules(List<ColoringCondition> savedRules)
+        public void LoadSavedRules(List<ColoringCondition>? savedRules)
         {
             ConditionsPanel.Children.Clear();
 
@@ -44,9 +43,9 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void AddCondition_Click(object sender, RoutedEventArgs e) => AddConditionRow();
+        private void AddCondition_Click(object? sender, RoutedEventArgs e) => AddConditionRow();
 
-        private void AddConditionRow(ColoringCondition existingRule = null)
+        private void AddConditionRow(ColoringCondition? existingRule = null)
         {
             var rowGrid = new Grid { Margin = new Thickness(0, 0, 0, 5) };
             rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -133,7 +132,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void OK_Click(object sender, RoutedEventArgs e)
+        private void OK_Click(object? sender, RoutedEventArgs e)
         {
             ResultConditions.Clear();
 
@@ -164,13 +163,13 @@ namespace IndiLogs_3._0.Views
             Close();
         }
 
-        private void Clear_Click(object sender, RoutedEventArgs e)
+        private void Clear_Click(object? sender, RoutedEventArgs e)
         {
             ConditionsPanel.Children.Clear();
             AddConditionRow();
         }
 
-        private void Cancel_Click(object sender, RoutedEventArgs e)
+        private void Cancel_Click(object? sender, RoutedEventArgs e)
         {
             DialogResult = false;
             Close();

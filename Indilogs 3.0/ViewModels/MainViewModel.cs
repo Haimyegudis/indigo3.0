@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs.PluginAPI;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
@@ -59,14 +58,15 @@ namespace IndiLogs_3._0.ViewModels
         private readonly ICsvExportService _csvService;
         private readonly IDefaultConfigurationService _defaultConfigService;
         private readonly IDialogService _dialogService;
+        private readonly IViewFactory _viewFactory;
         public IDefaultConfigurationService DefaultConfigService => _defaultConfigService;
         public ILogColoringService ColoringService => _coloringService;
 
         // Windows Instances
-        private StatesWindow _statesWindow;
-        private AnalysisReportWindow _analysisWindow;
+        private StatesWindow? _statesWindow;
+        private AnalysisReportWindow? _analysisWindow;
         private bool _isAnalysisRunning;
-        private ExportConfigurationWindow _exportConfigWindow = null;
+        private ExportConfigurationWindow? _exportConfigWindow = null;
         public bool IsAnalysisRunning
         {
             get => _isAnalysisRunning;
@@ -74,7 +74,7 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         // Caches
-        private IList<LogEntry> _allLogsCache;
+        private IList<LogEntry>? _allLogsCache;
 
         // Coloring
         private List<ColoringCondition> _savedColoringRules = new List<ColoringCondition>();
@@ -83,8 +83,8 @@ namespace IndiLogs_3._0.ViewModels
         private readonly object _collectionLock = new object();
 
         // Full-column DataView for EVENTS tab (all CSV columns as-is)
-        private System.Data.DataView _eventsDataView;
-        public System.Data.DataView EventsDataView
+        private System.Data.DataView? _eventsDataView;
+        public System.Data.DataView? EventsDataView
         {
             get => _eventsDataView;
             set { _eventsDataView = value; OnPropertyChanged(); }
@@ -158,7 +158,7 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         /// <summary>Exposes the plugin loader so child VMs can query loaded plugins.</summary>
-        public Services.Interfaces.IPluginLoader GetPluginLoader()
+        public Services.Interfaces.IPluginLoader? GetPluginLoader()
             => _logService?.GetPluginLoader();
 
         // ── UI properties ──
@@ -170,36 +170,36 @@ namespace IndiLogs_3._0.ViewModels
             set { _windowTitle = value; OnPropertyChanged(); }
         }
 
-        private IReadOnlyList<PluginColumnDef> _currentPluginColumns;
-        public IReadOnlyList<PluginColumnDef> CurrentPluginColumns
+        private IReadOnlyList<PluginColumnDef>? _currentPluginColumns;
+        public IReadOnlyList<PluginColumnDef>? CurrentPluginColumns
         {
             get => _currentPluginColumns;
             set { _currentPluginColumns = value; OnPropertyChanged(); }
         }
 
-        private string _setupInfo;
-        public string SetupInfo
+        private string? _setupInfo;
+        public string? SetupInfo
         {
             get => _setupInfo;
             set { _setupInfo = value; OnPropertyChanged(); }
         }
 
-        private string _pressConfig;
-        public string PressConfig
+        private string? _pressConfig;
+        public string? PressConfig
         {
             get => _pressConfig;
             set { _pressConfig = value; OnPropertyChanged(); }
         }
 
-        private string _versionsInfo;
-        public string VersionsInfo
+        private string? _versionsInfo;
+        public string? VersionsInfo
         {
             get => _versionsInfo;
             set { _versionsInfo = value; OnPropertyChanged(); }
         }
 
-        private LogEntry _selectedLog;
-        public LogEntry SelectedLog
+        private LogEntry? _selectedLog;
+        public LogEntry? SelectedLog
         {
             get => _selectedLog;
             set { _selectedLog = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasSelectedLog)); }
@@ -306,10 +306,10 @@ namespace IndiLogs_3._0.ViewModels
 
         // ── Scroll requests ──
 
-        public event Action<LogEntry> RequestScrollToLog;
-        public event Action<LogEntry, bool> RequestScrollToLogPreservePosition;
-        public event Action<LogEntry> RequestSaveScrollPosition;
-        public event Action<string> RequestScrollToBottom;
+        public event Action<LogEntry>? RequestScrollToLog;
+        public event Action<LogEntry, bool>? RequestScrollToLogPreservePosition;
+        public event Action<LogEntry>? RequestSaveScrollPosition;
+        public event Action<string>? RequestScrollToBottom;
 
         public void ScrollToLog(LogEntry log) => RequestScrollToLog?.Invoke(log);
         public void ScrollToLogPreservePosition(LogEntry log) => RequestScrollToLogPreservePosition?.Invoke(log, true);
@@ -399,24 +399,25 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand SetAsDefaultCommand { get; }
         public ICommand ResetDefaultsCommand { get; }
 
-        public MainViewModel(ILogFileService logService, ILogColoringService coloringService, ICsvExportService csvService, IDefaultConfigurationService defaultConfigService, IDialogService dialogService)
+        public MainViewModel(ILogFileService logService, ILogColoringService coloringService, ICsvExportService csvService, IDefaultConfigurationService defaultConfigService, IDialogService dialogService, IViewFactory viewFactory)
         {
             _logService = logService;
             _coloringService = coloringService;
             _csvService = csvService;
             _defaultConfigService = defaultConfigService;
             _dialogService = dialogService;
+            _viewFactory = viewFactory;
             _isTimeSyncEnabled = false;
 
             // Initialize child ViewModels
-            SessionVM = new LogSessionViewModel(this, _logService, _coloringService, _dialogService);
-            FilterVM = new FilterSearchViewModel(this, SessionVM, _dialogService);
-            CaseVM = new CaseManagementViewModel(this, SessionVM, FilterVM, _dialogService);
+            SessionVM = new LogSessionViewModel(this, _logService, _coloringService, _dialogService, _viewFactory);
+            FilterVM = new FilterSearchViewModel(this, SessionVM, _dialogService, _viewFactory);
+            CaseVM = new CaseManagementViewModel(this, SessionVM, FilterVM, _dialogService, _viewFactory);
             LiveVM = new LiveMonitoringViewModel(this, SessionVM, FilterVM, CaseVM, _logService, _coloringService);
-            ConfigVM = new ConfigExplorerViewModel(this, SessionVM, _dialogService);
+            ConfigVM = new ConfigExplorerViewModel(this, SessionVM, _dialogService, _viewFactory);
             ChartVM = new ChartTabViewModel(this);
             CprVM = new CprAnalysisViewModel(_dialogService);
-            DifferentLogsVM = new DifferentLogsViewModel(_logService.GetPluginLoader(), _dialogService);
+            DifferentLogsVM = new DifferentLogsViewModel(_logService.GetPluginLoader(), _dialogService, _viewFactory);
             DifferentLogsVM.GetCurrentZipPath = () => SessionVM?.SelectedSession?.FilePath;
             StepRecorderVM = new StepRecorderViewModel(_dialogService);
 
@@ -513,8 +514,8 @@ namespace IndiLogs_3._0.ViewModels
             ToggleThemeCommand = new RelayCommand(o => IsDarkMode = !IsDarkMode);
             ToggleBoldCommand = new RelayCommand(o => IsBold = !IsBold);
             OpenSettingsCommand = new RelayCommand(OpenSettingsWindow);
-            OpenHelpCommand = new RelayCommand(o => WindowManager.OpenWindow(new Views.HelpWindow()));
-            OpenPluginTesterCommand = new RelayCommand(o => WindowManager.GetOrCreate<Views.PluginTesterWindow>(() => new Views.PluginTesterWindow()));
+            OpenHelpCommand = new RelayCommand(o => WindowManager.OpenWindow(_viewFactory.Create<Views.HelpWindow>()));
+            OpenPluginTesterCommand = new RelayCommand(o => WindowManager.GetOrCreate<Views.PluginTesterWindow>(() => _viewFactory.Create<Views.PluginTesterWindow>()));
             OpenFontsWindowCommand = new RelayCommand(OpenFontsWindow);
             OpenSnakeGameCommand = new RelayCommand(OpenSnakeGame);
 

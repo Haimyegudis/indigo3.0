@@ -1,5 +1,4 @@
-#nullable disable
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Windows;
 using IndiLogs_3._0.Models;
 
@@ -14,7 +13,7 @@ namespace IndiLogs_3._0.Views
             StatesGrid.ItemsSource = states;
         }
 
-        private void Close_Click(object sender, RoutedEventArgs e)
+        private void Close_Click(object? sender, RoutedEventArgs e)
         {
             Close();
         }

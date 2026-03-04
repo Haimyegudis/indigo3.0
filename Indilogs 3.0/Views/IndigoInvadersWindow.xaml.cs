@@ -1,5 +1,4 @@
-#nullable disable
-﻿// BILINGUAL-HEADER-START
+// BILINGUAL-HEADER-START
 // EN: File: IndigoInvadersWindow.xaml.cs - Auto-added bilingual header.
 // HE: File: IndigoInvadersWindow.xaml.cs - Auto-added bilingual header.
 
@@ -25,15 +24,15 @@ namespace IndiLogs_3._0.Views
         private const int AlienCols = 9;
 
         // Timer and controls
-        private DispatcherTimer _gameTimer;
+        private DispatcherTimer _gameTimer = null!;
         private bool _moveLeft, _moveRight, _isShooting;
         private bool _gameRunning = false;
 
         // Game objects
-        private Rectangle _player;
-        private List<Rectangle> _playerBullets = new List<Rectangle>();
-        private List<Rectangle> _alienBullets = new List<Rectangle>();
-        private List<Invader> _invaders = new List<Invader>();
+        private Rectangle _player = null!;
+        private List<Rectangle> _playerBullets = new();
+        private List<Rectangle> _alienBullets = new();
+        private List<Invader> _invaders = new();
 
         // Game status
         private int _score = 0;
@@ -53,7 +52,7 @@ namespace IndiLogs_3._0.Views
             _gameTimer.Tick += GameLoop;
         }
 
-        private void StartGame_Click(object sender, RoutedEventArgs e)
+        private void StartGame_Click(object? sender, RoutedEventArgs e)
         {
             ResetGame();
         }
@@ -102,7 +101,7 @@ namespace IndiLogs_3._0.Views
 
         // --- Game Logic Loop ---
 
-        private void GameLoop(object sender, EventArgs e)
+        private void GameLoop(object? sender, EventArgs e)
         {
             if (!_gameRunning) return;
 
@@ -397,7 +396,7 @@ namespace IndiLogs_3._0.Views
 
         // --- Input Handling ---
 
-        private void Window_KeyDown(object sender, KeyEventArgs e)
+        private void Window_KeyDown(object? sender, KeyEventArgs e)
         {
             if (e.Key == Key.Left) _moveLeft = true;
             if (e.Key == Key.Right) _moveRight = true;
@@ -405,7 +404,7 @@ namespace IndiLogs_3._0.Views
             if (e.Key == Key.Escape) Close();
         }
 
-        private void Window_KeyUp(object sender, KeyEventArgs e)
+        private void Window_KeyUp(object? sender, KeyEventArgs e)
         {
             if (e.Key == Key.Left) _moveLeft = false;
             if (e.Key == Key.Right) _moveRight = false;
@@ -434,7 +433,7 @@ namespace IndiLogs_3._0.Views
 
         private class Invader
         {
-            public Rectangle UIElement { get; set; }
+            public Rectangle UIElement { get; set; } = null!;
         }
     }
 }

@@ -506,5 +506,5 @@ sample_*
 **/appsettings.local.json
 update-credentials.dat
 
-# Claude Code local settings
-.claude/settings.local.json
+# Claude Code (all local, never committed)
+.claude/

@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using System;
@@ -28,8 +27,8 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
-        private string _searchSyntaxError;
-        public string SearchSyntaxError
+        private string? _searchSyntaxError;
+        public string? SearchSyntaxError
         {
             get => _searchSyntaxError;
             set
@@ -189,7 +188,7 @@ namespace IndiLogs_3._0.ViewModels
         {
             try
             {
-            var win = new Views.FilterWindow();
+            var win = _viewFactory.Create<Views.FilterWindow>();
             bool isAppTab = SelectedTabIndex == AppConstants.TAB_APP;
             var currentRoot = isAppTab ? FilterVM.AppFilterRoot : FilterVM.MainFilterRoot;
 
@@ -388,7 +387,7 @@ namespace IndiLogs_3._0.ViewModels
 
         // ── Search timer callback ──
 
-        private void OnSearchTimerTick(object sender, EventArgs e)
+        private void OnSearchTimerTick(object? sender, EventArgs e)
         {
             // Save the currently selected log and its scroll position BEFORE toggling filter
             var savedSelectedLog = SelectedLog;

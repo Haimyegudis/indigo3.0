@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Views;
@@ -15,7 +14,7 @@ namespace IndiLogs_3._0.ViewModels
     {
         // ── File loading, export, drag-drop ──
 
-        public void ProcessFiles(string[] filePaths, Action<LogSessionData> onLoadComplete = null)
+        public void ProcessFiles(string[] filePaths, Action<LogSessionData>? onLoadComplete = null)
             => SessionVM?.ProcessFiles(filePaths, onLoadComplete);
 
         private async Task LoadFile(object obj)
@@ -89,7 +88,7 @@ namespace IndiLogs_3._0.ViewModels
                 return;
             }
 
-            _exportConfigWindow = new ExportConfigurationWindow();
+            _exportConfigWindow = _viewFactory.Create<ExportConfigurationWindow>();
             var viewModel = new ExportConfigurationViewModel(selectedSession, _csvService, _dialogService);
             _exportConfigWindow.DataContext = viewModel;
             _exportConfigWindow.Closed += (s, e) => _exportConfigWindow = null;
@@ -147,7 +146,7 @@ namespace IndiLogs_3._0.ViewModels
             var loadedFilePaths = SessionVM.LoadedSessions.Select(s => s.FilePath).ToList();
 
             // Show file selection window
-            var fileSelectionWindow = new Views.FileSelectionWindow(fileList, loadedFilePaths);
+            var fileSelectionWindow = _viewFactory.Create<Views.FileSelectionWindow>(fileList, loadedFilePaths);
             fileSelectionWindow.Owner = Application.Current.MainWindow;
 
             if (fileSelectionWindow.ShowDialog() == true)

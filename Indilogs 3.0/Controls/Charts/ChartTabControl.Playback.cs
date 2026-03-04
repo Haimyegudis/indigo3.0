@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Linq;
 using System.Windows;
@@ -11,7 +10,7 @@ namespace IndiLogs_3._0.Controls.Charts
     {
         #region Navigation
 
-        private void NavSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        private void NavSlider_ValueChanged(object? sender, RoutedPropertyChangedEventArgs<double> e)
         {
             if (_totalDataLength == 0) return;
 
@@ -30,7 +29,7 @@ namespace IndiLogs_3._0.Controls.Charts
             }
         }
 
-        private void NavLeftButton_Click(object sender, RoutedEventArgs e)
+        private void NavLeftButton_Click(object? sender, RoutedEventArgs e)
         {
             int viewSpan = _viewEndIndex - _viewStartIndex;
             int shift = Math.Max(100, viewSpan / 10);
@@ -41,7 +40,7 @@ namespace IndiLogs_3._0.Controls.Charts
             SyncAllViewRanges(newStart, newEnd);
         }
 
-        private void NavRightButton_Click(object sender, RoutedEventArgs e)
+        private void NavRightButton_Click(object? sender, RoutedEventArgs e)
         {
             int viewSpan = _viewEndIndex - _viewStartIndex;
             int shift = Math.Max(100, viewSpan / 10);
@@ -126,7 +125,7 @@ namespace IndiLogs_3._0.Controls.Charts
             SyncAllCursors(_cursorIndex);
         }
 
-        private void PlaybackTimer_Tick(object sender, EventArgs e)
+        private void PlaybackTimer_Tick(object? sender, EventArgs e)
         {
             if (!HasData || _totalDataLength == 0)
             {

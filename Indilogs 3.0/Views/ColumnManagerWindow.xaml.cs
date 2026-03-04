@@ -1,4 +1,3 @@
-#nullable disable
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -9,9 +8,9 @@ namespace IndiLogs_3._0.Views
 {
     public partial class ColumnManagerWindow : Window, INotifyPropertyChanged
     {
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
-        private ObservableCollection<ColumnInfo> _columns;
+        private ObservableCollection<ColumnInfo> _columns = new();
         public ObservableCollection<ColumnInfo> Columns
         {
             get => _columns;
@@ -33,7 +32,7 @@ namespace IndiLogs_3._0.Views
             Columns = new ObservableCollection<ColumnInfo>();
             foreach (var column in dataGrid.Columns)
             {
-                string headerText = GetColumnHeaderText(column);
+                string? headerText = GetColumnHeaderText(column);
                 if (!string.IsNullOrEmpty(headerText))
                 {
                     Columns.Add(new ColumnInfo
@@ -49,7 +48,7 @@ namespace IndiLogs_3._0.Views
         /// <summary>
         /// Extracts the display text from a column header, handling buttons and complex headers
         /// </summary>
-        private string GetColumnHeaderText(DataGridColumn column)
+        private string? GetColumnHeaderText(DataGridColumn column)
         {
             if (column.Header == null)
                 return null;
@@ -71,7 +70,7 @@ namespace IndiLogs_3._0.Views
             }
 
             // For other types, try ToString and extract the last part if it's a path
-            string headerText = column.Header.ToString();
+            string? headerText = column.Header.ToString();
 
             // Skip empty or type name strings
             if (string.IsNullOrEmpty(headerText) || headerText.StartsWith("System."))
@@ -87,7 +86,7 @@ namespace IndiLogs_3._0.Views
             return headerText;
         }
 
-        private void ApplyButton_Click(object sender, RoutedEventArgs e)
+        private void ApplyButton_Click(object? sender, RoutedEventArgs e)
         {
             // Apply visibility changes
             foreach (var columnInfo in Columns)
@@ -100,13 +99,13 @@ namespace IndiLogs_3._0.Views
             Close();
         }
 
-        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        private void CancelButton_Click(object? sender, RoutedEventArgs e)
         {
             DialogResult = false;
             Close();
         }
 
-        private void ResetButton_Click(object sender, RoutedEventArgs e)
+        private void ResetButton_Click(object? sender, RoutedEventArgs e)
         {
             // Reset all columns to visible
             foreach (var columnInfo in Columns)
@@ -118,10 +117,10 @@ namespace IndiLogs_3._0.Views
 
     public class ColumnInfo : INotifyPropertyChanged
     {
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         private bool _isVisible;
-        public string Header { get; set; }
+        public string Header { get; set; } = "";
         public bool IsVisible
         {
             get => _isVisible;
@@ -131,6 +130,6 @@ namespace IndiLogs_3._0.Views
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsVisible)));
             }
         }
-        public DataGridColumn Column { get; set; }
+        public DataGridColumn Column { get; set; } = null!;
     }
 }

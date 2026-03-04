@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Charts;
@@ -41,10 +40,10 @@ namespace IndiLogs_3._0.ViewModels
         public ObservableCollection<SelectableItem> ThreadItems { get; set; }
 
         // Cached filtered lists for performance
-        private List<SelectableItem> _cachedIOFiltered;
-        private List<SelectableItem> _cachedAxisFiltered;
-        private List<SelectableItem> _cachedCHStepFiltered;
-        private List<SelectableItem> _cachedThreadFiltered;
+        private List<SelectableItem>? _cachedIOFiltered;
+        private List<SelectableItem>? _cachedAxisFiltered;
+        private List<SelectableItem>? _cachedCHStepFiltered;
+        private List<SelectableItem>? _cachedThreadFiltered;
 
         // Debounce timer for search - prevents lag while typing
         private DispatcherTimer _searchDebounceTimer;
@@ -276,7 +275,7 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         // Timer tick - execute pending searches
-        private void SearchDebounceTimer_Tick(object sender, EventArgs e)
+        private void SearchDebounceTimer_Tick(object? sender, EventArgs e)
         {
             _searchDebounceTimer.Stop();
 

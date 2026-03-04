@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -14,7 +13,7 @@ namespace IndiLogs_3._0.Views
     {
         private class Particle
         {
-            public Ellipse Shape;
+            public Ellipse Shape = null!;
             public double X, Y;
             public double Vx, Vy;
             public double Life;
@@ -53,7 +52,7 @@ namespace IndiLogs_3._0.Views
             Loaded += OnLoaded;
         }
 
-        private void OnLoaded(object sender, RoutedEventArgs e)
+        private void OnLoaded(object? sender, RoutedEventArgs e)
         {
             _cx = ActualWidth  / 2.0;
             _cy = ActualHeight / 2.0;
@@ -112,7 +111,7 @@ namespace IndiLogs_3._0.Views
             _timer.Start();
         }
 
-        private void OnTick(object sender, EventArgs e)
+        private void OnTick(object? sender, EventArgs e)
         {
             const double gravity = 0.045;
             var dead = new List<Particle>();
@@ -142,7 +141,7 @@ namespace IndiLogs_3._0.Views
             if (_particles.Count == 0) _timer.Stop();
         }
 
-        private void OnDotTick(object sender, EventArgs e)
+        private void OnDotTick(object? sender, EventArgs e)
         {
             var dots = new[] { Dot1, Dot2, Dot3 };
             foreach (var d in dots) AnimateOpacity(d, d.Opacity, 0.25, 300);

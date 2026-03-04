@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
@@ -67,7 +66,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 var sortedList = combinedList.OrderByDescending(x => x.Date).ToList();
                 var collectionToShow = new ObservableCollection<LogEntry>(sortedList);
 
-                _combinedMarkedWindow = new MarkedLogsWindow(collectionToShow, "Marked Lines (Combined - Main & App)");
+                _combinedMarkedWindow = _viewFactory.Create<MarkedLogsWindow>(collectionToShow, "Marked Lines (Combined - Main & App)");
                 _combinedMarkedWindow.DataContext = _parent;
                 _combinedMarkedWindow.Closed += (s, e) => _combinedMarkedWindow = null;
                 WindowManager.OpenWindow(_combinedMarkedWindow);
@@ -84,7 +83,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         WindowManager.ActivateWindow(_markedAppLogsWindow);
                         return;
                     }
-                    _markedAppLogsWindow = new MarkedLogsWindow(MarkedAppLogs, "Marked Lines (APP)");
+                    _markedAppLogsWindow = _viewFactory.Create<MarkedLogsWindow>(MarkedAppLogs, "Marked Lines (APP)");
                     _markedAppLogsWindow.DataContext = _parent;
                     _markedAppLogsWindow.Closed += (s, e) => _markedAppLogsWindow = null;
                     WindowManager.OpenWindow(_markedAppLogsWindow);
@@ -97,7 +96,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         WindowManager.ActivateWindow(_markedMainLogsWindow);
                         return;
                     }
-                    _markedMainLogsWindow = new MarkedLogsWindow(MarkedLogs, "Marked Lines (LOGS)");
+                    _markedMainLogsWindow = _viewFactory.Create<MarkedLogsWindow>(MarkedLogs, "Marked Lines (LOGS)");
                     _markedMainLogsWindow.DataContext = _parent;
                     _markedMainLogsWindow.Closed += (s, e) => _markedMainLogsWindow = null;
                     WindowManager.OpenWindow(_markedMainLogsWindow);
@@ -116,7 +115,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         }
 
         // Track the currently highlighted marked log
-        private LogEntry _currentMarkedLog = null;
+        private LogEntry? _currentMarkedLog = null;
 
         private void ClearCurrentMarked()
         {

@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Interfaces;
@@ -44,20 +43,21 @@ namespace IndiLogs_3._0.ViewModels.Components
         private readonly MainViewModel _parent;
         private readonly LogSessionViewModel _sessionVM;
         private readonly IDialogService _dialogService;
+        private readonly IViewFactory _viewFactory;
 
         /// <summary>
         /// User-configurable default PLC filter applied when no explicit filters are active.
         /// </summary>
-        private FilterNode _defaultPlcFilter;
-        public FilterNode DefaultPlcFilter
+        private FilterNode? _defaultPlcFilter;
+        public FilterNode? DefaultPlcFilter
         {
             get => _defaultPlcFilter;
             set { _defaultPlcFilter = value; OnPropertyChanged(); }
         }
 
         // --- Search ---
-        private string _searchText;
-        public string SearchText
+        private string? _searchText;
+        public string? SearchText
         {
             get => _searchText;
             set
@@ -141,8 +141,8 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private LoggerNode _selectedTreeItem;
-        public LoggerNode SelectedTreeItem
+        private LoggerNode? _selectedTreeItem;
+        public LoggerNode? SelectedTreeItem
         {
             get => _selectedTreeItem;
             set
@@ -155,8 +155,8 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// Root node of the advanced filter tree for PLC/main logs.
         /// </summary>
-        private FilterNode _mainFilterRoot;
-        public FilterNode MainFilterRoot
+        private FilterNode? _mainFilterRoot;
+        public FilterNode? MainFilterRoot
         {
             get => _mainFilterRoot;
             set
@@ -169,8 +169,8 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// Root node of the advanced filter tree for APP logs.
         /// </summary>
-        private FilterNode _appFilterRoot;
-        public FilterNode AppFilterRoot
+        private FilterNode? _appFilterRoot;
+        public FilterNode? AppFilterRoot
         {
             get => _appFilterRoot;
             set { _appFilterRoot = value; OnPropertyChanged(); }
@@ -179,8 +179,8 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// Root node of a saved/persisted filter tree for restoring filter state.
         /// </summary>
-        private FilterNode _savedFilterRoot;
-        public FilterNode SavedFilterRoot
+        private FilterNode? _savedFilterRoot;
+        public FilterNode? SavedFilterRoot
         {
             get => _savedFilterRoot;
             set { _savedFilterRoot = value; OnPropertyChanged(); }
@@ -320,15 +320,15 @@ namespace IndiLogs_3._0.ViewModels.Components
         public bool HasAppStoredFilterOut => _appNegativeFilters.Any();
 
         // --- Caches ---
-        private List<LogEntry> _lastFilteredCache = null;
-        public List<LogEntry> LastFilteredCache
+        private List<LogEntry>? _lastFilteredCache = null;
+        public List<LogEntry>? LastFilteredCache
         {
             get => _lastFilteredCache;
             set { _lastFilteredCache = value; OnPropertyChanged(); }
         }
 
-        private List<LogEntry> _lastFilteredAppCache = null;
-        public List<LogEntry> LastFilteredAppCache
+        private List<LogEntry>? _lastFilteredAppCache = null;
+        public List<LogEntry>? LastFilteredAppCache
         {
             get => _lastFilteredAppCache;
             set { _lastFilteredAppCache = value; OnPropertyChanged(); }
@@ -341,15 +341,15 @@ namespace IndiLogs_3._0.ViewModels.Components
         private HashSet<string> _treeHiddenPrefixes = new HashSet<string>();
         public HashSet<string> TreeHiddenPrefixes => _treeHiddenPrefixes;
 
-        private string _treeShowOnlyLogger = null;
-        public string TreeShowOnlyLogger
+        private string? _treeShowOnlyLogger = null;
+        public string? TreeShowOnlyLogger
         {
             get => _treeShowOnlyLogger;
             set { _treeShowOnlyLogger = value; OnPropertyChanged(); }
         }
 
-        private string _treeShowOnlyPrefix = null;
-        public string TreeShowOnlyPrefix
+        private string? _treeShowOnlyPrefix = null;
+        public string? TreeShowOnlyPrefix
         {
             get => _treeShowOnlyPrefix;
             set { _treeShowOnlyPrefix = value; OnPropertyChanged(); }
@@ -358,8 +358,8 @@ namespace IndiLogs_3._0.ViewModels.Components
         // --- PLC Tree Filter State ---
         private HashSet<string> _plcTreeHiddenLoggers = new HashSet<string>();
         private HashSet<string> _plcTreeHiddenPrefixes = new HashSet<string>();
-        private string _plcTreeShowOnlyLogger = null;
-        private string _plcTreeShowOnlyPrefix = null;
+        private string? _plcTreeShowOnlyLogger = null;
+        private string? _plcTreeShowOnlyPrefix = null;
         public bool IsPlcTreeFilterActive => _plcTreeShowOnlyLogger != null || _plcTreeShowOnlyPrefix != null ||
                                               _plcTreeHiddenLoggers.Count > 0 || _plcTreeHiddenPrefixes.Count > 0;
 
@@ -388,7 +388,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         public ICommand ClearRangeCommand { get; }
 
         // Range selection state
-        private LogEntry _rangeStartLog = null;
+        private LogEntry? _rangeStartLog = null;
         private bool _hasRangeStart = false;
         public bool HasRangeStart
         {
@@ -396,11 +396,12 @@ namespace IndiLogs_3._0.ViewModels.Components
             set { _hasRangeStart = value; OnPropertyChanged(); }
         }
 
-        public FilterSearchViewModel(MainViewModel parent, LogSessionViewModel sessionVM, IDialogService dialogService)
+        public FilterSearchViewModel(MainViewModel parent, LogSessionViewModel sessionVM, IDialogService dialogService, IViewFactory viewFactory)
         {
             _parent = parent;
             _sessionVM = sessionVM;
             _dialogService = dialogService;
+            _viewFactory = viewFactory;
 
             _filteredLogs = new ObservableRangeCollection<LogEntry>();
             _appDevLogsFiltered = new ObservableRangeCollection<LogEntry>();
@@ -478,7 +479,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             _searchDebounceTimer.Start();
         }
 
-        private void OnSearchTimerTick(object sender, EventArgs e)
+        private void OnSearchTimerTick(object? sender, EventArgs e)
         {
             _searchDebounceTimer.Stop();
 

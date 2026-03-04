@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,19 +17,19 @@ namespace IndiLogs_3._0.Services
     public static class TabTearOffManager
     {
         private static readonly Dictionary<string, DetachedTabInfo> _detachedTabs = new Dictionary<string, DetachedTabInfo>();
-        private static TabControl _mainTabControl;
-        private static Window _mainWindow;
+        private static TabControl? _mainTabControl;
+        private static Window? _mainWindow;
 
         /// <summary>
         /// Information about a detached tab
         /// </summary>
         private class DetachedTabInfo
         {
-            public string Header { get; set; }
+            public string Header { get; set; } = "";
             public int OriginalIndex { get; set; }
-            public UIElement Content { get; set; }
-            public TabItem TabItem { get; set; }
-            public DetachedTabWindow Window { get; set; }
+            public UIElement Content { get; set; } = null!;
+            public TabItem TabItem { get; set; } = null!;
+            public DetachedTabWindow Window { get; set; } = null!;
         }
 
         /// <summary>
@@ -62,12 +61,12 @@ namespace IndiLogs_3._0.Services
         /// <summary>
         /// Detaches a tab from the main TabControl into a floating window
         /// </summary>
-        public static DetachedTabWindow DetachTab(TabItem tabItem, Point screenPosition)
+        public static DetachedTabWindow? DetachTab(TabItem tabItem, Point screenPosition)
         {
             if (tabItem == null || _mainTabControl == null || _mainWindow == null)
                 return null;
 
-            string header = tabItem.Header?.ToString();
+            string? header = tabItem.Header?.ToString();
             if (string.IsNullOrEmpty(header) || IsTabDetached(header))
                 return null;
 
@@ -86,8 +85,8 @@ namespace IndiLogs_3._0.Services
             tabItem.Content = placeholder;
 
             // Create the floating window
-            var floatingWindow = new DetachedTabWindow(header, _mainWindow.DataContext);
-            floatingWindow.SetContent(content);
+            var floatingWindow = new DetachedTabWindow(header, _mainWindow!.DataContext);
+            floatingWindow.SetContent(content!);
 
             // Position the window at the drop point
             floatingWindow.Left = screenPosition.X - 100;
@@ -137,7 +136,7 @@ namespace IndiLogs_3._0.Services
             _detachedTabs.Remove(header);
 
             // Select the restored tab
-            _mainTabControl.SelectedItem = info.TabItem;
+            _mainTabControl!.SelectedItem = info.TabItem;
         }
 
         /// <summary>
@@ -167,7 +166,7 @@ namespace IndiLogs_3._0.Services
         /// <summary>
         /// Gets a detached control by type and tab header
         /// </summary>
-        public static T GetDetachedControl<T>(string tabHeader) where T : class
+        public static T? GetDetachedControl<T>(string tabHeader) where T : class
         {
             if (_detachedTabs.TryGetValue(tabHeader, out var info))
             {
@@ -207,7 +206,7 @@ namespace IndiLogs_3._0.Services
             {
                 int checkIndex = (fromIndex + i + 1) % _mainTabControl.Items.Count;
                 var tabItem = _mainTabControl.Items[checkIndex] as TabItem;
-                if (tabItem != null && !IsTabDetached(tabItem.Header?.ToString()))
+                if (tabItem != null && !IsTabDetached(tabItem.Header?.ToString() ?? ""))
                 {
                     _mainTabControl.SelectedIndex = checkIndex;
                     return;

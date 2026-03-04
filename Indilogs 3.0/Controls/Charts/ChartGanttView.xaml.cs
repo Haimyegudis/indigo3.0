@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,9 +20,9 @@ namespace IndiLogs_3._0.Controls.Charts
         private static readonly SKTypeface s_segoeBold = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold);
         private static readonly SKTypeface s_consolas = SKTypeface.FromFamilyName("Consolas");
 
-        public event Action<int> OnTimeClicked;
-        public event Action<int, int> OnViewRangeChanged;
-        public event Action<int> OnCursorMoved;
+        public event Action<int>? OnTimeClicked;
+        public event Action<int, int>? OnViewRangeChanged;
+        public event Action<int>? OnCursorMoved;
 
         private List<StateData> _stateDataList = new List<StateData>();
         private int _totalDataLength = 0;
@@ -33,7 +32,7 @@ namespace IndiLogs_3._0.Controls.Charts
         private bool _isLightTheme = false;
 
         // For X-axis labels
-        public Func<int, string> GetXAxisLabel { get; set; }
+        public Func<int, string>? GetXAxisLabel { get; set; }
 
         // Row height for each CH
         private const float ROW_HEIGHT = 24f;
@@ -73,10 +72,10 @@ namespace IndiLogs_3._0.Controls.Charts
             SKColor.Parse("#D4E157"), // Lime
         };
 
-        private SKPaint _borderPaint;
-        private SKPaint _textPaint;
+        private SKPaint _borderPaint = null!;
+        private SKPaint _textPaint = null!;
         private SKPaint _cursorPaint = new SKPaint { Color = CursorColor, StrokeWidth = 2, Style = SKPaintStyle.Stroke };
-        private SKPaint _gridPaint;
+        private SKPaint _gridPaint = null!;
 
         // ── Cached paints for hot render loop (interval drawing) ──
         private readonly SKPaint _rowBgPaint = new SKPaint { Style = SKPaintStyle.Fill };
@@ -108,9 +107,9 @@ namespace IndiLogs_3._0.Controls.Charts
         private Point _lastMousePos;
 
         // Event marker support
-        private List<EventMarker> _chartEventMarkers;
-        private SKPaint _eventDotPaint;
-        private SKPaint _eventDotBorderPaint;
+        private List<EventMarker>? _chartEventMarkers;
+        private SKPaint _eventDotPaint = null!;
+        private SKPaint _eventDotBorderPaint = null!;
         private const float EVENT_DOT_RADIUS = 5f;
         private int _hoveredEventIndex = -1;
         private Point _hoverPos;
@@ -486,7 +485,7 @@ namespace IndiLogs_3._0.Controls.Charts
             e.Handled = true;
         }
 
-        private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
+        private void OnPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
         {
             var canvas = e.Surface.Canvas;
             var info = e.Info;

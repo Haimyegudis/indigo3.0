@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -295,7 +294,7 @@ namespace IndiLogs_3._0.Services.Grep
         {
             int count = 0;
             Stream seekableStream = stream;
-            MemoryStream memoryStream = null;
+            MemoryStream? memoryStream = null;
             if (!stream.CanSeek)
             {
                 memoryStream = new MemoryStream();
@@ -389,7 +388,7 @@ namespace IndiLogs_3._0.Services.Grep
             return result;
         }
 
-        internal static List<ErrorStat> CalculateErrorHistogram(List<LogEntry> errors, int take, Func<LogEntry, string> keySelector = null)
+        internal static List<ErrorStat> CalculateErrorHistogram(List<LogEntry> errors, int take, Func<LogEntry, string>? keySelector = null)
         {
             if (errors.Count == 0) return new List<ErrorStat>();
 
@@ -425,7 +424,7 @@ namespace IndiLogs_3._0.Services.Grep
             return result;
         }
 
-        internal static List<LoadStat> CalculateLoadDistribution(List<LogEntry> logs, Func<LogEntry, string> keySelector, int take, Func<LogEntry, string> fullNameSelector = null)
+        internal static List<LoadStat> CalculateLoadDistribution(List<LogEntry> logs, Func<LogEntry, string> keySelector, int take, Func<LogEntry, string>? fullNameSelector = null)
         {
             var counts = new Dictionary<string, int>();
             var firstLog = new Dictionary<string, LogEntry>();
@@ -612,7 +611,7 @@ namespace IndiLogs_3._0.Services.Grep
             foreach (var error in errors)
             {
                 int lo = 0, hi = stateEntries.Count - 1;
-                string foundState = null;
+                string? foundState = null;
                 while (lo <= hi)
                 {
                     int mid = (lo + hi) / 2;

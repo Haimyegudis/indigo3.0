@@ -33,7 +33,7 @@ namespace IndiLogs_3._0.Models.Grep
         /// <summary>
         /// Days of week to run (for Weekly schedule).
         /// </summary>
-        public List<DayOfWeek> RunDays { get; set; } = new List<DayOfWeek>();
+        public HashSet<DayOfWeek> RunDays { get; set; } = new HashSet<DayOfWeek>();
 
         /// <summary>
         /// Repeat interval value (unit determined by IntervalUnit).

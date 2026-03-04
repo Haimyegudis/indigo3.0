@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs.PluginAPI;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Interfaces;
@@ -41,10 +40,10 @@ namespace IndiLogs_3._0.Views
         }
 
         // ── Title bar ─────────────────────────────────────────────────
-        private void CloseBtn_Click(object sender, RoutedEventArgs e) => Close();
+        private void CloseBtn_Click(object? sender, RoutedEventArgs e) => Close();
 
         // ── Open Plugins Folder in Explorer ───────────────────────────
-        private void OpenFolderBtn_Click(object sender, RoutedEventArgs e)
+        private void OpenFolderBtn_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
@@ -59,7 +58,7 @@ namespace IndiLogs_3._0.Views
         }
 
         // ── Reload all folder plugins ─────────────────────────────────
-        private void ReloadBtn_Click(object sender, RoutedEventArgs e)
+        private void ReloadBtn_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
@@ -74,7 +73,7 @@ namespace IndiLogs_3._0.Views
         }
 
         // ── Load a DLL manually (for testing without installing) ──────
-        private void LoadDllBtn_Click(object sender, RoutedEventArgs e)
+        private void LoadDllBtn_Click(object? sender, RoutedEventArgs e)
         {
             var dlg = new OpenFileDialog
             {
@@ -96,7 +95,7 @@ namespace IndiLogs_3._0.Views
                 }
                 catch (ReflectionTypeLoadException rtle)
                 {
-                    types = rtle.Types?.Where(t => t != null).ToArray() ?? new Type[0];
+                    types = rtle.Types?.Where(t => t != null).ToArray() ?? Array.Empty<Type>();
                 }
 
                 var pluginTypes = types
@@ -158,7 +157,7 @@ namespace IndiLogs_3._0.Views
         // ── Delete DLL from disk ──────────────────────────────────────
         private void DeleteDll(ILogFilePlugin plugin)
         {
-            string path = _pluginLoader.GetDllPath(plugin);
+            string? path = _pluginLoader.GetDllPath(plugin);
             if (path == null) _tempDllPaths.TryGetValue(plugin, out path);
 
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
@@ -193,7 +192,7 @@ namespace IndiLogs_3._0.Views
         }
 
         // ── Browse for test file ──────────────────────────────────────
-        private void BrowseFileBtn_Click(object sender, RoutedEventArgs e)
+        private void BrowseFileBtn_Click(object? sender, RoutedEventArgs e)
         {
             var dlg = new OpenFileDialog
             {
@@ -207,7 +206,7 @@ namespace IndiLogs_3._0.Views
         private string BuildBrowseFilter()
         {
             var exts = AllPlugins()
-                .SelectMany(p => p.SupportedExtensions ?? new string[0])
+                .SelectMany(p => p.SupportedExtensions ?? Array.Empty<string>())
                 .Distinct()
                 .ToList();
 
@@ -219,7 +218,7 @@ namespace IndiLogs_3._0.Views
         }
 
         // ── Run Test ──────────────────────────────────────────────────
-        private async void RunTestBtn_Click(object sender, RoutedEventArgs e)
+        private async void RunTestBtn_Click(object? sender, RoutedEventArgs e)
         {
             string filePath = FilePathBox.Text?.Trim();
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
@@ -238,7 +237,7 @@ namespace IndiLogs_3._0.Views
                 string[] sampleLines = ReadSampleLines(filePath, 20);
 
                 // Resolve which plugin to use
-                ILogFilePlugin plugin = null;
+                ILogFilePlugin? plugin = null;
                 if (AutoDetectRadio.IsChecked == true)
                 {
                     plugin = AllPlugins().FirstOrDefault(p => SafeCanHandle(p, fileName, sampleLines));
@@ -277,7 +276,7 @@ namespace IndiLogs_3._0.Views
                 // Parse in background
                 var sw     = Stopwatch.StartNew();
                 var errors = new StringBuilder();
-                List<LogEntryDto> entries = null;
+                List<LogEntryDto>? entries = null;
 
                 try
                 {
@@ -398,7 +397,7 @@ namespace IndiLogs_3._0.Views
             });
         }
 
-        private static IReadOnlyList<PluginColumnDef> GetPluginColumns(ILogFilePlugin plugin)
+        private static IReadOnlyList<PluginColumnDef>? GetPluginColumns(ILogFilePlugin plugin)
         {
             try   { return plugin?.GetColumns(); }
             catch (Exception ex) { AppLogger.Error("GetPluginColumns failed", ex); return null; }
@@ -409,7 +408,7 @@ namespace IndiLogs_3._0.Views
         private UIElement BuildPluginCard(ILogFilePlugin plugin)
         {
             bool   isTemp  = _tempPlugins.Contains(plugin);
-            string dllPath = _pluginLoader.GetDllPath(plugin);
+            string? dllPath = _pluginLoader.GetDllPath(plugin);
             if (dllPath == null) _tempDllPaths.TryGetValue(plugin, out dllPath);
             string dllName = dllPath != null ? Path.GetFileName(dllPath) : "(temp / unknown)";
 
@@ -600,7 +599,7 @@ namespace IndiLogs_3._0.Views
                 }
                 return lines.ToArray();
             }
-            catch (Exception ex) { AppLogger.Error("ReadSampleLines failed", ex); return new string[0]; }
+            catch (Exception ex) { AppLogger.Error("ReadSampleLines failed", ex); return Array.Empty<string>(); }
         }
 
         private static bool SafeCanHandle(ILogFilePlugin plugin, string fileName, string[] sampleLines)

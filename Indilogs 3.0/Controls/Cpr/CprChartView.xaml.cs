@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +18,7 @@ namespace IndiLogs_3._0.Controls.Cpr
         private const float BOTTOM_MARGIN = 25;
         private const float LEGEND_LINE_HEIGHT = 14;
 
-        private CprGraphResult _graphResult;
+        private CprGraphResult? _graphResult;
         private double _dpiScaleX = 1.0;
         private double _dpiScaleY = 1.0;
         private Point _hoverPos;
@@ -70,7 +69,7 @@ namespace IndiLogs_3._0.Controls.Cpr
         private readonly SKPaint _noDataPaint = new SKPaint { TextSize = 16, IsAntialias = true };
 
         // Zoom event for sync
-        public event Action<double, double, double, double> ZoomChanged;
+        public event Action<double, double, double, double>? ZoomChanged;
 
         public CprChartView()
         {
@@ -78,7 +77,7 @@ namespace IndiLogs_3._0.Controls.Cpr
             Loaded += (s, e) =>
             {
                 var source = PresentationSource.FromVisual(this);
-                if (source != null)
+                if (source?.CompositionTarget != null)
                 {
                     _dpiScaleX = source.CompositionTarget.TransformToDevice.M11;
                     _dpiScaleY = source.CompositionTarget.TransformToDevice.M22;
@@ -90,7 +89,7 @@ namespace IndiLogs_3._0.Controls.Cpr
             SkiaCanvas.MouseRightButtonDown += OnMouseRightButtonDown;
         }
 
-        public void SetGraphResult(CprGraphResult result)
+        public void SetGraphResult(CprGraphResult? result)
         {
             _graphResult = result;
             // Reset zoom when new data arrives
@@ -125,7 +124,7 @@ namespace IndiLogs_3._0.Controls.Cpr
 
         #region Mouse Events
 
-        private void OnMouseMove(object sender, MouseEventArgs e)
+        private void OnMouseMove(object? sender, MouseEventArgs e)
         {
             var pos = e.GetPosition(SkiaCanvas);
             _hoverPos = new Point(pos.X * _dpiScaleX, pos.Y * _dpiScaleY);
@@ -133,13 +132,13 @@ namespace IndiLogs_3._0.Controls.Cpr
             SkiaCanvas.InvalidateVisual();
         }
 
-        private void OnMouseLeave(object sender, MouseEventArgs e)
+        private void OnMouseLeave(object? sender, MouseEventArgs e)
         {
             _showHover = false;
             SkiaCanvas.InvalidateVisual();
         }
 
-        private void OnMouseWheel(object sender, MouseWheelEventArgs e)
+        private void OnMouseWheel(object? sender, MouseWheelEventArgs e)
         {
             if (_graphResult == null) return;
             if (_graphResult.GraphType == CprGraphType.Skew || _graphResult.GraphType == CprGraphType.Histogram) return;
@@ -211,7 +210,7 @@ namespace IndiLogs_3._0.Controls.Cpr
             e.Handled = true;
         }
 
-        private void OnMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        private void OnMouseRightButtonDown(object? sender, MouseButtonEventArgs e)
         {
             // Right-click to reset zoom
             _zoomXMin = _zoomXMax = _zoomYMin = _zoomYMax = null;
@@ -221,7 +220,7 @@ namespace IndiLogs_3._0.Controls.Cpr
 
         #endregion
 
-        private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
+        private void OnPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
         {
             var canvas = e.Surface.Canvas;
             var info = e.Info;
@@ -259,7 +258,7 @@ namespace IndiLogs_3._0.Controls.Cpr
 
             if (chartW <= 0 || chartH <= 0) return;
 
-            var series = _graphResult.Series;
+            var series = _graphResult!.Series;
             if (series == null || series.Count == 0)
             {
                 DrawNoData(canvas, w, h);
@@ -313,9 +312,9 @@ namespace IndiLogs_3._0.Controls.Cpr
             if (_zoomXMin.HasValue)
             {
                 xMin = _zoomXMin.Value;
-                xMax = _zoomXMax.Value;
-                yMin = _zoomYMin.Value;
-                yMax = _zoomYMax.Value;
+                xMax = _zoomXMax!.Value;
+                yMin = _zoomYMin!.Value;
+                yMax = _zoomYMax!.Value;
             }
 
             double xRange = xMax - xMin;
@@ -426,7 +425,7 @@ namespace IndiLogs_3._0.Controls.Cpr
 
             if (chartW <= 0 || chartH <= 0) return;
 
-            var hist = _graphResult.HistogramData;
+            var hist = _graphResult!.HistogramData!;
             if (hist.BinEdges == null || hist.BinCounts == null) return;
 
             double xMin = hist.BinEdges.First();
@@ -485,7 +484,7 @@ namespace IndiLogs_3._0.Controls.Cpr
         {
             float w = info.Width;
             float h = info.Height;
-            int rows = _graphResult.SubplotRows;
+            int rows = _graphResult!.SubplotRows;
             int cols = _graphResult.SubplotCols;
 
             float cellW = w / cols;
@@ -498,7 +497,7 @@ namespace IndiLogs_3._0.Controls.Cpr
                 for (int r = 0; r < rows; r++)
                 for (int c = 0; c < cols; c++)
                 {
-                    var sp = _graphResult.Subplots[r, c];
+                    var sp = _graphResult.Subplots![r, c];
                     if (sp == null) continue;
                     foreach (var scatter in sp.ScatterSeries)
                     {
@@ -519,7 +518,7 @@ namespace IndiLogs_3._0.Controls.Cpr
             for (int r = 0; r < rows; r++)
             for (int c = 0; c < cols; c++)
             {
-                var sp = _graphResult.Subplots[r, c];
+                var sp = _graphResult.Subplots![r, c];
                 if (sp == null) continue;
 
                 float ox = c * cellW;
@@ -677,7 +676,7 @@ namespace IndiLogs_3._0.Controls.Cpr
 
         private const string Ellipsis = "...";
 
-        private void DrawTitle(SKCanvas canvas, float w, string title)
+        private void DrawTitle(SKCanvas canvas, float w, string? title)
         {
             if (string.IsNullOrEmpty(title)) return;
             _subplotTitlePaint.Color = _textColor;
@@ -745,7 +744,7 @@ namespace IndiLogs_3._0.Controls.Cpr
         }
 
         private void DrawAxisLabels(SKCanvas canvas, float chartLeft, float chartTop, float chartRight, float chartBottom,
-            float w, float h, string xLabel, string yLabel)
+            float w, float h, string? xLabel, string? yLabel)
         {
             _axisLabelPaint.Color = _textColor.WithAlpha(180);
             _axisLabelPaint.Typeface = s_segoeNormal;
@@ -774,7 +773,7 @@ namespace IndiLogs_3._0.Controls.Cpr
             _dftMarkerPaint.StrokeWidth = 1;
             _dftLabelPaint.Typeface = s_segoeNormal;
 
-            foreach (var marker in _graphResult.DftMarkers)
+            foreach (var marker in _graphResult!.DftMarkers!)
             {
                 float x = chartLeft + (float)((marker.Frequency - xMin) / xRange * chartW);
                 if (x < chartLeft || x > chartRight) continue;
@@ -798,7 +797,7 @@ namespace IndiLogs_3._0.Controls.Cpr
             _dftLabelPaint.Typeface = s_segoeNormal;
 
             float labelOffset = 0;
-            foreach (var refLine in _graphResult.VerticalRefLines)
+            foreach (var refLine in _graphResult!.VerticalRefLines!)
             {
                 float x = chartLeft + (float)((refLine.XValue - xMin) / xRange * chartW);
                 if (x < chartLeft || x > chartRight) continue;

@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -38,7 +37,7 @@ namespace IndiLogs_3._0.Views
             ApplySyntaxHighlighting(_formattedJson);
         }
 
-        private void RowDetailWindow_Closed(object sender, EventArgs e)
+        private void RowDetailWindow_Closed(object? sender, EventArgs e)
         {
             // Clean up temp files created during this window's lifetime
             foreach (var file in _tempFiles)
@@ -198,7 +197,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void OpenInNotepadPlusPlus_Click(object sender, RoutedEventArgs e)
+        private void OpenInNotepadPlusPlus_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
@@ -230,7 +229,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private string FindNotepadPlusPlus()
+        private string? FindNotepadPlusPlus()
         {
             var possiblePaths = new[]
             {
@@ -248,7 +247,7 @@ namespace IndiLogs_3._0.Views
             return null;
         }
 
-        private void CopyButton_Click(object sender, RoutedEventArgs e)
+        private void CopyButton_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
@@ -261,7 +260,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        private void CloseButton_Click(object? sender, RoutedEventArgs e)
         {
             Close();
         }

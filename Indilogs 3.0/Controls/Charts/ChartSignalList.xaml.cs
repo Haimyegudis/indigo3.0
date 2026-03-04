@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,18 +15,18 @@ namespace IndiLogs_3._0.Controls.Charts
     /// </summary>
     public class SignalListItem
     {
-        public string FullName { get; set; }
-        public string DisplayName { get; set; }
-        public string TypeIcon { get; set; }
-        public Brush TypeColor { get; set; }
+        public string FullName { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public string TypeIcon { get; set; } = "";
+        public Brush? TypeColor { get; set; }
         public SignalItemCategory Category { get; set; }
 
         // For CHSTEP - store state data
-        public StateData StateData { get; set; }
+        public StateData? StateData { get; set; }
 
         // For THREAD - store thread name
-        public string ThreadName { get; set; }
-        public List<ThreadMessageData> ThreadMessages { get; set; }
+        public string? ThreadName { get; set; }
+        public List<ThreadMessageData>? ThreadMessages { get; set; }
     }
 
     public enum SignalItemCategory
@@ -43,8 +42,8 @@ namespace IndiLogs_3._0.Controls.Charts
 
     public partial class ChartSignalList : UserControl
     {
-        public event Action<SignalListItem> OnItemDoubleClicked;
-        public event Action<string> OnSignalDoubleClicked; // Legacy event for signal names
+        public event Action<SignalListItem>? OnItemDoubleClicked;
+        public event Action<string>? OnSignalDoubleClicked; // Legacy event for signal names
 
         private List<SignalListItem> _allItems = new List<SignalListItem>();
         private List<SignalListItem> _filteredItems = new List<SignalListItem>();
@@ -102,7 +101,7 @@ namespace IndiLogs_3._0.Controls.Charts
         /// <summary>
         /// Sets full data package (for In-Memory mode with CHSTEP and Thread support)
         /// </summary>
-        public void SetDataPackage(ChartDataPackage package)
+        public void SetDataPackage(ChartDataPackage? package)
         {
             _allItems.Clear();
 
@@ -373,8 +372,8 @@ namespace IndiLogs_3._0.Controls.Charts
             return item;
         }
 
-        public SignalListItem SelectedItem => SignalListBox.SelectedItem as SignalListItem;
-        public string SelectedSignal => SelectedItem?.FullName;
+        public SignalListItem? SelectedItem => SignalListBox.SelectedItem as SignalListItem;
+        public string? SelectedSignal => SelectedItem?.FullName;
 
         private void ApplyFilters()
         {
@@ -419,7 +418,7 @@ namespace IndiLogs_3._0.Controls.Charts
             }
         }
 
-        private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        private void SearchBox_TextChanged(object? sender, TextChangedEventArgs e)
         {
             _pendingSearchText = SearchBox.Text ?? "";
 
@@ -428,25 +427,25 @@ namespace IndiLogs_3._0.Controls.Charts
             _searchDebounceTimer.Start();
         }
 
-        private void SearchDebounceTimer_Tick(object sender, EventArgs e)
+        private void SearchDebounceTimer_Tick(object? sender, EventArgs e)
         {
             _searchDebounceTimer.Stop();
             ApplyFilters();
         }
 
-        private void CategoryButton_Checked(object sender, RoutedEventArgs e)
+        private void CategoryButton_Checked(object? sender, RoutedEventArgs e)
         {
             ApplyFilters();
         }
 
-        private void ClearSearchBtn_Click(object sender, RoutedEventArgs e)
+        private void ClearSearchBtn_Click(object? sender, RoutedEventArgs e)
         {
             SearchBox.Text = "";
             _pendingSearchText = "";
             ApplyFilters();
         }
 
-        private void SignalListBox_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void SignalListBox_MouseDoubleClick(object? sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             if (SignalListBox.SelectedItem is SignalListItem item)
             {

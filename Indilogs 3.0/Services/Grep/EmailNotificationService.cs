@@ -1,4 +1,3 @@
-#nullable disable
 #pragma warning disable SYSLIB0014 // SmtpClient is deprecated but functional
 using System;
 using System.Collections.Concurrent;

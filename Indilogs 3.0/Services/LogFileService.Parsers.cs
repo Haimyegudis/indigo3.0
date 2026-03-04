@@ -1,4 +1,3 @@
-#nullable disable
 using Indigo.Infra.ICL.Core.Logging;
 using IndiLogs_3._0.Models;
 using System;
@@ -83,7 +82,7 @@ namespace IndiLogs_3._0.Services
                 {
                     if (logReader.Current != null)
                     {
-                        string processName = logReader.Current["ProcessName"]?.ToString();
+                        string? processName = logReader.Current["ProcessName"]?.ToString();
 
                         var entry = new LogEntry
                         {
@@ -133,7 +132,7 @@ namespace IndiLogs_3._0.Services
                             continue;
 
                         // Only create LogEntry for NEW entries
-                        string processName = logReader.Current["ProcessName"]?.ToString();
+                        string? processName = logReader.Current["ProcessName"]?.ToString();
 
                         var entry = new LogEntry
                         {
@@ -157,7 +156,7 @@ namespace IndiLogs_3._0.Services
             return (newEntries, totalCount);
         }
 
-        public (List<LogEntry> AllLogs, List<LogEntry> Transitions, List<LogEntry> Failures) ParseLogStream(Stream stream, StringPool pool = null)
+        public (List<LogEntry> AllLogs, List<LogEntry> Transitions, List<LogEntry> Failures) ParseLogStream(Stream stream, StringPool? pool = null)
         {
             // If no Pool was passed (e.g. from legacy calls), create a local one
             pool = pool ?? new StringPool();
@@ -177,7 +176,7 @@ namespace IndiLogs_3._0.Services
                 {
                     if (reader.Current != null)
                     {
-                        string processName = reader.Current["ProcessName"]?.ToString();
+                        string? processName = reader.Current["ProcessName"]?.ToString();
 
                         string message = reader.Current.Message ?? "";
                         string threadName = pool.Intern(reader.Current.ThreadName ?? "");
@@ -222,7 +221,7 @@ namespace IndiLogs_3._0.Services
             return (allLogs, transitions, failures);
         }
 
-        private List<LogEntry> ParseAppDevLogStream(Stream stream, StringPool pool = null)
+        private List<LogEntry> ParseAppDevLogStream(Stream stream, StringPool? pool = null)
         {
             pool = pool ?? new StringPool();
             // Pre-allocate based on ~1KB per entry
@@ -286,7 +285,7 @@ namespace IndiLogs_3._0.Services
         /// Avoids Split (saves array + 12 substrings) and StringBuilder buffer.
         /// Returns null if the line doesn't have enough \x1e separators (multi-line entry).
         /// </summary>
-        private LogEntry ParseOldFormatDirect(string line, StringPool pool)
+        private LogEntry? ParseOldFormatDirect(string line, StringPool pool)
         {
             // Fields: [0]Timestamp [1]Thread [2]RootIFlowId [3]IFlowId [4]IFlowName
             //         [5]Pattern [6]Context [7]LevelLogger [8]Location [9]Message [10]Exception [11]Data
@@ -371,7 +370,7 @@ namespace IndiLogs_3._0.Services
         /// Old format: fields separated by \x1e (record separator).
         /// New format: pipe-separated multi-line — falls back to regex only if needed.
         /// </summary>
-        private LogEntry ProcessAppDevBufferFast(string rawText, StringPool pool)
+        private LogEntry? ProcessAppDevBufferFast(string rawText, StringPool pool)
         {
             // ── Old format: \x1e separated ──
             // Fields: Timestamp\x1eThread\x1eRootIFlowId\x1eIFlowId\x1eIFlowName\x1ePattern\x1eContext\x1e"Level Logger"\x1eLocation\x1eMessage\x1eException\x1eData

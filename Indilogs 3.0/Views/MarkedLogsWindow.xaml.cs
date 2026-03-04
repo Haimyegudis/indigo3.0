@@ -1,5 +1,4 @@
-#nullable disable
-﻿using IndiLogs_3._0.Models;
+using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using System;
 using System.Collections.Generic;
@@ -14,7 +13,7 @@ namespace IndiLogs_3._0.Views
 {
     public partial class MarkedLogsWindow : Window
     {
-        public LogEntry SelectedItem { get; set; }
+        public LogEntry? SelectedItem { get; set; }
 
         public MarkedLogsWindow(IEnumerable<LogEntry> logsToShow, string title)
         {
@@ -31,7 +30,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void MarkedList_PreviewKeyDown(object sender, KeyEventArgs e)
+        private void MarkedList_PreviewKeyDown(object? sender, KeyEventArgs e)
         {
             if (e.Key == Key.C && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {

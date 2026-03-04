@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -22,8 +21,8 @@ namespace IndiLogs_3._0.ViewModels
         private readonly IDialogService _dialogService;
 
         // ═══ Section 1: Schedule Details ═══
-        private string _scheduleName;
-        public string ScheduleName
+        private string? _scheduleName;
+        public string? ScheduleName
         {
             get => _scheduleName;
             set => SetField(ref _scheduleName, value);
@@ -100,15 +99,15 @@ namespace IndiLogs_3._0.ViewModels
             set => SetField(ref _runDate, value);
         }
 
-        private string _runHour;
-        public string RunHour
+        private string? _runHour;
+        public string? RunHour
         {
             get => _runHour;
             set => SetField(ref _runHour, value);
         }
 
-        private string _runMinute;
-        public string RunMinute
+        private string? _runMinute;
+        public string? RunMinute
         {
             get => _runMinute;
             set => SetField(ref _runMinute, value);
@@ -124,8 +123,8 @@ namespace IndiLogs_3._0.ViewModels
         public bool DayFri { get => _dayFri; set => SetField(ref _dayFri, value); }
         public bool DaySat { get => _daySat; set => SetField(ref _daySat, value); }
 
-        private string _intervalValue;
-        public string IntervalValue
+        private string? _intervalValue;
+        public string? IntervalValue
         {
             get => _intervalValue;
             set => SetField(ref _intervalValue, value);
@@ -170,8 +169,8 @@ namespace IndiLogs_3._0.ViewModels
             set => SetField(ref _simpleField, value);
         }
 
-        private string _simpleSearchText;
-        public string SimpleSearchText
+        private string? _simpleSearchText;
+        public string? SimpleSearchText
         {
             get => _simpleSearchText;
             set => SetField(ref _simpleSearchText, value);
@@ -302,8 +301,8 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         // ═══ Section 6: Output ═══
-        private string _outputDirectory;
-        public string OutputDirectory
+        private string? _outputDirectory;
+        public string? OutputDirectory
         {
             get => _outputDirectory;
             set => SetField(ref _outputDirectory, value);
@@ -317,15 +316,15 @@ namespace IndiLogs_3._0.ViewModels
             set => SetField(ref _emailEnabled, value);
         }
 
-        private string _smtpHost;
-        public string SmtpHost
+        private string? _smtpHost;
+        public string? SmtpHost
         {
             get => _smtpHost;
             set => SetField(ref _smtpHost, value);
         }
 
-        private string _smtpPort;
-        public string SmtpPort
+        private string? _smtpPort;
+        public string? SmtpPort
         {
             get => _smtpPort;
             set => SetField(ref _smtpPort, value);
@@ -373,29 +372,29 @@ namespace IndiLogs_3._0.ViewModels
 
         public bool AuthIsUserPass => AuthUserPass;
 
-        private string _smtpUsername;
-        public string SmtpUsername
+        private string? _smtpUsername;
+        public string? SmtpUsername
         {
             get => _smtpUsername;
             set => SetField(ref _smtpUsername, value);
         }
 
-        private string _smtpPassword;
-        public string SmtpPassword
+        private string? _smtpPassword;
+        public string? SmtpPassword
         {
             get => _smtpPassword;
             set => SetField(ref _smtpPassword, value);
         }
 
-        private string _fromAddress;
-        public string FromAddress
+        private string? _fromAddress;
+        public string? FromAddress
         {
             get => _fromAddress;
             set => SetField(ref _fromAddress, value);
         }
 
-        private string _testEmailStatus;
-        public string TestEmailStatus
+        private string? _testEmailStatus;
+        public string? TestEmailStatus
         {
             get => _testEmailStatus;
             set => SetField(ref _testEmailStatus, value);
@@ -403,8 +402,8 @@ namespace IndiLogs_3._0.ViewModels
 
         public ObservableCollection<string> Recipients { get; } = new ObservableCollection<string>();
 
-        private string _newRecipient;
-        public string NewRecipient
+        private string? _newRecipient;
+        public string? NewRecipient
         {
             get => _newRecipient;
             set => SetField(ref _newRecipient, value);
@@ -434,22 +433,22 @@ namespace IndiLogs_3._0.ViewModels
 
         public bool TimingIsDeferred => TimingDeferred;
 
-        private string _emailHour;
-        public string EmailHour
+        private string? _emailHour;
+        public string? EmailHour
         {
             get => _emailHour;
             set => SetField(ref _emailHour, value);
         }
 
-        private string _emailMinute;
-        public string EmailMinute
+        private string? _emailMinute;
+        public string? EmailMinute
         {
             get => _emailMinute;
             set => SetField(ref _emailMinute, value);
         }
 
-        private string _customSubject;
-        public string CustomSubject
+        private string? _customSubject;
+        public string? CustomSubject
         {
             get => _customSubject;
             set => SetField(ref _customSubject, value);
@@ -470,7 +469,7 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand CancelCommand { get; }
 
         // ═══ Constructor ═══
-        public ScheduleEditorViewModel(ScheduledSearch schedule, List<SearchLocation> locations, SearchCriteria parentCriteria, IDialogService dialogService = null)
+        public ScheduleEditorViewModel(ScheduledSearch schedule, List<SearchLocation> locations, SearchCriteria parentCriteria, IDialogService? dialogService = null)
         {
             _schedule = schedule;
             _allLocations = locations;
@@ -622,7 +621,7 @@ namespace IndiLogs_3._0.ViewModels
             Conditions.Add(new ConditionRowViewModel());
         }
 
-        private void RemoveCondition(ConditionRowViewModel row)
+        private void RemoveCondition(ConditionRowViewModel? row)
         {
             if (row != null)
                 Conditions.Remove(row);
@@ -698,14 +697,14 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
-        private void RemoveRecipient(string email)
+        private void RemoveRecipient(string? email)
         {
             if (email != null)
                 Recipients.Remove(email);
         }
 
         // ═══ Save / Cancel ═══
-        private void Save(Window window)
+        private void Save(Window? window)
         {
             if (window == null) return;
 
@@ -858,7 +857,7 @@ namespace IndiLogs_3._0.ViewModels
             _schedule.RunDate = ScheduleTypeIndex == 0 ? RunDate : null;
             _schedule.RunTime = new TimeSpan(hours, minutes, 0);
 
-            var runDays = new List<DayOfWeek>();
+            var runDays = new HashSet<DayOfWeek>();
             if (DaySun) runDays.Add(DayOfWeek.Sunday);
             if (DayMon) runDays.Add(DayOfWeek.Monday);
             if (DayTue) runDays.Add(DayOfWeek.Tuesday);
@@ -942,7 +941,7 @@ namespace IndiLogs_3._0.ViewModels
             window.Close();
         }
 
-        private void Cancel(Window window)
+        private void Cancel(Window? window)
         {
             if (window == null) return;
             window.DialogResult = false;
@@ -994,8 +993,8 @@ namespace IndiLogs_3._0.ViewModels
     {
         public Guid Id { get; set; }
 
-        private string _displayText;
-        public string DisplayText
+        private string? _displayText;
+        public string? DisplayText
         {
             get => _displayText;
             set => SetField(ref _displayText, value);

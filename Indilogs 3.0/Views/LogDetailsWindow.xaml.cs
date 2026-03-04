@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using System.Collections.Generic;
 using System.Text;
@@ -76,7 +75,7 @@ namespace IndiLogs_3._0.Views
             PreviewKeyDown += (s, e) => { if (e.Key == System.Windows.Input.Key.Escape) Close(); };
         }
 
-        private void SetLevelColor(string level)
+        private void SetLevelColor(string? level)
         {
             if (string.IsNullOrEmpty(level))
             {
@@ -112,7 +111,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private string FormatData(string data)
+        private string FormatData(string? data)
         {
             if (string.IsNullOrEmpty(data))
                 return "(empty)";
@@ -186,7 +185,7 @@ namespace IndiLogs_3._0.Views
             return sb.ToString();
         }
 
-        private void CopyAll_Click(object sender, RoutedEventArgs e)
+        private void CopyAll_Click(object? sender, RoutedEventArgs e)
         {
             if (_log == null) return;
 
@@ -229,7 +228,7 @@ namespace IndiLogs_3._0.Views
             MessageBox.Show("Log details copied to clipboard!", "Copied", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        private void Close_Click(object sender, RoutedEventArgs e)
+        private void Close_Click(object? sender, RoutedEventArgs e)
         {
             Close();
         }

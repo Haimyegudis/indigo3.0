@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +21,7 @@ namespace IndiLogs_3._0.Views
             Loaded += OnLoaded;
         }
 
-        private void OnLoaded(object sender, RoutedEventArgs e)
+        private void OnLoaded(object? sender, RoutedEventArgs e)
         {
             // Map section anchors after the visual tree is ready
             _sections[0] = Section0;
@@ -43,7 +42,7 @@ namespace IndiLogs_3._0.Views
             TocList.SelectedIndex = 0;
         }
 
-        private void TocList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void TocList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
             if (TocList.SelectedItem is ListBoxItem item && item.Tag is string tagStr)
             {
@@ -54,12 +53,12 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void Close_Click(object sender, RoutedEventArgs e)
+        private void Close_Click(object? sender, RoutedEventArgs e)
         {
             Close();
         }
 
-        private void HelpSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        private void HelpSearchBox_TextChanged(object? sender, TextChangedEventArgs e)
         {
             string query = HelpSearchBox.Text?.Trim() ?? "";
 

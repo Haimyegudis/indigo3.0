@@ -1,5 +1,4 @@
-#nullable disable
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -8,11 +7,11 @@ namespace IndiLogs_3._0.Views
 {
     public partial class SaveConfigWindow : Window
     {
-        public string ConfigName { get; private set; }
+        public string? ConfigName { get; private set; }
         private readonly HashSet<string> _existingNames;
 
         // This is the constructor that MainViewModel looks for (receives a list of names)
-        public SaveConfigWindow(IEnumerable<string> existingNames = null)
+        public SaveConfigWindow(IEnumerable<string>? existingNames = null)
         {
             InitializeComponent();
             NameTextBox.Focus();
@@ -26,7 +25,7 @@ namespace IndiLogs_3._0.Views
         // Default constructor (in case XAML requires it, even though in code we use the other one)
         public SaveConfigWindow() : this(null) { }
 
-        private void OK_Click(object sender, RoutedEventArgs e)
+        private void OK_Click(object? sender, RoutedEventArgs e)
         {
             var name = NameTextBox.Text.Trim();
 
@@ -48,7 +47,7 @@ namespace IndiLogs_3._0.Views
             Close();
         }
 
-        private void Cancel_Click(object sender, RoutedEventArgs e)
+        private void Cancel_Click(object? sender, RoutedEventArgs e)
         {
             DialogResult = false;
             Close();

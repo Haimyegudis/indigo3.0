@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using System;
 using System.Collections.ObjectModel;
@@ -22,7 +21,7 @@ namespace IndiLogs_3._0.ViewModels
             set { _systabTree = value; OnPropertyChanged(); }
         }
 
-        private SystabTopicNode _selectedSystabNode;
+        private SystabTopicNode? _selectedSystabNode;
         public SystabTopicNode SelectedSystabNode
         {
             get => _selectedSystabNode;

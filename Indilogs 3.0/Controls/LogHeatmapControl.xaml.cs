@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -48,9 +47,9 @@ namespace IndiLogs_3._0.Controls
                 typeof(LogHeatmapControl),
                 new PropertyMetadata(null, OnItemsSourceChanged));
 
-        public IEnumerable<LogEntry> ItemsSource
+        public IEnumerable<LogEntry>? ItemsSource
         {
-            get => (IEnumerable<LogEntry>)GetValue(ItemsSourceProperty);
+            get => (IEnumerable<LogEntry>?)GetValue(ItemsSourceProperty);
             set => SetValue(ItemsSourceProperty, value);
         }
 
@@ -61,9 +60,9 @@ namespace IndiLogs_3._0.Controls
                 typeof(LogHeatmapControl),
                 new PropertyMetadata(null, OnLinkedDataGridChanged));
 
-        public DataGrid LinkedDataGrid
+        public DataGrid? LinkedDataGrid
         {
-            get => (DataGrid)GetValue(LinkedDataGridProperty);
+            get => (DataGrid?)GetValue(LinkedDataGridProperty);
             set => SetValue(LinkedDataGridProperty, value);
         }
 
@@ -86,7 +85,7 @@ namespace IndiLogs_3._0.Controls
 
         #region Events
 
-        public event Action<LogEntry> RequestScrollToLog;
+        public event Action<LogEntry>? RequestScrollToLog;
 
         #endregion
 
@@ -95,8 +94,8 @@ namespace IndiLogs_3._0.Controls
         private readonly Canvas _canvas;
         private readonly DispatcherTimer _updateTimer;
         private List<HeatmapTick> _tickCache = new List<HeatmapTick>();
-        private INotifyCollectionChanged _observableSource;
-        private ScrollViewer _dataGridScrollViewer;
+        private INotifyCollectionChanged? _observableSource;
+        private ScrollViewer? _dataGridScrollViewer;
 
         #endregion
 
@@ -292,7 +291,7 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private static ScrollViewer GetScrollViewer(DependencyObject depObj)
+        private static ScrollViewer? GetScrollViewer(DependencyObject depObj)
         {
             if (depObj is ScrollViewer sv)
                 return sv;
@@ -307,7 +306,7 @@ namespace IndiLogs_3._0.Controls
             return null;
         }
 
-        private void OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
             ScheduleRedraw();
         }
@@ -316,7 +315,7 @@ namespace IndiLogs_3._0.Controls
 
         #region Mouse Interaction
 
-        private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void OnMouseLeftButtonDown(object? sender, MouseButtonEventArgs e)
         {
             var pos = e.GetPosition(this);
             var tick = FindTickAtPosition(pos.Y);
@@ -338,7 +337,7 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private void OnMouseMove(object sender, MouseEventArgs e)
+        private void OnMouseMove(object? sender, MouseEventArgs e)
         {
             var pos = e.GetPosition(this);
             var tick = FindTickAtPosition(pos.Y);
@@ -367,7 +366,7 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private HeatmapTick FindTickAtPosition(double y)
+        private HeatmapTick? FindTickAtPosition(double y)
         {
             const double tolerance = 5;
 
@@ -377,7 +376,7 @@ namespace IndiLogs_3._0.Controls
                 .FirstOrDefault();
         }
 
-        private string Truncate(string text, int maxLength)
+        private string? Truncate(string? text, int maxLength)
         {
             if (string.IsNullOrEmpty(text) || text.Length <= maxLength)
                 return text;
@@ -398,7 +397,7 @@ namespace IndiLogs_3._0.Controls
 
         private class HeatmapTick
         {
-            public LogEntry LogEntry { get; set; }
+            public LogEntry LogEntry { get; set; } = null!;
             public int Index { get; set; }
             public double YPosition { get; set; }
             public HeatmapTickType Type { get; set; }

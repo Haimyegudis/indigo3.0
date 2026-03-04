@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -20,13 +19,13 @@ namespace IndiLogs_3._0.Views
     {
         private readonly string _tableName;
         private readonly byte[] _dbBytes;
-        private DataTable _dataTable;
-        private DataTable _originalDataTable; // Stores the full data for row expansion
-        private DataView _filteredView;
-        private string _tempDbPath;
-        private List<string> _columnNames;
+        private DataTable? _dataTable;
+        private DataTable? _originalDataTable; // Stores the full data for row expansion
+        private DataView? _filteredView;
+        private string? _tempDbPath;
+        private List<string>? _columnNames;
         private long _totalRowCount;
-        private List<string> _originalColumnOrder;
+        private List<string>? _originalColumnOrder;
         private bool _columnsGenerated = false;
         private HashSet<string> _jsonColumnNames = new HashSet<string>();
 
@@ -925,17 +924,17 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void SearchTextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        private void SearchTextBox_TextChanged(object? sender, System.Windows.Controls.TextChangedEventArgs e)
         {
             ApplyFilter();
         }
 
-        private void ClearSearchButton_Click(object sender, RoutedEventArgs e)
+        private void ClearSearchButton_Click(object? sender, RoutedEventArgs e)
         {
             SearchTextBox.Clear();
         }
 
-        private void DataBrowserGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void DataBrowserGrid_MouseDoubleClick(object? sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             // Get the clicked cell
             var cell = e.OriginalSource as FrameworkElement;
@@ -1013,7 +1012,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void ExportButton_Click(object sender, RoutedEventArgs e)
+        private void ExportButton_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
@@ -1076,7 +1075,7 @@ namespace IndiLogs_3._0.Views
             return value;
         }
 
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        private void CloseButton_Click(object? sender, RoutedEventArgs e)
         {
             Close();
         }
@@ -1090,7 +1089,7 @@ namespace IndiLogs_3._0.Views
 
         #region Column Settings Persistence
 
-        private void DataBrowserGrid_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
+        private void DataBrowserGrid_AutoGeneratingColumn(object? sender, DataGridAutoGeneratingColumnEventArgs e)
         {
             // Store original column order
             if (_originalColumnOrder == null)
@@ -1105,12 +1104,12 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void DataBrowserGrid_ColumnReordered(object sender, DataGridColumnEventArgs e)
+        private void DataBrowserGrid_ColumnReordered(object? sender, DataGridColumnEventArgs e)
         {
             // Settings will be saved on window close
         }
 
-        private void ManageColumnsButton_Click(object sender, RoutedEventArgs e)
+        private void ManageColumnsButton_Click(object? sender, RoutedEventArgs e)
         {
             var managerWindow = new ColumnManagerWindow(DataBrowserGrid);
             managerWindow.Owner = this;
@@ -1120,7 +1119,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void ResetColumnsButton_Click(object sender, RoutedEventArgs e)
+        private void ResetColumnsButton_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
@@ -1213,7 +1212,7 @@ namespace IndiLogs_3._0.Views
 
         private class DbColumnSettingsInfo
         {
-            public string Header { get; set; }
+            public string Header { get; set; } = "";
             public int DisplayIndex { get; set; }
             public double Width { get; set; }
             public bool IsVisible { get; set; } = true;

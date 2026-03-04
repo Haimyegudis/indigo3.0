@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs.PluginAPI;
 using IndiLogs_3._0.Models;
 using System;

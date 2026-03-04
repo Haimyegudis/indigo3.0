@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.IO;
 using System.Windows;
@@ -33,7 +32,7 @@ namespace IndiLogs_3._0.Controls
         /// <summary>
         /// Call from derived constructor after InitializeComponent to wire up shared events.
         /// </summary>
-        protected void InitializeSharedBehavior(DataGrid grid, LogHeatmapControl heatmap = null)
+        protected void InitializeSharedBehavior(DataGrid grid, LogHeatmapControl? heatmap = null)
         {
             grid.LoadingRow += OnRowLoading;
 
@@ -62,7 +61,7 @@ namespace IndiLogs_3._0.Controls
 
         #region Row Annotation Management
 
-        protected void OnRowLoading(object sender, DataGridRowEventArgs e)
+        protected void OnRowLoading(object? sender, DataGridRowEventArgs e)
         {
             if (e.Row.Item is LogEntry log)
             {
@@ -76,7 +75,7 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private void Log_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private void Log_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(LogEntry.IsAnnotationExpanded) && sender is LogEntry log)
             {
@@ -89,7 +88,7 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        protected DataGridRow FindRowForLog(LogEntry log)
+        protected DataGridRow? FindRowForLog(LogEntry log)
         {
             if (log == null) return null;
             var grid = InnerDataGrid;
@@ -123,7 +122,7 @@ namespace IndiLogs_3._0.Controls
             grid.MouseRightButtonUp += DataGrid_MouseRightButtonUp;
         }
 
-        private void DataGrid_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        private void DataGrid_MouseRightButtonUp(object? sender, MouseButtonEventArgs e)
         {
             var depObj = e.OriginalSource as DependencyObject;
 
@@ -175,7 +174,7 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private void ColumnVisibilityMenuItem_Click(object sender, RoutedEventArgs e)
+        private void ColumnVisibilityMenuItem_Click(object? sender, RoutedEventArgs e)
         {
             if (sender is MenuItem menuItem && menuItem.Tag is DataGridColumn column)
             {
@@ -193,7 +192,7 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        protected string GetColumnHeaderText(DataGridColumn column)
+        protected string? GetColumnHeaderText(DataGridColumn column)
         {
             if (column.Header == null) return null;
 

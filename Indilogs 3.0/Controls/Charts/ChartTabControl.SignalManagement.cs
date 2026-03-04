@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -124,7 +123,7 @@ namespace IndiLogs_3._0.Controls.Charts
         /// <summary>
         /// Gets signal data by name from the current In-Memory package
         /// </summary>
-        private SignalData GetSignalDataByName(string signalName)
+        private SignalData? GetSignalDataByName(string signalName)
         {
             if (_currentDataPackage == null) return null;
             return _currentDataPackage.Signals.FirstOrDefault(s =>
@@ -319,7 +318,7 @@ namespace IndiLogs_3._0.Controls.Charts
                                 var interval = intervals[i];
                                 int dataRow = _dataService.DataStartRow + interval.StartIndex;
 
-                                string stepMsg = msgCol > 0 ? _dataService.GetStringAt(dataRow, msgCol) : null;
+                                string? stepMsg = msgCol > 0 ? _dataService.GetStringAt(dataRow, msgCol) : null;
                                 if (!string.IsNullOrWhiteSpace(stepMsg))
                                     interval.StateName = stepMsg;
 
@@ -332,23 +331,23 @@ namespace IndiLogs_3._0.Controls.Charts
                                 if (!string.IsNullOrEmpty(parentName))
                                     sb.AppendLine($"Parent: {parentName}");
 
-                                string subsysVal = subsysCol > 0 ? _dataService.GetStringAt(dataRow, subsysCol) : null;
+                                string? subsysVal = subsysCol > 0 ? _dataService.GetStringAt(dataRow, subsysCol) : null;
                                 if (!string.IsNullOrWhiteSpace(subsysVal))
                                     sb.AppendLine($"SubsysID: {subsysVal}");
 
-                                string prevStep = prevStepCol > 0 ? _dataService.GetStringAt(dataRow, prevStepCol) : null;
+                                string? prevStep = prevStepCol > 0 ? _dataService.GetStringAt(dataRow, prevStepCol) : null;
                                 if (!string.IsNullOrWhiteSpace(prevStep))
                                     sb.AppendLine($"PrevStepNo: {prevStep}");
 
-                                string diffTime = diffTimeCol > 0 ? _dataService.GetStringAt(dataRow, diffTimeCol) : null;
+                                string? diffTime = diffTimeCol > 0 ? _dataService.GetStringAt(dataRow, diffTimeCol) : null;
                                 if (!string.IsNullOrWhiteSpace(diffTime))
                                     sb.AppendLine($"DiffTime: {diffTime}");
 
-                                string subStep = subStepCol > 0 ? _dataService.GetStringAt(dataRow, subStepCol) : null;
+                                string? subStep = subStepCol > 0 ? _dataService.GetStringAt(dataRow, subStepCol) : null;
                                 if (!string.IsNullOrWhiteSpace(subStep))
                                     sb.AppendLine($"SubStepNo: {subStep}");
 
-                                string objType = objTypeCol > 0 ? _dataService.GetStringAt(dataRow, objTypeCol) : null;
+                                string? objType = objTypeCol > 0 ? _dataService.GetStringAt(dataRow, objTypeCol) : null;
                                 if (!string.IsNullOrWhiteSpace(objType))
                                     sb.AppendLine($"CHObjType: {objType}");
 
@@ -851,7 +850,7 @@ namespace IndiLogs_3._0.Controls.Charts
             // Check if already added
             if (chart.Series.Any(s => s.Name == signalName)) return;
 
-            double[] data = null;
+            double[]? data = null;
 
             // Try In-Memory data first
             if (_inMemoryDataLoaded && _currentDataPackage != null)
@@ -910,28 +909,28 @@ namespace IndiLogs_3._0.Controls.Charts
 
         #region Helpers
 
-        private ChartGraphView FindGraphViewForChart(ChartViewModel chart)
+        private ChartGraphView? FindGraphViewForChart(ChartViewModel chart)
         {
             var container = ChartsContainer.ItemContainerGenerator.ContainerFromItem(chart) as FrameworkElement;
             if (container == null) return null;
             return FindVisualChild<ChartGraphView>(container);
         }
 
-        private ChartGanttView FindGanttViewForChart(ChartViewModel chart)
+        private ChartGanttView? FindGanttViewForChart(ChartViewModel chart)
         {
             var container = ChartsContainer.ItemContainerGenerator.ContainerFromItem(chart) as FrameworkElement;
             if (container == null) return null;
             return FindVisualChild<ChartGanttView>(container);
         }
 
-        private ChartThreadView FindThreadViewForChart(ChartViewModel chart)
+        private ChartThreadView? FindThreadViewForChart(ChartViewModel chart)
         {
             var container = ChartsContainer.ItemContainerGenerator.ContainerFromItem(chart) as FrameworkElement;
             if (container == null) return null;
             return FindVisualChild<ChartThreadView>(container);
         }
 
-        private T FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        private T? FindVisualChild<T>(DependencyObject? parent) where T : DependencyObject
         {
             if (parent == null) return null;
 

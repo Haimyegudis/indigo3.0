@@ -1,4 +1,3 @@
-#nullable disable
 using System.Collections.ObjectModel;
 using System.Windows;
 using IndiLogs_3._0.Models.Charts;
@@ -24,7 +23,7 @@ namespace IndiLogs_3._0.Views
             LinesGrid.ItemsSource = _referenceLines;
         }
 
-        private void AddButton_Click(object sender, RoutedEventArgs e)
+        private void AddButton_Click(object? sender, RoutedEventArgs e)
         {
             var dialog = new AddReferenceLineWindow(_currentCursorValue, _currentCursorIndex);
             dialog.Owner = this;
@@ -35,7 +34,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void DeleteButton_Click(object sender, RoutedEventArgs e)
+        private void DeleteButton_Click(object? sender, RoutedEventArgs e)
         {
             if (LinesGrid.SelectedItem is ReferenceLine line)
             {
@@ -43,7 +42,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        private void CloseButton_Click(object? sender, RoutedEventArgs e)
         {
             Close();
         }

@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using System;
@@ -20,8 +19,8 @@ namespace IndiLogs_3._0.ViewModels
             set { _globalsFileNames = value; OnPropertyChanged(); }
         }
 
-        private string _selectedGlobalsFile;
-        public string SelectedGlobalsFile
+        private string? _selectedGlobalsFile;
+        public string? SelectedGlobalsFile
         {
             get => _selectedGlobalsFile;
             set
@@ -46,7 +45,7 @@ namespace IndiLogs_3._0.ViewModels
         private List<GlobalEntry> _allGlobalsEntries = new List<GlobalEntry>();
 
         // Debounce for globals search
-        private CancellationTokenSource _globalsSearchDebounce;
+        private CancellationTokenSource? _globalsSearchDebounce;
 
         private string _globalsSearchText = "";
         public string GlobalsSearchText

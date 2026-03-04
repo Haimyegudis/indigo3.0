@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -22,7 +21,7 @@ namespace IndiLogs_3._0.Views
     public partial class StripeAnalysisWindow : Window
     {
         private List<IndigoStripeEntry> _allEntries;
-        private ICollectionView _dataView;
+        private ICollectionView? _dataView;
         private readonly StripeDataParserService _parser;
         private string _selectedSearchColumn = "All Columns";
 
@@ -353,19 +352,19 @@ namespace IndiLogs_3._0.Views
 
         private class ColumnSettingsInfo
         {
-            public string Header { get; set; }
+            public string Header { get; set; } = "";
             public int DisplayIndex { get; set; }
             public double Width { get; set; }
             public bool IsVisible { get; set; } = true;
         }
 
-        private void StripeDataGrid_ColumnReordered(object sender, DataGridColumnEventArgs e)
+        private void StripeDataGrid_ColumnReordered(object? sender, DataGridColumnEventArgs e)
         {
             SaveColumnSettings();
             TxtStatus.Text = "Column order saved";
         }
 
-        private void BtnManageColumns_Click(object sender, RoutedEventArgs e)
+        private void BtnManageColumns_Click(object? sender, RoutedEventArgs e)
         {
             var managerWindow = new ColumnManagerWindow(StripeDataGrid);
             managerWindow.Owner = this;
@@ -376,7 +375,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void BtnResetColumns_Click(object sender, RoutedEventArgs e)
+        private void BtnResetColumns_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
@@ -400,7 +399,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void Window_Closing(object sender, CancelEventArgs e)
+        private void Window_Closing(object? sender, CancelEventArgs e)
         {
             SaveColumnSettings();
         }
@@ -409,13 +408,13 @@ namespace IndiLogs_3._0.Views
 
         #region Event Handlers
 
-        private void Filter_Changed(object sender, RoutedEventArgs e)
+        private void Filter_Changed(object? sender, RoutedEventArgs e)
         {
             _dataView?.Refresh();
             UpdateStatistics();
         }
 
-        private void CmbSearchColumn_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void CmbSearchColumn_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
             // Guard against null during initialization
             if (CmbSearchColumn == null || TxtSearch == null)
@@ -431,34 +430,34 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void TxtSearch_TextChanged(object sender, TextChangedEventArgs e)
+        private void TxtSearch_TextChanged(object? sender, TextChangedEventArgs e)
         {
             // Debounce search to improve performance
             _searchDebounceTimer.Stop();
             _searchDebounceTimer.Start();
         }
 
-        private void SearchDebounceTimer_Tick(object sender, EventArgs e)
+        private void SearchDebounceTimer_Tick(object? sender, EventArgs e)
         {
             _searchDebounceTimer.Stop();
             _dataView?.Refresh();
             UpdateStatistics();
         }
 
-        private void BtnClearSearch_Click(object sender, RoutedEventArgs e)
+        private void BtnClearSearch_Click(object? sender, RoutedEventArgs e)
         {
             TxtSearch.Text = "";
             CmbSearchColumn.SelectedIndex = 0;
         }
 
-        private void BtnRefresh_Click(object sender, RoutedEventArgs e)
+        private void BtnRefresh_Click(object? sender, RoutedEventArgs e)
         {
             _dataView?.Refresh();
             UpdateStatistics();
             TxtStatus.Text = "Data refreshed";
         }
 
-        private void BtnTranspose_Click(object sender, RoutedEventArgs e)
+        private void BtnTranspose_Click(object? sender, RoutedEventArgs e)
         {
             if (_dataView == null || _allEntries == null || !_allEntries.Any())
             {
@@ -498,7 +497,7 @@ namespace IndiLogs_3._0.Views
             TxtStatus.Text = $"Opened transpose view with {filteredEntries.Count} entries";
         }
 
-        private void BtnExport_Click(object sender, RoutedEventArgs e)
+        private void BtnExport_Click(object? sender, RoutedEventArgs e)
         {
             try
             {

@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.ViewModels.Components;
 using System.Collections.Generic;
@@ -72,7 +71,7 @@ namespace IndiLogs_3._0.ViewModels
 
         // ── Tab selection ──
 
-        private TabSelectionConfig _lastTabSelection;
+        private TabSelectionConfig? _lastTabSelection;
 
         public void ApplyTabSelection(TabSelectionConfig selection, TabSelectionConfig preScan)
         {

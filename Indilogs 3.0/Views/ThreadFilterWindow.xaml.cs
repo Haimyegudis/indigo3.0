@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,10 +10,10 @@ namespace IndiLogs_3._0.Views
     public partial class ThreadFilterWindow : Window
     {
         // Changed: list instead of a single variable
-        public List<string> SelectedThreads { get; private set; }
+        public List<string>? SelectedThreads { get; private set; }
         public bool ShouldClear { get; private set; }
         private List<string> _allThreads;
-        private FrameworkElement _anchorElement;
+        private FrameworkElement? _anchorElement;
 
         public ThreadFilterWindow(IEnumerable<string> threads)
         {
@@ -25,7 +24,7 @@ namespace IndiLogs_3._0.Views
             this.Loaded += ThreadFilterWindow_Loaded;
         }
 
-        private void ThreadFilterWindow_Loaded(object sender, RoutedEventArgs e)
+        private void ThreadFilterWindow_Loaded(object? sender, RoutedEventArgs e)
         {
             // Position after loaded
             if (_anchorElement != null)
@@ -89,7 +88,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        private void SearchBox_TextChanged(object? sender, TextChangedEventArgs e)
         {
             var filter = SearchBox.Text;
             if (string.IsNullOrWhiteSpace(filter))
@@ -102,7 +101,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void Apply_Click(object sender, RoutedEventArgs e)
+        private void Apply_Click(object? sender, RoutedEventArgs e)
         {
             // Changed: collect all selected items
             if (ThreadsList.SelectedItems.Count > 0)
@@ -113,14 +112,14 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void Clear_Click(object sender, RoutedEventArgs e)
+        private void Clear_Click(object? sender, RoutedEventArgs e)
         {
             ShouldClear = true;
             DialogResult = true;
             Close();
         }
 
-        private void ThreadsList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void ThreadsList_MouseDoubleClick(object? sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             // Double-click still selects the current item and exits
             if (ThreadsList.SelectedItem != null)
@@ -134,7 +133,7 @@ namespace IndiLogs_3._0.Views
         /// <summary>
         /// Close window when it loses focus (clicked outside)
         /// </summary>
-        private void Window_Deactivated(object sender, EventArgs e)
+        private void Window_Deactivated(object? sender, EventArgs e)
         {
             // Close the window when user clicks outside - but only if not already closing
             try

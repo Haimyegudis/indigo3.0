@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services.Charts;
 using System;
@@ -21,7 +20,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         private bool _isTimeSyncEnabled;
         private bool _isSyncScrolling;
         private int _timeSyncOffsetSeconds;
-        private LogEntry _pendingSyncLog;
+        private LogEntry? _pendingSyncLog;
         private int _pendingSyncTabIndex = -1;
 
         public bool IsTimeSyncEnabled
@@ -47,7 +46,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// Pending sync log — stores a log entry to scroll to when user switches to the target tab.
         /// MainViewModel's SelectedTabIndex setter checks this.
         /// </summary>
-        public LogEntry PendingSyncLog
+        public LogEntry? PendingSyncLog
         {
             get => _pendingSyncLog;
             set => _pendingSyncLog = value;

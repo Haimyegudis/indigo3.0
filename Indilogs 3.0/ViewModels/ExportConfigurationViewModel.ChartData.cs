@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Charts;
 using IndiLogs_3._0.Services;
@@ -24,7 +23,7 @@ namespace IndiLogs_3._0.ViewModels
             try
             {
                 IsLoading = true;
-                ChartDataPackage dataPackage = null;
+                ChartDataPackage? dataPackage = null;
 
                 if (_hasIoTerminalData && _ioDevices != null)
                 {
@@ -166,7 +165,7 @@ namespace IndiLogs_3._0.ViewModels
             List<IoDeviceData> devices,
             List<string> selectedKeys,
             LogSessionData sessionData,
-            IProgress<(double pct, string msg)> progress = null)
+            IProgress<(double pct, string msg)>? progress = null)
         {
             var empty = new ChartDataPackage
             {
@@ -333,7 +332,7 @@ namespace IndiLogs_3._0.ViewModels
             var states = new List<StateData>();
             {
                 var stateIntervals = new List<StateInterval>();
-                string currentState = null;
+                string? currentState = null;
                 int intervalStart = 0;
 
                 for (int i = 0; i < allRows.Count; i++)

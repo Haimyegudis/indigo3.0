@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -44,7 +43,7 @@ namespace IndiLogs_3._0.Views
             FilesToLoad = new List<string>();
         }
 
-        private void LoadButton_Click(object sender, RoutedEventArgs e)
+        private void LoadButton_Click(object? sender, RoutedEventArgs e)
         {
             var fileInfos = FilesGrid.ItemsSource as List<FileInfo>;
             if (fileInfos != null)
@@ -61,7 +60,7 @@ namespace IndiLogs_3._0.Views
             Close();
         }
 
-        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        private void CancelButton_Click(object? sender, RoutedEventArgs e)
         {
             DialogResult = false;
             Close();
@@ -69,11 +68,11 @@ namespace IndiLogs_3._0.Views
 
         public class FileInfo
         {
-            public string FilePath { get; set; }
-            public string FileName { get; set; }
+            public string FilePath { get; set; } = "";
+            public string FileName { get; set; } = "";
             public bool IsLoaded { get; set; }
-            public string StatusText { get; set; }
-            public string StatusIcon { get; set; }
+            public string StatusText { get; set; } = "";
+            public string StatusIcon { get; set; } = "";
         }
     }
 }

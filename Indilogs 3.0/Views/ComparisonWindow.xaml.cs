@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,8 +18,8 @@ namespace IndiLogs_3._0.Views
         private LogComparisonViewModel _vm;
         private bool _isScrollSyncing = false;
         private bool _isProgrammaticScroll = false;
-        private ScrollViewer _leftScrollViewer;
-        private ScrollViewer _rightScrollViewer;
+        private ScrollViewer? _leftScrollViewer;
+        private ScrollViewer? _rightScrollViewer;
 
         public ComparisonWindow(LogComparisonViewModel viewModel)
         {
@@ -32,7 +31,7 @@ namespace IndiLogs_3._0.Views
             Loaded += ComparisonWindow_Loaded;
         }
 
-        private void ComparisonWindow_Loaded(object sender, RoutedEventArgs e)
+        private void ComparisonWindow_Loaded(object? sender, RoutedEventArgs e)
         {
             // Cache scroll viewers for performance
             _leftScrollViewer = GetScrollViewer(LeftDataGrid);
@@ -45,7 +44,7 @@ namespace IndiLogs_3._0.Views
 
         private bool _isSelectionSyncing = false;
 
-        private void LeftDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void LeftDataGrid_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
             if (_isSelectionSyncing || !_vm.IsSyncLocked)
                 return;
@@ -74,7 +73,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void RightDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void RightDataGrid_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
             if (_isSelectionSyncing || !_vm.IsSyncLocked)
                 return;
@@ -105,7 +104,7 @@ namespace IndiLogs_3._0.Views
 
         #region Scroll Synchronization
 
-        private void LeftGrid_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        private void LeftGrid_ScrollChanged(object? sender, ScrollChangedEventArgs e)
         {
             // Skip if this is a programmatic scroll or sync is in progress
             if (_isScrollSyncing || _isProgrammaticScroll || !_vm.IsSyncLocked)
@@ -118,7 +117,7 @@ namespace IndiLogs_3._0.Views
             SyncScrollFromPane(LeftDataGrid, RightDataGrid, _vm.LeftPane, _vm.RightPane, "Left");
         }
 
-        private void RightGrid_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        private void RightGrid_ScrollChanged(object? sender, ScrollChangedEventArgs e)
         {
             // Skip if this is a programmatic scroll or sync is in progress
             if (_isScrollSyncing || _isProgrammaticScroll || !_vm.IsSyncLocked)
@@ -161,7 +160,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private LogEntry GetTopVisibleLog(DataGrid grid, ViewModels.Components.ComparisonPaneViewModel pane)
+        private LogEntry? GetTopVisibleLog(DataGrid grid, ViewModels.Components.ComparisonPaneViewModel pane)
         {
             var scrollViewer = grid == LeftDataGrid ? _leftScrollViewer : _rightScrollViewer;
             if (scrollViewer == null)
@@ -223,11 +222,8 @@ namespace IndiLogs_3._0.Views
             return 25.0; // Default estimate
         }
 
-        private DataGridRow GetFirstVisibleRow(DataGrid grid, ScrollViewer scrollViewer)
+        private DataGridRow? GetFirstVisibleRow(DataGrid grid, ScrollViewer scrollViewer)
         {
-            if (scrollViewer == null)
-                return null;
-
             // Start from an estimated index based on scroll position
             double rowHeight = GetEstimatedRowHeight(grid);
             int estimatedStart = Math.Max(0, (int)(scrollViewer.VerticalOffset / rowHeight) - 2);
@@ -325,7 +321,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private ScrollViewer GetScrollViewer(DataGrid grid)
+        private ScrollViewer? GetScrollViewer(DataGrid? grid)
         {
             if (grid == null)
                 return null;
@@ -346,7 +342,7 @@ namespace IndiLogs_3._0.Views
             return null;
         }
 
-        private ScrollViewer FindScrollViewer(DependencyObject obj)
+        private ScrollViewer? FindScrollViewer(DependencyObject obj)
         {
             if (obj is ScrollViewer sv)
                 return sv;
@@ -366,7 +362,7 @@ namespace IndiLogs_3._0.Views
 
         #region User Interactions
 
-        private void DataGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        private void DataGrid_MouseDoubleClick(object? sender, MouseButtonEventArgs e)
         {
             var grid = sender as DataGrid;
             if (grid?.SelectedItem is LogEntry log)
@@ -376,7 +372,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void DataGrid_PreviewKeyDown(object sender, KeyEventArgs e)
+        private void DataGrid_PreviewKeyDown(object? sender, KeyEventArgs e)
         {
             var grid = sender as DataGrid;
             if (grid?.SelectedItem is LogEntry log)
@@ -398,7 +394,7 @@ namespace IndiLogs_3._0.Views
             }
         }
 
-        private void HelpButton_Click(object sender, RoutedEventArgs e)
+        private void HelpButton_Click(object? sender, RoutedEventArgs e)
         {
             // Show detailed help message
             MessageBox.Show(

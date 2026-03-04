@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -29,7 +28,7 @@ namespace IndiLogs_3._0.Services
 
             foreach (var log in candidates)
             {
-                string jsonString = ExtractValidJson(log);
+                string? jsonString = ExtractValidJson(log);
                 if (string.IsNullOrEmpty(jsonString))
                     continue;
 
@@ -62,12 +61,12 @@ namespace IndiLogs_3._0.Services
         /// <summary>
         /// Extract valid JSON that contains stripeDescriptor
         /// </summary>
-        private string ExtractValidJson(LogEntry log)
+        private string? ExtractValidJson(LogEntry log)
         {
             // First try the Data field - it's more likely to have clean JSON
             if (!string.IsNullOrEmpty(log.Data) && log.Data.Contains("stripeDescriptor"))
             {
-                string json = ExtractJsonObject(log.Data);
+                string? json = ExtractJsonObject(log.Data);
                 if (json != null && IsValidJson(json))
                     return json;
             }
@@ -75,7 +74,7 @@ namespace IndiLogs_3._0.Services
             // Then try the Message field
             if (!string.IsNullOrEmpty(log.Message) && log.Message.Contains("stripeDescriptor"))
             {
-                string json = ExtractJsonObject(log.Message);
+                string? json = ExtractJsonObject(log.Message);
                 if (json != null && IsValidJson(json))
                     return json;
             }
@@ -86,7 +85,7 @@ namespace IndiLogs_3._0.Services
         /// <summary>
         /// Extract a complete JSON object from text by matching braces
         /// </summary>
-        private string ExtractJsonObject(string text)
+        private string? ExtractJsonObject(string text)
         {
             int startIndex = text.IndexOf('{');
             if (startIndex < 0)
@@ -159,7 +158,7 @@ namespace IndiLogs_3._0.Services
             double lenNotScaledMm = Math.Round(lenNotScaledUm / 1000.0, 2);
             bool lastStripeInSpread = GetBoolProperty(stripeDesc, "lastStripeInSpread");
             bool imageToBru = GetBoolProperty(stripeDesc, "imageToBru");
-            string dataTransferControl = GetStringProperty(stripeDesc, "dataTransferControl");
+            string? dataTransferControl = GetStringProperty(stripeDesc, "dataTransferControl");
             bool reportPrintDetails = GetBoolProperty(stripeDesc, "reportPrintDetails");
             int reportId = GetIntProperty(stripeDesc, "reportId");
             int nSliceGroups = GetIntProperty(stripeDesc, "nSliceGroups");
@@ -175,8 +174,8 @@ namespace IndiLogs_3._0.Services
             // SPM data from root
             string spmStatus = "None";
             int spmMeasureId = 0;
-            string spmScanDirection = null;
-            string spmMeasureMode = null;
+            string? spmScanDirection = null;
+            string? spmMeasureMode = null;
             int spmNumOfStrips = 0;
             if (root.TryGetProperty("SpmMeasureInstruction", out JsonElement spmElement))
             {
@@ -193,7 +192,7 @@ namespace IndiLogs_3._0.Services
             // ILS data from root
             bool ilsIsActive = false;
             int ilsScanLenUm = 0;
-            string ilsScanMode = null;
+            string? ilsScanMode = null;
             int ilsScanSpeedUmSec = 0;
             if (root.TryGetProperty("IlsMeasureInstruction", out JsonElement ilsElement))
             {
@@ -255,7 +254,7 @@ namespace IndiLogs_3._0.Services
                     LengthNotScaledMm = lenNotScaledMm,
                     LastStripeInSpread = lastStripeInSpread,
                     ImageToBru = imageToBru,
-                    DataTransferControl = dataTransferControl,
+                    DataTransferControl = dataTransferControl ?? "",
                     ReportPrintDetails = reportPrintDetails,
                     ReportId = reportId,
                     NSliceGroups = nSliceGroups,
@@ -267,12 +266,12 @@ namespace IndiLogs_3._0.Services
                     StartPosInBlanketLoopUm = startPosInBlanketLoopUm,
                     SpmStatus = spmStatus,
                     SpmMeasureId = spmMeasureId,
-                    SpmScanDirection = spmScanDirection,
-                    SpmMeasureMode = spmMeasureMode,
+                    SpmScanDirection = spmScanDirection ?? "",
+                    SpmMeasureMode = spmMeasureMode ?? "",
                     SpmNumOfStrips = spmNumOfStrips,
                     IlsIsActive = ilsIsActive,
                     IlsScanLenUm = ilsScanLenUm,
-                    IlsScanMode = ilsScanMode,
+                    IlsScanMode = ilsScanMode ?? "",
                     IlsScanSpeedUmSec = ilsScanSpeedUmSec,
                     SliceGroupIndex = -1,
                     SliceIndex = -1,
@@ -283,15 +282,15 @@ namespace IndiLogs_3._0.Services
             return entries;
         }
 
-        private IndigoStripeEntry CreateEntryFromSlice(
+        private IndigoStripeEntry? CreateEntryFromSlice(
             JsonElement slice, DateTime timestamp, int spreadId, int stripeId,
             bool isNull, double lenMm, double lenNotScaledMm, int groupIndex, int sliceIndex,
-            bool lastStripeInSpread, bool imageToBru, string dataTransferControl,
+            bool lastStripeInSpread, bool imageToBru, string? dataTransferControl,
             bool reportPrintDetails, int reportId, int nSliceGroups,
             double webRepeatLenScalingFactor, int blanketLoopRepeatLenUm, int blanketLoopT2TotalLenUm,
             bool firstInBlanketLoop, bool lastInBlanketLoop, int startPosInBlanketLoopUm,
-            string spmStatus, int spmMeasureId, string spmScanDirection, string spmMeasureMode, int spmNumOfStrips,
-            bool ilsIsActive, int ilsScanLenUm, string ilsScanMode, int ilsScanSpeedUmSec)
+            string spmStatus, int spmMeasureId, string? spmScanDirection, string? spmMeasureMode, int spmNumOfStrips,
+            bool ilsIsActive, int ilsScanLenUm, string? ilsScanMode, int ilsScanSpeedUmSec)
         {
             try
             {
@@ -307,7 +306,7 @@ namespace IndiLogs_3._0.Services
                 int endPos = GetIntProperty(slice, "endPosUm");
 
                 // HV target
-                string hvTarget = GetStringProperty(slice, "hvTargetType") ?? "Unknown";
+                string? hvTarget = GetStringProperty(slice, "hvTargetType") ?? "Unknown";
 
                 // BID data (Binary Image Developer)
                 int vDev = 0, vElec = 0, vSqueegee = 0, vCleaner = 0;
@@ -369,7 +368,7 @@ namespace IndiLogs_3._0.Services
 
                     // Ink info - just use the raw inkId, no name mapping
                     InkId = inkId,
-                    InkName = null, // No name mapping - display inkId directly
+                    InkName = "", // No name mapping - display inkId directly
                     IsStationActive = isActive,
 
                     // Position
@@ -402,7 +401,7 @@ namespace IndiLogs_3._0.Services
                     // Stripe-level data passed down
                     LastStripeInSpread = lastStripeInSpread,
                     ImageToBru = imageToBru,
-                    DataTransferControl = dataTransferControl,
+                    DataTransferControl = dataTransferControl ?? "",
                     ReportPrintDetails = reportPrintDetails,
                     ReportId = reportId,
                     NSliceGroups = nSliceGroups,
@@ -418,14 +417,14 @@ namespace IndiLogs_3._0.Services
                     // SPM data
                     SpmStatus = spmStatus,
                     SpmMeasureId = spmMeasureId,
-                    SpmScanDirection = spmScanDirection,
-                    SpmMeasureMode = spmMeasureMode,
+                    SpmScanDirection = spmScanDirection ?? "",
+                    SpmMeasureMode = spmMeasureMode ?? "",
                     SpmNumOfStrips = spmNumOfStrips,
 
                     // ILS data
                     IlsIsActive = ilsIsActive,
                     IlsScanLenUm = ilsScanLenUm,
-                    IlsScanMode = ilsScanMode,
+                    IlsScanMode = ilsScanMode ?? "",
                     IlsScanSpeedUmSec = ilsScanSpeedUmSec
                 };
             }
@@ -469,7 +468,7 @@ namespace IndiLogs_3._0.Services
             return false;
         }
 
-        private string GetStringProperty(JsonElement element, string propertyName)
+        private string? GetStringProperty(JsonElement element, string propertyName)
         {
             if (element.TryGetProperty(propertyName, out JsonElement prop))
             {

@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Interfaces;
@@ -68,10 +67,10 @@ namespace IndiLogs_3._0.ViewModels.Components
         }
 
         // File watching infrastructure
-        private CancellationTokenSource _liveCts;
-        private string _liveFilePath;
-        private ObservableRangeCollection<LogEntry> _liveLogsCollection;
-        private LogSessionData _liveSession;
+        private CancellationTokenSource? _liveCts;
+        private string? _liveFilePath;
+        private ObservableRangeCollection<LogEntry>? _liveLogsCollection;
+        private LogSessionData? _liveSession;
         private int _lastParsedLogCount = 0;
 
         // Polling state
@@ -80,7 +79,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         // Local cache: avoids re-reading the entire file from network on every poll.
         // We keep a local copy and only fetch new bytes from the network each poll.
-        private MemoryStream _cachedStream;
+        private MemoryStream? _cachedStream;
 
         // Lock for thread-safe access to _cachedStream, _lastFileSize, _lastParsedLogCount
         private readonly object _streamLock = new object();

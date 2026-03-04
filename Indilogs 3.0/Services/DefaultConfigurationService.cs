@@ -1,4 +1,3 @@
-#nullable disable
 using IndiLogs_3._0;
 using IndiLogs_3._0.Models;
 using Newtonsoft.Json;
@@ -16,9 +15,9 @@ namespace IndiLogs_3._0.Services
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "IndiLogs3.0", "Configs", "_defaults.json");
 
-        private static FilterNode _cachedFactoryPlcFilter;
+        private static FilterNode? _cachedFactoryPlcFilter;
 
-        public DefaultConfiguration CurrentDefaults { get; private set; }
+        public DefaultConfiguration? CurrentDefaults { get; private set; }
 
         public void Load()
         {
@@ -27,7 +26,7 @@ namespace IndiLogs_3._0.Services
                 if (File.Exists(DefaultsFilePath))
                 {
                     var json = File.ReadAllText(DefaultsFilePath);
-                    CurrentDefaults = JsonConvert.DeserializeObject<DefaultConfiguration>(json, new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth });
+                    CurrentDefaults = JsonConvert.DeserializeObject<DefaultConfiguration>(json, new JsonSerializerSettings { MaxDepth = AppConstants.JsonMaxDepth }) ?? null;
                 }
             }
             catch (Exception ex)
@@ -42,7 +41,7 @@ namespace IndiLogs_3._0.Services
             try
             {
                 var dir = Path.GetDirectoryName(DefaultsFilePath);
-                if (!Directory.Exists(dir))
+                if (dir != null && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
 
                 var json = JsonConvert.SerializeObject(config, Formatting.Indented);

@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -36,8 +35,8 @@ namespace IndiLogs_3._0.Controls
             "ViewOffset", typeof(double), typeof(TimelineCanvas),
             new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnVisualPropertyChanged));
 
-        public IEnumerable<TimelineState> States { get => (IEnumerable<TimelineState>)GetValue(StatesProperty); set => SetValue(StatesProperty, value); }
-        public IEnumerable<TimelineMarker> Markers { get => (IEnumerable<TimelineMarker>)GetValue(MarkersProperty); set => SetValue(MarkersProperty, value); }
+        public IEnumerable<TimelineState>? States { get => (IEnumerable<TimelineState>?)GetValue(StatesProperty); set => SetValue(StatesProperty, value); }
+        public IEnumerable<TimelineMarker>? Markers { get => (IEnumerable<TimelineMarker>?)GetValue(MarkersProperty); set => SetValue(MarkersProperty, value); }
         public double ViewScale { get => (double)GetValue(ViewScaleProperty); set => SetValue(ViewScaleProperty, value); }
         public double ViewOffset { get => (double)GetValue(ViewOffsetProperty); set => SetValue(ViewOffsetProperty, value); }
 
@@ -58,7 +57,7 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private void OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
             // On Reset (Clear()), immediately redraw — don't debounce
             if (e.Action == NotifyCollectionChangedAction.Reset)
@@ -94,8 +93,8 @@ namespace IndiLogs_3._0.Controls
 
         #region Events
 
-        public event EventHandler<TimelineState> StateClicked;
-        public event EventHandler<TimelineMarker> MarkerClicked;
+        public event EventHandler<TimelineState>? StateClicked;
+        public event EventHandler<TimelineMarker>? MarkerClicked;
 
         #endregion
 
@@ -110,19 +109,19 @@ namespace IndiLogs_3._0.Controls
         private Point _currentMousePos;
 
         // Tooltip
-        private DispatcherTimer _hoverTimer;
-        private object _currentHoverObject;
+        private DispatcherTimer? _hoverTimer;
+        private object? _currentHoverObject;
         private bool _showTooltip;
 
         // Collection change debounce timer
-        private DispatcherTimer _collectionUpdateTimer;
+        private DispatcherTimer? _collectionUpdateTimer;
 
         // Cached time range (avoid recomputing Min/Max every frame)
         private DateTime _cachedMinTime;
         private DateTime _cachedMaxTime;
         private double _cachedTotalSeconds;
-        private List<TimelineState> _cachedStates;
-        private List<TimelineMarker> _cachedMarkers;
+        private List<TimelineState>? _cachedStates;
+        private List<TimelineMarker>? _cachedMarkers;
 
         // DPI scale factor
         private float _dpiScale = 1f;
@@ -141,13 +140,13 @@ namespace IndiLogs_3._0.Controls
         private SKColor _gridColor;
 
         // Reusable paints (avoid allocations per frame)
-        private SKPaint _gradientPaint;
-        private SKPaint _glowPaint;
-        private SKPaint _edgePaint;
-        private SKPaint _highlightBorderPaint;
-        private SKPaint _labelPaint;
-        private SKPaint _axisPaint;
-        private SKPaint _axisTextPaint;
+        private SKPaint _gradientPaint = null!;
+        private SKPaint _glowPaint = null!;
+        private SKPaint _edgePaint = null!;
+        private SKPaint _highlightBorderPaint = null!;
+        private SKPaint _labelPaint = null!;
+        private SKPaint _axisPaint = null!;
+        private SKPaint _axisTextPaint = null!;
 
         // Cached paints for draw helpers (DrawHazardPattern, DrawErrorMarker, DrawEventMarker, DrawTooltip)
         private readonly SKPaint _hazardStripePaint = new SKPaint { Color = new SKColor(255, 255, 255, 60), StrokeWidth = 4, Style = SKPaintStyle.Stroke, IsAntialias = true };
@@ -309,7 +308,7 @@ namespace IndiLogs_3._0.Controls
 
         #region Color Helpers
 
-        internal static SKColor GetMaterialColorForState(string name)
+        internal static SKColor GetMaterialColorForState(string? name)
         {
             if (string.IsNullOrEmpty(name)) return StateColorDefault;
             string upper = name.ToUpperInvariant();
@@ -342,9 +341,9 @@ namespace IndiLogs_3._0.Controls
 
         #region Tooltip
 
-        private void OnHoverTimerTick(object sender, EventArgs e)
+        private void OnHoverTimerTick(object? sender, EventArgs e)
         {
-            _hoverTimer.Stop();
+            _hoverTimer!.Stop();
             if (_currentHoverObject != null)
             {
                 _showTooltip = true;
@@ -362,7 +361,7 @@ namespace IndiLogs_3._0.Controls
 
         #region Paint
 
-        private void OnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
+        private void OnPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
         {
             var canvas = e.Surface.Canvas;
             var info = e.Info;
@@ -383,7 +382,7 @@ namespace IndiLogs_3._0.Controls
             float chartBottom = h - TIME_AXIS_HEIGHT;
 
             // Track hovered state/marker for tooltip
-            object hoveredObj = null;
+            object? hoveredObj = null;
             float hoverX = (float)_currentMousePos.X;
             float hoverY = (float)_currentMousePos.Y;
 
@@ -520,7 +519,7 @@ namespace IndiLogs_3._0.Controls
             // Update hover tracking
             if (hoveredObj != _currentHoverObject)
             {
-                _hoverTimer.Stop();
+                _hoverTimer!.Stop();
                 _showTooltip = false;
                 _currentHoverObject = hoveredObj;
                 if (hoveredObj != null) _hoverTimer.Start();
@@ -712,7 +711,7 @@ namespace IndiLogs_3._0.Controls
 
         #region Mouse Interaction
 
-        private void OnMouseDown(object sender, MouseButtonEventArgs e)
+        private void OnMouseDown(object? sender, MouseButtonEventArgs e)
         {
             if (e.ChangedButton == MouseButton.Left)
             {
@@ -733,7 +732,7 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private void OnMouseMove(object sender, MouseEventArgs e)
+        private void OnMouseMove(object? sender, MouseEventArgs e)
         {
             _currentMousePos = e.GetPosition(SkiaCanvas);
 
@@ -755,7 +754,7 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private void OnMouseUp(object sender, MouseButtonEventArgs e)
+        private void OnMouseUp(object? sender, MouseButtonEventArgs e)
         {
             if (_isZooming && _cachedStates != null && _cachedStates.Count > 0)
             {
@@ -781,7 +780,7 @@ namespace IndiLogs_3._0.Controls
             SkiaCanvas.ReleaseMouseCapture();
         }
 
-        private void OnMouseWheel(object sender, MouseWheelEventArgs e)
+        private void OnMouseWheel(object? sender, MouseWheelEventArgs e)
         {
             if (_cachedStates == null || _cachedStates.Count == 0) return;
 
@@ -799,12 +798,12 @@ namespace IndiLogs_3._0.Controls
             SkiaCanvas.InvalidateVisual();
         }
 
-        private void OnMouseLeave(object sender, MouseEventArgs e)
+        private void OnMouseLeave(object? sender, MouseEventArgs e)
         {
             _isDragging = false;
             _isZooming = false;
             HideTooltip();
-            _hoverTimer.Stop();
+            _hoverTimer!.Stop();
             SkiaCanvas.InvalidateVisual();
         }
 
@@ -815,7 +814,7 @@ namespace IndiLogs_3._0.Controls
             else if (hit is TimelineMarker m) MarkerClicked?.Invoke(this, m);
         }
 
-        private object GetHitObject(Point p)
+        private object? GetHitObject(Point p)
         {
             if (_cachedStates == null || _cachedStates.Count == 0) return null;
 

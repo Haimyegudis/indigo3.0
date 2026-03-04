@@ -1,4 +1,3 @@
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -53,7 +52,7 @@ namespace IndiLogs_3._0.Controls
         }
 
         // Handle annotation expansion manually
-        private void OnRowLoading(object sender, DataGridRowEventArgs e)
+        private void OnRowLoading(object? sender, DataGridRowEventArgs e)
         {
             if (e.Row.Item is LogEntry log)
             {
@@ -69,7 +68,7 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private void Log_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        private void Log_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(LogEntry.IsAnnotationExpanded) && sender is LogEntry log)
             {
@@ -85,7 +84,7 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private DataGridRow FindRowForLog(LogEntry log)
+        private DataGridRow? FindRowForLog(LogEntry log)
         {
             if (log == null) return null;
 
@@ -112,57 +111,57 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private void AppLogsGrid_Sorting(object sender, DataGridSortingEventArgs e)
+        private void AppLogsGrid_Sorting(object? sender, DataGridSortingEventArgs e)
         {
             var parent = Window.GetWindow(this) as ITabHost;
             parent?.AppLogsGrid_Sorting(sender, e);
         }
 
-        private void AppLogsGrid_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs e)
+        private void AppLogsGrid_RequestBringIntoView(object? sender, RequestBringIntoViewEventArgs e)
         {
             e.Handled = true;
         }
 
-        private void AppLogsGrid_Loaded(object sender, RoutedEventArgs e)
+        private void AppLogsGrid_Loaded(object? sender, RoutedEventArgs e)
         {
             var parent = Window.GetWindow(this) as ITabHost;
             parent?.DataGrid_Loaded(sender, e);
         }
 
-        private void AppLogsGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+        private void AppLogsGrid_LoadingRow(object? sender, DataGridRowEventArgs e)
         {
             var parent = Window.GetWindow(this) as ITabHost;
             parent?.DataGrid_LoadingRow(sender, e);
         }
 
-        private void AppLogsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void AppLogsGrid_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
 
         }
 
         // Column filter button click handlers - pass button as parameter for positioning
-        private void LoggerFilterButton_Click(object sender, RoutedEventArgs e)
+        private void LoggerFilterButton_Click(object? sender, RoutedEventArgs e)
         {
             var vm = DataContext as ViewModels.MainViewModel;
             vm?.OpenLoggerFilterCommand?.Execute(sender as FrameworkElement);
             e.Handled = true;
         }
 
-        private void ThreadFilterButton_Click(object sender, RoutedEventArgs e)
+        private void ThreadFilterButton_Click(object? sender, RoutedEventArgs e)
         {
             var vm = DataContext as ViewModels.MainViewModel;
             vm?.OpenThreadFilterCommand?.Execute(sender as FrameworkElement);
             e.Handled = true;
         }
 
-        private void MethodFilterButton_Click(object sender, RoutedEventArgs e)
+        private void MethodFilterButton_Click(object? sender, RoutedEventArgs e)
         {
             var vm = DataContext as ViewModels.MainViewModel;
             vm?.OpenMethodFilterCommand?.Execute(sender as FrameworkElement);
             e.Handled = true;
         }
 
-        private void ActionsButton_Click(object sender, RoutedEventArgs e)
+        private void ActionsButton_Click(object? sender, RoutedEventArgs e)
         {
             if (sender is Button button && button.ContextMenu != null)
             {
@@ -176,7 +175,7 @@ namespace IndiLogs_3._0.Controls
             AppLogsGrid.MouseRightButtonUp += DataGrid_MouseRightButtonUp;
         }
 
-        private void DataGrid_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        private void DataGrid_MouseRightButtonUp(object? sender, MouseButtonEventArgs e)
         {
             var depObj = e.OriginalSource as DependencyObject;
 
@@ -227,7 +226,7 @@ namespace IndiLogs_3._0.Controls
             }
         }
 
-        private void ColumnVisibilityMenuItem_Click(object sender, RoutedEventArgs e)
+        private void ColumnVisibilityMenuItem_Click(object? sender, RoutedEventArgs e)
         {
             if (sender is MenuItem menuItem && menuItem.Tag is DataGridColumn column)
             {
@@ -248,7 +247,7 @@ namespace IndiLogs_3._0.Controls
         /// <summary>
         /// Extracts the display text from a column header, handling buttons and complex headers
         /// </summary>
-        private string GetColumnHeaderText(DataGridColumn column)
+        private string? GetColumnHeaderText(DataGridColumn column)
         {
             if (column.Header == null)
                 return null;
@@ -286,7 +285,7 @@ namespace IndiLogs_3._0.Controls
             return headerText;
         }
 
-        private void AppLogsGrid_ColumnReordered(object sender, DataGridColumnEventArgs e)
+        private void AppLogsGrid_ColumnReordered(object? sender, DataGridColumnEventArgs e)
         {
             SaveColumnSettings();
         }

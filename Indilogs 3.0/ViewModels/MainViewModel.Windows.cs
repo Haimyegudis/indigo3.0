@@ -1,7 +1,7 @@
-#nullable disable
 using IndiLogs.PluginAPI;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Analysis;
+using IndiLogs_3._0.Models.Grep;
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Views;
 using System;
@@ -32,7 +32,7 @@ namespace IndiLogs_3._0.ViewModels
             {
                 if (_statesWindow != null && _statesWindow.IsVisible) { WindowManager.ActivateWindow(_statesWindow); return; }
 
-                _statesWindow = new StatesWindow(SessionVM.SelectedSession.CachedStates, this);
+                _statesWindow = _viewFactory.Create<StatesWindow>(SessionVM.SelectedSession.CachedStates, this);
                 _statesWindow.Closed += (s, e) => _statesWindow = null;
                 WindowManager.OpenWindow(_statesWindow);
             }
@@ -64,7 +64,7 @@ namespace IndiLogs_3._0.ViewModels
             }
 
             // S6: Show analysis menu with Failures / Statistics choices
-            var menuWindow = new Views.AnalysisMenuWindow();
+            var menuWindow = _viewFactory.Create<Views.AnalysisMenuWindow>();
             menuWindow.Owner = Application.Current.MainWindow;
 
             if (menuWindow.ShowDialog() == true)
@@ -115,21 +115,22 @@ namespace IndiLogs_3._0.ViewModels
             }
 
             // Create the window with both parameters and a callback for filtering
-            var statsWindow = new Views.StatsWindow(plcLogs, appLogs, ApplyChartDrillDownFilter, NavigateToLogFromStats, IsDarkMode, HasBinaryAppLogs);
+            var statsWindow = _viewFactory.Create<Views.StatsWindow>(plcLogs, appLogs, (Action<string, string>)ApplyChartDrillDownFilter, (Action<LogEntry>)NavigateToLogFromStats, IsDarkMode, HasBinaryAppLogs);
             statsWindow.Title = "Log Statistics Dashboard";
             WindowManager.OpenWindow(statsWindow);
         }
 
         private void OpenAnalysisWindow(List<AnalysisResult> results)
         {
-            _analysisWindow = new AnalysisReportWindow(results, log => JumpToLog(log));
+            _analysisWindow = _viewFactory.Create<AnalysisReportWindow>(results, (Action<LogEntry>)(log => JumpToLog(log)));
             _analysisWindow.Closed += (s, e) => _analysisWindow = null;
             WindowManager.OpenWindow(_analysisWindow);
         }
 
         private void OpenSettingsWindow(object obj)
         {
-            var win = new SettingsWindow { DataContext = this };
+            var win = _viewFactory.Create<SettingsWindow>();
+            win.DataContext = this;
             win.WindowStartupLocation = WindowStartupLocation.Manual;
 
             if (obj is FrameworkElement button)
@@ -180,7 +181,7 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
-        private void OpenFontsWindow(object obj) { WindowManager.ShowDialog(new FontsWindow { DataContext = this }); }
+        private void OpenFontsWindow(object obj) { var w = _viewFactory.Create<FontsWindow>(); w.DataContext = this; WindowManager.ShowDialog(w); }
 
         private void OpenMarkedLogsWindow(object obj) => CaseVM?.OpenMarkedWindowCommand.Execute(obj);
 
@@ -189,16 +190,16 @@ namespace IndiLogs_3._0.ViewModels
             // Create an empty collection if no sessions are loaded, to allow the window to open
             var sessions = SessionVM?.LoadedSessions ?? new ObservableCollection<LogSessionData>();
 
-            var viewModel = new GlobalGrepViewModel(sessions, _dialogService);
+            var viewModel = new GlobalGrepViewModel(sessions, _dialogService, _viewFactory);
 
-            var window = new GlobalGrepWindow(viewModel, NavigateToGrepResult, LoadMultipleFiles);
+            var window = _viewFactory.Create<GlobalGrepWindow>(viewModel, (Action<GrepResult>)NavigateToGrepResult, (Action<List<(string FilePath, string SessionName)>>)LoadMultipleFiles);
             WindowManager.OpenWindow(window);
         }
 
         private void OpenComparisonWindow()
         {
             var comparisonWindow = WindowManager.GetOrCreate<Views.ComparisonWindow>(
-                () => new Views.ComparisonWindow(new LogComparisonViewModel(
+                () => _viewFactory.Create<Views.ComparisonWindow>(new LogComparisonViewModel(
                     SessionVM.AllLogsCache,
                     SessionVM.AllAppLogsCache,
                     this
@@ -235,7 +236,7 @@ namespace IndiLogs_3._0.ViewModels
                 return;
             }
 
-            var window = new StripeAnalysisWindow();
+            var window = _viewFactory.Create<StripeAnalysisWindow>();
             WindowManager.OpenWindow(window);
 
             // Load data asynchronously after window is shown
@@ -249,13 +250,13 @@ namespace IndiLogs_3._0.ViewModels
 
         private void OpenSnakeGame(object obj)
         {
-            var snakeWindow = new IndiLogs_3._0.Views.SnakeWindow();
+            var snakeWindow = _viewFactory.Create<IndiLogs_3._0.Views.SnakeWindow>();
             WindowManager.ShowDialog(snakeWindow);
         }
 
         private void OpenIndigoInvaders(object obj)
         {
-            var invadersWindow = new IndiLogs_3._0.Views.IndigoInvadersWindow();
+            var invadersWindow = _viewFactory.Create<IndiLogs_3._0.Views.IndigoInvadersWindow>();
             invadersWindow.Owner = Application.Current.MainWindow;
             invadersWindow.ShowDialog();
         }
@@ -264,7 +265,7 @@ namespace IndiLogs_3._0.ViewModels
         {
             if (parameter is LogEntry log)
             {
-                WindowManager.OpenWindow(new LogDetailsWindow(log));
+                WindowManager.OpenWindow(_viewFactory.Create<LogDetailsWindow>(log));
             }
         }
 
