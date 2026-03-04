@@ -508,3 +508,4 @@ update-credentials.dat
 
 # Claude Code (all local, never committed)
 .claude/
+CLAUDE.md
