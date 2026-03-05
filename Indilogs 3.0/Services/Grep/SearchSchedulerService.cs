@@ -22,7 +22,7 @@ namespace IndiLogs_3._0.Services.Grep
 
         private readonly IGlobalGrepService _grepService;
         private readonly ISearchLocationService _locationService;
-        private readonly EmailNotificationService _emailService;
+        private readonly IEmailNotificationService _emailService;
         private readonly System.Timers.Timer _timer;
         private volatile bool _isRunning;
 
@@ -38,11 +38,11 @@ namespace IndiLogs_3._0.Services.Grep
         /// </summary>
         public event Action<ScheduledSearch, int, string> SearchCompleted;
 
-        public SearchSchedulerService(IGlobalGrepService grepService, ISearchLocationService locationService)
+        public SearchSchedulerService(IGlobalGrepService grepService, ISearchLocationService locationService, IEmailNotificationService emailService)
         {
             _grepService = grepService;
             _locationService = locationService;
-            _emailService = new EmailNotificationService();
+            _emailService = emailService;
             LoadSchedules();
 
             _timer = new System.Timers.Timer(60_000); // Check every 60 seconds

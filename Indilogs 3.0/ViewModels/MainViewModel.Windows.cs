@@ -198,6 +198,7 @@ namespace IndiLogs_3._0.ViewModels
                 Bootstrapper.Resolve<ISearchConfigService>(),
                 Bootstrapper.Resolve<ISearchSchedulerService>(),
                 Bootstrapper.Resolve<IWindowsTaskSchedulerService>(),
+                Bootstrapper.Resolve<IEmailNotificationService>(),
                 _dialogService, _viewFactory, _dispatcher, _windowOwner);
 
             var window = _viewFactory.Create<GlobalGrepWindow>(viewModel, (Action<GrepResult>)NavigateToGrepResult, (Action<List<(string FilePath, string SessionName)>>)LoadMultipleFiles);

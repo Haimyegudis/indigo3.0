@@ -23,6 +23,7 @@ namespace IndiLogs_3._0.ViewModels
         private readonly IDialogService _dialogService;
         private readonly IViewFactory? _viewFactory;
         private readonly ISearchLocationService? _locationService;
+        private readonly IEmailNotificationService? _emailService;
 
         // ═══ Section 1: Schedule Details ═══
         private string? _scheduleName;
@@ -397,13 +398,14 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand CancelCommand { get; }
 
         // ═══ Constructor ═══
-        public ScheduleEditorViewModel(ScheduledSearch schedule, List<SearchLocation> locations, SearchCriteria parentCriteria, IDialogService? dialogService = null, IViewFactory? viewFactory = null, ISearchLocationService? locationService = null)
+        public ScheduleEditorViewModel(ScheduledSearch schedule, List<SearchLocation> locations, SearchCriteria parentCriteria, IDialogService? dialogService = null, IViewFactory? viewFactory = null, ISearchLocationService? locationService = null, IEmailNotificationService? emailService = null)
         {
             _schedule = schedule;
             _allLocations = locations;
             _dialogService = dialogService;
             _viewFactory = viewFactory;
             _locationService = locationService;
+            _emailService = emailService;
 
             // Commands
             AddConditionCommand = new RelayCommand(_ => AddCondition());

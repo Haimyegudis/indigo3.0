@@ -28,6 +28,7 @@ namespace IndiLogs_3._0.ViewModels
         private readonly ISearchSchedulerService _schedulerService;
         private readonly IWindowsTaskSchedulerService _taskSchedulerService;
         private readonly IDialogService _dialogService;
+        private readonly IEmailNotificationService _emailService;
         private readonly IViewFactory _viewFactory;
         private readonly IDispatcher _dispatcher;
         private readonly IWindowOwnerProvider _windowOwner;
@@ -62,6 +63,7 @@ namespace IndiLogs_3._0.ViewModels
             ISearchConfigService configService,
             ISearchSchedulerService schedulerService,
             IWindowsTaskSchedulerService taskSchedulerService,
+            IEmailNotificationService emailService,
             IDialogService dialogService,
             IViewFactory viewFactory,
             IDispatcher dispatcher,
@@ -72,6 +74,7 @@ namespace IndiLogs_3._0.ViewModels
             _configService = configService;
             _schedulerService = schedulerService;
             _taskSchedulerService = taskSchedulerService;
+            _emailService = emailService;
             _dialogService = dialogService;
             _viewFactory = viewFactory;
             _dispatcher = dispatcher;

@@ -64,7 +64,10 @@ namespace IndiLogs_3._0
             var searchConfigService = new SearchConfigService();
             Register<ISearchConfigService>(searchConfigService);
 
-            var searchSchedulerService = new SearchSchedulerService(globalGrepService, searchLocationService);
+            var emailNotificationService = new EmailNotificationService();
+            Register<IEmailNotificationService>(emailNotificationService);
+
+            var searchSchedulerService = new SearchSchedulerService(globalGrepService, searchLocationService, emailNotificationService);
             Register<ISearchSchedulerService>(searchSchedulerService);
 
             var windowsTaskSchedulerService = new WindowsTaskSchedulerService();

@@ -8,10 +8,11 @@ using System.Threading.Tasks;
 using System.Timers;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Grep;
+using IndiLogs_3._0.Services.Interfaces;
 
 namespace IndiLogs_3._0.Services.Grep
 {
-    public class EmailNotificationService : IDisposable
+    public class EmailNotificationService : IEmailNotificationService
     {
         private readonly ConcurrentQueue<DeferredEmail> _deferredQueue
             = new ConcurrentQueue<DeferredEmail>();
@@ -421,11 +422,11 @@ namespace IndiLogs_3._0.Services.Grep
 
         private class DeferredEmail
         {
-            public EmailNotificationConfig Config { get; set; }
-            public string Subject { get; set; }
-            public string PlainTextBody { get; set; }
-            public string HtmlReportPath { get; set; }
-            public string ScheduleName { get; set; }
+            public EmailNotificationConfig Config { get; set; } = null!;
+            public string Subject { get; set; } = "";
+            public string PlainTextBody { get; set; } = "";
+            public string HtmlReportPath { get; set; } = "";
+            public string ScheduleName { get; set; } = "";
             public TimeSpan SendTime { get; set; }
             public DateTime QueuedAt { get; set; }
         }

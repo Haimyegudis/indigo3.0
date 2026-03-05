@@ -14,7 +14,7 @@ namespace IndiLogs.Tests
         {
             // The constructor loads schedules from disk and creates a timer,
             // but ShouldRun is pure logic that doesn't need infrastructure.
-            _scheduler = new SearchSchedulerService(new IndiLogs_3._0.Services.GlobalGrepService(), new SearchLocationService());
+            _scheduler = new SearchSchedulerService(new IndiLogs_3._0.Services.GlobalGrepService(), new SearchLocationService(), new EmailNotificationService());
         }
 
         // ── Once schedule ──

@@ -12,7 +12,7 @@ namespace IndiLogs_3._0.ViewModels
         /// </summary>
         private bool ShowScheduleDialog(string title, ScheduledSearch schedule)
         {
-            var vm = new ScheduleEditorViewModel(schedule, Locations.ToList(), BuildFullCriteria(), _dialogService, _viewFactory, _locationService);
+            var vm = new ScheduleEditorViewModel(schedule, Locations.ToList(), BuildFullCriteria(), _dialogService, _viewFactory, _locationService, _emailService);
             var window = _viewFactory.Create<Views.ScheduleEditorWindow>();
             window.DataContext = vm;
             window.Title = title;

@@ -196,10 +196,14 @@ namespace IndiLogs_3._0.ViewModels
             _isTestEmailRunning = true;
             try
             {
-                using (var emailSvc = new EmailNotificationService())
+                if (_emailService != null)
                 {
-                    var (ok, msg) = await emailSvc.TestConnectionAsync(testConfig, Recipients[0]);
+                    var (ok, msg) = await _emailService.TestConnectionAsync(testConfig, Recipients[0]);
                     TestEmailStatus = msg;
+                }
+                else
+                {
+                    TestEmailStatus = "Email service not available";
                 }
             }
             finally

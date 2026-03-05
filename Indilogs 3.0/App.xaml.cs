@@ -89,7 +89,8 @@ namespace IndiLogs_3._0
             {
                 IGlobalGrepService grepService = new GlobalGrepService();
                 ISearchLocationService locationService = new SearchLocationService();
-                using (ISearchSchedulerService schedulerService = new SearchSchedulerService(grepService, locationService))
+                IEmailNotificationService emailService = new EmailNotificationService();
+                using (ISearchSchedulerService schedulerService = new SearchSchedulerService(grepService, locationService, emailService))
                 {
                     var schedule = schedulerService.Schedules.FirstOrDefault(s => s.Id == scheduleId);
                     if (schedule == null)
