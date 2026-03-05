@@ -73,6 +73,9 @@ namespace IndiLogs_3._0
             var windowsTaskSchedulerService = new WindowsTaskSchedulerService();
             Register<IWindowsTaskSchedulerService>(windowsTaskSchedulerService);
 
+            var updateService = new UpdateService(dialogService, dispatcher);
+            Register<IUpdateService>(updateService);
+
             // --- ViewModels ---
             var mainVM = new MainViewModel(logFileService, coloringService, csvService, defaultConfigService, dialogService, viewFactory, dispatcher, windowOwner, windowManager);
             Register<MainViewModel>(mainVM);

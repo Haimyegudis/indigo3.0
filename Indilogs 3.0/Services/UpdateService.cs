@@ -14,7 +14,7 @@ using IndiLogs_3._0.Services.Interfaces;
 
 namespace IndiLogs_3._0.Services
 {
-    public class UpdateService
+    public class UpdateService : Interfaces.IUpdateService
     {
         // Server paths — read from appsettings.json (sits next to the exe)
         private static readonly string VersionFileUrl = "";
