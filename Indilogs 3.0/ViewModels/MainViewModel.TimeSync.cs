@@ -34,8 +34,8 @@ namespace IndiLogs_3._0.ViewModels
         // Set to true inside the BeginInvoke(Loaded) that fires the sync scroll.
         // Read and cleared by the view's TabControl_SelectionChanged ApplicationIdle callback.
         // Without this flag, the dispatch order causes:
-        //   Loaded(6): sync scroll applied \u2192 tab at correct synced time
-        //   ApplicationIdle(2): ScrollGridToBottom fires \u2192 overwrites synced position with last line
+        //   Loaded(6): sync scroll applied → tab at correct synced time
+        //   ApplicationIdle(2): ScrollGridToBottom fires → overwrites synced position with last line
         public bool TimeSyncScrollWasApplied { get; set; } = false;
 
         // Double (not int) so that sub-second APP/PLC clock differences are preserved.
@@ -74,20 +74,33 @@ namespace IndiLogs_3._0.ViewModels
 
         // ==================== TIME-SYNC SCROLLING METHODS ====================
 
+        /// <summary>
+        /// Binary search for the log entry whose Date is nearest to targetTime.
+        /// Collection must be sorted by Date ascending.
+        /// </summary>
         private int BinarySearchNearest(IList<LogEntry> collection, DateTime targetTime)
+        {
+            return BinarySearchNearestBy(collection, targetTime, log => log.Date);
+        }
+
+        /// <summary>
+        /// Binary search for the log entry whose time (extracted by selector) is nearest to targetTime.
+        /// Collection must be sorted by the selector value in ascending order.
+        /// </summary>
+        private int BinarySearchNearestBy(IList<LogEntry> collection, DateTime targetTime, Func<LogEntry, DateTime> timeSelector)
         {
             if (collection == null || collection.Count == 0) return -1;
 
             int left = 0;
             int right = collection.Count - 1;
 
-            if (targetTime <= collection[0].Date) return 0;
-            if (targetTime >= collection[right].Date) return right;
+            if (targetTime <= timeSelector(collection[0])) return 0;
+            if (targetTime >= timeSelector(collection[right])) return right;
 
             while (left <= right)
             {
                 int mid = left + (right - left) / 2;
-                DateTime midTime = collection[mid].Date;
+                DateTime midTime = timeSelector(collection[mid]);
 
                 if (midTime == targetTime) return mid;
 
@@ -99,8 +112,8 @@ namespace IndiLogs_3._0.ViewModels
 
             if (left >= collection.Count) return right;
 
-            DateTime leftTime = collection[left].Date;
-            DateTime rightTime = collection[right].Date;
+            DateTime leftTime = timeSelector(collection[left]);
+            DateTime rightTime = timeSelector(collection[right]);
 
             TimeSpan leftDiff = (leftTime - targetTime).Duration();
             TimeSpan rightDiff = (targetTime - rightTime).Duration();
@@ -108,34 +121,33 @@ namespace IndiLogs_3._0.ViewModels
             return leftDiff < rightDiff ? left : right;
         }
 
-        public void RequestSyncScroll(DateTime targetTime, string sourceGrid)
+        /// <summary>
+        /// Called from TriggerTimeSyncScroll in the view. Accepts the source log entry
+        /// directly (not just time) so we can use SyncedTime when available for ms precision.
+        /// </summary>
+        public void RequestSyncScroll(LogEntry sourceLog, string sourceGrid)
         {
-            // _isTabSwitching: tab is mid-transition; the ScrollChanged that fired here
-            // is from WPF re-rendering the newly-visible DataGrid, not from a real user scroll.
             if (!IsTimeSyncEnabled || _isSyncScrolling || _isTabSwitching) return;
 
             _isSyncScrolling = true;
 
             try
             {
-                // TimeSyncOffsetSeconds = APP.Date - PLC.Date  (calculated at session load)
-                //
-                // PLC \u2192 APP:  PLC time is raw PLC clock.  We ADD the offset to convert it to
-                //              APP clock space before searching AppDevLogsFiltered.
-                //
-                // APP \u2192 PLC:  APP time is in APP clock space.  We SUBTRACT the offset to
-                //              convert it back to PLC clock space before searching AllLogsCache.
-                //              Using +offset here was the bug that caused >1 min offset in this
-                //              direction (it shifted the search time by 2\u00d7 the actual offset).
-                IList<LogEntry> targetCollection = null;
-                string targetGrid = null;
+                IList<LogEntry>? targetCollection = null;
+                string? targetGrid = null;
                 int targetTabIndex = -1;
                 DateTime adjustedTime;
 
                 if (sourceGrid == "PLC")
                 {
-                    // PLC \u2192 APP: convert PLC time \u2192 APP clock
-                    adjustedTime = targetTime.AddSeconds(TimeSyncOffsetSeconds);
+                    // PLC → APP: need to convert PLC time to APP clock
+                    // If SyncedTime exists (tick-precise), use it directly (already in APP clock).
+                    // Otherwise fall back to Date + offset (double→ticks conversion, less precise).
+                    if (sourceLog.SyncedTime.HasValue)
+                        adjustedTime = sourceLog.SyncedTime.Value;
+                    else
+                        adjustedTime = sourceLog.Date.AddSeconds(TimeSyncOffsetSeconds);
+
                     if (FilterVM?.AppDevLogsFiltered != null && FilterVM.AppDevLogsFiltered.Count > 0)
                     {
                         targetCollection = FilterVM.AppDevLogsFiltered;
@@ -145,45 +157,66 @@ namespace IndiLogs_3._0.ViewModels
                 }
                 else if (sourceGrid == "APP")
                 {
-                    // APP \u2192 PLC: convert APP time \u2192 PLC clock (reverse direction)
-                    adjustedTime = targetTime.AddSeconds(-TimeSyncOffsetSeconds);
-                    if (SessionVM?.AllLogsCache != null && SessionVM.AllLogsCache.Count > 0)
+                    // APP → PLC: need to find PLC log at the same real-world moment.
+                    // If PLC logs have SyncedTime, search by SyncedTime (already in APP clock)
+                    // using the APP log's Date directly — avoids double→ticks precision loss.
+                    // Otherwise search by Date with offset subtracted.
+                    adjustedTime = sourceLog.Date;
+
+                    var plcLogs = SessionVM?.Logs as IList<LogEntry>;
+                    if (plcLogs != null && plcLogs.Count > 0)
                     {
-                        targetCollection = SessionVM.AllLogsCache;
+                        targetCollection = plcLogs;
                         targetGrid = "PLC";
                         targetTabIndex = 0;
                     }
                 }
                 else
                 {
-                    adjustedTime = targetTime;
+                    adjustedTime = sourceLog.Date;
                 }
 
                 if (targetCollection == null || targetCollection.Count == 0) return;
 
-                int nearestIndex = BinarySearchNearest(targetCollection, adjustedTime);
+                // For APP→PLC with SyncedTime: search PLC by SyncedTime field (APP clock ↔ APP clock).
+                // For all other cases: search by Date field.
+                int nearestIndex;
+                if (sourceGrid == "APP" && HasTimeSyncData && targetCollection.Count > 0
+                    && targetCollection[0].SyncedTime.HasValue)
+                {
+                    nearestIndex = BinarySearchNearestBy(targetCollection, adjustedTime,
+                        log => log.SyncedTime ?? log.Date);
+                }
+                else
+                {
+                    nearestIndex = BinarySearchNearest(targetCollection, adjustedTime);
+                }
 
                 if (nearestIndex >= 0)
                 {
                     LogEntry nearestLog = targetCollection[nearestIndex];
-                    TimeSpan timeDiff = (nearestLog.Date - adjustedTime).Duration();
+
+                    // Calculate diff using the same clock space for accurate display
+                    DateTime nearestTime = (sourceGrid == "APP" && nearestLog.SyncedTime.HasValue)
+                        ? nearestLog.SyncedTime.Value
+                        : nearestLog.Date;
+                    TimeSpan timeDiff = (nearestTime - adjustedTime).Duration();
 
                     if (timeDiff.TotalSeconds <= 60)
                     {
-                        // Store pending sync - will scroll when user switches to target tab
                         _pendingSyncLog = nearestLog;
                         _pendingSyncTabIndex = targetTabIndex;
 
                         _dispatcher.Post(() =>
                         {
-                            SessionVM.StatusMessage =$"\ud83d\udd17 Synced to {targetGrid} @ {nearestLog.Date:HH:mm:ss.ffffff} (\u00b1{timeDiff.TotalSeconds:F1}s) - switch tab to see";
+                            SessionVM.StatusMessage = $"\ud83d\udd17 Synced to {targetGrid} @ {nearestLog.Date:HH:mm:ss.fff} (\u00b1{timeDiff.TotalMilliseconds:F0}ms) - switch tab to see";
                         });
                     }
                     else
                     {
                         _dispatcher.Post(() =>
                         {
-                            SessionVM.StatusMessage =$"\u26a0 No correlated logs within 60s (closest: {timeDiff.TotalSeconds:F0}s)";
+                            SessionVM.StatusMessage = $"\u26a0 No correlated logs within 60s (closest: {timeDiff.TotalSeconds:F1}s)";
                         });
                     }
                 }
@@ -192,6 +225,16 @@ namespace IndiLogs_3._0.ViewModels
             {
                 _isSyncScrolling = false;
             }
+        }
+
+        /// <summary>
+        /// Legacy overload for backward compatibility (chart navigation, etc.)
+        /// </summary>
+        public void RequestSyncScroll(DateTime targetTime, string sourceGrid)
+        {
+            // Create a temporary LogEntry wrapper for the DateTime-only call path
+            var tempLog = new LogEntry { Date = targetTime };
+            RequestSyncScroll(tempLog, sourceGrid);
         }
 
         /// <summary>

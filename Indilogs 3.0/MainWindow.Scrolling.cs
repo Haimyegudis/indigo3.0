@@ -52,6 +52,7 @@ namespace IndiLogs_3._0
         // Helper to find child in visual tree
         private T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
         {
+            if (parent is not Visual && parent is not System.Windows.Media.Media3D.Visual3D) return null;
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
             {
                 var child = VisualTreeHelper.GetChild(parent, i);
@@ -68,6 +69,7 @@ namespace IndiLogs_3._0
         // Helper to find parent in visual tree
         private T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
         {
+            if (child is not Visual && child is not System.Windows.Media.Media3D.Visual3D) return null;
             var parentObject = VisualTreeHelper.GetParent(child);
             if (parentObject == null) return null;
             if (parentObject is T parent) return parent;
@@ -586,8 +588,8 @@ namespace IndiLogs_3._0
             if (gridName.Contains("App") || sourceGrid.ItemsSource == vm.FilterVM?.AppDevLogsFiltered)
                 sourceType = "APP";
 
-            // Trigger the sync
-            vm.RequestSyncScroll(logEntry.Date, sourceType);
+            // Pass the full LogEntry so RequestSyncScroll can use SyncedTime for ms precision
+            vm.RequestSyncScroll(logEntry, sourceType);
         }
     }
 }

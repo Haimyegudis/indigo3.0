@@ -2,6 +2,7 @@
 using IndiLogs_3._0.Models.Analysis;
 using IndiLogs_3._0.Models.Charts;
 using IndiLogs_3._0.Services.Charts;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Media.Imaging;
@@ -77,6 +78,11 @@ namespace IndiLogs_3._0.Models
 
         // --- EM_Statistics CSV content (extracted from ZIP for Gantt chart) ---
         public string? EmStatisticsCsvContent { get; set; }
+
+        // --- Per-session time sync offset (preserved across session switches) ---
+        // TimeSpan (not double seconds) to preserve tick-level precision for ms-accurate sync.
+        public TimeSpan? TimeSyncOffset { get; set; }
+        public bool HasTimeSyncData { get; set; }
 
         // --- Per-session filter state (preserved across session switches) ---
         public SessionFilterState? SavedFilterState { get; set; }
