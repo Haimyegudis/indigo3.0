@@ -348,6 +348,8 @@ namespace IndiLogs_3._0.Views
         {
             if (obj is ScrollViewer sv)
                 return sv;
+            if (obj is not Visual && obj is not System.Windows.Media.Media3D.Visual3D)
+                return null;
 
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(obj); i++)
             {

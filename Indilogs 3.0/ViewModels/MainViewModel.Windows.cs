@@ -293,18 +293,23 @@ namespace IndiLogs_3._0.ViewModels
         private void OpenOutlook(object obj) { try { Process.Start(new ProcessStartInfo("outlook.exe", "/c ipm.note") { UseShellExecute = true }); } catch (Exception ex) { AppLogger.Warn($"Outlook launch failed: {ex.Message}"); OpenUrl("mailto:"); } }
 
         /// <summary>
-        /// Opens Kibana in the default browser, pre-filling the machine name from the loaded ZIP.
+        /// Opens Kibana in the default browser using the machine name from the Readme file.
         /// </summary>
         private void OpenKibana(object obj)
         {
-            string zipPath = SessionVM?.SelectedSession?.FilePath ?? string.Empty;
             string machineName = string.Empty;
 
-            if (!string.IsNullOrEmpty(zipPath))
+            // Extract machine name from Readme content (line: "Machine name: MANUAL-FP-4")
+            if (!string.IsNullOrEmpty(PressConfig))
             {
-                string fileName = System.IO.Path.GetFileNameWithoutExtension(zipPath);
-                int underscoreIdx = fileName.IndexOf('_');
-                machineName = underscoreIdx > 0 ? fileName.Substring(0, underscoreIdx) : fileName;
+                foreach (var line in PressConfig.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (line.StartsWith("Machine name:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        machineName = line.Substring("Machine name:".Length).Trim();
+                        break;
+                    }
+                }
             }
 
             if (string.IsNullOrEmpty(machineName))
@@ -313,9 +318,8 @@ namespace IndiLogs_3._0.ViewModels
                 return;
             }
 
-            string escapedMachineName = Uri.EscapeDataString(machineName);
-            string nextParam = Uri.EscapeDataString($"/{escapedMachineName}/app/home");
-            string url = $"http://localhost/{escapedMachineName}/login?next={nextParam}";
+            string nextParam = Uri.EscapeDataString($"/{machineName}/app/home");
+            string url = $"http://localhost/{machineName}/login?next={nextParam}#/";
             OpenUrl(url);
         }
     }

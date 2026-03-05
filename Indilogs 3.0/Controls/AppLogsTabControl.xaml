@@ -12,6 +12,7 @@
     </UserControl.Resources>
     <Grid>
         <DataGrid x:Name="AppLogsGrid" Margin="0,0,12,0" ItemsSource="{Binding FilterVM.AppDevLogsFiltered}" SelectedItem="{Binding SelectedLog}" Sorting="AppLogsGrid_Sorting" FontSize="{Binding GridFontSize}" FontFamily="{DynamicResource ContentFontFamily}" FontWeight="{DynamicResource ContentFontWeight}" AutoGenerateColumns="False" IsReadOnly="True" AutomationProperties.Name="App Logs Grid"
+                  PreviewMouseRightButtonDown="AppLogsGrid_PreviewMouseRightButtonDown"
                   SelectionMode="Extended" SelectionUnit="FullRow"
                   VirtualizingPanel.IsVirtualizing="True"
                   VirtualizingPanel.VirtualizationMode="Recycling"

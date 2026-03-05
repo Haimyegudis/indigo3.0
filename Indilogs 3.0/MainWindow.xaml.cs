@@ -81,17 +81,16 @@ namespace IndiLogs_3._0
 
         private void SaveAllGridColumnSettings(DependencyObject parent)
         {
+            if (parent is not Visual && parent is not System.Windows.Media.Media3D.Visual3D) return;
             for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
             {
                 var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
-                if (child is Controls.PlcLogsGridControl grid)
-                {
-                    grid.SaveColumnSettings();
-                }
+                if (child is Controls.PlcLogsGridControl plcGrid)
+                    plcGrid.SaveColumnSettings();
+                else if (child is Controls.AppLogsTabControl appGrid)
+                    appGrid.SaveColumnSettings();
                 else
-                {
                     SaveAllGridColumnSettings(child);
-                }
             }
         }
 
@@ -305,7 +304,10 @@ namespace IndiLogs_3._0
 
         static TreeViewItem VisualUpwardSearch(DependencyObject source)
         {
-            while (source != null && !(source is TreeViewItem)) source = VisualTreeHelper.GetParent(source);
+            while (source != null && !(source is TreeViewItem))
+                source = source is Visual || source is System.Windows.Media.Media3D.Visual3D
+                    ? VisualTreeHelper.GetParent(source)
+                    : LogicalTreeHelper.GetParent(source);
             return source as TreeViewItem;
         }
 
@@ -332,9 +334,9 @@ namespace IndiLogs_3._0
             {
                 if (e.Delta > 0) vm.ZoomInCommand.Execute(null);
                 else vm.ZoomOutCommand.Execute(null);
-
                 e.Handled = true;
             }
+            // Without Ctrl, let ScrollViewer handle normal scrolling
         }
 
         private void OnImageMouseLeftButtonDown(object? sender, MouseButtonEventArgs e)

@@ -52,7 +52,7 @@ namespace IndiLogs.Tests
 
             Assert.False(result.AreEqual);
             // Right side should have an Added segment
-            Assert.True(result.RightSegments.Any(s => s.Type == DiffType.Added));
+            Assert.Contains(result.RightSegments, s => s.Type == DiffType.Added);
         }
 
         [Fact]
@@ -62,7 +62,7 @@ namespace IndiLogs.Tests
 
             Assert.False(result.AreEqual);
             // Left side should have a Removed segment
-            Assert.True(result.LeftSegments.Any(s => s.Type == DiffType.Removed));
+            Assert.Contains(result.LeftSegments, s => s.Type == DiffType.Removed);
         }
 
         [Fact]

@@ -202,6 +202,19 @@ namespace IndiLogs_3._0.ViewModels
                 // Auto-load events DataView the first time user clicks the EVENTS tab
                 if (_selectedTabIndex == AppConstants.TAB_EVENTS && _eventsDataView == null)
                     LoadEventsDataView();
+
+                // Apply pending time-sync scroll when user switches to the target tab
+                if (_pendingSyncLog != null && _selectedTabIndex == _pendingSyncTabIndex)
+                {
+                    var logToScroll = _pendingSyncLog;
+                    _pendingSyncLog = null;
+                    _pendingSyncTabIndex = -1;
+                    TimeSyncScrollWasApplied = true;
+                    SelectedLog = logToScroll;
+                    // Defer scroll to Loaded priority — the tab's grid isn't rendered yet
+                    _dispatcher.Post(() => RequestScrollToLog?.Invoke(logToScroll),
+                        Services.Interfaces.DispatchPriority.Loaded);
+                }
             }
         }
 
@@ -213,7 +226,7 @@ namespace IndiLogs_3._0.ViewModels
         public string ReportsButtonText => HasBinaryAppLogs ? "📊 Statistics" : "⚙ Reports";
 
         public System.Collections.ObjectModel.ObservableCollection<Models.LoggerNode> ActiveLoggerTree =>
-            _selectedTabIndex == AppConstants.TAB_APP ? FilterVM?.PlcLoggerTreeRoot : FilterVM?.LoggerTreeRoot;
+            _selectedTabIndex == AppConstants.TAB_APP ? FilterVM?.LoggerTreeRoot : FilterVM?.PlcLoggerTreeRoot;
 
         public string LoggerTabTitle =>
             _selectedTabIndex == AppConstants.TAB_APP ? "App Loggers" : "PLC Loggers";

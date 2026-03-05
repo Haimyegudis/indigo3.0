@@ -24,6 +24,9 @@ namespace IndiLogs_3._0.Controls
         /// <summary>Grid type key for column settings ("PLC" or "APP"). Override in derived classes.</summary>
         protected virtual string GridSettingsKey => "PLC";
 
+        /// <summary>Whether current session is S4-5 (binary APP). Override in derived classes that need config-aware persistence.</summary>
+        protected virtual bool IsBinaryAppConfig => false;
+
         protected const string SettingsFileName = "GridColumnSettings.json";
         protected string SettingsFilePath => AppPaths.GridColumnSettings;
 
@@ -242,9 +245,15 @@ namespace IndiLogs_3._0.Controls
                 }
 
                 if (GridSettingsKey == "APP")
-                    gridSettings.AppColumns = columnSettings;
+                {
+                    if (IsBinaryAppConfig) gridSettings.AppColumnsS45 = columnSettings;
+                    else gridSettings.AppColumns = columnSettings;
+                }
                 else
-                    gridSettings.PlcColumns = columnSettings;
+                {
+                    if (IsBinaryAppConfig) gridSettings.PlcColumnsS45 = columnSettings;
+                    else gridSettings.PlcColumns = columnSettings;
+                }
 
                 Directory.CreateDirectory(Path.GetDirectoryName(SettingsFilePath));
                 string json = JsonConvert.SerializeObject(gridSettings, Formatting.Indented);
@@ -261,7 +270,9 @@ namespace IndiLogs_3._0.Controls
             try
             {
                 GridSettings gridSettings = LoadGridSettings();
-                var columnSettings = GridSettingsKey == "APP" ? gridSettings.AppColumns : gridSettings.PlcColumns;
+                var columnSettings = GridSettingsKey == "APP"
+                    ? (IsBinaryAppConfig ? gridSettings.AppColumnsS45 : gridSettings.AppColumns)
+                    : (IsBinaryAppConfig ? gridSettings.PlcColumnsS45 : gridSettings.PlcColumns);
 
                 if (columnSettings == null) return;
 

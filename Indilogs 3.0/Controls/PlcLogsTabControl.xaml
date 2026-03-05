@@ -15,6 +15,7 @@
         <controls:PlcLogsGridControl x:Name="MainLogsGrid"
                                      DataContext="{Binding}"
                                      LogsSource="{Binding SessionVM.Logs}"
+                                     IsBinaryApp="{Binding HasBinaryAppLogs}"
                                      PluginColumns="{Binding DataContext.CurrentPluginColumns, RelativeSource={RelativeSource AncestorType=Window}}"/>
         <views:VisualTimelineView DataContext="{Binding VisualTimelineVM}" Visibility="{Binding DataContext.IsVisualMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
     </Grid>

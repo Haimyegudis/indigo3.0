@@ -71,10 +71,7 @@ namespace IndiLogs_3._0.ViewModels
                 return "PASSED";
             }
         }
-        /// <summary>Regex for S4-5 binary PLC state transitions: "STATE_STANDBY - Enter ======" / "STATE_SERVICE - Exit ======"</summary>
-        private static readonly Regex _s4StateRegex = new Regex(
-            @"STATE_(\w+)\s*-\s*(Enter|Exit)",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(2));
+
 
         public void LoadData(IEnumerable<LogEntry> logs, IEnumerable<EventEntry>? events)
         {
@@ -157,7 +154,7 @@ namespace IndiLogs_3._0.ViewModels
                     // ── S4-5 state transitions: STATE_XXX - Enter/Exit ====== ──
                     else if (log.Message != null && log.Message.Contains("==== STATE"))
                     {
-                        var match = _s4StateRegex.Match(log.Message);
+                        var match = AppConstants.S4StateRegex.Match(log.Message);
                         if (match.Success)
                         {
                             string stateName = match.Groups[1].Value.ToUpperInvariant();

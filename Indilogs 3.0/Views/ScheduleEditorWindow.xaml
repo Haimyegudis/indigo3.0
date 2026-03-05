@@ -297,6 +297,8 @@
                     </ScrollViewer>
 
                     <WrapPanel Margin="0,6,0,0">
+                        <Button Content="+ Add Location" Style="{StaticResource SmallBtn}" Margin="0,0,6,0"
+                                Command="{Binding AddLocationCommand}"/>
                         <Button Content="Select All" Style="{StaticResource SmallBtn}" Margin="0,0,6,0"
                                 Command="{Binding SelectAllLocationsCommand}"/>
                         <Button Content="Select None" Style="{StaticResource SmallBtn}"
@@ -389,48 +391,8 @@
 
                     <StackPanel Visibility="{Binding EmailEnabled, Converter={StaticResource BoolToVis}}">
 
-                        <!-- SMTP Server -->
-                        <TextBlock Text="SMTP Server" Style="{StaticResource SectionLabel}"/>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBox Text="{Binding SmtpHost, UpdateSourceTrigger=PropertyChanged}" Width="300" Style="{StaticResource EditorTextBox}"/>
-                            <TextBlock Text="Port:" Foreground="{DynamicResource TextSecondary}" FontSize="11"
-                                       VerticalAlignment="Center" Margin="12,0,4,0"/>
-                            <TextBox Text="{Binding SmtpPort, UpdateSourceTrigger=PropertyChanged}" Width="60" Style="{StaticResource EditorTextBox}"/>
-                        </StackPanel>
-
-                        <CheckBox Content="Use SSL/TLS" Foreground="{DynamicResource TextPrimary}"
-                                  IsChecked="{Binding UseSsl}" FontSize="11" Margin="0,4,0,0"/>
-
-                        <!-- Authentication -->
-                        <TextBlock Text="Authentication" Style="{StaticResource SectionLabel}"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                            <RadioButton Content="None" Foreground="{DynamicResource TextPrimary}" FontSize="11"
-                                         IsChecked="{Binding AuthNone}" Margin="0,0,14,0" GroupName="Auth"/>
-                            <RadioButton Content="Windows (current user)" Foreground="{DynamicResource TextPrimary}" FontSize="11"
-                                         IsChecked="{Binding AuthWindows}" Margin="0,0,14,0" GroupName="Auth"/>
-                            <RadioButton Content="Username / Password" Foreground="{DynamicResource TextPrimary}" FontSize="11"
-                                         IsChecked="{Binding AuthUserPass}" GroupName="Auth"/>
-                        </StackPanel>
-
-                        <!-- Credentials (Username/Password only) -->
-                        <StackPanel Visibility="{Binding AuthIsUserPass, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Username" Style="{StaticResource SectionLabel}"/>
-                            <TextBox Text="{Binding SmtpUsername, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource EditorTextBox}"/>
-                            <TextBlock Text="Password" Style="{StaticResource SectionLabel}"/>
-                            <TextBox Text="{Binding SmtpPassword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource EditorTextBox}"/>
-                        </StackPanel>
-
-                        <TextBlock Text="From Address" Style="{StaticResource SectionLabel}"/>
-                        <TextBox Text="{Binding FromAddress, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource EditorTextBox}"/>
-
-                        <!-- Test Email -->
-                        <Button Content="Send Test Email" Style="{StaticResource SmallBtn}" FontSize="11"
-                                Padding="8,3,8,3" HorizontalAlignment="Left" Margin="0,6,0,4"
-                                Command="{Binding SendTestEmailCommand}"/>
-                        <TextBlock Text="{Binding TestEmailStatus}" Style="{StaticResource HintText}"/>
-
-                        <!-- Recipients -->
-                        <Separator Margin="0,4,0,4" Background="{DynamicResource BorderColor}"/>
+                        <TextBlock Style="{StaticResource HintText}" Margin="0,0,0,6"
+                                   Text="Emails are sent via your local Outlook installation (no SMTP configuration needed)."/>
                         <TextBlock Text="Recipients" Style="{StaticResource SectionLabel}"/>
 
                         <ItemsControl ItemsSource="{Binding Recipients}">
@@ -456,6 +418,12 @@
                                     BorderBrush="{DynamicResource BorderColor}" FontSize="12" Cursor="Hand"
                                     Command="{Binding AddRecipientCommand}"/>
                         </StackPanel>
+
+                        <!-- Test Email -->
+                        <Button Content="Send Test Email" Style="{StaticResource SmallBtn}" FontSize="11"
+                                Padding="8,3,8,3" HorizontalAlignment="Left" Margin="0,6,0,4"
+                                Command="{Binding SendTestEmailCommand}"/>
+                        <TextBlock Text="{Binding TestEmailStatus}" Style="{StaticResource HintText}"/>
 
                         <!-- Timing -->
                         <Separator Margin="0,8,0,4" Background="{DynamicResource BorderColor}"/>

@@ -295,6 +295,8 @@ namespace IndiLogs_3._0.Controls
         {
             if (depObj is ScrollViewer sv)
                 return sv;
+            if (depObj is not Visual && depObj is not System.Windows.Media.Media3D.Visual3D)
+                return null;
 
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
             {

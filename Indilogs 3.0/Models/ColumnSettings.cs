@@ -20,7 +20,11 @@ namespace IndiLogs_3._0.Models
     [Serializable]
     public class GridSettings
     {
+        // S6 configuration
         public ColumnSettings PlcColumns { get; set; } = new ColumnSettings();
         public ColumnSettings AppColumns { get; set; } = new ColumnSettings();
+        // S4-5 configuration (binary APP)
+        public ColumnSettings PlcColumnsS45 { get; set; } = new ColumnSettings();
+        public ColumnSettings AppColumnsS45 { get; set; } = new ColumnSettings();
     }
 }

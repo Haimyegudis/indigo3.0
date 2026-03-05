@@ -20,7 +20,7 @@ namespace IndiLogs.Tests
         [InlineData("app.log", false)]
         [InlineData("", false)]
         [InlineData(null, false)]
-        public void IsCustomTerminalLog_MatchesKnownPrefixes(string fileName, bool expected)
+        public void IsCustomTerminalLog_MatchesKnownPrefixes(string? fileName, bool expected)
         {
             Assert.Equal(expected, ZipClassificationHelpers.IsCustomTerminalLog(fileName));
         }
@@ -44,7 +44,7 @@ namespace IndiLogs.Tests
         [InlineData("diagnosticslogs/systab_saved.log", false)]
         [InlineData("", false)]
         [InlineData(null, false)]
-        public void IsSystabFile_MatchesDiagnosticsLogsPath(string path, bool expected)
+        public void IsSystabFile_MatchesDiagnosticsLogsPath(string? path, bool expected)
         {
             Assert.Equal(expected, ZipClassificationHelpers.IsSystabFile(path));
         }
@@ -82,7 +82,7 @@ namespace IndiLogs.Tests
         [InlineData("machine/other/globals/params.xml", false)]
         [InlineData("", false)]
         [InlineData(null, false)]
-        public void IsGlobalsXmlFile_MatchesGlobalsPath(string path, bool expected)
+        public void IsGlobalsXmlFile_MatchesGlobalsPath(string? path, bool expected)
         {
             Assert.Equal(expected, ZipClassificationHelpers.IsGlobalsXmlFile(path));
         }
@@ -133,7 +133,7 @@ namespace IndiLogs.Tests
         [InlineData("other_file.csv", false)]
         [InlineData("", false)]
         [InlineData(null, false)]
-        public void IsEmStatisticsFile_MatchesCorrectFiles(string name, bool expected)
+        public void IsEmStatisticsFile_MatchesCorrectFiles(string? name, bool expected)
         {
             Assert.Equal(expected, ZipClassificationHelpers.IsEmStatisticsFile(name));
         }

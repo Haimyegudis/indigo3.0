@@ -227,7 +227,6 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{DynamicResource BgCardHover}"/>
                                 <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource PrimaryColor}"/>
                                 <Setter TargetName="border" Property="Effect">
                                     <Setter.Value>

@@ -8,6 +8,7 @@ using System.Windows.Input;
 using IndiLogs_3._0.Models.Grep;
 using IndiLogs_3._0.Services.Grep;
 using IndiLogs_3._0.Services.Interfaces;
+using IndiLogs_3._0.Views;
 
 namespace IndiLogs_3._0.ViewModels
 {
@@ -20,6 +21,8 @@ namespace IndiLogs_3._0.ViewModels
         private readonly ScheduledSearch _schedule;
         private readonly List<SearchLocation> _allLocations;
         private readonly IDialogService _dialogService;
+        private readonly IViewFactory? _viewFactory;
+        private readonly SearchLocationService? _locationService;
 
         // ═══ Section 1: Schedule Details ═══
         private string? _scheduleName;
@@ -317,83 +320,6 @@ namespace IndiLogs_3._0.ViewModels
             set => SetField(ref _emailEnabled, value);
         }
 
-        private string? _smtpHost;
-        public string? SmtpHost
-        {
-            get => _smtpHost;
-            set => SetField(ref _smtpHost, value);
-        }
-
-        private string? _smtpPort;
-        public string? SmtpPort
-        {
-            get => _smtpPort;
-            set => SetField(ref _smtpPort, value);
-        }
-
-        private bool _useSsl;
-        public bool UseSsl
-        {
-            get => _useSsl;
-            set => SetField(ref _useSsl, value);
-        }
-
-        private bool _authNone;
-        public bool AuthNone
-        {
-            get => _authNone;
-            set
-            {
-                if (SetField(ref _authNone, value))
-                    OnPropertyChanged(nameof(AuthIsUserPass));
-            }
-        }
-
-        private bool _authWindows;
-        public bool AuthWindows
-        {
-            get => _authWindows;
-            set
-            {
-                if (SetField(ref _authWindows, value))
-                    OnPropertyChanged(nameof(AuthIsUserPass));
-            }
-        }
-
-        private bool _authUserPass;
-        public bool AuthUserPass
-        {
-            get => _authUserPass;
-            set
-            {
-                if (SetField(ref _authUserPass, value))
-                    OnPropertyChanged(nameof(AuthIsUserPass));
-            }
-        }
-
-        public bool AuthIsUserPass => AuthUserPass;
-
-        private string? _smtpUsername;
-        public string? SmtpUsername
-        {
-            get => _smtpUsername;
-            set => SetField(ref _smtpUsername, value);
-        }
-
-        private string? _smtpPassword;
-        public string? SmtpPassword
-        {
-            get => _smtpPassword;
-            set => SetField(ref _smtpPassword, value);
-        }
-
-        private string? _fromAddress;
-        public string? FromAddress
-        {
-            get => _fromAddress;
-            set => SetField(ref _fromAddress, value);
-        }
-
         private string? _testEmailStatus;
         public string? TestEmailStatus
         {
@@ -462,6 +388,7 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand RemoveConditionCommand { get; }
         public ICommand SelectAllLocationsCommand { get; }
         public ICommand SelectNoLocationsCommand { get; }
+        public ICommand AddLocationCommand { get; }
         public ICommand BrowseOutputCommand { get; }
         public ICommand SendTestEmailCommand { get; }
         public ICommand AddRecipientCommand { get; }
@@ -470,17 +397,20 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand CancelCommand { get; }
 
         // ═══ Constructor ═══
-        public ScheduleEditorViewModel(ScheduledSearch schedule, List<SearchLocation> locations, SearchCriteria parentCriteria, IDialogService? dialogService = null)
+        public ScheduleEditorViewModel(ScheduledSearch schedule, List<SearchLocation> locations, SearchCriteria parentCriteria, IDialogService? dialogService = null, IViewFactory? viewFactory = null, SearchLocationService? locationService = null)
         {
             _schedule = schedule;
             _allLocations = locations;
             _dialogService = dialogService;
+            _viewFactory = viewFactory;
+            _locationService = locationService;
 
             // Commands
             AddConditionCommand = new RelayCommand(_ => AddCondition());
             RemoveConditionCommand = new RelayCommand(p => RemoveCondition(p as ConditionRowViewModel));
             SelectAllLocationsCommand = new RelayCommand(_ => SetAllLocations(true));
             SelectNoLocationsCommand = new RelayCommand(_ => SetAllLocations(false));
+            AddLocationCommand = new RelayCommand(_ => AddLocation(), _ => _viewFactory != null);
             BrowseOutputCommand = new RelayCommand(_ => BrowseOutput());
             SendTestEmailCommand = new RelayCommand(_ => _ = SendTestEmailAsync(), _ => !_isTestEmailRunning);
             AddRecipientCommand = new RelayCommand(_ => AddRecipient());
@@ -598,15 +528,6 @@ namespace IndiLogs_3._0.ViewModels
             // Section 7: Email
             var email = schedule.EmailConfig ?? new EmailNotificationConfig();
             EmailEnabled = email.IsEnabled;
-            SmtpHost = email.SmtpHost;
-            SmtpPort = email.SmtpPort.ToString();
-            UseSsl = email.UseSsl;
-            AuthNone = email.AuthMode == SmtpAuthMode.None;
-            AuthWindows = email.AuthMode == SmtpAuthMode.WindowsIntegrated;
-            AuthUserPass = email.AuthMode == SmtpAuthMode.UsernamePassword;
-            SmtpUsername = email.SmtpUsername;
-            SmtpPassword = email.SmtpPassword;
-            FromAddress = email.FromAddress;
             if (email.Recipients != null)
                 foreach (var r in email.Recipients) Recipients.Add(r);
             TimingImmediate = email.Timing == EmailTiming.Immediately;
@@ -629,6 +550,30 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         // ═══ Location helpers ═══
+        private void AddLocation()
+        {
+            if (_viewFactory == null) return;
+            var dialog = _viewFactory.Create<LocationDialog>("Add Search Location", "", "", "");
+            if (dialog.ShowDialog() != true) return;
+
+            var loc = new SearchLocation
+            {
+                Name = dialog.LocationName,
+                Address = dialog.Address,
+                BasePath = dialog.LocationPath
+            };
+
+            _locationService?.Add(loc);
+            _allLocations.Add(loc);
+            LocationItems.Add(new LocationCheckItem
+            {
+                Id = loc.Id,
+                DisplayText = $"{loc.Name}  ({loc.Address} \u2014 {loc.BasePath})",
+                IsChecked = true
+            });
+            OnPropertyChanged(nameof(HasLocations));
+        }
+
         private void SetAllLocations(bool isChecked)
         {
             foreach (var item in LocationItems)
@@ -656,23 +601,9 @@ namespace IndiLogs_3._0.ViewModels
                 return;
             }
 
-            var testAuthMode = AuthWindows ? SmtpAuthMode.WindowsIntegrated
-                : AuthUserPass ? SmtpAuthMode.UsernamePassword
-                : SmtpAuthMode.None;
+            var testConfig = new EmailNotificationConfig();
 
-            var testConfig = new EmailNotificationConfig
-            {
-                SmtpHost = (SmtpHost ?? "").Trim(),
-                SmtpPort = int.TryParse(SmtpPort, out int tp) ? tp : 25,
-                UseSsl = UseSsl,
-                AuthMode = testAuthMode,
-                SmtpUsername = testAuthMode == SmtpAuthMode.UsernamePassword ? (SmtpUsername ?? "").Trim() : null,
-                SmtpPassword = testAuthMode == SmtpAuthMode.UsernamePassword ? SmtpPassword : null,
-                FromAddress = (FromAddress ?? "").Trim(),
-                FromDisplayName = "IndiLogs 3.0"
-            };
-
-            TestEmailStatus = "Sending test email...";
+            TestEmailStatus = "Sending test email via Outlook...";
             _isTestEmailRunning = true;
             try
             {
@@ -882,16 +813,6 @@ namespace IndiLogs_3._0.ViewModels
             // ═══ EMAIL CONFIG ═══
             if (EmailEnabled)
             {
-                if (string.IsNullOrWhiteSpace(SmtpHost))
-                {
-                    _dialogService?.ShowWarning("SMTP server is required when email is enabled.", "Validation");
-                    return;
-                }
-                if (string.IsNullOrWhiteSpace(FromAddress) || !FromAddress.Contains("@"))
-                {
-                    _dialogService?.ShowWarning("A valid From address is required.", "Validation");
-                    return;
-                }
                 if (Recipients.Count == 0)
                 {
                     _dialogService?.ShowWarning("Add at least one email recipient.", "Validation");
@@ -913,20 +834,9 @@ namespace IndiLogs_3._0.ViewModels
                     }
                 }
 
-                var authMode = AuthWindows ? SmtpAuthMode.WindowsIntegrated
-                    : AuthUserPass ? SmtpAuthMode.UsernamePassword
-                    : SmtpAuthMode.None;
-
                 _schedule.EmailConfig = new EmailNotificationConfig
                 {
                     IsEnabled = true,
-                    SmtpHost = SmtpHost.Trim(),
-                    SmtpPort = int.TryParse(SmtpPort, out int port) ? port : 25,
-                    UseSsl = UseSsl,
-                    AuthMode = authMode,
-                    SmtpUsername = authMode == SmtpAuthMode.UsernamePassword ? (SmtpUsername ?? "").Trim() : null,
-                    SmtpPassword = authMode == SmtpAuthMode.UsernamePassword ? SmtpPassword : null,
-                    FromAddress = FromAddress.Trim(),
                     Recipients = new List<string>(Recipients),
                     Timing = TimingDeferred ? EmailTiming.AtSpecificTime : EmailTiming.Immediately,
                     SendTime = new TimeSpan(emailSendHour, emailSendMin, 0),

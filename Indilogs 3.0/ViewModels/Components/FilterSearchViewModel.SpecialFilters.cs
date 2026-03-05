@@ -268,8 +268,8 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         private void FilterOutThread(object obj)
         {
-            if (_parent.SelectedLog == null || string.IsNullOrEmpty(_parent.SelectedLog.ThreadName)) return;
-            var win = _viewFactory.Create<Views.FilterOutWindow>(_parent.SelectedLog.ThreadName);
+            if (_parent.SelectedLog == null) return;
+            var win = _viewFactory.Create<Views.FilterOutWindow>(_parent.SelectedLog.ThreadName ?? "");
             if (win.ShowDialog() == true && !string.IsNullOrWhiteSpace(win.TextToRemove))
             {
                 string filterKey = "THREAD:" + win.TextToRemove;

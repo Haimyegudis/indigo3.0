@@ -55,6 +55,26 @@ namespace IndiLogs_3._0.Controls
             set => SetValue(GridTypeProperty, value);
         }
 
+        public static readonly DependencyProperty IsBinaryAppProperty =
+            DependencyProperty.Register(
+                nameof(IsBinaryApp),
+                typeof(bool),
+                typeof(PlcLogsGridControl),
+                new PropertyMetadata(false, OnIsBinaryAppChanged));
+
+        public bool IsBinaryApp
+        {
+            get => (bool)GetValue(IsBinaryAppProperty);
+            set => SetValue(IsBinaryAppProperty, value);
+        }
+
+        private static void OnIsBinaryAppChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var ctrl = (PlcLogsGridControl)d;
+            ctrl._settingsLoaded = false;
+            ctrl.LoadColumnSettings();
+        }
+
         // ── Plugin dynamic columns ────────────────────────────────────────────
 
         public static readonly DependencyProperty PluginColumnsProperty =
@@ -150,6 +170,8 @@ namespace IndiLogs_3._0.Controls
 
         private const string SettingsFileName = "GridColumnSettings.json";
         private string SettingsFilePath => AppPaths.GridColumnSettings;
+        private bool _isLoadingSettings;
+        private bool _settingsLoaded;
 
         public PlcLogsGridControl()
         {
@@ -158,7 +180,7 @@ namespace IndiLogs_3._0.Controls
             LogsDataGrid.Loaded += (s, e) =>
             {
                 AttachColumnHeaderContextMenu();
-                LoadColumnSettings();
+                if (!_settingsLoaded) LoadColumnSettings();
                 HookColumnResizeHandlers();
             };
 
@@ -183,6 +205,17 @@ namespace IndiLogs_3._0.Controls
                 EnsureMarkedLogsHook();
                 UpdateHeatmapBinaryAppFlag();
             };
+        }
+
+        private void LogsDataGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var dep = (DependencyObject)e.OriginalSource;
+            while (dep != null && dep is not DataGridRow)
+                dep = dep is Visual || dep is System.Windows.Media.Media3D.Visual3D
+                    ? VisualTreeHelper.GetParent(dep)
+                    : LogicalTreeHelper.GetParent(dep);
+            if (dep is DataGridRow row)
+                LogsDataGrid.SelectedItem = row.DataContext;
         }
 
         private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -292,6 +325,7 @@ namespace IndiLogs_3._0.Controls
 
         private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
         {
+            if (parent is not Visual && parent is not System.Windows.Media.Media3D.Visual3D) return null;
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
             {
                 var child = VisualTreeHelper.GetChild(parent, i);
@@ -304,6 +338,7 @@ namespace IndiLogs_3._0.Controls
 
         private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
         {
+            if (parent is not Visual && parent is not System.Windows.Media.Media3D.Visual3D) yield break;
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
             {
                 var child = VisualTreeHelper.GetChild(parent, i);
@@ -501,11 +536,12 @@ namespace IndiLogs_3._0.Controls
 
         private void LogsDataGrid_ColumnReordered(object? sender, DataGridColumnEventArgs e)
         {
-            SaveColumnSettings();
+            if (!_isLoadingSettings) SaveColumnSettings();
         }
 
         public void SaveColumnSettings()
         {
+            if (_isLoadingSettings) return;
             try
             {
                 GridSettings gridSettings = LoadGridSettings();
@@ -524,11 +560,13 @@ namespace IndiLogs_3._0.Controls
 
                 if (GridType == "APP")
                 {
-                    gridSettings.AppColumns = columnSettings;
+                    if (IsBinaryApp) gridSettings.AppColumnsS45 = columnSettings;
+                    else gridSettings.AppColumns = columnSettings;
                 }
                 else
                 {
-                    gridSettings.PlcColumns = columnSettings;
+                    if (IsBinaryApp) gridSettings.PlcColumnsS45 = columnSettings;
+                    else gridSettings.PlcColumns = columnSettings;
                 }
 
                 Directory.CreateDirectory(Path.GetDirectoryName(SettingsFilePath)!);
@@ -579,12 +617,15 @@ namespace IndiLogs_3._0.Controls
         }
         private void LoadColumnSettings()
         {
+            _isLoadingSettings = true;
             try
             {
                 GridSettings gridSettings = LoadGridSettings();
-                var columnSettings = GridType == "APP" ? gridSettings.AppColumns : gridSettings.PlcColumns;
+                var columnSettings = GridType == "APP"
+                    ? (IsBinaryApp ? gridSettings.AppColumnsS45 : gridSettings.AppColumns)
+                    : (IsBinaryApp ? gridSettings.PlcColumnsS45 : gridSettings.PlcColumns);
 
-                if (columnSettings == null) return;
+                if (columnSettings == null || columnSettings.ColumnWidths.Count == 0) return;
 
                 foreach (var column in LogsDataGrid.Columns)
                 {
@@ -607,10 +648,15 @@ namespace IndiLogs_3._0.Controls
                         }
                     }
                 }
+                _settingsLoaded = true;
             }
             catch (Exception ex)
             {
                 AppLogger.Error("Loading column settings failed", ex);
+            }
+            finally
+            {
+                _isLoadingSettings = false;
             }
         }
 

@@ -45,25 +45,6 @@ namespace IndiLogs_3._0.Views
             return new string(name.Select(c => invalidChars.Contains(c) ? '_' : c).ToArray());
         }
 
-        /// <summary>
-        /// Escapes a SQL identifier for safe use in double-quoted context ("identifier").
-        /// Prevents SQL injection via crafted table/column names.
-        /// </summary>
-        private static string EscapeSqlIdentifier(string identifier)
-        {
-            if (string.IsNullOrEmpty(identifier)) return identifier;
-            return identifier.Replace("\"", "\"\"");
-        }
-
-        /// <summary>
-        /// Escapes a SQL identifier for safe use in bracket-quoted context ([identifier]).
-        /// Prevents SQL injection via crafted table/column names.
-        /// </summary>
-        private static string EscapeSqlBracketId(string identifier)
-        {
-            if (string.IsNullOrEmpty(identifier)) return identifier;
-            return identifier.Replace("]", "]]");
-        }
 
         private void LoadTableData()
         {
@@ -93,14 +74,14 @@ namespace IndiLogs_3._0.Views
                             connection.Open();
 
                             // Get total row count
-                            using (var cmd = new SqliteCommand($"SELECT COUNT(*) FROM \"{EscapeSqlIdentifier(_tableName)}\"", connection))
+                            using (var cmd = new SqliteCommand($"SELECT COUNT(*) FROM \"{AppConstants.EscapeSqlIdentifier(_tableName)}\"", connection))
                             {
                                 _totalRowCount = (long)cmd.ExecuteScalar();
                             }
 
                             // Get column names for search
                             _columnNames = new List<string>();
-                            using (var cmd = new SqliteCommand($"PRAGMA table_info([{EscapeSqlBracketId(_tableName)}])", connection))
+                            using (var cmd = new SqliteCommand($"PRAGMA table_info([{AppConstants.EscapeSqlBracketId(_tableName)}])", connection))
                             using (var reader = cmd.ExecuteReader())
                             {
                                 while (reader.Read())
@@ -152,11 +133,11 @@ namespace IndiLogs_3._0.Views
                         // No search - load first 10000 rows
                         if (_totalRowCount > 10000)
                         {
-                            query = $"SELECT rowid AS ID, * FROM \"{EscapeSqlIdentifier(_tableName)}\" LIMIT 10000";
+                            query = $"SELECT rowid AS ID, * FROM \"{AppConstants.EscapeSqlIdentifier(_tableName)}\" LIMIT 10000";
                         }
                         else
                         {
-                            query = $"SELECT rowid AS ID, * FROM \"{EscapeSqlIdentifier(_tableName)}\"";
+                            query = $"SELECT rowid AS ID, * FROM \"{AppConstants.EscapeSqlIdentifier(_tableName)}\"";
                         }
                     }
                     else
@@ -166,10 +147,10 @@ namespace IndiLogs_3._0.Views
 
                         foreach (var colName in _columnNames)
                         {
-                            whereConditions.Add($"CAST([{EscapeSqlBracketId(colName)}] AS TEXT) LIKE @searchParam");
+                            whereConditions.Add($"CAST([{AppConstants.EscapeSqlBracketId(colName)}] AS TEXT) LIKE @searchParam");
                         }
 
-                        query = $"SELECT rowid AS ID, * FROM \"{EscapeSqlIdentifier(_tableName)}\" WHERE {string.Join(" OR ", whereConditions)} LIMIT 10000";
+                        query = $"SELECT rowid AS ID, * FROM \"{AppConstants.EscapeSqlIdentifier(_tableName)}\" WHERE {string.Join(" OR ", whereConditions)} LIMIT 10000";
                     }
 
                     using (var cmd = new SqliteCommand(query, connection))

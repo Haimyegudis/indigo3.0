@@ -599,7 +599,7 @@
                                 </StackPanel>
                             </DataTemplate>
                         </TabItem.HeaderTemplate>
-                        <controls:AppLogsTabControl x:Name="AppLogsTab" DataContext="{Binding}"/>
+                        <controls:AppLogsTabControl x:Name="AppLogsTab" DataContext="{Binding}" IsBinaryApp="{Binding HasBinaryAppLogs}"/>
                     </TabItem>
 
                     <TabItem Header="EVENTS"
@@ -648,36 +648,22 @@
 
                     <TabItem Header="SCREENSHOTS"
                              Visibility="{Binding ShowScreenshotsTab, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <Grid Background="{DynamicResource BgDark}" ClipToBounds="True">
-                            <ScrollViewer x:Name="ScreenshotScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" PanningMode="Both" Cursor="SizeAll" PreviewMouseLeftButtonDown="OnImageMouseLeftButtonDown" PreviewMouseLeftButtonUp="OnImageMouseLeftButtonUp" PreviewMouseMove="OnImageMouseMove" PreviewMouseWheel="OnScreenshotMouseWheel">
-                                <ItemsControl ItemsSource="{Binding SessionVM.Screenshots}">
+                        <Grid x:Name="ScreenshotContainer" Background="{DynamicResource BgDark}" ClipToBounds="True">
+                            <ScrollViewer x:Name="ScreenshotScrollViewer"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          PreviewMouseWheel="OnScreenshotMouseWheel">
+                                <ItemsControl ItemsSource="{Binding SessionVM.Screenshots}"
+                                              Width="{Binding ActualWidth, ElementName=ScreenshotContainer}">
+                                    <ItemsControl.LayoutTransform>
+                                        <ScaleTransform
+                                            ScaleX="{Binding ScreenshotZoom}"
+                                            ScaleY="{Binding ScreenshotZoom}"/>
+                                    </ItemsControl.LayoutTransform>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Border BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Margin="5">
-                                                <Image Source="{Binding}" Stretch="Uniform">
-                                                    <Image.Width>
-                                                        <MultiBinding Converter="{StaticResource ScreenshotWidthConverter}">
-                                                            <Binding Path="DataContext.ScreenshotZoom" RelativeSource="{RelativeSource AncestorType=Window}"/>
-                                                            <Binding Path="DataContext.Screenshots.Count" RelativeSource="{RelativeSource AncestorType=Window}"/>
-                                                        </MultiBinding>
-                                                    </Image.Width>
-                                                    <Image.LayoutTransform>
-                                                        <ScaleTransform>
-                                                            <ScaleTransform.ScaleX>
-                                                                <MultiBinding Converter="{StaticResource ScreenshotScaleConverter}">
-                                                                    <Binding Path="DataContext.ScreenshotZoom" RelativeSource="{RelativeSource AncestorType=Window}"/>
-                                                                    <Binding Path="DataContext.Screenshots.Count" RelativeSource="{RelativeSource AncestorType=Window}"/>
-                                                                </MultiBinding>
-                                                            </ScaleTransform.ScaleX>
-                                                            <ScaleTransform.ScaleY>
-                                                                <MultiBinding Converter="{StaticResource ScreenshotScaleConverter}">
-                                                                    <Binding Path="DataContext.ScreenshotZoom" RelativeSource="{RelativeSource AncestorType=Window}"/>
-                                                                    <Binding Path="DataContext.Screenshots.Count" RelativeSource="{RelativeSource AncestorType=Window}"/>
-                                                                </MultiBinding>
-                                                            </ScaleTransform.ScaleY>
-                                                        </ScaleTransform>
-                                                    </Image.LayoutTransform>
-                                                </Image>
+                                                <Image Source="{Binding}" Stretch="Uniform"/>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
@@ -1135,7 +1121,17 @@
                                           GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#333"
                                           RowBackground="{DynamicResource BgDark}" AlternatingRowBackground="{DynamicResource BgPanel}"
                                           CanUserSortColumns="True" CanUserReorderColumns="True" CanUserResizeColumns="True"
-                                          HeadersVisibility="Column" SelectionMode="Single" FontFamily="{DynamicResource ContentFontFamily}" FontSize="12">
+                                          ColumnHeaderHeight="30" SelectionMode="Single" FontFamily="{DynamicResource ContentFontFamily}" FontSize="12">
+                                    <DataGrid.Style>
+                                        <Style TargetType="DataGrid">
+                                            <Setter Property="HeadersVisibility" Value="Column"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="HasItems" Value="False">
+                                                    <Setter Property="HeadersVisibility" Value="None"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGrid.Style>
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Parameter" Binding="{Binding Parameter}" Width="*" MinWidth="200"/>
                                         <DataGridTextColumn Header="Saved" Binding="{Binding Saved}" Width="120"/>

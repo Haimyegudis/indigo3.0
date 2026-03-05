@@ -285,6 +285,7 @@ namespace IndiLogs_3._0.Views
         /// </summary>
         private IEnumerable<DependencyObject> GetAllDescendants(DependencyObject parent)
         {
+            if (parent is not Visual && parent is not System.Windows.Media.Media3D.Visual3D) yield break;
             int count = VisualTreeHelper.GetChildrenCount(parent);
             for (int i = 0; i < count; i++)
             {

@@ -9,5 +9,6 @@
     <controls:PlcLogsGridControl x:Name="FilteredLogsGrid"
                                  DataContext="{Binding}"
                                  LogsSource="{Binding FilterVM.FilteredLogs}"
-                                 GridType="FILTERED"/>
+                                 GridType="FILTERED"
+                                 IsBinaryApp="{Binding HasBinaryAppLogs}"/>
 </UserControl>

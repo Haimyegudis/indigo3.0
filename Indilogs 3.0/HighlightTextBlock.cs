@@ -402,12 +402,16 @@ namespace IndiLogs_3._0.Controls
 
         private static T? FindParent<T>(DependencyObject child) where T : DependencyObject
         {
-            var parent = VisualTreeHelper.GetParent(child);
+            DependencyObject? parent = child is Visual || child is System.Windows.Media.Media3D.Visual3D
+                ? VisualTreeHelper.GetParent(child)
+                : LogicalTreeHelper.GetParent(child);
             while (parent != null)
             {
                 if (parent is T found)
                     return found;
-                parent = VisualTreeHelper.GetParent(parent);
+                parent = parent is Visual || parent is System.Windows.Media.Media3D.Visual3D
+                    ? VisualTreeHelper.GetParent(parent)
+                    : LogicalTreeHelper.GetParent(parent);
             }
             return null;
         }

@@ -109,9 +109,9 @@ namespace IndiLogs_3._0.ViewModels
                 var ext = System.IO.Path.GetExtension(files[0]).ToLower();
                 var fileName = System.IO.Path.GetFileName(files[0]).ToLower();
 
-                // Route CSV files to CPR — EXCEPT event CSV files which are log events
-                bool isEventCsv = fileName.StartsWith("event-history__from") || fileName.StartsWith("pressevents.");
-                if (ext == ".csv" && !isEventCsv)
+                // Route CSV files to CPR — EXCEPT event CSV/XML files which are log events
+                bool isEventFile = fileName.StartsWith("event-history__from") || fileName.StartsWith("pressevents.");
+                if (ext == ".csv" && !isEventFile)
                 {
                     // Switch to CPR tab and load
                     SelectedTabIndex = AppConstants.TAB_CPR; // CPR tab

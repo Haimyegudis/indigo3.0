@@ -547,7 +547,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                             };
 
                             // Get column info using PRAGMA
-                            using (var cmd = new SqliteCommand($"PRAGMA table_info([{EscapeSqlBracketId(tableName)}])", connection))
+                            using (var cmd = new SqliteCommand($"PRAGMA table_info([{AppConstants.EscapeSqlBracketId(tableName)}])", connection))
                             using (var reader = cmd.ExecuteReader())
                             {
                                 while (reader.Read())
@@ -765,14 +765,6 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        /// <summary>
-        /// Escapes a SQL identifier for safe use in bracket-quoted context ([identifier]).
-        /// </summary>
-        private static string EscapeSqlBracketId(string identifier)
-        {
-            if (string.IsNullOrEmpty(identifier)) return identifier;
-            return identifier.Replace("]", "]]");
-        }
 
         protected override void Dispose(bool disposing)
         {

@@ -20,7 +20,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             var items = new List<ActiveFilterItem>();
             int tab = _parent?.SelectedTabIndex ?? 0;
             bool isAppTab = (tab == AppConstants.TAB_APP);
-            bool isPLCTab = (tab == AppConstants.TAB_PLC || tab == AppConstants.TAB_PLC_FILTERED);
+            bool isPLCTab = (tab == AppConstants.TAB_PLC);
 
             if (isAppTab)
             {

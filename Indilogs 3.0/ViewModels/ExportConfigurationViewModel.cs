@@ -307,7 +307,6 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         public ICommand ExportCommand { get; }
-        public ICommand OpenInViewerCommand { get; }
         public ICommand OpenInChartsTabCommand { get; }
         public ICommand SavePresetCommand { get; }
         public ICommand LoadPresetCommand { get; }
@@ -319,20 +318,6 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand DeselectAllAxisCommand { get; }
         public ICommand DeselectAllCHStepsCommand { get; }
         public ICommand DeselectAllThreadsCommand { get; }
-
-        private string _lastExportedFilePath;
-        public string LastExportedFilePath
-        {
-            get => _lastExportedFilePath;
-            set
-            {
-                _lastExportedFilePath = value;
-                OnPropertyChanged(nameof(LastExportedFilePath));
-                OnPropertyChanged(nameof(CanOpenInViewer));
-            }
-        }
-
-        public bool CanOpenInViewer => !string.IsNullOrEmpty(LastExportedFilePath) && File.Exists(LastExportedFilePath);
 
         public ExportConfigurationViewModel(LogSessionData sessionData, ICsvExportService csvService, IDialogService dialogService, IDispatcher dispatcher)
         {
@@ -356,8 +341,7 @@ namespace IndiLogs_3._0.ViewModels
             };
             _searchDebounceTimer.Tick += SearchDebounceTimer_Tick;
 
-            ExportCommand = new RelayCommand(async _ => await ExecuteExport(false), _ => CanExport());
-            OpenInViewerCommand = new RelayCommand(async _ => await ExecuteExport(true), _ => CanExport());
+            ExportCommand = new RelayCommand(async _ => await ExecuteExport(), _ => CanExport());
             OpenInChartsTabCommand = new RelayCommand(async _ => await OpenInChartsTabAsync(), _ => CanExport());
             SavePresetCommand = new RelayCommand(_ => SavePreset());
             LoadPresetCommand = new RelayCommand(_ => LoadPreset());
@@ -746,7 +730,7 @@ namespace IndiLogs_3._0.ViewModels
                    ThreadItems.Any(x => x.IsSelected);
         }
 
-        private async Task ExecuteExport(bool openInViewer = false)
+        private async Task ExecuteExport()
         {
             try
             {
@@ -773,9 +757,6 @@ namespace IndiLogs_3._0.ViewModels
 
                     IsLoading = false;
                     LoadingMessage = string.Empty;
-                    LastExportedFilePath = saveDialog.FileName;
-
-                    if (openInViewer) OpenInViewer();
                     return;
                 }
 
@@ -796,17 +777,7 @@ namespace IndiLogs_3._0.ViewModels
                         .Select(x => x.Name).ToList()
                 };
 
-                string exportedPath = await _csvService.ExportLogsToCsvAsync(_sessionData.Logs, _sessionData.FileName, preset);
-
-                if (!string.IsNullOrEmpty(exportedPath))
-                {
-                    LastExportedFilePath = exportedPath;
-
-                    if (openInViewer)
-                    {
-                        OpenInViewer();
-                    }
-                }
+                await _csvService.ExportLogsToCsvAsync(_sessionData.Logs, _sessionData.FileName, preset);
             }
             catch (Exception ex)
             {
@@ -925,74 +896,6 @@ namespace IndiLogs_3._0.ViewModels
         {
             foreach (var item in collection)
                 item.IsSelected = false;
-        }
-
-        private void OpenInViewer()
-        {
-            if (string.IsNullOrEmpty(LastExportedFilePath) || !File.Exists(LastExportedFilePath))
-            {
-                _dialogService.ShowWarning("No exported file available to open.", "Error");
-                return;
-            }
-
-            try
-            {
-                // Look for Flow CSV Viewer in common installation paths
-                string flowViewerPath = null;
-                string[] searchPaths = new[]
-                {
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Flow CSV Viewer", "Flow CSV Viewer.exe"),
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Flow CSV Viewer", "Flow CSV Viewer.exe"),
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Flow CSV Viewer", "Flow CSV Viewer.exe"),
-                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Flow CSV Viewer.exe"),
-                };
-
-                foreach (var path in searchPaths)
-                {
-                    if (File.Exists(path))
-                    {
-                        flowViewerPath = path;
-                        break;
-                    }
-                }
-
-                if (flowViewerPath != null && File.Exists(flowViewerPath))
-                {
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                    {
-                        FileName = Path.GetFullPath(flowViewerPath),
-                        Arguments = $"\"{LastExportedFilePath}\"",
-                        UseShellExecute = true
-                    });
-                }
-                else
-                {
-                    // Fallback: open with default application — validate path and extension first
-                    string ext = System.IO.Path.GetExtension(LastExportedFilePath);
-                    bool isSafeExtension = ext != null && (
-                        ext.Equals(".csv", StringComparison.OrdinalIgnoreCase) ||
-                        ext.Equals(".xlsx", StringComparison.OrdinalIgnoreCase) ||
-                        ext.Equals(".xls", StringComparison.OrdinalIgnoreCase) ||
-                        ext.Equals(".txt", StringComparison.OrdinalIgnoreCase));
-
-                    if (isSafeExtension && File.Exists(LastExportedFilePath))
-                    {
-                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                        {
-                            FileName = LastExportedFilePath,
-                            UseShellExecute = true
-                        });
-                    }
-                    else
-                    {
-                        _dialogService.ShowWarning($"Cannot open file: unsupported file type or file not found.\n{LastExportedFilePath}", "Error");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _dialogService.ShowError($"Failed to open viewer: {ex.Message}", "Error");
-            }
         }
 
 

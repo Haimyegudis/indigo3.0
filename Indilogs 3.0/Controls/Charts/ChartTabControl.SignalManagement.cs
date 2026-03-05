@@ -933,6 +933,7 @@ namespace IndiLogs_3._0.Controls.Charts
         private T? FindVisualChild<T>(DependencyObject? parent) where T : DependencyObject
         {
             if (parent == null) return null;
+            if (parent is not System.Windows.Media.Visual && parent is not System.Windows.Media.Media3D.Visual3D) return null;
 
             for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
             {

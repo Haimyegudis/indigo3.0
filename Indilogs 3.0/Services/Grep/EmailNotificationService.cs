@@ -1,11 +1,8 @@
-#pragma warning disable SYSLIB0014 // SmtpClient is deprecated but functional
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
@@ -74,41 +71,33 @@ namespace IndiLogs_3._0.Services.Grep
             }
             else
             {
-                Task.Run(() => SendEmailAsync(config, subject, plainTextBody, htmlReportPath, schedule.Name));
+                Task.Run(() => SendViaOutlookAsync(config, subject, plainTextBody, htmlReportPath, schedule.Name));
             }
         }
 
-        public async Task<(bool Success, string Message)> TestConnectionAsync(
+        public Task<(bool Success, string Message)> TestConnectionAsync(
             EmailNotificationConfig config, string testRecipient)
         {
+            AppLogger.Info($"[Email] Test starting via Outlook — To: {testRecipient}");
             try
             {
-                using (var msg = new MailMessage())
-                {
-                    msg.From = new MailAddress(config.FromAddress, config.FromDisplayName ?? "IndiLogs 3.0");
-                    msg.To.Add(testRecipient);
-                    msg.Subject = "[IndiLogs] Test Email";
-                    msg.Body = "This is a test email from IndiLogs 3.0 scheduled scan notifications.\r\n\r\n" +
-                               $"SMTP: {config.SmtpHost}:{config.SmtpPort} (SSL: {config.UseSsl})\r\n" +
-                               $"Sent at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                SendViaOutlook(
+                    new[] { testRecipient },
+                    "[IndiLogs] Test Email",
+                    $"This is a test email from IndiLogs 3.0 scheduled scan notifications.\r\n\r\nSent at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
+                    null);
 
-                    using (var client = new SmtpClient(config.SmtpHost, config.SmtpPort))
-                    {
-                        ConfigureSmtpAuth(client, config);
-                        client.Timeout = 15_000;
-
-                        await client.SendMailAsync(msg).ConfigureAwait(false);
-                    }
-                }
-                return (true, "Test email sent successfully.");
+                AppLogger.Info("[Email] Test email sent successfully via Outlook.");
+                return Task.FromResult<(bool, string)>((true, "Test email sent successfully via Outlook."));
             }
             catch (Exception ex)
             {
-                return (false, $"Failed: {ex.Message}");
+                AppLogger.Error($"[Email] Test failed — {ex.GetType().Name}: {ex.Message}", ex);
+                return Task.FromResult<(bool, string)>((false, $"Failed: {ex.Message}"));
             }
         }
 
-        private async Task SendEmailAsync(
+        private Task SendViaOutlookAsync(
             EmailNotificationConfig config,
             string subject,
             string plainTextBody,
@@ -117,53 +106,39 @@ namespace IndiLogs_3._0.Services.Grep
         {
             try
             {
-                using (var msg = new MailMessage())
-                {
-                    msg.From = new MailAddress(config.FromAddress, config.FromDisplayName ?? "IndiLogs 3.0");
-                    foreach (var recipient in config.Recipients)
-                        msg.To.Add(recipient.Trim());
-
-                    msg.Subject = subject;
-                    msg.Body = plainTextBody;
-                    msg.IsBodyHtml = false;
-
-                    if (!string.IsNullOrEmpty(htmlReportPath) && File.Exists(htmlReportPath))
-                        msg.Attachments.Add(new Attachment(htmlReportPath));
-
-                    using (var client = new SmtpClient(config.SmtpHost, config.SmtpPort))
-                    {
-                        ConfigureSmtpAuth(client, config);
-                        client.Timeout = 30_000;
-
-                        await client.SendMailAsync(msg).ConfigureAwait(false);
-                    }
-                }
-                AppLogger.Info($"[Email] Sent notification for \"{scheduleName}\" to {config.Recipients.Count} recipient(s)");
+                SendViaOutlook(config.Recipients, subject, plainTextBody, htmlReportPath);
+                AppLogger.Info($"[Email] Sent notification for \"{scheduleName}\" to {config.Recipients.Count} recipient(s) via Outlook");
             }
             catch (Exception ex)
             {
                 AppLogger.Error($"[Email] Failed to send for \"{scheduleName}\": {ex.Message}");
             }
+            return Task.CompletedTask;
         }
 
-        private static void ConfigureSmtpAuth(SmtpClient client, EmailNotificationConfig config)
+        private static void SendViaOutlook(
+            IEnumerable<string> recipients,
+            string subject,
+            string body,
+            string? attachmentPath)
         {
-            client.EnableSsl = config.UseSsl;
-
-            switch (config.AuthMode)
+            dynamic outlook = Activator.CreateInstance(Type.GetTypeFromProgID("Outlook.Application")!)!;
+            try
             {
-                case SmtpAuthMode.WindowsIntegrated:
-                    client.UseDefaultCredentials = true;
-                    break;
+                dynamic mail = outlook.CreateItem(0); // olMailItem = 0
+                mail.Subject = subject;
+                mail.Body = body;
+                mail.To = string.Join(";", recipients);
 
-                case SmtpAuthMode.UsernamePassword:
-                    client.UseDefaultCredentials = false;
-                    client.Credentials = new NetworkCredential(config.SmtpUsername, config.SmtpPassword);
-                    break;
+                if (!string.IsNullOrEmpty(attachmentPath) && File.Exists(attachmentPath))
+                    mail.Attachments.Add(attachmentPath);
 
-                default: // None
-                    client.UseDefaultCredentials = false;
-                    break;
+                AppLogger.Info($"[Email] Sending via Outlook to: {mail.To}");
+                mail.Send();
+            }
+            finally
+            {
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(outlook);
             }
         }
 
@@ -422,7 +397,7 @@ namespace IndiLogs_3._0.Services.Grep
 
                 foreach (var item in toSend)
                 {
-                    await SendEmailAsync(item.Config, item.Subject,
+                    await SendViaOutlookAsync(item.Config, item.Subject,
                         item.PlainTextBody, item.HtmlReportPath, item.ScheduleName).ConfigureAwait(false);
                 }
             }

@@ -27,6 +27,7 @@
               SelectionUnit="FullRow"
               HorizontalScrollBarVisibility="Auto"
               CanUserReorderColumns="True"
+              PreviewMouseRightButtonDown="LogsDataGrid_PreviewMouseRightButtonDown"
               CanUserResizeColumns="True"
               VirtualizingPanel.IsVirtualizing="True"
               VirtualizingPanel.VirtualizationMode="Recycling"
@@ -592,7 +593,7 @@
                 </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
 
-            <DataGridTemplateColumn Header="Message" Width="*" MinWidth="400">
+            <DataGridTemplateColumn Header="Message" MinWidth="400">
                 <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate>
                         <controls:HighlightTextBlock Text="{Binding Message}" HighlightText="{Binding DataContext.FilterVM.SearchText, RelativeSource={RelativeSource AncestorType=Window}}" VerticalAlignment="Center">

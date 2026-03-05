@@ -238,6 +238,7 @@ namespace IndiLogs_3._0.Views
 
         private T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
         {
+            if (parent is not Visual && parent is not System.Windows.Media.Media3D.Visual3D) return null;
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
             {
                 var child = VisualTreeHelper.GetChild(parent, i);
