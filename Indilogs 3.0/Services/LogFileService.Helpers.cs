@@ -17,17 +17,39 @@ namespace IndiLogs_3._0.Services
         // Maximum decompressed size per ZIP entry (512 MB) — prevents ZIP bomb attacks
         private const long MaxEntryDecompressedBytes = 512L * 1024 * 1024;
 
-        private enum FileType { MainLog, AppDevLog, AppBinaryLog, EventsCsv, Plugin }
+        private enum FileType { MainLog, AppDevLog, AppBinaryLog, EventsCsv, EventsXml, Plugin }
+
+        /// <summary>
+        /// Checks whether a file name matches known events file patterns (CSV or XML).
+        /// Returns true and sets <paramref name="type"/> accordingly.
+        /// </summary>
+        private static bool IsEventsFile(string fileName, out FileType type)
+        {
+            string name = Path.GetFileName(fileName);
+            bool isEventHistory = name.StartsWith("event-history__From", StringComparison.OrdinalIgnoreCase);
+            bool isPressEvents = name.StartsWith("pressEvents.", StringComparison.OrdinalIgnoreCase);
+
+            if (!isEventHistory && !isPressEvents) { type = default; return false; }
+
+            if (name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+            { type = FileType.EventsCsv; return true; }
+
+            if (name.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+            { type = FileType.EventsXml; return true; }
+
+            type = default;
+            return false;
+        }
 
         private class ZipEntryData
         {
-            public string Name;
-            public string EntryFullName; // For deferred CopyToMemory (pipeline extraction)
+            public string Name = "";
+            public string EntryFullName = ""; // For deferred CopyToMemory (pipeline extraction)
             public FileType Type;
-            public MemoryStream Stream;
+            public MemoryStream Stream = null!;
             // Set when Type == Plugin:
-            public ILogFilePlugin Plugin;
-            public ParseContext Context;
+            public ILogFilePlugin Plugin = null!;
+            public ParseContext Context = null!;
         }
 
         /// <summary>Fast inline check: "YYYY-MM-DD HH:MM:SS,ddd" — replaces _dateStartPattern regex.</summary>
@@ -162,7 +184,7 @@ namespace IndiLogs_3._0.Services
             return result;
         }
 
-        private BitmapImage LoadBitmapFromZip(ZipArchiveEntry entry)
+        private BitmapImage? LoadBitmapFromZip(ZipArchiveEntry entry)
         {
             try
             {
@@ -191,7 +213,7 @@ namespace IndiLogs_3._0.Services
             catch (Exception ex) { AppLogger.Error("ParseReadmeVersions failed", ex); return ("Unknown", "Unknown"); }
         }
 
-        private string ExtractPlcVersionFromSetupInfo(string jsonContent)
+        private string? ExtractPlcVersionFromSetupInfo(string jsonContent)
         {
             try
             {
@@ -264,8 +286,8 @@ namespace IndiLogs_3._0.Services
                 Message     = dto.Message ?? "",
                 ThreadName  = pool.Intern(dto.ThreadName ?? ""),
                 Logger      = pool.Intern(dto.Logger ?? ""),
-                ProcessName = string.IsNullOrEmpty(dto.ProcessName) ? null : pool.Intern(dto.ProcessName),
-                Method      = string.IsNullOrEmpty(dto.Method)      ? null : pool.Intern(dto.Method),
+                ProcessName = string.IsNullOrEmpty(dto.ProcessName) ? "" : pool.Intern(dto.ProcessName),
+                Method      = string.IsNullOrEmpty(dto.Method)      ? "" : pool.Intern(dto.Method),
                 Data        = dto.Data,
                 Exception   = dto.Exception,
                 ExtraFields = dto.ExtraFields
@@ -284,8 +306,8 @@ namespace IndiLogs_3._0.Services
                 Message     = dto.Message ?? "",
                 ThreadName  = dto.ThreadName ?? "",
                 Logger      = dto.Logger ?? "",
-                ProcessName = string.IsNullOrEmpty(dto.ProcessName) ? null : dto.ProcessName,
-                Method      = string.IsNullOrEmpty(dto.Method)      ? null : dto.Method,
+                ProcessName = string.IsNullOrEmpty(dto.ProcessName) ? "" : dto.ProcessName,
+                Method      = string.IsNullOrEmpty(dto.Method)      ? "" : dto.Method,
                 Data        = dto.Data,
                 Exception   = dto.Exception,
                 ExtraFields = dto.ExtraFields
@@ -307,7 +329,7 @@ namespace IndiLogs_3._0.Services
                 // leaveOpen = true so we don't close the MemoryStream
                 using (var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 1024, leaveOpen: true))
                 {
-                    string line;
+                    string? line;
                     while (lines.Count < count && (line = reader.ReadLine()) != null)
                         lines.Add(line);
                 }
@@ -329,7 +351,7 @@ namespace IndiLogs_3._0.Services
                 using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096))
                 using (var reader = new StreamReader(fs, Encoding.UTF8))
                 {
-                    string line;
+                    string? line;
                     while (lines.Count < count && (line = reader.ReadLine()) != null)
                         lines.Add(line);
                 }
@@ -342,7 +364,7 @@ namespace IndiLogs_3._0.Services
         /// Runs all registered plugins' <see cref="ILogFilePlugin.CanHandle"/> methods
         /// and returns the first one that returns <c>true</c>, or <c>null</c>.
         /// </summary>
-        private ILogFilePlugin FindPlugin(string fileName, string[] sampleLines)
+        private ILogFilePlugin? FindPlugin(string fileName, string[] sampleLines)
         {
             if (_pluginLoader == null || _pluginLoader.Plugins.Count == 0) return null;
 

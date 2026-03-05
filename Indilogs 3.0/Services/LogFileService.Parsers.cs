@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Xml.Linq;
 
 namespace IndiLogs_3._0.Services
 {
@@ -18,7 +19,7 @@ namespace IndiLogs_3._0.Services
                 if (stream.Position != 0) stream.Position = 0;
                 using (var reader = new StreamReader(stream, Encoding.UTF8))
                 {
-                    string header = reader.ReadLine();
+                    string? header = reader.ReadLine();
                     if (header == null) return list;
 
                     var headers = header.Split(',').Select(h => h.Trim().Trim('"')).ToArray();
@@ -69,6 +70,68 @@ namespace IndiLogs_3._0.Services
             return list;
         }
 
+        /// <summary>
+        /// Converts a pressEvents XML stream to CSV format so existing CSV display
+        /// and parsing code can be reused. Handles both attribute-based and
+        /// element-based XML structures.
+        /// </summary>
+        public static string ConvertEventsXmlToCsv(Stream stream)
+        {
+            try
+            {
+                if (stream.CanSeek) stream.Position = 0;
+                var doc = XDocument.Load(stream);
+                var root = doc.Root;
+                if (root == null) return "";
+
+                var records = root.Elements().ToList();
+                if (records.Count == 0) return "";
+
+                var first = records[0];
+                bool useAttributes = first.Attributes().Any();
+
+                // Collect all column names preserving order of first occurrence
+                var columnSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var columns = new List<string>();
+
+                foreach (var r in records)
+                {
+                    var names = useAttributes
+                        ? r.Attributes().Select(a => a.Name.LocalName)
+                        : r.Elements().Select(e => e.Name.LocalName);
+
+                    foreach (var name in names)
+                    {
+                        if (columnSet.Add(name))
+                            columns.Add(name);
+                    }
+                }
+
+                var sb = new StringBuilder();
+                sb.AppendLine(string.Join(",", columns.Select(c => $"\"{c}\"")));
+
+                foreach (var record in records)
+                {
+                    var values = new List<string>();
+                    foreach (var col in columns)
+                    {
+                        string val = useAttributes
+                            ? (record.Attribute(col)?.Value ?? "")
+                            : (record.Element(col)?.Value ?? "");
+                        values.Add($"\"{val.Replace("\"", "\"\"")}\"");
+                    }
+                    sb.AppendLine(string.Join(",", values));
+                }
+
+                return sb.ToString();
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("ConvertEventsXmlToCsv failed", ex);
+                return "";
+            }
+        }
+
         public List<LogEntry> ParseLogStreamPartial(Stream stream)
         {
             var pool = new StringPool();
@@ -91,7 +154,7 @@ namespace IndiLogs_3._0.Services
                             Message = logReader.Current.Message ?? "",
                             ThreadName = pool.Intern(logReader.Current.ThreadName ?? ""),
                             Logger = pool.Intern(logReader.Current.LoggerName ?? ""),
-                            ProcessName = string.IsNullOrEmpty(processName) ? null : pool.Intern(processName)
+                            ProcessName = string.IsNullOrEmpty(processName) ? "" : pool.Intern(processName)
                         };
 
                         newLogs.Add(entry);
@@ -141,7 +204,7 @@ namespace IndiLogs_3._0.Services
                             Message = logReader.Current.Message ?? "",
                             ThreadName = pool.Intern(logReader.Current.ThreadName ?? ""),
                             Logger = pool.Intern(logReader.Current.LoggerName ?? ""),
-                            ProcessName = string.IsNullOrEmpty(processName) ? null : pool.Intern(processName)
+                            ProcessName = string.IsNullOrEmpty(processName) ? "" : pool.Intern(processName)
                         };
 
                         newEntries.Add(entry);
@@ -190,7 +253,7 @@ namespace IndiLogs_3._0.Services
                             Message = message,
                             ThreadName = threadName,
                             Logger = pool.Intern(reader.Current.LoggerName ?? ""),
-                            ProcessName = string.IsNullOrEmpty(processName) ? null : pool.Intern(processName)
+                            ProcessName = string.IsNullOrEmpty(processName) ? "" : pool.Intern(processName)
                         };
 
                         allLogs.Add(entry);
@@ -233,7 +296,7 @@ namespace IndiLogs_3._0.Services
                 // 64KB reader buffer — much better throughput for large files (default is 1KB)
                 using (var reader = new StreamReader(stream, Encoding.UTF8, true, 65536))
                 {
-                    string line;
+                    string? line;
                     var buffer = new StringBuilder(4096);
 
                     while ((line = reader.ReadLine()) != null)
@@ -321,7 +384,7 @@ namespace IndiLogs_3._0.Services
             string message = line.Substring(e8 + 1, e9 - e8 - 1).Trim();
 
             // Exception [10] — optional
-            string exception = null;
+            string? exception = null;
             int e10 = line.IndexOf('\x1e', e9 + 1);
             if (e10 > e9 + 1)
             {
@@ -330,7 +393,7 @@ namespace IndiLogs_3._0.Services
             }
 
             // Data [11] — optional
-            string data = null;
+            string? data = null;
             if (e10 > 0)
             {
                 int e11 = line.IndexOf('\x1e', e10 + 1);
@@ -343,7 +406,7 @@ namespace IndiLogs_3._0.Services
             }
 
             // Pattern [5]
-            string pattern = null;
+            string? pattern = null;
             if (e5 > e4 + 1)
             {
                 string p = line.Substring(e4 + 1, e5 - e4 - 1).Trim();
@@ -359,9 +422,9 @@ namespace IndiLogs_3._0.Services
                 Message = message,
                 ProcessName = pool.Intern("APP"),
                 Method = pool.Intern(line.Substring(e7 + 1, e8 - e7 - 1).Trim()),
-                Pattern = pattern,
-                Data = data,
-                Exception = exception
+                Pattern = pattern ?? "",
+                Data = data ?? "",
+                Exception = exception ?? ""
             };
         }
 
@@ -409,9 +472,9 @@ namespace IndiLogs_3._0.Services
                     Message = message,
                     ProcessName = pool.Intern("APP"),
                     Method = pool.Intern(location),
-                    Pattern = string.IsNullOrEmpty(pattern) ? null : pattern,
-                    Data = string.IsNullOrEmpty(data) ? null : data,
-                    Exception = string.IsNullOrEmpty(exception) ? null : exception
+                    Pattern = string.IsNullOrEmpty(pattern) ? "" : pattern,
+                    Data = string.IsNullOrEmpty(data) ? "" : data,
+                    Exception = string.IsNullOrEmpty(exception) ? "" : exception
                 };
             }
 
@@ -491,7 +554,7 @@ namespace IndiLogs_3._0.Services
                             Message = pMessage,
                             ProcessName = pool.Intern("APP"),
                             Method = pool.Intern(pLocation),
-                            Pattern = string.IsNullOrEmpty(pPattern) ? null : pPattern
+                            Pattern = string.IsNullOrEmpty(pPattern) ? "" : pPattern
                         };
                     }
                 }

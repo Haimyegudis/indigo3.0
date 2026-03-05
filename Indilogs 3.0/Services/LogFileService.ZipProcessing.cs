@@ -29,9 +29,9 @@ namespace IndiLogs_3._0.Services
                 using (var archive = new ZipArchive(fs, ZipArchiveMode.Read))
                 {
                     // Track first/last log entries for time range detection
-                    string firstPlcEntry = null, lastPlcEntry = null;
-                    string firstAppBinEntry = null, lastAppBinEntry = null;
-                    string firstAppTextEntry = null, lastAppTextEntry = null;
+                    string? firstPlcEntry = null, lastPlcEntry = null;
+                    string? firstAppBinEntry = null, lastAppBinEntry = null;
+                    string? firstAppTextEntry = null, lastAppTextEntry = null;
 
                     foreach (var entry in archive.Entries)
                     {
@@ -90,11 +90,8 @@ namespace IndiLogs_3._0.Services
                             continue;
                         }
 
-                        // Events CSV
-                        if ((entry.Name.StartsWith("event-history__From", StringComparison.OrdinalIgnoreCase) &&
-                             entry.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)) ||
-                            (Path.GetFileName(entry.Name).StartsWith("pressEvents.", StringComparison.OrdinalIgnoreCase) &&
-                             entry.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)))
+                        // Events CSV or XML
+                        if (IsEventsFile(entry.Name, out _))
                         { config.HasEvents = true; continue; }
 
                         // Screenshots
@@ -135,10 +132,7 @@ namespace IndiLogs_3._0.Services
                                         { config.HasApp = true; config.IsS6 = true; }
                                         else if (IsNumericAppFile(innerEntry.Name))
                                             config.HasApp = true;
-                                        else if ((innerEntry.Name.StartsWith("event-history__From", StringComparison.OrdinalIgnoreCase) &&
-                                                  innerEntry.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)) ||
-                                                 (Path.GetFileName(innerEntry.Name).StartsWith("pressEvents.", StringComparison.OrdinalIgnoreCase) &&
-                                                  innerEntry.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)))
+                                        else if (IsEventsFile(innerEntry.Name, out _))
                                             config.HasEvents = true;
                                         else if (innerEntry.Name.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
                                                  innerEntry.Name.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase))
@@ -171,9 +165,9 @@ namespace IndiLogs_3._0.Services
         /// Non-fatal — if anything fails, the time range properties stay null and the UI hides the section.
         /// </summary>
         private void ScanTimeBounds(ZipArchive archive, TabSelectionConfig config,
-            string firstPlcEntry, string lastPlcEntry,
-            string firstAppBinEntry, string lastAppBinEntry,
-            string firstAppTextEntry, string lastAppTextEntry)
+            string? firstPlcEntry, string? lastPlcEntry,
+            string? firstAppBinEntry, string? lastAppBinEntry,
+            string? firstAppTextEntry, string? lastAppTextEntry)
         {
             try
             {
@@ -189,7 +183,7 @@ namespace IndiLogs_3._0.Services
                 }
 
                 // --- Binary logs (PLC and APP S4-5): use IndigoLogsReader ---
-                void ScanBinaryEntry(string entryName, bool first)
+                void ScanBinaryEntry(string? entryName, bool first)
                 {
                     if (entryName == null) return;
                     var zipEntry = archive.GetEntry(entryName);
@@ -223,7 +217,7 @@ namespace IndiLogs_3._0.Services
                 ScanBinaryEntry(lastAppBinEntry, false);
 
                 // --- Text APP logs (S6): read first/last lines with IsDateStart ---
-                void ScanTextEntry(string entryName, bool first)
+                void ScanTextEntry(string? entryName, bool first)
                 {
                     if (entryName == null) return;
                     var zipEntry = archive.GetEntry(entryName);
@@ -233,7 +227,7 @@ namespace IndiLogs_3._0.Services
                     {
                         if (first)
                         {
-                            string line;
+                            string? line;
                             while ((line = sr.ReadLine()) != null)
                             {
                                 if (IsDateStart(line))
@@ -247,7 +241,7 @@ namespace IndiLogs_3._0.Services
                         {
                             // Iterate all lines to find the last valid timestamp
                             DateTime lastTime = DateTime.MinValue;
-                            string line;
+                            string? line;
                             while ((line = sr.ReadLine()) != null)
                             {
                                 if (IsDateStart(line))
@@ -353,7 +347,7 @@ namespace IndiLogs_3._0.Services
                                 try
                                 {
                                     string fileNameOnly = Path.GetFileName(entry.Name).ToLower();
-                                    string systabKey = null;
+                                    string? systabKey = null;
                                     if (fileNameOnly.Contains("saved")) systabKey = "saved";
                                     else if (fileNameOnly.Contains("default")) systabKey = "default";
                                     else if (fileNameOnly.Contains("minimum")) systabKey = "minimum";
@@ -467,12 +461,10 @@ namespace IndiLogs_3._0.Services
                                 continue;
                             }
 
-                            // Events CSV
-                            if (sel.LoadEvents &&
-                                ((entry.Name.StartsWith("event-history__From", StringComparison.OrdinalIgnoreCase) && entry.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)) ||
-                                 (Path.GetFileName(entry.Name).StartsWith("pressEvents.", StringComparison.OrdinalIgnoreCase) && entry.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))))
+                            // Events CSV or XML
+                            if (sel.LoadEvents && IsEventsFile(entry.Name, out var outerEvtType))
                             {
-                                filesToProcess.Add(new ZipEntryData { Name = entry.Name, EntryFullName = entry.FullName, Type = FileType.EventsCsv });
+                                filesToProcess.Add(new ZipEntryData { Name = entry.Name, EntryFullName = entry.FullName, Type = outerEvtType });
                                 continue;
                             }
 
@@ -490,19 +482,17 @@ namespace IndiLogs_3._0.Services
                                 continue;
                             }
 
-                            // Setup Info
-                            if (sel.LoadSetupInfo)
+                            // Readme.txt — always loaded (press config + versions)
+                            if (entry.Name.Equals("Readme.txt", StringComparison.OrdinalIgnoreCase))
                             {
-                                if (entry.Name.Equals("Readme.txt", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    session.PressConfiguration = ReadTextFromEntry(entry);
-                                    continue;
-                                }
-                                if (entry.Name.EndsWith("_setupInfo.json", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    session.SetupInfo = ReadTextFromEntry(entry);
-                                    continue;
-                                }
+                                session.PressConfiguration = ReadTextFromEntry(entry);
+                                continue;
+                            }
+                            // Setup Info (_setupInfo.json only)
+                            if (sel.LoadSetupInfo && entry.Name.EndsWith("_setupInfo.json", StringComparison.OrdinalIgnoreCase))
+                            {
+                                session.SetupInfo = ReadTextFromEntry(entry);
+                                continue;
                             }
 
                             // Nested ZIP — check for components inside
@@ -551,7 +541,7 @@ namespace IndiLogs_3._0.Services
                                             try
                                             {
                                                 string fileNameOnly = Path.GetFileName(innerEntry.Name).ToLower();
-                                                string systabKey = null;
+                                                string? systabKey = null;
                                                 if (fileNameOnly.Contains("saved")) systabKey = "saved";
                                                 else if (fileNameOnly.Contains("default")) systabKey = "default";
                                                 else if (fileNameOnly.Contains("minimum")) systabKey = "minimum";
@@ -638,13 +628,11 @@ namespace IndiLogs_3._0.Services
                                             continue;
                                         }
 
-                                        // Events CSV from inner ZIP
-                                        if (sel.LoadEvents &&
-                                            ((innerEntry.Name.StartsWith("event-history__From", StringComparison.OrdinalIgnoreCase) && innerEntry.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)) ||
-                                             (Path.GetFileName(innerEntry.Name).StartsWith("pressEvents.", StringComparison.OrdinalIgnoreCase) && innerEntry.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))))
+                                        // Events CSV or XML from inner ZIP
+                                        if (sel.LoadEvents && IsEventsFile(innerEntry.Name, out var innerEvtType))
                                         {
                                             var ms = CopyToMemory(innerEntry);
-                                            filesToProcess.Add(new ZipEntryData { Name = innerEntry.Name, Stream = ms, Type = FileType.EventsCsv });
+                                            filesToProcess.Add(new ZipEntryData { Name = innerEntry.Name, Stream = ms, Type = innerEvtType });
                                             continue;
                                         }
 
@@ -661,8 +649,8 @@ namespace IndiLogs_3._0.Services
                                             continue;
                                         }
 
-                                        // Setup Info from inner ZIP
-                                        if (sel.LoadSetupInfo && innerEntry.Name.Equals("Readme.txt", StringComparison.OrdinalIgnoreCase))
+                                        // Readme from inner ZIP — always loaded
+                                        if (innerEntry.Name.Equals("Readme.txt", StringComparison.OrdinalIgnoreCase))
                                         {
                                             if (string.IsNullOrEmpty(session.PressConfiguration))
                                                 session.PressConfiguration = ReadTextFromEntry(innerEntry);
@@ -725,6 +713,22 @@ namespace IndiLogs_3._0.Services
                                             item.Stream.Position = 0;
                                             var evts = ParseEventsCsv(item.Stream);
                                             if (evts.Count > 0) eventsBag.Add(evts);
+                                        }
+                                        else if (item.Type == FileType.EventsXml)
+                                        {
+                                            item.Stream.Position = 0;
+                                            string csvFromXml = ConvertEventsXmlToCsv(item.Stream);
+                                            if (!string.IsNullOrEmpty(csvFromXml))
+                                            {
+                                                lock (csvLock)
+                                                {
+                                                    if (string.IsNullOrEmpty(session.EventsCsvRawContent))
+                                                        session.EventsCsvRawContent = csvFromXml;
+                                                }
+                                                using var ms = new MemoryStream(Encoding.UTF8.GetBytes(csvFromXml));
+                                                var evts = ParseEventsCsv(ms);
+                                                if (evts.Count > 0) eventsBag.Add(evts);
+                                            }
                                         }
                                     }
                                 }

@@ -16,7 +16,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
-using Microsoft.Data.Sqlite;
 
 namespace IndiLogs_3._0.ViewModels
 {
@@ -84,81 +83,6 @@ namespace IndiLogs_3._0.ViewModels
 
         private const int UI_UPDATE_BATCH_SIZE = AppConstants.UiUpdateBatchSize;
         private readonly object _collectionLock = new object();
-
-        // Full-column DataView for EVENTS tab (all CSV columns as-is)
-        private System.Data.DataView? _eventsDataView;
-        public System.Data.DataView? EventsDataView
-        {
-            get => _eventsDataView;
-            set { _eventsDataView = value; OnPropertyChanged(); }
-        }
-
-        public void LoadEventsDataView()
-        {
-            var session = SessionVM?.SelectedSession;
-            if (session == null) return;
-
-            // Events tab: display terminal CSV bytes
-            var eventsCsvEntries = session.TerminalCsvBytes?
-                .Where(kv => !Path.GetFileName(kv.Key).StartsWith("Io-", StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            if (eventsCsvEntries == null || eventsCsvEntries.Count == 0)
-            {
-                EventsDataView = null;
-                return;
-            }
-
-            var dt = new System.Data.DataTable("Events");
-            bool headersDone = false;
-
-            foreach (var kv in eventsCsvEntries)
-            {
-                string csvText = System.Text.Encoding.UTF8.GetString(kv.Value);
-                using var reader = new StringReader(csvText);
-                string headerLine = reader.ReadLine();
-                if (headerLine == null) continue;
-
-                if (!headersDone)
-                {
-                    var headers = SplitCsvLineHelper(headerLine);
-                    foreach (var h in headers)
-                        dt.Columns.Add(h.Trim(), typeof(string));
-                    headersDone = true;
-                }
-
-                string dataLine;
-                while ((dataLine = reader.ReadLine()) != null)
-                {
-                    var values = SplitCsvLineHelper(dataLine);
-                    var row = dt.NewRow();
-                    for (int i = 0; i < Math.Min(values.Count, dt.Columns.Count); i++)
-                        row[i] = values[i].Trim();
-                    dt.Rows.Add(row);
-                }
-            }
-            EventsDataView = dt.DefaultView;
-        }
-
-        private static List<string> SplitCsvLineHelper(string line)
-        {
-            var result = new List<string>();
-            bool inQuotes = false;
-            var sb = new System.Text.StringBuilder();
-            foreach (char c in line)
-            {
-                if (c == '"') { inQuotes = !inQuotes; continue; }
-                if (c == ',' && !inQuotes)
-                {
-                    result.Add(sb.ToString());
-                    sb.Clear();
-                    continue;
-                }
-                sb.Append(c);
-            }
-            result.Add(sb.ToString());
-            return result;
-        }
 
         /// <summary>Exposes the plugin loader so child VMs can query loaded plugins.</summary>
         public Services.Interfaces.IPluginLoader? GetPluginLoader()
@@ -257,7 +181,7 @@ namespace IndiLogs_3._0.ViewModels
             set { _gridFontSize = value; OnPropertyChanged(); }
         }
 
-        private double _screenshotZoom = 400;
+        private double _screenshotZoom = 1.0;
         public double ScreenshotZoom
         {
             get => _screenshotZoom;
@@ -530,12 +454,12 @@ namespace IndiLogs_3._0.ViewModels
 
             ZoomInCommand = new RelayCommand(o =>
             {
-                if (SelectedTabIndex == AppConstants.TAB_SCREENSHOTS) ScreenshotZoom = Math.Min(5000, ScreenshotZoom + 100);
+                if (SelectedTabIndex == AppConstants.TAB_SCREENSHOTS) ScreenshotZoom = Math.Min(5.0, Math.Round(ScreenshotZoom + 0.1, 1));
                 else GridFontSize = Math.Min(30, GridFontSize + 1);
             });
             ZoomOutCommand = new RelayCommand(o =>
             {
-                if (SelectedTabIndex == AppConstants.TAB_SCREENSHOTS) ScreenshotZoom = Math.Max(100, ScreenshotZoom - 100);
+                if (SelectedTabIndex == AppConstants.TAB_SCREENSHOTS) ScreenshotZoom = Math.Max(0.2, Math.Round(ScreenshotZoom - 0.1, 1));
                 else GridFontSize = Math.Max(8, GridFontSize - 1);
             });
 
@@ -614,83 +538,6 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         private void CloseAnnotation(object parameter) => CaseVM?.CloseAnnotationCommand.Execute(parameter);
-
-        // ── SQLite content loading ──
-
-        private string LoadSqliteContent(byte[] dbBytes)
-        {
-            var sb = new System.Text.StringBuilder();
-            string tempDbPath = null;
-
-            try
-            {
-                tempDbPath = Path.Combine(Path.GetTempPath(), $"indilogs_temp_{Guid.NewGuid()}.db");
-                File.WriteAllBytes(tempDbPath, dbBytes);
-
-                using (var connection = new SqliteConnection($"Data Source={tempDbPath};Mode=ReadOnly"))
-                {
-                    connection.Open();
-                    var tables = new List<string>();
-                    using (var cmd = new SqliteCommand("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;", connection))
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read()) { tables.Add(reader.GetString(0)); }
-                    }
-
-                    sb.AppendLine($"=== SQLite Database: {tables.Count} tables ===");
-                    sb.AppendLine();
-
-                    foreach (var tableName in tables)
-                    {
-                        sb.AppendLine($"━━━ TABLE: {tableName} ━━━");
-                        using (var countCmd = new SqliteCommand($"SELECT COUNT(*) FROM [{EscapeSqlBracketId(tableName)}]", connection))
-                        {
-                            var count = countCmd.ExecuteScalar();
-                            sb.AppendLine($"Rows: {count}");
-                        }
-                        using (var cmd = new SqliteCommand($"SELECT * FROM [{EscapeSqlBracketId(tableName)}] LIMIT 100", connection))
-                        using (var reader = cmd.ExecuteReader())
-                        {
-                            var columns = new List<string>();
-                            for (int i = 0; i < reader.FieldCount; i++) { columns.Add(reader.GetName(i)); }
-                            sb.AppendLine($"Columns: {string.Join(", ", columns)}");
-                            sb.AppendLine();
-
-                            int rowNum = 0;
-                            while (reader.Read() && rowNum < 100)
-                            {
-                                sb.AppendLine($"--- Row {++rowNum} ---");
-                                for (int i = 0; i < reader.FieldCount; i++)
-                                {
-                                    var value = reader.IsDBNull(i) ? "NULL" : reader.GetValue(i)?.ToString() ?? "NULL";
-                                    if (value.Length > 500) value = value.Substring(0, 500) + "...";
-                                    sb.AppendLine($"  {columns[i]}: {value}");
-                                }
-                            }
-                        }
-                        sb.AppendLine();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                sb.AppendLine($"Error reading SQLite database: {ex.Message}");
-            }
-            finally
-            {
-                if (tempDbPath != null && File.Exists(tempDbPath))
-                {
-                    try { File.Delete(tempDbPath); } catch (Exception ex) { AppLogger.Error("Temp DB cleanup failed", ex); }
-                }
-            }
-            return sb.ToString();
-        }
-
-        private static string EscapeSqlBracketId(string identifier)
-        {
-            if (string.IsNullOrEmpty(identifier)) return identifier;
-            return identifier.Replace("]", "]]");
-        }
 
         // ── Live monitoring ──
 
