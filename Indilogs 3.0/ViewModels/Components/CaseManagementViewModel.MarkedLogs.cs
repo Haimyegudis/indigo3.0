@@ -151,7 +151,18 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             var list = logs.ToList();
             int current = _parent.SelectedLog != null ? list.IndexOf(_parent.SelectedLog) : -1;
-            var next = list.Skip(current + 1).FirstOrDefault(l => l.IsMarked) ?? list.FirstOrDefault(l => l.IsMarked);
+            LogEntry? next = null;
+            for (int i = current + 1; i < list.Count; i++)
+            {
+                if (list[i].IsMarked) { next = list[i]; break; }
+            }
+            if (next == null)
+            {
+                for (int i = 0; i < list.Count; i++)
+                {
+                    if (list[i].IsMarked) { next = list[i]; break; }
+                }
+            }
 
             if (next != null)
             {
@@ -173,7 +184,18 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             var list = logs.ToList();
             int current = _parent.SelectedLog != null ? list.IndexOf(_parent.SelectedLog) : list.Count;
-            var prev = list.Take(current).LastOrDefault(l => l.IsMarked) ?? list.LastOrDefault(l => l.IsMarked);
+            LogEntry? prev = null;
+            for (int i = current - 1; i >= 0; i--)
+            {
+                if (list[i].IsMarked) { prev = list[i]; break; }
+            }
+            if (prev == null)
+            {
+                for (int i = list.Count - 1; i >= 0; i--)
+                {
+                    if (list[i].IsMarked) { prev = list[i]; break; }
+                }
+            }
 
             if (prev != null)
             {

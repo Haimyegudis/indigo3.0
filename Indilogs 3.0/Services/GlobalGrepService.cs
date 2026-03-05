@@ -57,7 +57,7 @@ namespace IndiLogs_3._0.Services
 
                     progress?.Report((sessionIndex + 1, totalSessions, $"Searching: {sessionName}"));
                 }
-            }).ConfigureAwait(false);
+            }, cancellationToken).ConfigureAwait(false);
 
             return results;
         }
@@ -853,11 +853,6 @@ namespace IndiLogs_3._0.Services
         //  File time filtering
         // ====================================================================
 
-        // Matches timestamps like 2024-01-15T14-30-00 or 2024-01-15_14-30-00 in filenames
-        private static readonly Regex _fileTimestampRegex = new Regex(
-            @"(\d{4})-(\d{2})-(\d{2})[T_](\d{2})-(\d{2})-(\d{2})",
-            RegexOptions.Compiled);
-
         /// <summary>
         /// Filters files by time range using filename timestamp pattern or file modification date as fallback.
         /// </summary>
@@ -872,7 +867,7 @@ namespace IndiLogs_3._0.Services
 
                 // Try to parse timestamp from filename first
                 string fileName = Path.GetFileNameWithoutExtension(f);
-                var match = _fileTimestampRegex.Match(fileName);
+                var match = AppConstants.FileTimestampRegex.Match(fileName);
                 if (match.Success)
                 {
                     fileTime = new DateTime(

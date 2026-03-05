@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace IndiLogs_3._0
 {
@@ -59,17 +60,53 @@ namespace IndiLogs_3._0
         // Must match the order of TabItems in MainWindow.xaml
         public const int TAB_PLC = 0;
         public const int TAB_APP = 1;
-        public const int TAB_PLC_FILTERED = 2;
+        public const int TAB_EVENTS = 2;
         public const int TAB_SCREENSHOTS = 3;
-        public const int TAB_GLOBALS = 4;
-        public const int TAB_SYSTAB = 5;
-        public const int TAB_EVENTS = 6;
-        public const int TAB_TERMINALS = 7;
-        public const int TAB_TIMELINE = 8;
+        public const int TAB_CONFIG = 4;
+        public const int TAB_TERMINALS = 5;
+        public const int TAB_SETUP_INFO = 6;
+        public const int TAB_GLOBALS = 7;
+        public const int TAB_SYSTAB = 8;
         public const int TAB_CHARTS = 9;
         public const int TAB_CPR = 10;
         public const int TAB_STEP_RECORDER = 11;
         public const int TAB_DIFFERENT_LOGS = 12;
+
+        // ── Shared Regex Patterns ─────────────────────────────────────
+        /// <summary>
+        /// S4-5 binary PLC state transitions: "STATE_STANDBY - Enter ======" / "STATE_SERVICE - Exit ======"
+        /// </summary>
+        public static readonly Regex S4StateRegex = new Regex(
+            @"STATE_(\w+)\s*-\s*(Enter|Exit)",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled, RegexTimeout);
+
+        /// <summary>
+        /// Matches timestamps like 2024-01-15T14-30-00 or 2024-01-15_14-30-00 embedded in file names.
+        /// Groups: 1=year, 2=month, 3=day, 4=hour, 5=minute, 6=second.
+        /// </summary>
+        public static readonly Regex FileTimestampRegex = new Regex(
+            @"(\d{4})-(\d{2})-(\d{2})[T_](\d{2})-(\d{2})-(\d{2})",
+            RegexOptions.Compiled, RegexTimeout);
+
+        // ── SQL Helpers ───────────────────────────────────────────────
+
+        /// <summary>
+        /// Escapes a SQL identifier for safe use in bracket-quoted context ([identifier]).
+        /// </summary>
+        public static string EscapeSqlBracketId(string identifier)
+        {
+            if (string.IsNullOrEmpty(identifier)) return identifier;
+            return identifier.Replace("]", "]]");
+        }
+
+        /// <summary>
+        /// Escapes a SQL identifier for safe use in double-quoted context ("identifier").
+        /// </summary>
+        public static string EscapeSqlIdentifier(string identifier)
+        {
+            if (string.IsNullOrEmpty(identifier)) return identifier;
+            return identifier.Replace("\"", "\"\"");
+        }
     }
 
     /// <summary>

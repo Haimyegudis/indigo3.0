@@ -193,7 +193,7 @@ namespace IndiLogs_3._0.Services
                 string cmdContent =
                     "@echo off\r\n" +
                     "echo Updating IndiLogs 3.0...\r\n" +
-                    "timeout /t 2 /nobreak >nul\r\n" +
+                    "timeout /t 2 /nobreak\r\n" +
                     $"move /y \"{tempExePath}\" \"{currentExePath}\"\r\n" +
                     $"start \"\" \"{currentExePath}\"\r\n" +
                     $"del \"%~f0\"\r\n";

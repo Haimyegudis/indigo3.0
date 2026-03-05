@@ -23,8 +23,7 @@ namespace IndiLogs_3._0.Services.Grep
         private static readonly HashSet<string> ErrorLevels =
             new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Error", "Fatal" };
 
-        private static readonly Regex S4StateRegex =
-            new Regex(@"STATE_(\w+)\s*-\s*(Enter|Exit)", RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(2));
+
 
         // ====================================================================
         //  Main entry point
@@ -570,7 +569,7 @@ namespace IndiLogs_3._0.Services.Grep
                 var l = plcLogs[i];
                 if (l.Message != null && l.Message.Contains("==== STATE"))
                 {
-                    var match = S4StateRegex.Match(l.Message);
+                    var match = AppConstants.S4StateRegex.Match(l.Message);
                     if (match.Success && match.Groups[2].Value.Equals("Enter", StringComparison.OrdinalIgnoreCase))
                         enterLogs.Add((l, match.Groups[1].Value.ToUpperInvariant()));
                 }
@@ -751,10 +750,6 @@ namespace IndiLogs_3._0.Services.Grep
             return "PLC";
         }
 
-        // Matches timestamps like 2024-01-15T14-30-00 or 2024-01-15_14-30-00 in filenames
-        private static readonly Regex FileTimestampRegex = new Regex(
-            @"(\d{4})-(\d{2})-(\d{2})[T_](\d{2})-(\d{2})-(\d{2})",
-            RegexOptions.Compiled);
 
         private static List<string> FilterFilesByTimeRange(List<string> files, TimeRangeFilter filter)
         {
@@ -765,7 +760,7 @@ namespace IndiLogs_3._0.Services.Grep
             {
                 DateTime fileTime;
                 string fileName = Path.GetFileNameWithoutExtension(f);
-                var match = FileTimestampRegex.Match(fileName);
+                var match = AppConstants.FileTimestampRegex.Match(fileName);
                 if (match.Success)
                 {
                     fileTime = new DateTime(

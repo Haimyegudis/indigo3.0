@@ -360,14 +360,11 @@ namespace IndiLogs_3._0.Services
                                         shouldProcess = true;
                                         hasBinaryAppLogs = true;
                                     }
-                                    // 4. Events CSV
-                                    else if ((entry.Name.StartsWith("event-history__From", StringComparison.OrdinalIgnoreCase) &&
-                                              entry.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)) ||
-                                             (Path.GetFileName(entry.Name).StartsWith("pressEvents.", StringComparison.OrdinalIgnoreCase) &&
-                                              entry.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)))
+                                    // 4. Events CSV or XML
+                                    else if (IsEventsFile(entry.Name, out var outerEvtType2))
                                     {
                                         if (!sel.LoadEvents) continue;
-                                        entryData.Type = FileType.EventsCsv;
+                                        entryData.Type = outerEvtType2;
                                         shouldProcess = true;
                                     }
                                     // 5. .db files (skip if user unchecked Configuration)
@@ -404,10 +401,9 @@ namespace IndiLogs_3._0.Services
                                         }
                                         continue;
                                     }
-                                    // 7. Info files
+                                    // 7. Info files — Readme.txt always loaded (press config + versions)
                                     else if (entry.Name.Equals("Readme.txt", StringComparison.OrdinalIgnoreCase))
                                     {
-                                        if (!sel.LoadSetupInfo) continue;
                                         session.PressConfiguration = ReadTextFromEntry(entry);
                                         var (sw, plc) = ParseReadmeVersions(session.PressConfiguration);
                                         if (sw != "Unknown") detectedSwVersion = sw;
@@ -676,14 +672,11 @@ namespace IndiLogs_3._0.Services
                                                     innerShouldProcess = true;
                                                     hasBinaryAppLogs = true;
                                                 }
-                                                // Events CSV
-                                                else if ((innerEntry.Name.StartsWith("event-history__From", StringComparison.OrdinalIgnoreCase) &&
-                                                          innerEntry.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)) ||
-                                                         (Path.GetFileName(innerEntry.Name).StartsWith("pressEvents.", StringComparison.OrdinalIgnoreCase) &&
-                                                          innerEntry.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)))
+                                                // Events CSV or XML
+                                                else if (IsEventsFile(innerEntry.Name, out var innerEvtType2))
                                                 {
                                                     if (!sel.LoadEvents) continue;
-                                                    innerData.Type = FileType.EventsCsv;
+                                                    innerData.Type = innerEvtType2;
                                                     innerShouldProcess = true;
                                                 }
                                                 // DB files (skip if user unchecked Configuration)
@@ -716,10 +709,9 @@ namespace IndiLogs_3._0.Services
                                                     }
                                                     continue;
                                                 }
-                                                // Readme
+                                                // Readme — always loaded (press config + versions)
                                                 else if (innerEntry.Name.Equals("Readme.txt", StringComparison.OrdinalIgnoreCase))
                                                 {
-                                                    if (!sel.LoadSetupInfo) continue;
                                                     if (string.IsNullOrEmpty(session.PressConfiguration))
                                                     {
                                                         session.PressConfiguration = ReadTextFromEntry(innerEntry);
@@ -836,6 +828,24 @@ namespace IndiLogs_3._0.Services
                                                     if (timeFilterActive)
                                                         evts.RemoveAll(e => e.Time < tfStart || e.Time > tfEnd);
                                                     if (evts.Count > 0) localEvtLists.Add(evts);
+                                                }
+                                                else if (item.Type == FileType.EventsXml)
+                                                {
+                                                    item.Stream.Position = 0;
+                                                    string csvFromXml = ConvertEventsXmlToCsv(item.Stream);
+                                                    if (!string.IsNullOrEmpty(csvFromXml))
+                                                    {
+                                                        lock (csvLock)
+                                                        {
+                                                            if (string.IsNullOrEmpty(session.EventsCsvRawContent))
+                                                                session.EventsCsvRawContent = csvFromXml;
+                                                        }
+                                                        using var ms = new MemoryStream(Encoding.UTF8.GetBytes(csvFromXml));
+                                                        var evts = ParseEventsCsv(ms);
+                                                        if (timeFilterActive)
+                                                            evts.RemoveAll(e => e.Time < tfStart || e.Time > tfEnd);
+                                                        if (evts.Count > 0) localEvtLists.Add(evts);
+                                                    }
                                                 }
                                                 else if (item.Type == FileType.Plugin && item.Plugin != null)
                                                 {
@@ -965,9 +975,9 @@ namespace IndiLogs_3._0.Services
                                 nonZipFiles.Add(new ZipEntryData { Name = filePath, Type = FileType.AppBinaryLog });
                                 hasBinaryAppLogs = true;
                             }
-                            else if ((lowerName.StartsWith("event-history__from") || lowerName.StartsWith("pressevents.")) && lowerName.EndsWith(".csv"))
+                            else if (IsEventsFile(lowerName, out var nzEvtType))
                             {
-                                nonZipFiles.Add(new ZipEntryData { Name = filePath, Type = FileType.EventsCsv });
+                                nonZipFiles.Add(new ZipEntryData { Name = filePath, Type = nzEvtType });
                             }
                             else if (lowerName.EndsWith(".db"))
                             {
@@ -1104,6 +1114,19 @@ namespace IndiLogs_3._0.Services
                                         fs.Position = 0;
                                         var evts = ParseEventsCsv(fs);
                                         if (evts.Count > 0) nzLocalEvts.Add(evts);
+                                    }
+                                    else if (item.Type == FileType.EventsXml)
+                                    {
+                                        fs.Position = 0;
+                                        string csvFromXml = ConvertEventsXmlToCsv(fs);
+                                        if (!string.IsNullOrEmpty(csvFromXml))
+                                        {
+                                            if (string.IsNullOrEmpty(session.EventsCsvRawContent))
+                                                session.EventsCsvRawContent = csvFromXml;
+                                            using var ms = new MemoryStream(Encoding.UTF8.GetBytes(csvFromXml));
+                                            var evts = ParseEventsCsv(ms);
+                                            if (evts.Count > 0) nzLocalEvts.Add(evts);
+                                        }
                                     }
                                     else if (item.Type == FileType.Plugin && item.Plugin != null)
                                     {
