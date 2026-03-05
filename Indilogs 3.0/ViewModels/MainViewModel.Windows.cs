@@ -3,6 +3,7 @@ using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Analysis;
 using IndiLogs_3._0.Models.Grep;
 using IndiLogs_3._0.Services;
+using IndiLogs_3._0.Services.Interfaces;
 using IndiLogs_3._0.Views;
 using System;
 using System.Collections.Generic;
@@ -190,7 +191,14 @@ namespace IndiLogs_3._0.ViewModels
             // Create an empty collection if no sessions are loaded, to allow the window to open
             var sessions = SessionVM?.LoadedSessions ?? new ObservableCollection<LogSessionData>();
 
-            var viewModel = new GlobalGrepViewModel(sessions, _dialogService, _viewFactory, _dispatcher, _windowOwner);
+            var viewModel = new GlobalGrepViewModel(
+                sessions,
+                Bootstrapper.Resolve<IGlobalGrepService>(),
+                Bootstrapper.Resolve<ISearchLocationService>(),
+                Bootstrapper.Resolve<ISearchConfigService>(),
+                Bootstrapper.Resolve<ISearchSchedulerService>(),
+                Bootstrapper.Resolve<IWindowsTaskSchedulerService>(),
+                _dialogService, _viewFactory, _dispatcher, _windowOwner);
 
             var window = _viewFactory.Create<GlobalGrepWindow>(viewModel, (Action<GrepResult>)NavigateToGrepResult, (Action<List<(string FilePath, string SessionName)>>)LoadMultipleFiles);
             _windowManager.OpenWindow(window);

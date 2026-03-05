@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Grep;
+using IndiLogs_3._0.Services.Interfaces;
 using Newtonsoft.Json;
 
 namespace IndiLogs_3._0.Services.Grep
@@ -15,12 +16,12 @@ namespace IndiLogs_3._0.Services.Grep
     /// In-app scheduler that checks every 60 seconds for scheduled searches and executes them.
     /// Results are saved to the configured output directory as JSON and CSV.
     /// </summary>
-    public class SearchSchedulerService : IDisposable
+    public class SearchSchedulerService : ISearchSchedulerService
     {
         private static readonly string ScheduleFile = AppPaths.SearchSchedules;
 
-        private readonly GlobalGrepService _grepService;
-        private readonly SearchLocationService _locationService;
+        private readonly IGlobalGrepService _grepService;
+        private readonly ISearchLocationService _locationService;
         private readonly EmailNotificationService _emailService;
         private readonly System.Timers.Timer _timer;
         private volatile bool _isRunning;
@@ -37,7 +38,7 @@ namespace IndiLogs_3._0.Services.Grep
         /// </summary>
         public event Action<ScheduledSearch, int, string> SearchCompleted;
 
-        public SearchSchedulerService(GlobalGrepService grepService, SearchLocationService locationService)
+        public SearchSchedulerService(IGlobalGrepService grepService, ISearchLocationService locationService)
         {
             _grepService = grepService;
             _locationService = locationService;

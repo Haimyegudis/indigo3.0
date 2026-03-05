@@ -22,11 +22,11 @@ namespace IndiLogs_3._0.ViewModels
     /// </summary>
     public partial class GlobalGrepViewModel : ViewModelBase
     {
-        private readonly GlobalGrepService _grepService;
-        private readonly SearchLocationService _locationService;
-        private readonly SearchConfigService _configService;
-        private readonly SearchSchedulerService _schedulerService;
-        private readonly WindowsTaskSchedulerService _taskSchedulerService;
+        private readonly IGlobalGrepService _grepService;
+        private readonly ISearchLocationService _locationService;
+        private readonly ISearchConfigService _configService;
+        private readonly ISearchSchedulerService _schedulerService;
+        private readonly IWindowsTaskSchedulerService _taskSchedulerService;
         private readonly IDialogService _dialogService;
         private readonly IViewFactory _viewFactory;
         private readonly IDispatcher _dispatcher;
@@ -55,17 +55,27 @@ namespace IndiLogs_3._0.ViewModels
 
         #region Constructor
 
-        public GlobalGrepViewModel(IEnumerable<LogSessionData> loadedSessions, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher, IWindowOwnerProvider windowOwner)
+        public GlobalGrepViewModel(
+            IEnumerable<LogSessionData> loadedSessions,
+            IGlobalGrepService grepService,
+            ISearchLocationService locationService,
+            ISearchConfigService configService,
+            ISearchSchedulerService schedulerService,
+            IWindowsTaskSchedulerService taskSchedulerService,
+            IDialogService dialogService,
+            IViewFactory viewFactory,
+            IDispatcher dispatcher,
+            IWindowOwnerProvider windowOwner)
         {
+            _grepService = grepService;
+            _locationService = locationService;
+            _configService = configService;
+            _schedulerService = schedulerService;
+            _taskSchedulerService = taskSchedulerService;
             _dialogService = dialogService;
             _viewFactory = viewFactory;
             _dispatcher = dispatcher;
             _windowOwner = windowOwner;
-            _grepService = new GlobalGrepService();
-            _locationService = new SearchLocationService();
-            _configService = new SearchConfigService();
-            _schedulerService = new SearchSchedulerService(_grepService, _locationService);
-            _taskSchedulerService = new WindowsTaskSchedulerService();
             LoadedSessions = loadedSessions;
             Results = new ObservableRangeCollection<GrepResult>();
 

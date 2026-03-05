@@ -1,5 +1,6 @@
 using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Grep;
+using IndiLogs_3._0.Services.Interfaces;
 using IndiLogs_3._0.ViewModels;
 using IndiLogs_3._0.Views;
 using System;
@@ -86,9 +87,9 @@ namespace IndiLogs_3._0
 
             try
             {
-                var grepService = new GlobalGrepService();
-                var locationService = new SearchLocationService();
-                using (var schedulerService = new SearchSchedulerService(grepService, locationService))
+                IGlobalGrepService grepService = new GlobalGrepService();
+                ISearchLocationService locationService = new SearchLocationService();
+                using (ISearchSchedulerService schedulerService = new SearchSchedulerService(grepService, locationService))
                 {
                     var schedule = schedulerService.Schedules.FirstOrDefault(s => s.Id == scheduleId);
                     if (schedule == null)

@@ -11,11 +11,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Grep;
+using IndiLogs_3._0.Services.Interfaces;
 using Indigo.Infra.ICL.Core.Logging;
 
 namespace IndiLogs_3._0.Services
 {
-    public class GlobalGrepService
+    public class GlobalGrepService : IGlobalGrepService
     {
         private readonly QueryParserService _queryParser;
 

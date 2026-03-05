@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using IndiLogs_3._0.Models.Grep;
+using IndiLogs_3._0.Services.Interfaces;
 
 namespace IndiLogs_3._0.Services.Grep
 {
@@ -12,7 +13,7 @@ namespace IndiLogs_3._0.Services.Grep
     /// Uses schtasks.exe — no third-party dependencies.
     /// Task names follow the pattern: IndiLogs_Scan_{guid}
     /// </summary>
-    public class WindowsTaskSchedulerService
+    public class WindowsTaskSchedulerService : IWindowsTaskSchedulerService
     {
         private const string TaskPrefix = "IndiLogs_Scan_";
 

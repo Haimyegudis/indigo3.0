@@ -1,4 +1,5 @@
 using IndiLogs_3._0.Services;
+using IndiLogs_3._0.Services.Grep;
 using IndiLogs_3._0.Services.Interfaces;
 using IndiLogs_3._0.ViewModels;
 using System;
@@ -53,6 +54,21 @@ namespace IndiLogs_3._0
 
             var windowOwner = new WpfWindowOwnerProvider();
             Register<IWindowOwnerProvider>(windowOwner);
+
+            var globalGrepService = new GlobalGrepService();
+            Register<IGlobalGrepService>(globalGrepService);
+
+            var searchLocationService = new SearchLocationService();
+            Register<ISearchLocationService>(searchLocationService);
+
+            var searchConfigService = new SearchConfigService();
+            Register<ISearchConfigService>(searchConfigService);
+
+            var searchSchedulerService = new SearchSchedulerService(globalGrepService, searchLocationService);
+            Register<ISearchSchedulerService>(searchSchedulerService);
+
+            var windowsTaskSchedulerService = new WindowsTaskSchedulerService();
+            Register<IWindowsTaskSchedulerService>(windowsTaskSchedulerService);
 
             // --- ViewModels ---
             var mainVM = new MainViewModel(logFileService, coloringService, csvService, defaultConfigService, dialogService, viewFactory, dispatcher, windowOwner, windowManager);

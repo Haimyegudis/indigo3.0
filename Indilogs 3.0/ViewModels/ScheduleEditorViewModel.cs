@@ -22,7 +22,7 @@ namespace IndiLogs_3._0.ViewModels
         private readonly List<SearchLocation> _allLocations;
         private readonly IDialogService _dialogService;
         private readonly IViewFactory? _viewFactory;
-        private readonly SearchLocationService? _locationService;
+        private readonly ISearchLocationService? _locationService;
 
         // ═══ Section 1: Schedule Details ═══
         private string? _scheduleName;
@@ -397,7 +397,7 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand CancelCommand { get; }
 
         // ═══ Constructor ═══
-        public ScheduleEditorViewModel(ScheduledSearch schedule, List<SearchLocation> locations, SearchCriteria parentCriteria, IDialogService? dialogService = null, IViewFactory? viewFactory = null, SearchLocationService? locationService = null)
+        public ScheduleEditorViewModel(ScheduledSearch schedule, List<SearchLocation> locations, SearchCriteria parentCriteria, IDialogService? dialogService = null, IViewFactory? viewFactory = null, ISearchLocationService? locationService = null)
         {
             _schedule = schedule;
             _allLocations = locations;

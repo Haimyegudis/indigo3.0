@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.NetworkInformation;
 using System.Threading.Tasks;
 using IndiLogs_3._0.Models.Grep;
+using IndiLogs_3._0.Services.Interfaces;
 using Newtonsoft.Json;
 
 namespace IndiLogs_3._0.Services.Grep
@@ -12,7 +13,7 @@ namespace IndiLogs_3._0.Services.Grep
     /// <summary>
     /// CRUD and connectivity for search locations. Persisted to disk as JSON.
     /// </summary>
-    public class SearchLocationService
+    public class SearchLocationService : ISearchLocationService
     {
         private static readonly string ConfigDir = AppPaths.Root;
         private static readonly string LocationsFile = AppPaths.SearchLocations;

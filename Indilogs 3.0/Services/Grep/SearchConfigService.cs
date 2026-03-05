@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using IndiLogs_3._0.Models.Grep;
+using IndiLogs_3._0.Services.Interfaces;
 using Newtonsoft.Json;
 
 namespace IndiLogs_3._0.Services.Grep
@@ -10,7 +11,7 @@ namespace IndiLogs_3._0.Services.Grep
     /// <summary>
     /// Saves and loads <see cref="SearchProfile"/> JSON configs.
     /// </summary>
-    public class SearchConfigService
+    public class SearchConfigService : ISearchConfigService
     {
         public SearchConfigService()
         {
