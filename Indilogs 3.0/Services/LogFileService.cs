@@ -1034,7 +1034,7 @@ namespace IndiLogs_3._0.Services
                                 {
                                     string fileName = Path.GetFileName(filePath);
                                     string[] sample = ReadSampleLinesFromFile(filePath, 20);
-                                    ILogFilePlugin plugin = FindPlugin(fileName, sample);
+                                    ILogFilePlugin? plugin = FindPlugin(fileName, sample);
                                     if (plugin != null)
                                     {
                                         nonZipFiles.Add(new ZipEntryData
