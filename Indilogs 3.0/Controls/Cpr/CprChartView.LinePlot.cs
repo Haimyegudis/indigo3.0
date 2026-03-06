@@ -1,4 +1,3 @@
-#pragma warning disable CS0618 // SKPaint text APIs are obsolete in favor of SKFont — suppress until SkiaSharp migration
 using System;
 using System.Collections.Generic;
 using IndiLogs_3._0.Models.Cpr;
@@ -161,8 +160,8 @@ namespace IndiLogs_3._0.Controls.Cpr
             if (_zoomXMin.HasValue)
             {
                 _dftLabelPaint.Color = _textColor.WithAlpha(100);
-                _dftLabelPaint.TextSize = 9;
-                canvas.DrawText("Right-click to reset zoom", chartLeft + 4, h - 3, _dftLabelPaint);
+                _dftLabelFont.Size = 9;
+                canvas.DrawText("Right-click to reset zoom", chartLeft + 4, h - 3, _dftLabelFont, _dftLabelPaint);
             }
 
             // Draw hover tooltip
@@ -180,12 +179,12 @@ namespace IndiLogs_3._0.Controls.Cpr
         private void DrawNoData(SKCanvas canvas, float w, float h)
         {
             _noDataPaint.Color = _textColor.WithAlpha(128);
-            _noDataPaint.TextSize = 14;
-            _noDataPaint.Typeface = s_segoeNormal;
+            _noDataFont.Size = 14;
+            _noDataFont.Typeface = s_segoeNormal;
 
             string msg = "No data to display";
-            float tw = _noDataPaint.MeasureText(msg);
-            canvas.DrawText(msg, (w - tw) / 2, h / 2, _noDataPaint);
+            float tw = _noDataFont.MeasureText(msg);
+            canvas.DrawText(msg, (w - tw) / 2, h / 2, _noDataFont, _noDataPaint);
         }
 
         private const string Ellipsis = "...";
@@ -194,20 +193,20 @@ namespace IndiLogs_3._0.Controls.Cpr
         {
             if (string.IsNullOrEmpty(title)) return;
             _subplotTitlePaint.Color = _textColor;
-            _subplotTitlePaint.TextSize = 12;
-            _subplotTitlePaint.Typeface = s_segoeBold;
+            _subplotTitleFont.Size = 12;
+            _subplotTitleFont.Typeface = s_segoeBold;
 
-            float tw = _subplotTitlePaint.MeasureText(title);
+            float tw = _subplotTitleFont.MeasureText(title);
             // Truncate if too long
             if (tw > w - 20)
             {
-                float ellipsisW = _subplotTitlePaint.MeasureText(Ellipsis);
-                while (title.Length > 10 && _subplotTitlePaint.MeasureText(title) + ellipsisW > w - 20)
+                float ellipsisW = _subplotTitleFont.MeasureText(Ellipsis);
+                while (title.Length > 10 && _subplotTitleFont.MeasureText(title) + ellipsisW > w - 20)
                     title = title.Substring(0, title.Length - 1);
                 title += Ellipsis;
-                tw = _subplotTitlePaint.MeasureText(title);
+                tw = _subplotTitleFont.MeasureText(title);
             }
-            canvas.DrawText(title, (w - tw) / 2, 16, _subplotTitlePaint);
+            canvas.DrawText(title, (w - tw) / 2, 16, _subplotTitleFont, _subplotTitlePaint);
         }
 
         private void DrawGrid(SKCanvas canvas, float chartLeft, float chartTop, float chartRight, float chartBottom,
@@ -216,7 +215,7 @@ namespace IndiLogs_3._0.Controls.Cpr
             _gridPaint.Color = _gridColor.WithAlpha(60);
             _axisPaint.Color = _gridColor;
             _axisTextPaint.Color = _textColor;
-            _axisTextPaint.Typeface = s_segoeNormal;
+            _axisTextFont.Typeface = s_segoeNormal;
 
             // Border
             canvas.DrawRect(new SKRect(chartLeft, chartTop, chartRight, chartBottom), _axisPaint);
@@ -230,8 +229,8 @@ namespace IndiLogs_3._0.Controls.Cpr
                 canvas.DrawLine(chartLeft, y, chartRight, y, _gridPaint);
 
                 string label = FormatTickLabel(val);
-                float tw = _axisTextPaint.MeasureText(label);
-                canvas.DrawText(label, chartLeft - tw - 4, y + 4, _axisTextPaint);
+                float tw = _axisTextFont.MeasureText(label);
+                canvas.DrawText(label, chartLeft - tw - 4, y + 4, _axisTextFont, _axisTextPaint);
             }
 
             // X grid + labels
@@ -243,8 +242,8 @@ namespace IndiLogs_3._0.Controls.Cpr
                 canvas.DrawLine(x, chartTop, x, chartBottom, _gridPaint);
 
                 string label = FormatTickLabel(val);
-                float tw = _axisTextPaint.MeasureText(label);
-                canvas.DrawText(label, x - tw / 2, chartBottom + 14, _axisTextPaint);
+                float tw = _axisTextFont.MeasureText(label);
+                canvas.DrawText(label, x - tw / 2, chartBottom + 14, _axisTextFont, _axisTextPaint);
             }
 
             // Y=0 reference line (X-axis) — helps see convergence
@@ -261,20 +260,20 @@ namespace IndiLogs_3._0.Controls.Cpr
             float w, float h, string? xLabel, string? yLabel)
         {
             _axisLabelPaint.Color = _textColor.WithAlpha(180);
-            _axisLabelPaint.Typeface = s_segoeNormal;
+            _axisLabelFont.Typeface = s_segoeNormal;
 
             if (!string.IsNullOrEmpty(xLabel))
             {
-                float tw = _axisLabelPaint.MeasureText(xLabel);
-                canvas.DrawText(xLabel, (chartLeft + chartRight - tw) / 2, h - 2, _axisLabelPaint);
+                float tw = _axisLabelFont.MeasureText(xLabel);
+                canvas.DrawText(xLabel, (chartLeft + chartRight - tw) / 2, h - 2, _axisLabelFont, _axisLabelPaint);
             }
 
             if (!string.IsNullOrEmpty(yLabel))
             {
                 canvas.Save();
                 canvas.RotateDegrees(-90, 10, (chartTop + chartBottom) / 2);
-                float tw = _axisLabelPaint.MeasureText(yLabel);
-                canvas.DrawText(yLabel, 10 - tw / 2, (chartTop + chartBottom) / 2 + 4, _axisLabelPaint);
+                float tw = _axisLabelFont.MeasureText(yLabel);
+                canvas.DrawText(yLabel, 10 - tw / 2, (chartTop + chartBottom) / 2 + 4, _axisLabelFont, _axisLabelPaint);
                 canvas.Restore();
             }
         }
@@ -285,7 +284,7 @@ namespace IndiLogs_3._0.Controls.Cpr
             float chartW = chartRight - chartLeft;
 
             _dftMarkerPaint.StrokeWidth = 1;
-            _dftLabelPaint.Typeface = s_segoeNormal;
+            _dftLabelFont.Typeface = s_segoeNormal;
 
             foreach (var marker in _graphResult!.DftMarkers!)
             {
@@ -298,7 +297,7 @@ namespace IndiLogs_3._0.Controls.Cpr
                 canvas.DrawLine(x, chartTop, x, chartBottom, _dftMarkerPaint);
 
                 _dftLabelPaint.Color = _dftMarkerPaint.Color;
-                canvas.DrawText(marker.Label, x + 2, chartTop + 12, _dftLabelPaint);
+                canvas.DrawText(marker.Label, x + 2, chartTop + 12, _dftLabelFont, _dftLabelPaint);
 
                 _dftMarkerPaint.PathEffect = null;
             }
@@ -308,7 +307,7 @@ namespace IndiLogs_3._0.Controls.Cpr
             double xMin, double xRange, float chartW)
         {
             _dftMarkerPaint.StrokeWidth = 1.5f;
-            _dftLabelPaint.Typeface = s_segoeNormal;
+            _dftLabelFont.Typeface = s_segoeNormal;
 
             float labelOffset = 0;
             foreach (var refLine in _graphResult!.VerticalRefLines!)
@@ -339,7 +338,7 @@ namespace IndiLogs_3._0.Controls.Cpr
                 canvas.DrawLine(x, chartTop, x, chartBottom, _dftMarkerPaint);
 
                 _dftLabelPaint.Color = _dftMarkerPaint.Color;
-                canvas.DrawText(refLine.Label, x + 2, chartTop + 12 + labelOffset, _dftLabelPaint);
+                canvas.DrawText(refLine.Label, x + 2, chartTop + 12 + labelOffset, _dftLabelFont, _dftLabelPaint);
                 labelOffset += 10; // Stagger labels so they don't overlap
 
                 _dftMarkerPaint.PathEffect = null;
@@ -354,7 +353,7 @@ namespace IndiLogs_3._0.Controls.Cpr
             float legendY = chartTop + 5;
 
             _axisTextPaint.Color = _textColor;
-            _axisTextPaint.Typeface = s_segoeNormal;
+            _axisTextFont.Typeface = s_segoeNormal;
             _subplotLinePaint.StrokeWidth = 2;
             _subplotLinePaint.IsAntialias = false;
 
@@ -362,7 +361,7 @@ namespace IndiLogs_3._0.Controls.Cpr
             {
                 _subplotLinePaint.Color = s.Color;
                 canvas.DrawLine(legendX, legendY + 5, legendX + 14, legendY + 5, _subplotLinePaint);
-                canvas.DrawText(s.Name, legendX + 17, legendY + 9, _axisTextPaint);
+                canvas.DrawText(s.Name, legendX + 17, legendY + 9, _axisTextFont, _axisTextPaint);
                 legendY += LEGEND_LINE_HEIGHT;
             }
             _subplotLinePaint.IsAntialias = true; // restore default
@@ -391,22 +390,22 @@ namespace IndiLogs_3._0.Controls.Cpr
 
             // --- Draw Y value label on the left Y-axis ---
             _dftLabelPaint.Color = _textColor;
-            _dftLabelPaint.TextSize = 9;
-            _dftLabelPaint.Typeface = s_segoeNormal;
+            _dftLabelFont.Size = 9;
+            _dftLabelFont.Typeface = s_segoeNormal;
             _tooltipBgPaint.Color = _bgColor.WithAlpha(220);
             {
                 string yLabel = FormatTickLabel(dataY);
-                float tw = _dftLabelPaint.MeasureText(yLabel);
+                float tw = _dftLabelFont.MeasureText(yLabel);
                 var yRect = new SKRect(chartLeft - tw - 7, my - 7, chartLeft - 1, my + 7);
                 canvas.DrawRect(yRect, _tooltipBgPaint);
-                canvas.DrawText(yLabel, chartLeft - tw - 4, my + 3, _dftLabelPaint);
+                canvas.DrawText(yLabel, chartLeft - tw - 4, my + 3, _dftLabelFont, _dftLabelPaint);
 
                 // X value label on the bottom X-axis
                 string xLabel = FormatTickLabel(dataX);
-                float xw = _dftLabelPaint.MeasureText(xLabel);
+                float xw = _dftLabelFont.MeasureText(xLabel);
                 var xRect = new SKRect(mx - xw / 2 - 3, chartBottom + 1, mx + xw / 2 + 3, chartBottom + 15);
                 canvas.DrawRect(xRect, _tooltipBgPaint);
-                canvas.DrawText(xLabel, mx - xw / 2, chartBottom + 12, _dftLabelPaint);
+                canvas.DrawText(xLabel, mx - xw / 2, chartBottom + 12, _dftLabelFont, _dftLabelPaint);
             }
 
             // --- Build tooltip with per-series Y values at cursor X ---
@@ -442,15 +441,15 @@ namespace IndiLogs_3._0.Controls.Cpr
             _tooltipBgPaint.Color = _bgColor.WithAlpha(230);
             _tooltipBorderPaint.Color = _gridColor;
             _tooltipTextPaint.Color = _textColor;
-            _tooltipTextPaint.Typeface = s_segoeNormal;
+            _tooltipTextFont.Typeface = s_segoeNormal;
             {
                 // Header line
                 string header = $"X: {FormatTickLabel(dataX)}";
                 float lineHeight = 14;
-                float maxW = _tooltipTextPaint.MeasureText(header);
+                float maxW = _tooltipTextFont.MeasureText(header);
                 foreach (var line in tooltipLines)
                 {
-                    float lw = _tooltipTextPaint.MeasureText(line.text);
+                    float lw = _tooltipTextFont.MeasureText(line.text);
                     if (lw + 18 > maxW) maxW = lw + 18; // 18 = color swatch + gap
                 }
 
@@ -471,7 +470,7 @@ namespace IndiLogs_3._0.Controls.Cpr
                 // Draw header
                 float textX = tipX + 6;
                 float textY = tipY + lineHeight;
-                canvas.DrawText(header, textX, textY, _tooltipTextPaint);
+                canvas.DrawText(header, textX, textY, _tooltipTextFont, _tooltipTextPaint);
 
                 // Separator line
                 textY += 3;
@@ -486,7 +485,7 @@ namespace IndiLogs_3._0.Controls.Cpr
                     _tooltipColorPaint.Color = line.color;
                     canvas.DrawLine(textX, textY - 4, textX + 10, textY - 4, _tooltipColorPaint);
                     // Text
-                    canvas.DrawText(line.text, textX + 14, textY, _tooltipTextPaint);
+                    canvas.DrawText(line.text, textX + 14, textY, _tooltipTextFont, _tooltipTextPaint);
                 }
             }
         }

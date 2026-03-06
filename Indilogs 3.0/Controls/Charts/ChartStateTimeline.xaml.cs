@@ -1,4 +1,3 @@
-#pragma warning disable CS0618 // SKPaint text APIs are obsolete in favor of SKFont — suppress until SkiaSharp migration
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,7 +35,8 @@ namespace IndiLogs_3._0.Controls.Charts
 
         // Cached paints — reused every frame, properties updated before draw
         private readonly SKPaint _borderPaint = new SKPaint { Color = BorderColor, Style = SKPaintStyle.Stroke, StrokeWidth = 1 };
-        private readonly SKPaint _textPaint = new SKPaint { Color = TextColor, TextSize = 10, IsAntialias = true, Typeface = s_segoeUI };
+        private readonly SKPaint _textPaint = new SKPaint { Color = TextColor, IsAntialias = true };
+        private readonly SKFont _textFont = new SKFont(s_segoeUI, 10);
         private readonly SKPaint _cursorPaint = new SKPaint { Color = CursorColor, StrokeWidth = 2, Style = SKPaintStyle.Stroke };
         private readonly SKPaint _fillPaint = new SKPaint { Style = SKPaintStyle.Fill };
         private readonly SKPaint _overlayPaint = new SKPaint { Color = s_overlayBlack, Style = SKPaintStyle.Fill };
@@ -135,11 +135,11 @@ namespace IndiLogs_3._0.Controls.Charts
                 // Draw state name if there's enough space
                 // Use StateName if available, otherwise fall back to StateId lookup
                 string name = !string.IsNullOrEmpty(st.StateName) ? st.StateName : ChartStateConfig.GetName(st.StateId);
-                float textWidth = _textPaint.MeasureText(name);
+                float textWidth = _textFont.MeasureText(name);
                 if (textWidth < (x2 - x1) - 4)
                 {
                     float textX = x1 + ((x2 - x1) - textWidth) / 2;
-                    canvas.DrawText(name, textX, h / 2 + 4, _textPaint);
+                    canvas.DrawText(name, textX, h / 2 + 4, _textFont, _textPaint);
                 }
             }
 

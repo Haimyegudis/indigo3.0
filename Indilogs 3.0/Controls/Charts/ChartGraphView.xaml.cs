@@ -1,4 +1,3 @@
-#pragma warning disable CS0618 // SKPaint text APIs are obsolete in favor of SKFont — suppress until SkiaSharp migration
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -59,8 +58,11 @@ namespace IndiLogs_3._0.Controls.Charts
         private SKPaint _gridLinePaint = null!;
         private SKPaint _axisLinePaint = null!;
         private SKPaint _textPaintLeft = null!;
+        private readonly SKFont _textFontLeft = new SKFont { Size = 11, Typeface = s_segoeNormal };
         private SKPaint _textPaintRight = null!;
+        private readonly SKFont _textFontRight = new SKFont { Size = 11, Typeface = s_segoeBold };
         private SKPaint _stateTextPaint = null!;
+        private readonly SKFont _stateTextFont = new SKFont { Size = 12, Typeface = s_segoeBold };
         private SKPaint _stateFillPaint = null!;
         private SKPaint _targetLinePaint = null!;
         private SKPaint _cursorLinePaint = null!;
@@ -117,13 +119,15 @@ namespace IndiLogs_3._0.Controls.Charts
             IsAntialias = true
         };
         private readonly SKPaint _gapTextPaint;
+        private readonly SKFont _gapTextFont = new SKFont { Size = 10, Typeface = s_segoeBold };
 
         // Cached path effect for gap borders
         private readonly SKPathEffect _gapDashEffect = SKPathEffect.CreateDash(new float[] { 4, 3 }, 0);
 
         // Cached paints for reference lines (color/pathEffect updated per-line)
         private readonly SKPaint _refLinePaint = new SKPaint { Style = SKPaintStyle.Stroke, IsAntialias = true };
-        private readonly SKPaint _refLineTextPaint = new SKPaint { TextSize = 11, IsAntialias = true, Typeface = s_segoeBold };
+        private readonly SKPaint _refLineTextPaint = new SKPaint { IsAntialias = true };
+        private readonly SKFont _refLineTextFont = new SKFont { Size = 11, Typeface = s_segoeBold };
 
         // Cached path effect for dashed reference lines
         private readonly SKPathEffect _refDashEffect = SKPathEffect.CreateDash(new float[] { 10, 5 }, 0);
@@ -145,11 +149,13 @@ namespace IndiLogs_3._0.Controls.Charts
         private readonly SKPathEffect _ctrlDashEffect = SKPathEffect.CreateDash(new float[] { 5, 5 }, 0);
 
         // Cached paints for DrawTooltip (colors updated per-call)
-        private readonly SKPaint _tooltipMeasurePaint = new SKPaint { TextSize = 11, Typeface = s_segoeNormal };
+        private readonly SKPaint _tooltipMeasurePaint = new SKPaint();
+        private readonly SKFont _tooltipMeasureFont = new SKFont { Size = 11, Typeface = s_segoeNormal };
         private readonly SKPaint _tooltipBgPaint = new SKPaint { Style = SKPaintStyle.Fill };
         private readonly SKPaint _tooltipBorderPaint = new SKPaint { Style = SKPaintStyle.Stroke, StrokeWidth = 1.5f };
         private readonly SKPaint _tooltipShadowPaint = new SKPaint { Color = SKColors.Black.WithAlpha(80), Style = SKPaintStyle.Fill };
-        private readonly SKPaint _tooltipTextPaint = new SKPaint { TextSize = 11, IsAntialias = true, Typeface = s_segoeNormal };
+        private readonly SKPaint _tooltipTextPaint = new SKPaint { IsAntialias = true };
+        private readonly SKFont _tooltipTextFont = new SKFont { Size = 11, Typeface = s_segoeNormal };
 
         private int _viewStartIndex = 0;
         private int _viewEndIndex = 0;
@@ -190,9 +196,7 @@ namespace IndiLogs_3._0.Controls.Charts
             _gapTextPaint = new SKPaint
             {
                 Color = s_gapTextColor,
-                TextSize = 10,
-                IsAntialias = true,
-                Typeface = s_segoeBold
+                IsAntialias = true
             };
             _gapBorderPaint.PathEffect = _gapDashEffect;
             _ctrlMeasureDashPaint.PathEffect = _ctrlDashEffect;
@@ -243,9 +247,9 @@ namespace IndiLogs_3._0.Controls.Charts
 
             _gridLinePaint = new SKPaint { Color = _gridColor.WithAlpha(80), IsAntialias = false, StrokeWidth = 1 };
             _axisLinePaint = new SKPaint { Color = _gridColor, IsAntialias = false, StrokeWidth = 1 };
-            _textPaintLeft = new SKPaint { Color = _textColor, TextSize = 11, IsAntialias = true, Typeface = s_segoeNormal };
-            _textPaintRight = new SKPaint { Color = _accentColor, TextSize = 11, IsAntialias = true, Typeface = s_segoeBold };
-            _stateTextPaint = new SKPaint { Color = SKColors.Black, TextSize = 12, IsAntialias = true, Typeface = s_segoeBold };
+            _textPaintLeft = new SKPaint { Color = _textColor, IsAntialias = true };
+            _textPaintRight = new SKPaint { Color = _accentColor, IsAntialias = true };
+            _stateTextPaint = new SKPaint { Color = SKColors.Black, IsAntialias = true };
             _stateFillPaint = new SKPaint { Style = SKPaintStyle.Fill };
             _targetLinePaint = new SKPaint { Color = _accentColor, StrokeWidth = 2, Style = SKPaintStyle.Stroke, IsAntialias = false };
             _cursorLinePaint = new SKPaint { Color = SKColors.Red, StrokeWidth = 1.5f, Style = SKPaintStyle.Stroke, IsAntialias = false };

@@ -1,4 +1,3 @@
-#pragma warning disable CS0618 // SKPaint text APIs are obsolete in favor of SKFont — suppress until SkiaSharp migration
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -75,6 +74,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
         private SKPaint _borderPaint = null!;
         private SKPaint _textPaint = null!;
+        private SKFont _textFont = null!;
         private SKPaint _cursorPaint = new SKPaint { Color = CursorColor, StrokeWidth = 2, Style = SKPaintStyle.Stroke };
         private SKPaint _gridPaint = null!;
 
@@ -84,11 +84,14 @@ namespace IndiLogs_3._0.Controls.Charts
         private readonly SKPaint _glowPaint = new SKPaint { Color = SKColors.White.WithAlpha(40), Style = SKPaintStyle.Fill, IsAntialias = true };
         private readonly SKPaint _edgePaint = new SKPaint { Style = SKPaintStyle.Stroke, StrokeWidth = 0.8f, IsAntialias = true };
         private readonly SKPaint _highlightBorderPaint = new SKPaint { Color = SKColors.White.WithAlpha(200), Style = SKPaintStyle.Stroke, StrokeWidth = 2, IsAntialias = true };
-        private readonly SKPaint _intervalLabelPaint = new SKPaint { TextSize = 9, IsAntialias = true, Typeface = s_segoeBold };
+        private readonly SKPaint _intervalLabelPaint = new SKPaint { IsAntialias = true };
+        private readonly SKFont _intervalLabelFont = new SKFont(s_segoeBold, 9);
 
         // ── Cached paints for labels, tooltips, cursors ──
-        private readonly SKPaint _labelPaint = new SKPaint { TextSize = 10, IsAntialias = true };
-        private readonly SKPaint _axisPaint = new SKPaint { TextSize = 9, IsAntialias = true };
+        private readonly SKPaint _labelPaint = new SKPaint { IsAntialias = true };
+        private readonly SKFont _labelFont = new SKFont(s_segoeNormal, 10);
+        private readonly SKPaint _axisPaint = new SKPaint { IsAntialias = true };
+        private readonly SKFont _axisFont = new SKFont { Size = 9 };
         private readonly SKPaint _cursorGlowPaint = new SKPaint { Color = CursorColor.WithAlpha(40), StrokeWidth = 6, Style = SKPaintStyle.Stroke, IsAntialias = true };
         private readonly SKPaint _eventHighlightPaint = new SKPaint { Color = SKColors.Red.WithAlpha(60), Style = SKPaintStyle.Fill, IsAntialias = true };
 
@@ -96,10 +99,12 @@ namespace IndiLogs_3._0.Controls.Charts
         private readonly SKPaint _tooltipShadowPaint = new SKPaint { Color = s_shadowColor, Style = SKPaintStyle.Fill, IsAntialias = true };
         private readonly SKPaint _tooltipBgPaint = new SKPaint { Style = SKPaintStyle.Fill, IsAntialias = true };
         private readonly SKPaint _tooltipBorderPaint = new SKPaint { Style = SKPaintStyle.Stroke, IsAntialias = true };
-        private readonly SKPaint _tooltipTextPaint = new SKPaint { TextSize = 11, IsAntialias = true, Typeface = s_consolas };
+        private readonly SKPaint _tooltipTextPaint = new SKPaint { IsAntialias = true };
+        private readonly SKFont _tooltipTextFont = new SKFont(s_consolas, 11);
         private readonly SKPaint _tooltipAccentPaint = new SKPaint { Style = SKPaintStyle.Fill, IsAntialias = true };
         // Label tooltip uses a separate text paint (Segoe Bold, size 11) and a separate border paint (accent blue)
-        private readonly SKPaint _labelTooltipTextPaint = new SKPaint { TextSize = 11, IsAntialias = true, Typeface = s_segoeBold };
+        private readonly SKPaint _labelTooltipTextPaint = new SKPaint { IsAntialias = true };
+        private readonly SKFont _labelTooltipTextFont = new SKFont(s_segoeBold, 11);
         private readonly SKPaint _labelTooltipBorderPaint = new SKPaint { Color = s_accentBlue, Style = SKPaintStyle.Stroke, StrokeWidth = 1f, IsAntialias = true };
 
         // Drag/Pan support
@@ -159,12 +164,14 @@ namespace IndiLogs_3._0.Controls.Charts
             // Dispose previous paints before creating new ones
             _borderPaint?.Dispose();
             _textPaint?.Dispose();
+            _textFont?.Dispose();
             _gridPaint?.Dispose();
             _eventDotPaint?.Dispose();
             _eventDotBorderPaint?.Dispose();
 
             _borderPaint = new SKPaint { Color = _borderColor, Style = SKPaintStyle.Stroke, StrokeWidth = 1 };
-            _textPaint = new SKPaint { Color = _textColor, TextSize = 10, IsAntialias = true, Typeface = s_segoeNormal };
+            _textPaint = new SKPaint { Color = _textColor, IsAntialias = true };
+            _textFont = new SKFont(s_segoeNormal, 10);
             _gridPaint = new SKPaint { Color = _gridColor, StrokeWidth = 1, Style = SKPaintStyle.Stroke };
             _eventDotPaint = new SKPaint { Color = SKColors.Red, Style = SKPaintStyle.Fill, IsAntialias = true };
             _eventDotBorderPaint = new SKPaint { Color = SKColors.DarkRed, Style = SKPaintStyle.Stroke, StrokeWidth = 1.5f, IsAntialias = true };
@@ -586,7 +593,7 @@ namespace IndiLogs_3._0.Controls.Charts
                         float barW = x2 - x1;
                         string stateLabel = !string.IsNullOrEmpty(interval.StateName)
                             ? interval.StateName : interval.StateId.ToString();
-                        float textWidth = _intervalLabelPaint.MeasureText(stateLabel);
+                        float textWidth = _intervalLabelFont.MeasureText(stateLabel);
                         if (textWidth < barW - 6 && barHeight > 10)
                         {
                             // Contrast text: white on dark colors, dark on light colors
@@ -594,7 +601,7 @@ namespace IndiLogs_3._0.Controls.Charts
                             _intervalLabelPaint.Color = brightness > 0.55f ? s_darkTextColor : SKColors.White;
                             float textX = x1 + (barW - textWidth) / 2;
                             float textY = barTop + barHeight / 2 + 3.5f;
-                            canvas.DrawText(stateLabel, textX, textY, _intervalLabelPaint);
+                            canvas.DrawText(stateLabel, textX, textY, _intervalLabelFont, _intervalLabelPaint);
                         }
                     }
                 }
@@ -609,7 +616,7 @@ namespace IndiLogs_3._0.Controls.Charts
             canvas.ClipRect(new SKRect(0, 0, w, chartBottom));
             rowIndex = 0;
             _labelPaint.Color = _textColor;
-            _labelPaint.Typeface = s_segoeNormal;
+            _labelFont.Typeface = s_segoeNormal;
             foreach (var stateData in _stateDataList)
             {
                 float rowTop = PADDING + (rowIndex * ROW_HEIGHT) - _verticalOffset;
@@ -628,15 +635,15 @@ namespace IndiLogs_3._0.Controls.Charts
                 if (isLabelHovered)
                 {
                     _labelPaint.Color = s_accentBlue;
-                    _labelPaint.Typeface = s_segoeBold;
+                    _labelFont.Typeface = s_segoeBold;
                 }
                 else
                 {
                     _labelPaint.Color = _textColor;
-                    _labelPaint.Typeface = s_segoeNormal;
+                    _labelFont.Typeface = s_segoeNormal;
                 }
 
-                canvas.DrawText(label, 5, rowTop + ROW_HEIGHT / 2 + 4, _labelPaint);
+                canvas.DrawText(label, 5, rowTop + ROW_HEIGHT / 2 + 4, _labelFont, _labelPaint);
 
                 // Draw subtle horizontal grid line
                 canvas.DrawLine(chartLeft, rowBottom + PADDING / 2, chartRight, rowBottom + PADDING / 2, _gridPaint);
@@ -656,7 +663,7 @@ namespace IndiLogs_3._0.Controls.Charts
                 _tooltipBgPaint.Color = _isLightTheme ? s_tooltipBgLight : s_tooltipBgDark;
                 _labelTooltipTextPaint.Color = _isLightTheme ? s_darkTextColor : SKColors.White;
 
-                float textW = _labelTooltipTextPaint.MeasureText(fullName);
+                float textW = _labelTooltipTextFont.MeasureText(fullName);
                 float ttW = textW + 16;
                 float ttH = 22;
                 float ttX = (float)_hoverPos.X + 10;
@@ -666,7 +673,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
                 canvas.DrawRoundRect(new SKRoundRect(new SKRect(ttX, ttY, ttX + ttW, ttY + ttH), 4), _tooltipBgPaint);
                 canvas.DrawRoundRect(new SKRoundRect(new SKRect(ttX, ttY, ttX + ttW, ttY + ttH), 4), _labelTooltipBorderPaint);
-                canvas.DrawText(fullName, ttX + 8, ttY + 15, _labelTooltipTextPaint);
+                canvas.DrawText(fullName, ttX + 8, ttY + 15, _labelTooltipTextFont, _labelTooltipTextPaint);
             }
 
             // Draw CHSTEP hover tooltip
@@ -826,7 +833,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
             float maxWidth = 0;
             foreach (var line in lines)
-                maxWidth = Math.Max(maxWidth, _tooltipTextPaint.MeasureText(line));
+                maxWidth = Math.Max(maxWidth, _tooltipTextFont.MeasureText(line));
 
             float tooltipW = maxWidth + 16;
             float tooltipH = lines.Length * 16 + 12;
@@ -839,7 +846,7 @@ namespace IndiLogs_3._0.Controls.Charts
             float ty = y + 16;
             foreach (var line in lines)
             {
-                canvas.DrawText(line, x + 8, ty, _tooltipTextPaint);
+                canvas.DrawText(line, x + 8, ty, _tooltipTextFont, _tooltipTextPaint);
                 ty += 16;
             }
         }
@@ -855,7 +862,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
             float maxWidth = 0;
             foreach (var line in lines)
-                maxWidth = Math.Max(maxWidth, _tooltipTextPaint.MeasureText(line));
+                maxWidth = Math.Max(maxWidth, _tooltipTextFont.MeasureText(line));
 
             float tooltipW = maxWidth + 20;
             float tooltipH = lines.Length * 16 + 14;
@@ -888,7 +895,7 @@ namespace IndiLogs_3._0.Controls.Charts
             float ty = y + 16;
             foreach (var line in lines)
             {
-                canvas.DrawText(line, x + 10, ty, _tooltipTextPaint);
+                canvas.DrawText(line, x + 10, ty, _tooltipTextFont, _tooltipTextPaint);
                 ty += 16;
             }
         }
@@ -917,10 +924,10 @@ namespace IndiLogs_3._0.Controls.Charts
 
                     // Draw label
                     string label = GetXAxisLabel?.Invoke(index) ?? index.ToString();
-                    float textWidth = _axisPaint.MeasureText(label);
+                    float textWidth = _axisFont.MeasureText(label);
                     float textX = x - textWidth / 2;
                     textX = Math.Max(chartLeft, Math.Min(textX, chartRight - textWidth));
-                    canvas.DrawText(label, textX, chartBottom + 14, _axisPaint);
+                    canvas.DrawText(label, textX, chartBottom + 14, _axisFont, _axisPaint);
                 }
             }
         }

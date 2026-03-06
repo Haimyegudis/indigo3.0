@@ -1,4 +1,3 @@
-#pragma warning disable CS0618 // SKPaint text APIs are obsolete in favor of SKFont — suppress until SkiaSharp migration
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -146,8 +145,10 @@ namespace IndiLogs_3._0.Controls
         private SKPaint _edgePaint = null!;
         private SKPaint _highlightBorderPaint = null!;
         private SKPaint _labelPaint = null!;
+        private SKFont _labelFont = null!;
         private SKPaint _axisPaint = null!;
         private SKPaint _axisTextPaint = null!;
+        private SKFont _axisTextFont = null!;
 
         // Cached paints for draw helpers (DrawHazardPattern, DrawErrorMarker, DrawEventMarker, DrawTooltip)
         private readonly SKPaint _hazardStripePaint = new SKPaint { Color = new SKColor(255, 255, 255, 60), StrokeWidth = 4, Style = SKPaintStyle.Stroke, IsAntialias = true };
@@ -156,7 +157,8 @@ namespace IndiLogs_3._0.Controls
         private readonly SKPaint _markerFillPaint = new SKPaint { Style = SKPaintStyle.Fill, IsAntialias = true };
         private readonly SKPaint _markerBorderPaint = new SKPaint { Color = SKColors.White.WithAlpha(180), StrokeWidth = 1.2f, Style = SKPaintStyle.Stroke, IsAntialias = true };
         private readonly SKPaint _markerXPaint = new SKPaint { Color = SKColors.White, StrokeWidth = 2, Style = SKPaintStyle.Stroke, IsAntialias = true, StrokeCap = SKStrokeCap.Round };
-        private readonly SKPaint _tooltipTextPaint = new SKPaint { TextSize = 11, IsAntialias = true };
+        private readonly SKPaint _tooltipTextPaint = new SKPaint { IsAntialias = true };
+        private readonly SKFont _tooltipTextFont = new SKFont { Size = 11 };
         private readonly SKPaint _tooltipShadowPaint = new SKPaint { Color = SKColor.Parse("#60000000"), Style = SKPaintStyle.Fill, IsAntialias = true };
         private readonly SKPaint _tooltipBgPaint = new SKPaint { Style = SKPaintStyle.Fill, IsAntialias = true };
         private readonly SKPaint _tooltipBorderPaint = new SKPaint { Style = SKPaintStyle.Stroke, StrokeWidth = 1.5f, IsAntialias = true };
@@ -240,9 +242,11 @@ namespace IndiLogs_3._0.Controls
             _glowPaint = new SKPaint { Color = SKColors.White.WithAlpha(40), Style = SKPaintStyle.Fill, IsAntialias = true };
             _edgePaint = new SKPaint { Style = SKPaintStyle.Stroke, StrokeWidth = 0.8f, IsAntialias = true };
             _highlightBorderPaint = new SKPaint { Color = SKColors.White.WithAlpha(200), Style = SKPaintStyle.Stroke, StrokeWidth = 2, IsAntialias = true };
-            _labelPaint = new SKPaint { TextSize = 12, IsAntialias = true, Typeface = s_segoeUIBold };
+            _labelPaint = new SKPaint { IsAntialias = true };
+            _labelFont = new SKFont(s_segoeUIBold, 12);
             _axisPaint = new SKPaint { StrokeWidth = 1, Style = SKPaintStyle.Stroke };
-            _axisTextPaint = new SKPaint { TextSize = 11, IsAntialias = true, Typeface = s_segoeUI };
+            _axisTextPaint = new SKPaint { IsAntialias = true };
+            _axisTextFont = new SKFont(s_segoeUI, 11);
         }
 
         #endregion
@@ -450,13 +454,13 @@ namespace IndiLogs_3._0.Controls
                     string displayText = state.Name;
                     if (isCriticalFailure) displayText += " (FAILED!)";
 
-                    float textWidth = _labelPaint.MeasureText(displayText);
+                    float textWidth = _labelFont.MeasureText(displayText);
                     if (textWidth > barW - 10)
                     {
-                        while (displayText.Length > 3 && _labelPaint.MeasureText(displayText + "..") > barW - 10)
+                        while (displayText.Length > 3 && _labelFont.MeasureText(displayText + "..") > barW - 10)
                             displayText = displayText.Substring(0, displayText.Length - 1);
                         displayText += "..";
-                        textWidth = _labelPaint.MeasureText(displayText);
+                        textWidth = _labelFont.MeasureText(displayText);
                     }
 
                     float brightness = (baseColor.Red * 0.299f + baseColor.Green * 0.587f + baseColor.Blue * 0.114f) / 255f;
@@ -464,7 +468,7 @@ namespace IndiLogs_3._0.Controls
 
                     float textX = x1 + (barW - textWidth) / 2;
                     float textY = TIMELINE_Y + BAR_HEIGHT / 2 + 4.5f;
-                    canvas.DrawText(displayText, textX, textY, _labelPaint);
+                    canvas.DrawText(displayText, textX, textY, _labelFont, _labelPaint);
                 }
             }
 
@@ -622,8 +626,8 @@ namespace IndiLogs_3._0.Controls
 
                 DateTime absoluteTime = startTime.AddSeconds(t);
                 string label = absoluteTime.ToString("HH:mm:ss");
-                float tw = _axisTextPaint.MeasureText(label);
-                canvas.DrawText(label, x - tw / 2, y + 20, _axisTextPaint);
+                float tw = _axisTextFont.MeasureText(label);
+                canvas.DrawText(label, x - tw / 2, y + 20, _axisTextFont, _axisTextPaint);
             }
         }
 
@@ -656,12 +660,12 @@ namespace IndiLogs_3._0.Controls
             else return;
 
             _tooltipTextPaint.Color = _isLightTheme ? s_darkTextColor : SKColors.White;
-            _tooltipTextPaint.Typeface = s_consolas;
+            _tooltipTextFont.Typeface = s_consolas;
             {
-                var textPaint = _tooltipTextPaint;
+                var textFont = _tooltipTextFont;
                 float maxWidth = 0;
                 foreach (var line in lines)
-                    maxWidth = Math.Max(maxWidth, textPaint.MeasureText(line));
+                    maxWidth = Math.Max(maxWidth, textFont.MeasureText(line));
 
                 float accentBarWidth = 4;
                 float tooltipW = maxWidth + 20 + accentBarWidth;
@@ -692,7 +696,7 @@ namespace IndiLogs_3._0.Controls
                 float ty = y + 16;
                 foreach (var line in lines)
                 {
-                    canvas.DrawText(line, x + accentBarWidth + 8, ty, textPaint);
+                    canvas.DrawText(line, x + accentBarWidth + 8, ty, textFont, _tooltipTextPaint);
                     ty += 16;
                 }
             }

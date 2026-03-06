@@ -1,4 +1,3 @@
-#pragma warning disable CS0618 // SKPaint text APIs are obsolete in favor of SKFont — suppress until SkiaSharp migration
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -47,10 +46,10 @@ namespace IndiLogs_3._0.Controls.Charts
                     canvas.DrawRect(new SKRect(chartLeft + x1, chartTop, chartLeft + x2, chartBottom), _stateFillPaint);
 
                     string nm = ChartStateConfig.GetName(st.StateId);
-                    float tw = _stateTextPaint.MeasureText(nm);
+                    float tw = _stateTextFont.MeasureText(nm);
                     if (tw < (x2 - x1) - 4)
                     {
-                        canvas.DrawText(nm, (float)Math.Round(chartLeft + x1 + (x2 - x1) / 2 - tw / 2), (float)Math.Round(chartTop + 14), _stateTextPaint);
+                        canvas.DrawText(nm, (float)Math.Round(chartLeft + x1 + (x2 - x1) / 2 - tw / 2), (float)Math.Round(chartTop + 14), _stateTextFont, _stateTextPaint);
                     }
                 }
             }
@@ -76,15 +75,15 @@ namespace IndiLogs_3._0.Controls.Charts
                     if (!string.IsNullOrEmpty(gap.Duration))
                     {
                         string label = $"GAP {gap.Duration}";
-                        float tw = _gapTextPaint.MeasureText(label);
+                        float tw = _gapTextFont.MeasureText(label);
                         float labelX = gx1 + (gx2 - gx1) / 2 - tw / 2;
                         if (tw < (gx2 - gx1) - 4)
                         {
-                            canvas.DrawText(label, labelX, chartTop + 12, _gapTextPaint);
+                            canvas.DrawText(label, labelX, chartTop + 12, _gapTextFont, _gapTextPaint);
                         }
                         else
                         {
-                            canvas.DrawText("GAP", gx1 + 2, chartTop + 12, _gapTextPaint);
+                            canvas.DrawText("GAP", gx1 + 2, chartTop + 12, _gapTextFont, _gapTextPaint);
                         }
                     }
                 }
@@ -151,13 +150,13 @@ namespace IndiLogs_3._0.Controls.Charts
                 if (hasLeft || !hasRight)
                 {
                     string lbl = (lDisplayMin + (ratio * lRange)).ToString("0.##");
-                    float lblW = _textPaintLeft.MeasureText(lbl);
-                    canvas.DrawText(lbl, chartLeft - lblW - 6, yPos + 4, _textPaintLeft);
+                    float lblW = _textFontLeft.MeasureText(lbl);
+                    canvas.DrawText(lbl, chartLeft - lblW - 6, yPos + 4, _textFontLeft, _textPaintLeft);
                 }
                 if (hasRight)
                 {
                     string lbl = (rDisplayMin + (ratio * rRange)).ToString("0.##");
-                    canvas.DrawText(lbl, chartRight + 6, yPos + 4, _textPaintRight);
+                    canvas.DrawText(lbl, chartRight + 6, yPos + 4, _textFontRight, _textPaintRight);
                 }
             }
 
@@ -180,11 +179,11 @@ namespace IndiLogs_3._0.Controls.Charts
                     string t = GetXAxisLabel(idx);
                     if (!string.IsNullOrEmpty(t))
                     {
-                        float txtW = _textPaintLeft.MeasureText(t);
+                        float txtW = _textFontLeft.MeasureText(t);
                         float tl = (float)Math.Round(xPos - txtW / 2);
                         if (tl > lastTextRight + 20)
                         {
-                            canvas.DrawText(t, tl, chartBottom + 16, _textPaintLeft);
+                            canvas.DrawText(t, tl, chartBottom + 16, _textFontLeft, _textPaintLeft);
                             lastTextRight = tl + txtW;
                         }
                     }
@@ -211,7 +210,7 @@ namespace IndiLogs_3._0.Controls.Charts
                             if (!string.IsNullOrEmpty(line.Name))
                             {
                                 _refLineTextPaint.Color = line.Color;
-                                canvas.DrawText(line.Name, x + 4, chartTop + 12, _refLineTextPaint);
+                                canvas.DrawText(line.Name, x + 4, chartTop + 12, _refLineTextFont, _refLineTextPaint);
                             }
                         }
                     }
@@ -228,7 +227,7 @@ namespace IndiLogs_3._0.Controls.Charts
                             if (!string.IsNullOrEmpty(line.Name))
                             {
                                 _refLineTextPaint.Color = line.Color;
-                                canvas.DrawText(line.Name, chartLeft + 4, y - 4, _refLineTextPaint);
+                                canvas.DrawText(line.Name, chartLeft + 4, y - 4, _refLineTextFont, _refLineTextPaint);
                             }
                         }
                     }
@@ -634,7 +633,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
             foreach (var line in ls)
             {
-                float w = _tooltipMeasurePaint.MeasureText(line);
+                float w = _tooltipMeasureFont.MeasureText(line);
                 if (w > maxWidth) maxWidth = w;
             }
 
@@ -657,7 +656,7 @@ namespace IndiLogs_3._0.Controls.Charts
             float ty = y + 14;
             foreach (var l in ls)
             {
-                c.DrawText(l, x + 5, ty, _tooltipTextPaint);
+                c.DrawText(l, x + 5, ty, _tooltipTextFont, _tooltipTextPaint);
                 ty += 16;
             }
         }

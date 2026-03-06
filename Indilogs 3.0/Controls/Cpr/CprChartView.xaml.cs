@@ -1,4 +1,3 @@
-#pragma warning disable CS0618 // SKPaint text APIs are obsolete in favor of SKFont — suppress until SkiaSharp migration
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -41,10 +40,12 @@ namespace IndiLogs_3._0.Controls.Cpr
 
         // Cached paints for hot render path (DrawSingleSubplot + DrawSubplotYAxis — called N times per frame)
         private readonly SKPaint _subplotTitlePaint = new SKPaint { IsAntialias = true };
+        private readonly SKFont _subplotTitleFont = new SKFont();
         private readonly SKPaint _subplotBorderPaint = new SKPaint { Style = SKPaintStyle.Stroke, StrokeWidth = 1, IsAntialias = false };
         private readonly SKPaint _subplotDotPaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill };
         private readonly SKPaint _subplotLinePaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke };
         private readonly SKPaint _subplotAxisTextPaint = new SKPaint { IsAntialias = true };
+        private readonly SKFont _subplotAxisTextFont = new SKFont();
 
         // Cached paints for histogram and curve rendering
         private readonly SKPaint _histBarPaint = new SKPaint { IsAntialias = false, Style = SKPaintStyle.Fill };
@@ -53,19 +54,24 @@ namespace IndiLogs_3._0.Controls.Cpr
         // Cached paints for grid, axis, labels, tooltips
         private readonly SKPaint _gridPaint = new SKPaint { IsAntialias = false, StrokeWidth = 1 };
         private readonly SKPaint _axisPaint = new SKPaint { IsAntialias = false, StrokeWidth = 1 };
-        private readonly SKPaint _axisTextPaint = new SKPaint { TextSize = 10, IsAntialias = true };
-        private readonly SKPaint _axisLabelPaint = new SKPaint { TextSize = 10, IsAntialias = true };
+        private readonly SKPaint _axisTextPaint = new SKPaint { IsAntialias = true };
+        private readonly SKFont _axisTextFont = new SKFont { Size = 10 };
+        private readonly SKPaint _axisLabelPaint = new SKPaint { IsAntialias = true };
+        private readonly SKFont _axisLabelFont = new SKFont { Size = 10 };
         private readonly SKPaint _zeroLinePaint = new SKPaint { IsAntialias = false, StrokeWidth = 1.5f };
         private readonly SKPaint _dftMarkerPaint = new SKPaint { IsAntialias = false, StrokeWidth = 1 };
-        private readonly SKPaint _dftLabelPaint = new SKPaint { TextSize = 9, IsAntialias = true };
+        private readonly SKPaint _dftLabelPaint = new SKPaint { IsAntialias = true };
+        private readonly SKFont _dftLabelFont = new SKFont { Size = 9 };
 
         // Cached paints for hover tooltip and crosshair
         private readonly SKPaint _crosshairPaint = new SKPaint { IsAntialias = false, StrokeWidth = 1 };
         private readonly SKPaint _tooltipBgPaint = new SKPaint { Style = SKPaintStyle.Fill };
         private readonly SKPaint _tooltipBorderPaint = new SKPaint { Style = SKPaintStyle.Stroke, StrokeWidth = 1 };
-        private readonly SKPaint _tooltipTextPaint = new SKPaint { TextSize = 10, IsAntialias = true };
+        private readonly SKPaint _tooltipTextPaint = new SKPaint { IsAntialias = true };
+        private readonly SKFont _tooltipTextFont = new SKFont { Size = 10 };
         private readonly SKPaint _tooltipColorPaint = new SKPaint { IsAntialias = false, StrokeWidth = 2 };
-        private readonly SKPaint _noDataPaint = new SKPaint { TextSize = 16, IsAntialias = true };
+        private readonly SKPaint _noDataPaint = new SKPaint { IsAntialias = true };
+        private readonly SKFont _noDataFont = new SKFont { Size = 16 };
 
         // Zoom event for sync
         public event Action<double, double, double, double>? ZoomChanged;

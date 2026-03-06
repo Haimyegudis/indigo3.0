@@ -1,4 +1,3 @@
-#pragma warning disable CS0618 // SKPaint text APIs are obsolete in favor of SKFont — suppress until SkiaSharp migration
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Models.Charts;
 using IndiLogs_3._0.ViewModels;
@@ -68,10 +67,14 @@ namespace IndiLogs_3._0.Views
         };
 
         // Cached SKPaint instances — created once, reused per frame
-        private readonly SKPaint _cachedTextPaint11 = new SKPaint { TextSize = 11, IsAntialias = true, Typeface = s_segoeUI };
-        private readonly SKPaint _cachedTextPaint11Bold = new SKPaint { TextSize = 11, IsAntialias = true, Typeface = s_segoeUIBold };
-        private readonly SKPaint _cachedTextPaint10 = new SKPaint { TextSize = 10, IsAntialias = true, Typeface = s_segoeUI };
-        private readonly SKPaint _cachedTextPaint9 = new SKPaint { TextSize = 9, IsAntialias = true, Typeface = s_segoeUI };
+        private readonly SKPaint _cachedTextPaint11 = new SKPaint { IsAntialias = true };
+        private readonly SKFont _cachedTextFont11 = new SKFont(s_segoeUI, 11);
+        private readonly SKPaint _cachedTextPaint11Bold = new SKPaint { IsAntialias = true };
+        private readonly SKFont _cachedTextFont11Bold = new SKFont(s_segoeUIBold, 11);
+        private readonly SKPaint _cachedTextPaint10 = new SKPaint { IsAntialias = true };
+        private readonly SKFont _cachedTextFont10 = new SKFont(s_segoeUI, 10);
+        private readonly SKPaint _cachedTextPaint9 = new SKPaint { IsAntialias = true };
+        private readonly SKFont _cachedTextFont9 = new SKFont(s_segoeUI, 9);
         private readonly SKPaint _cachedFillPaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill };
         private readonly SKPaint _cachedStrokePaint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke };
         private readonly SKPaint _cachedGridPaint = new SKPaint { StrokeWidth = 1, IsAntialias = false };
@@ -302,10 +305,10 @@ namespace IndiLogs_3._0.Views
                 }
 
                 string label = item.Name.Length > 22 ? item.Name.Substring(0, 19) + "..." : item.Name;
-                canvas.DrawText(label, 5, y + barHeight / 2 + 4, _cachedTextPaint11);
+                canvas.DrawText(label, 5, y + barHeight / 2 + 4, _cachedTextFont11, _cachedTextPaint11);
 
                 string valueText = item.Count.ToString("N0");
-                canvas.DrawText(valueText, leftMargin + barW + 6, y + barHeight / 2 + 4, _cachedTextPaint11Bold);
+                canvas.DrawText(valueText, leftMargin + barW + 6, y + barHeight / 2 + 4, _cachedTextFont11Bold, _cachedTextPaint11Bold);
             }
 
             if (_hoveredBarIndex >= 0 && _hoveredBarIndex < data.Count)
@@ -418,7 +421,7 @@ namespace IndiLogs_3._0.Views
                     float ly = cy + exY + (float)(labelR * Math.Sin(midAngle * Math.PI / 180));
                     _cachedTextPaint11Bold.Color = SKColors.White;
                     _cachedTextPaint11Bold.TextAlign = SKTextAlign.Center;
-                    canvas.DrawText($"{(float)item.Count / total * 100:F0}%", lx, ly + 4, _cachedTextPaint11Bold);
+                    canvas.DrawText($"{(float)item.Count / total * 100:F0}%", lx, ly + 4, _cachedTextFont11Bold, _cachedTextPaint11Bold);
                 }
 
                 startAngle += sweep;
@@ -442,8 +445,8 @@ namespace IndiLogs_3._0.Views
                 string name = item.State.Length > 16 ? item.State.Substring(0, 13) + "..." : item.State;
                 _cachedTextPaint11.Color = isHov ? _chartText : _chartTextDim;
                 _cachedTextPaint11.TextAlign = SKTextAlign.Left;
-                canvas.DrawText(name, legendX + 18, legendY + 11, _cachedTextPaint11);
-                canvas.DrawText($"({item.Count})", legendX + 18, legendY + 24, _cachedTextPaint10);
+                canvas.DrawText(name, legendX + 18, legendY + 11, _cachedTextFont11, _cachedTextPaint11);
+                canvas.DrawText($"({item.Count})", legendX + 18, legendY + 24, _cachedTextFont10, _cachedTextPaint10);
                 legendY += 30;
             }
 
@@ -536,7 +539,7 @@ namespace IndiLogs_3._0.Views
                         _cachedTextPaint9.Color = SKColors.Black;
                         _cachedTextPaint9.TextAlign = SKTextAlign.Center;
                         float labelX = x1 + bandWidth / 2;
-                        canvas.DrawText(state.StateName, labelX, topM + 11, _cachedTextPaint9);
+                        canvas.DrawText(state.StateName, labelX, topM + 11, _cachedTextFont9, _cachedTextPaint9);
                     }
                 }
             }
@@ -638,7 +641,7 @@ namespace IndiLogs_3._0.Views
                 {
                     float y = topM + (chartH / gridLines) * i;
                     int val = (int)(maxVal * (1.0 - (double)i / gridLines));
-                    canvas.DrawText(val.ToString(), leftM - 6, y + 4, _cachedTextPaint10);
+                    canvas.DrawText(val.ToString(), leftM - 6, y + 4, _cachedTextFont10, _cachedTextPaint10);
                 }
             }
 
@@ -652,7 +655,7 @@ namespace IndiLogs_3._0.Views
                     int i = zStart + vi;
                     float x = leftM + vi * stepW + stepW / 2;
                     var time = _vm.TimelineFirstTime.AddSeconds(i * _vm.TimelineBucketSize);
-                    canvas.DrawText(time.ToString("HH:mm:ss"), x, topM + chartH + 18, _cachedTextPaint10);
+                    canvas.DrawText(time.ToString("HH:mm:ss"), x, topM + chartH + 18, _cachedTextFont10, _cachedTextPaint10);
                 }
             }
 
@@ -662,7 +665,7 @@ namespace IndiLogs_3._0.Views
                 string zoomText = $"Zoom: {visibleCount}/{_vm.TimelineBucketCount} buckets  (Scroll to zoom, Shift+Scroll to pan)";
                 _cachedTextPaint9.Color = _chartTextDim.WithAlpha(150);
                 _cachedTextPaint9.TextAlign = SKTextAlign.Right;
-                canvas.DrawText(zoomText, w - rightM, topM + chartH + 30, _cachedTextPaint9);
+                canvas.DrawText(zoomText, w - rightM, topM + chartH + 30, _cachedTextFont9, _cachedTextPaint9);
             }
 
             // Hover tooltip
@@ -743,7 +746,7 @@ namespace IndiLogs_3._0.Views
             float maxW = 0;
             foreach (var line in lines)
             {
-                float lw = _cachedTextPaint11.MeasureText(line);
+                float lw = _cachedTextFont11.MeasureText(line);
                 if (lw > maxW) maxW = lw;
             }
             float boxW = maxW + padding * 2;
@@ -765,7 +768,7 @@ namespace IndiLogs_3._0.Views
 
             _cachedTextPaint11.Color = _chartText;
             for (int i = 0; i < lines.Length; i++)
-                canvas.DrawText(lines[i], x + padding, y + padding + (i + 1) * lineH - 3, _cachedTextPaint11);
+                canvas.DrawText(lines[i], x + padding, y + padding + (i + 1) * lineH - 3, _cachedTextFont11, _cachedTextPaint11);
         }
     }
 

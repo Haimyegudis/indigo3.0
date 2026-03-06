@@ -1,4 +1,3 @@
-#pragma warning disable CS0618 // SKPaint text APIs are obsolete in favor of SKFont — suppress until SkiaSharp migration
 using System;
 using System.Linq;
 using IndiLogs_3._0.Models.Cpr;
@@ -186,10 +185,10 @@ namespace IndiLogs_3._0.Controls.Cpr
 
             // Subplot title (reuse cached paint)
             _subplotTitlePaint.Color = _textColor;
-            _subplotTitlePaint.TextSize = 11;
-            _subplotTitlePaint.Typeface = s_segoeNormal;
-            float titleW = _subplotTitlePaint.MeasureText(subplot.Title);
-            canvas.DrawText(subplot.Title, (chartLeft + chartRight - titleW) / 2, chartTop - 6, _subplotTitlePaint);
+            _subplotTitleFont.Size = 11;
+            _subplotTitleFont.Typeface = s_segoeNormal;
+            float titleW = _subplotTitleFont.MeasureText(subplot.Title);
+            canvas.DrawText(subplot.Title, (chartLeft + chartRight - titleW) / 2, chartTop - 6, _subplotTitleFont, _subplotTitlePaint);
 
             // Y-axis labels (3 ticks)
             DrawSubplotYAxis(canvas, chartLeft, chartTop, chartBottom, yMin, yMax);
@@ -243,8 +242,8 @@ namespace IndiLogs_3._0.Controls.Cpr
         private void DrawSubplotYAxis(SKCanvas canvas, float chartLeft, float chartTop, float chartBottom, double yMin, double yMax)
         {
             _subplotAxisTextPaint.Color = _textColor;
-            _subplotAxisTextPaint.TextSize = 9;
-            _subplotAxisTextPaint.Typeface = s_segoeNormal;
+            _subplotAxisTextFont.Size = 9;
+            _subplotAxisTextFont.Typeface = s_segoeNormal;
 
             int nTicks = 3;
             for (int i = 0; i <= nTicks; i++)
@@ -252,8 +251,8 @@ namespace IndiLogs_3._0.Controls.Cpr
                 double val = yMin + (yMax - yMin) * i / nTicks;
                 float y = chartBottom - (chartBottom - chartTop) * i / nTicks;
                 string label = FormatTickLabel(val);
-                float tw = _subplotAxisTextPaint.MeasureText(label);
-                canvas.DrawText(label, chartLeft - tw - 3, y + 3, _subplotAxisTextPaint);
+                float tw = _subplotAxisTextFont.MeasureText(label);
+                canvas.DrawText(label, chartLeft - tw - 3, y + 3, _subplotAxisTextFont, _subplotAxisTextPaint);
             }
         }
 
