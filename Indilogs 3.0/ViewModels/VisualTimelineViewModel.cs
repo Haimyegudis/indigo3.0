@@ -82,7 +82,7 @@ namespace IndiLogs_3._0.ViewModels
             // 1. Process logs and build state timeline
             if (sortedLogs.Any())
             {
-                TimelineState currentState = null;
+                TimelineState? currentState = null;
                 foreach (var log in sortedLogs)
                 {
                     // ── Error detection ──
@@ -132,22 +132,22 @@ namespace IndiLogs_3._0.ViewModels
 
                     // ── S6 state transitions: PlcMngr: OLD -> NEW ──
                     if (StateTransitionHelper.IsS6StateTransition(log) &&
-                        StateTransitionHelper.TryParseTransition(log.Message, out _, out string newStateName))
+                        StateTransitionHelper.TryParseTransition(log.Message, out _, out string? newStateName))
                     {
 
                         if (currentState != null)
                         {
                             currentState.EndTime = log.Date;
                             if (currentState.Status != "FAILED")
-                                currentState.Status = DetermineStatus(currentState.Name, newStateName, currentState.ErrorCount);
+                                currentState.Status = DetermineStatus(currentState.Name, newStateName!, currentState.ErrorCount);
                             States.Add(currentState);
                         }
 
                         currentState = new TimelineState
                         {
-                            Name = newStateName,
+                            Name = newStateName!,
                             StartTime = log.Date,
-                            Color = GetColorForState(newStateName),
+                            Color = GetColorForState(newStateName!),
                             Status = "RUNNING"
                         };
                     }

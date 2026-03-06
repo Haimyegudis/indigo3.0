@@ -15,8 +15,8 @@ namespace IndiLogs_3._0.Services
         private readonly ConcurrentDictionary<string, Regex> _regexCache = new ConcurrentDictionary<string, Regex>();
 
         // User-configurable default coloring rules (loaded from _defaults.json)
-        public List<ColoringCondition> UserDefaultMainRules { get; set; }
-        public List<ColoringCondition> UserDefaultAppRules { get; set; }
+        public List<ColoringCondition>? UserDefaultMainRules { get; set; }
+        public List<ColoringCondition>? UserDefaultAppRules { get; set; }
 
         /// <summary>
         /// Applies default colors. Uses user-configured rules if available, otherwise falls back to factory defaults.

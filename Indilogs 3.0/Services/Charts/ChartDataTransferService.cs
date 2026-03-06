@@ -147,8 +147,8 @@ namespace IndiLogs_3._0.Services.Charts
             bool wantState = preset.IncludeMachineState;
             bool wantEvents = preset.IncludeEvents;
 
-            HashSet<string> threadSet = wantThreads
-                ? new HashSet<string>(preset.SelectedThreads, StringComparer.OrdinalIgnoreCase)
+            HashSet<string>? threadSet = wantThreads
+                ? new HashSet<string>(preset.SelectedThreads!, StringComparer.OrdinalIgnoreCase)
                 : null;
 
             progress?.Report((5, "Classifying logs (single pass)..."));
@@ -189,25 +189,25 @@ namespace IndiLogs_3._0.Services.Charts
                     {
                         if (wantIO && (msg.StartsWith("IO_Mon:", StringComparison.OrdinalIgnoreCase) ||
                                        msg.StartsWith("IO:", StringComparison.OrdinalIgnoreCase)))
-                            ioLogs.Add(log);
+                            ioLogs!.Add(log);
                     }
                     else if (fc == 'A' || fc == 'a')
                     {
                         if (wantAxis && (msg.StartsWith("AxisMon:", StringComparison.OrdinalIgnoreCase) ||
                                          msg.StartsWith("AxM:", StringComparison.OrdinalIgnoreCase)))
-                            axisLogs.Add(log);
+                            axisLogs!.Add(log);
                     }
                     else if (fc == 'C' || fc == 'c')
                     {
                         if (wantCHStep && msg.StartsWith("CHStep:", StringComparison.OrdinalIgnoreCase))
-                            chStepLogs.Add(log);
+                            chStepLogs!.Add(log);
                     }
                     else if (wantState && (fc == 'P' || fc == 'p'))
                     {
                         if (msg.StartsWith("PlcMngr:", StringComparison.OrdinalIgnoreCase) && msg.Contains("->"))
                         {
                             if (log.ThreadName != null && log.ThreadName.Equals("Manager", StringComparison.OrdinalIgnoreCase))
-                                s6StateLogs.Add(log);
+                                s6StateLogs!.Add(log);
                         }
                     }
 
@@ -219,11 +219,11 @@ namespace IndiLogs_3._0.Services.Charts
                 // Events by ThreadName
                 if (wantEvents && !string.IsNullOrEmpty(msg) &&
                     string.Equals(log.ThreadName, "Events", StringComparison.OrdinalIgnoreCase))
-                    eventLogs.Add(log);
+                    eventLogs!.Add(log);
 
                 // Thread messages
-                if (wantThreads && !string.IsNullOrEmpty(log.ThreadName) && threadSet.Contains(log.ThreadName))
-                    threadLogs.Add(log);
+                if (wantThreads && !string.IsNullOrEmpty(log.ThreadName) && threadSet!.Contains(log.ThreadName))
+                    threadLogs!.Add(log);
 
                 // Report progress every ~64K entries
                 if ((i & 0xFFFF) == 0)
@@ -250,24 +250,24 @@ namespace IndiLogs_3._0.Services.Charts
                 timeIndexLookup[timestamps[i]] = i;
 
             // ── Parse IO + Axis in PARALLEL (independent data, independent lists) ──
-            List<SignalData> ioSignals = null;
-            List<SignalData> axisSignals = null;
+            List<SignalData>? ioSignals = null;
+            List<SignalData>? axisSignals = null;
 
             if (wantIO || wantAxis)
             {
-                progress?.Report((20, $"Parsing {(wantIO ? preset.SelectedIOComponents.Count : 0)} IO + {(wantAxis ? preset.SelectedAxisComponents.Count : 0)} Axis signals..."));
+                progress?.Report((20, $"Parsing {(wantIO ? preset.SelectedIOComponents!.Count : 0)} IO + {(wantAxis ? preset.SelectedAxisComponents!.Count : 0)} Axis signals..."));
                 AppLogger.Info($"[ChartBuild] Parallel IO+Axis: IO={ioLogs?.Count ?? 0:N0} msgs, Axis={axisLogs?.Count ?? 0:N0} msgs");
 
                 System.Threading.Tasks.Parallel.Invoke(
                     () =>
                     {
                         if (wantIO)
-                            ioSignals = ParseIOSignals(ioLogs, preset.SelectedIOComponents, dataLength, timeIndexLookup, signalProgress);
+                            ioSignals = ParseIOSignals(ioLogs!, preset.SelectedIOComponents!, dataLength, timeIndexLookup, signalProgress);
                     },
                     () =>
                     {
                         if (wantAxis)
-                            axisSignals = ParseAxisSignals(axisLogs, preset.SelectedAxisComponents, dataLength, timeIndexLookup, signalProgress);
+                            axisSignals = ParseAxisSignals(axisLogs!, preset.SelectedAxisComponents!, dataLength, timeIndexLookup, signalProgress);
                     }
                 );
 
@@ -285,8 +285,8 @@ namespace IndiLogs_3._0.Services.Charts
 
             if (wantCHStep)
             {
-                progress?.Report((55, $"Parsing {preset.SelectedCHSteps.Count} CHStep states from {chStepLogs.Count:N0} msgs..."));
-                AppLogger.Info($"[ChartBuild] Parsing CHStep: {preset.SelectedCHSteps.Count} selected from {chStepLogs.Count:N0} classified msgs");
+                progress?.Report((55, $"Parsing {preset.SelectedCHSteps!.Count} CHStep states from {chStepLogs!.Count:N0} msgs..."));
+                AppLogger.Info($"[ChartBuild] Parsing CHStep: {preset.SelectedCHSteps!.Count} selected from {chStepLogs!.Count:N0} classified msgs");
                 var states = ParseCHStepStates(chStepLogs, preset.SelectedCHSteps, timeIndexLookup);
                 package.States.AddRange(states);
                 AppLogger.Info($"[ChartBuild] CHStep result: {states.Count} state tracks");
@@ -294,8 +294,8 @@ namespace IndiLogs_3._0.Services.Charts
 
             if (wantThreads)
             {
-                progress?.Report((68, $"Parsing {preset.SelectedThreads.Count} threads from {threadLogs.Count:N0} msgs..."));
-                AppLogger.Info($"[ChartBuild] Parsing Threads: {preset.SelectedThreads.Count} selected from {threadLogs.Count:N0} classified msgs");
+                progress?.Report((68, $"Parsing {preset.SelectedThreads!.Count} threads from {threadLogs!.Count:N0} msgs..."));
+                AppLogger.Info($"[ChartBuild] Parsing Threads: {preset.SelectedThreads!.Count} selected from {threadLogs!.Count:N0} classified msgs");
                 var messages = ParseThreadMessages(threadLogs, preset.SelectedThreads, timeIndexLookup);
                 package.ThreadMessages.AddRange(messages);
                 AppLogger.Info($"[ChartBuild] Thread result: {messages.Count} messages");
@@ -305,7 +305,7 @@ namespace IndiLogs_3._0.Services.Charts
             {
                 progress?.Report((80, "Parsing machine state..."));
                 AppLogger.Info("[ChartBuild] Parsing Machine State");
-                var machineStates = ParseMachineState(s6StateLogs, s4StateLogs, dataLength, timeIndexLookup);
+                var machineStates = ParseMachineState(s6StateLogs!, s4StateLogs!, dataLength, timeIndexLookup);
                 if (machineStates != null)
                 {
                     package.States.Add(machineStates);
@@ -319,9 +319,9 @@ namespace IndiLogs_3._0.Services.Charts
 
             if (wantEvents)
             {
-                progress?.Report((90, $"Parsing events from {eventLogs.Count:N0} msgs..."));
+                progress?.Report((90, $"Parsing events from {eventLogs!.Count:N0} msgs..."));
                 AppLogger.Info("[ChartBuild] Parsing Events");
-                var events = ParseEvents(eventLogs, timeIndexLookup);
+                var events = ParseEvents(eventLogs!, timeIndexLookup);
                 package.Events.AddRange(events);
                 AppLogger.Info($"[ChartBuild] Events: {events.Count} markers");
             }

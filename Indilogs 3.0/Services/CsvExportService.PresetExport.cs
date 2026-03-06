@@ -577,7 +577,7 @@ namespace IndiLogs_3._0.Services
                                 string cleanValue = valueStr.Split(' ')[0];
 
                                 // Check for eIoStatus in parts[2]
-                                string ioStatus = null;
+                                string? ioStatus = null;
                                 if (parts.Length >= 3)
                                 {
                                     string statusPart = parts[2].Trim();
@@ -646,7 +646,7 @@ namespace IndiLogs_3._0.Services
                 {
                     // C: Machine State - extract from PlcMngr CHStep
                     if ((preset == null || preset.IncludeMachineState) &&
-                        TryParsePlcMngrState(msg, out string stateName))
+                        TryParsePlcMngrState(msg, out string? stateName))
                     {
                         if (!string.IsNullOrEmpty(stateName))
                         {
@@ -655,9 +655,9 @@ namespace IndiLogs_3._0.Services
                     }
 
                     // D: Regular CHStep export (always try, even for PlcMngr if selected)
-                    if (TryParseCHStep(msg, out string chName, out string stepMessage, out string stateId,
-                        out string chParentName, out string subsysID, out string prevStepNo, out string diffTime,
-                        out string subStepNo, out string chObjType))
+                    if (TryParseCHStep(msg, out string? chName, out string? stepMessage, out string? stateId,
+                        out string? chParentName, out string? subsysID, out string? prevStepNo, out string? diffTime,
+                        out string? subStepNo, out string? chObjType))
                     {
                         string componentKey = $"{chParentName}|{chName}";
 
@@ -670,7 +670,7 @@ namespace IndiLogs_3._0.Services
                             else if (chObjType == "1")
                                 chObjTypeText = "component";
                             else
-                                chObjTypeText = chObjType;
+                                chObjTypeText = chObjType ?? "";
 
                             string subsys = $"CHStep: {chParentName}§{chName}§{subsysID}";
                             string component = "Data";
@@ -680,14 +680,14 @@ namespace IndiLogs_3._0.Services
                             if (!dataMatrix.TryGetValue(time, out var chStepRow))
                                 dataMatrix[time] = chStepRow = new Dictionary<string, string>();
 
-                            chStepRow[$"{subsys}|{component}|StepMessage"] = stepMessage;
-                            chStepRow[$"{subsys}|{component}|SubStepNo"] = subStepNo;
+                            chStepRow[$"{subsys}|{component}|StepMessage"] = stepMessage ?? "";
+                            chStepRow[$"{subsys}|{component}|SubStepNo"] = subStepNo ?? "";
                             chStepRow[$"{subsys}|{component}|CHObjType"] = chObjTypeText;
-                            chStepRow[$"{subsys}|{component}|PrevStepNo"] = prevStepNo;
-                            chStepRow[$"{subsys}|{component}|DiffTime"] = diffTime;
-                            chStepRow[$"{subsys}|{component}|State"] = stateId;
-                            chStepRow[$"{subsys}|{component}|Parent"] = chParentName;
-                            chStepRow[$"{subsys}|{component}|SubsysID"] = subsysID;
+                            chStepRow[$"{subsys}|{component}|PrevStepNo"] = prevStepNo ?? "";
+                            chStepRow[$"{subsys}|{component}|DiffTime"] = diffTime ?? "";
+                            chStepRow[$"{subsys}|{component}|State"] = stateId ?? "";
+                            chStepRow[$"{subsys}|{component}|Parent"] = chParentName ?? "";
+                            chStepRow[$"{subsys}|{component}|SubsysID"] = subsysID ?? "";
 
                             foreach (var param in _chStepParams)
                             {
@@ -724,8 +724,8 @@ namespace IndiLogs_3._0.Services
                     if (string.Equals(cleanThreadName, "LogStats", StringComparison.OrdinalIgnoreCase) &&
                         msg.StartsWith("LogStat:", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (TryParseLogStats(msg, out string total, out string isReady, out string semTotal,
-                            out string semMult, out string lost, out string bufFull, out string maxNum, out string maxCat))
+                        if (TryParseLogStats(msg, out string? total, out string? isReady, out string? semTotal,
+                            out string? semMult, out string? lost, out string? bufFull, out string? maxNum, out string? maxCat))
                         {
                             string subsys = "LogStats";
                             string component = "Metrics";
@@ -756,7 +756,7 @@ namespace IndiLogs_3._0.Services
                             foreach (var param in logStatsParams)
                             {
                                 string key = $"{subsys}|{component}|{param}";
-                                threadNameMap[key] = threadName;
+                                threadNameMap[key] = threadName!;
                             }
                         }
                     }
@@ -900,7 +900,7 @@ namespace IndiLogs_3._0.Services
                     }
 
                     // Forward-fill inline: update lastValues if we have new data for this time
-                    Dictionary<string, string> timeData;
+                    Dictionary<string, string>? timeData;
                     if (dataMatrix.TryGetValue(time, out timeData))
                     {
                         foreach (var kvp in timeData)
@@ -910,7 +910,7 @@ namespace IndiLogs_3._0.Services
                     }
 
                     // Write data columns using forward-filled values
-                    string val;
+                    string? val;
                     foreach (var colKey in orderedKeys)
                     {
                         rowSb.Append(",");
@@ -941,13 +941,13 @@ namespace IndiLogs_3._0.Services
                     }
 
                     // Thread messages
-                    Dictionary<string, string> threadMsgs;
+                    Dictionary<string, string>? threadMsgs;
                     if (preset != null && preset.IncludeEvents)
                     {
                         rowSb.Append(",");
                         if (threadMessages.TryGetValue(time, out threadMsgs))
                         {
-                            string evtVal;
+                            string? evtVal;
                             if (threadMsgs.TryGetValue("Events", out evtVal))
                             {
                                 evtVal = "\"" + evtVal.Replace("\"", "\"\"") + "\"";
@@ -964,7 +964,7 @@ namespace IndiLogs_3._0.Services
                             rowSb.Append(",");
                             if (threadMessages.TryGetValue(time, out threadMsgs))
                             {
-                                string tVal;
+                                string? tVal;
                                 if (threadMsgs.TryGetValue(thread, out tVal))
                                 {
                                     tVal = "\"" + tVal.Replace("\"", "\"\"") + "\"";

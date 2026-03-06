@@ -61,6 +61,7 @@ namespace IndiLogs_3._0.ViewModels
         private readonly IDispatcher _dispatcher;
         private readonly IWindowOwnerProvider _windowOwner;
         private readonly IWindowManager _windowManager;
+        private readonly Services.GrepServiceBundle _grepBundle;
         public IDefaultConfigurationService DefaultConfigService => _defaultConfigService;
         public ILogColoringService ColoringService => _coloringService;
 
@@ -311,7 +312,7 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand TreeShowAllCommand { get; }
         public ICommand OpenIndigoInvadersCommand { get; }
         public ICommand FilterAppErrorsCommand { get; }
-        public ICommand OpenVisualAnalysisCommand { get; }
+        public ICommand? OpenVisualAnalysisCommand { get; private set; }
         public ICommand ResetTimeFocusCommand { get; }
         public ICommand ToggleTimeSyncCommand { get; }
         public ICommand OpenTimeRangeFilterCommand { get; }
@@ -326,7 +327,7 @@ namespace IndiLogs_3._0.ViewModels
         public ICommand SetAsDefaultCommand { get; }
         public ICommand ResetDefaultsCommand { get; }
 
-        public MainViewModel(ILogFileService logService, ILogColoringService coloringService, ICsvExportService csvService, IDefaultConfigurationService defaultConfigService, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher, IWindowOwnerProvider windowOwner, IWindowManager windowManager)
+        public MainViewModel(ILogFileService logService, ILogColoringService coloringService, ICsvExportService csvService, IDefaultConfigurationService defaultConfigService, IDialogService dialogService, IViewFactory viewFactory, IDispatcher dispatcher, IWindowOwnerProvider windowOwner, IWindowManager windowManager, Services.GrepServiceBundle grepBundle)
         {
             _logService = logService;
             _coloringService = coloringService;
@@ -337,6 +338,7 @@ namespace IndiLogs_3._0.ViewModels
             _dispatcher = dispatcher;
             _windowOwner = windowOwner;
             _windowManager = windowManager;
+            _grepBundle = grepBundle;
             _isTimeSyncEnabled = false;
 
             // Initialize child ViewModels
@@ -507,15 +509,15 @@ namespace IndiLogs_3._0.ViewModels
 
         // ── Annotation logic ──
 
-        private void ToggleAnnotation(object parameter)
+        private void ToggleAnnotation(object? parameter)
         {
             if (parameter is LogEntry log && log.HasAnnotation)
                 log.IsAnnotationExpanded = !log.IsAnnotationExpanded;
         }
 
-        private void ToggleAllAnnotations(object obj)
+        private void ToggleAllAnnotations(object? obj)
         {
-            IEnumerable<LogEntry> targetList = null;
+            IEnumerable<LogEntry>? targetList = null;
 
             if (SelectedTabIndex == AppConstants.TAB_APP)
                 targetList = SessionVM?.AllAppLogsCache;
@@ -537,11 +539,11 @@ namespace IndiLogs_3._0.ViewModels
             SessionVM.StatusMessage = newState ? "All annotations expanded" : "All annotations collapsed";
         }
 
-        private void CloseAnnotation(object parameter) => CaseVM?.CloseAnnotationCommand.Execute(parameter);
+        private void CloseAnnotation(object? parameter) => CaseVM?.CloseAnnotationCommand.Execute(parameter);
 
         // ── Live monitoring ──
 
-        private void LiveClear(object obj)
+        private void LiveClear(object? obj)
         {
             LiveVM.IsRunning = false;
 
@@ -566,7 +568,7 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
-        private void ClearLogs(object obj)
+        private void ClearLogs(object? obj)
         {
             try
             {
@@ -591,11 +593,11 @@ namespace IndiLogs_3._0.ViewModels
                     FilterVM.ActiveLoggerFilters?.Clear();
                     FilterVM.ActiveMethodFilters?.Clear();
 
-                    if (FilterVM?.LoggerTreeRoot != null)
+                    if (FilterVM.LoggerTreeRoot != null)
                     {
                         FilterVM.LoggerTreeRoot.Clear();
                     }
-                    if (FilterVM?.PlcLoggerTreeRoot != null)
+                    if (FilterVM.PlcLoggerTreeRoot != null)
                     {
                         FilterVM.PlcLoggerTreeRoot.Clear();
                         OnPropertyChanged(nameof(ActiveLoggerTree));
@@ -648,8 +650,8 @@ namespace IndiLogs_3._0.ViewModels
 
         private void StartLiveMonitoring(string path) => LiveVM?.StartLiveMonitoring(path);
         private void StopLiveMonitoring() => LiveVM?.StopLiveMonitoring();
-        private void LivePlay(object obj) => LiveVM?.LivePlayCommand.Execute(obj);
-        private void LivePause(object obj) => LiveVM?.LivePauseCommand.Execute(obj);
+        private void LivePlay(object? obj) => LiveVM?.LivePlayCommand.Execute(obj);
+        private void LivePause(object? obj) => LiveVM?.LivePauseCommand.Execute(obj);
 
         // ── Configuration management ──
 
@@ -673,7 +675,7 @@ namespace IndiLogs_3._0.ViewModels
                 FilterVM.DefaultPlcFilter = defaults.PlcFilteredDefaultFilter;
         }
 
-        private void SetCurrentAsDefault(object obj)
+        private void SetCurrentAsDefault(object? obj)
         {
             var config = new Models.DefaultConfiguration();
 
@@ -703,7 +705,7 @@ namespace IndiLogs_3._0.ViewModels
             SessionVM.StatusMessage = "Current settings saved as defaults.";
         }
 
-        private void ResetDefaults(object obj)
+        private void ResetDefaults(object? obj)
         {
             _defaultConfigService.Reset();
             _coloringService.UserDefaultMainRules = null;
@@ -713,27 +715,27 @@ namespace IndiLogs_3._0.ViewModels
             SessionVM.StatusMessage = "Defaults reset to factory settings.";
         }
 
-        private void ApplyConfiguration(object parameter) { if (parameter is SavedConfiguration c) CaseVM?.ApplyConfiguration(c); }
-        private void RemoveConfiguration(object parameter) => CaseVM?.DeleteConfigCommand.Execute(parameter);
-        private void SaveConfiguration(object obj) => CaseVM?.SaveConfigCommand.Execute(obj);
-        private void LoadConfigurationFromFile(object obj) => CaseVM?.LoadConfigCommand.Execute(obj);
+        private void ApplyConfiguration(object? parameter) { if (parameter is SavedConfiguration c) CaseVM?.ApplyConfiguration(c); }
+        private void RemoveConfiguration(object? parameter) => CaseVM?.DeleteConfigCommand.Execute(parameter);
+        private void SaveConfiguration(object? obj) => CaseVM?.SaveConfigCommand.Execute(obj);
+        private void LoadConfigurationFromFile(object? obj) => CaseVM?.LoadConfigCommand.Execute(obj);
 
         // ── Case management delegates ──
 
-        private void MarkRow(object obj) => CaseVM?.MarkLogCommand.Execute(obj);
-        private void GoToNextMarked(object obj) => CaseVM?.GoToNextMarkedCommand.Execute(obj);
-        private void GoToPrevMarked(object obj) => CaseVM?.GoToPrevMarkedCommand.Execute(obj);
-        private void JumpToLog(object obj) { if (obj is LogEntry log) { SelectedLog = log; RequestScrollToLog?.Invoke(log); } }
+        private void MarkRow(object? obj) => CaseVM?.MarkLogCommand.Execute(obj);
+        private void GoToNextMarked(object? obj) => CaseVM?.GoToNextMarkedCommand.Execute(obj);
+        private void GoToPrevMarked(object? obj) => CaseVM?.GoToPrevMarkedCommand.Execute(obj);
+        private void JumpToLog(object? obj) { if (obj is LogEntry log) { SelectedLog = log; RequestScrollToLog?.Invoke(log); } }
 
-        public LogAnnotation GetAnnotation(LogEntry log) => CaseVM?.GetAnnotation(log);
-        private void AddAnnotation(object parameter) => CaseVM?.AddAnnotationCommand.Execute(parameter);
-        private void DeleteAnnotation(object parameter) => CaseVM?.DeleteAnnotationCommand.Execute(parameter);
-        private void SaveCase(object parameter) => CaseVM?.SaveCaseCommand.Execute(parameter);
-        private void LoadCase(object parameter) => CaseVM?.LoadCaseCommand.Execute(parameter);
+        public LogAnnotation? GetAnnotation(LogEntry log) => CaseVM?.GetAnnotation(log);
+        private void AddAnnotation(object? parameter) => CaseVM?.AddAnnotationCommand.Execute(parameter);
+        private void DeleteAnnotation(object? parameter) => CaseVM?.DeleteAnnotationCommand.Execute(parameter);
+        private void SaveCase(object? parameter) => CaseVM?.SaveCaseCommand.Execute(parameter);
+        private void LoadCase(object? parameter) => CaseVM?.LoadCaseCommand.Execute(parameter);
 
         // ── Clipboard ──
 
-        private void CopyTableName(object parameter)
+        private void CopyTableName(object? parameter)
         {
             if (parameter is DbTreeNode node && !string.IsNullOrEmpty(node.Name))
             {
@@ -747,7 +749,7 @@ namespace IndiLogs_3._0.ViewModels
 
         // ── Session changes ──
 
-        private async Task OnSelectedSessionChangedAsync(LogSessionData session)
+        private async Task OnSelectedSessionChangedAsync(LogSessionData? session)
         {
             if (session != null && session.HasBinaryAppLogs &&
                 !string.IsNullOrEmpty(session.FilePath) && File.Exists(session.FilePath))
@@ -758,7 +760,7 @@ namespace IndiLogs_3._0.ViewModels
 
         // ── Child VM PropertyChanged handlers ──
 
-        private void SessionVM_PropertyChanged(object s, PropertyChangedEventArgs e)
+        private void SessionVM_PropertyChanged(object? s, PropertyChangedEventArgs e)
         {
             switch (e.PropertyName)
             {
@@ -774,7 +776,7 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
-        private void FilterVM_PropertyChanged(object s, PropertyChangedEventArgs e)
+        private void FilterVM_PropertyChanged(object? s, PropertyChangedEventArgs e)
         {
             switch (e.PropertyName)
             {
@@ -804,12 +806,12 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
-        private void LiveVM_PropertyChanged(object s, PropertyChangedEventArgs e)
+        private void LiveVM_PropertyChanged(object? s, PropertyChangedEventArgs e)
         {
             // LiveVM properties (IsLiveMode, IsRunning, IsPaused) bind directly via LiveVM.* in XAML
         }
 
-        private void DifferentLogsVM_PropertyChanged(object s, PropertyChangedEventArgs e)
+        private void DifferentLogsVM_PropertyChanged(object? s, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(DifferentLogsVM.HasFile))
             {

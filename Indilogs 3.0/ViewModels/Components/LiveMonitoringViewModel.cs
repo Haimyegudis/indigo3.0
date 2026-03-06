@@ -205,7 +205,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             _sessionVM.StatusMessage = "Live monitoring stopped";
         }
 
-        private void LivePlay(object obj)
+        private void LivePlay(object? obj)
         {
             if (!IsLiveMode || string.IsNullOrEmpty(_liveFilePath))
                 return;
@@ -215,14 +215,14 @@ namespace IndiLogs_3._0.ViewModels.Components
             _sessionVM.StatusMessage = "Live monitoring active.";
         }
 
-        private void LivePause(object obj)
+        private void LivePause(object? obj)
         {
             IsRunning = false;
             IsPaused = true;
             _sessionVM.StatusMessage = "Live monitoring paused.";
         }
 
-        private void LiveClear(object obj)
+        private void LiveClear(object? obj)
         {
             // Clear logs and restart live monitoring
             _sessionVM.ClearCommand.Execute(null);

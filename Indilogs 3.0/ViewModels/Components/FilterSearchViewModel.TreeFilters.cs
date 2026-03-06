@@ -5,7 +5,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 {
     public partial class FilterSearchViewModel
     {
-        private void ExecuteTreeShowThis(object obj)
+        private void ExecuteTreeShowThis(object? obj)
         {
             if (obj is LoggerNode node)
             {
@@ -50,7 +50,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private void ExecuteTreeHideThis(object obj)
+        private void ExecuteTreeHideThis(object? obj)
         {
             if (obj is LoggerNode node)
             {
@@ -86,7 +86,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private void ExecuteTreeShowOnlyThis(object obj)
+        private void ExecuteTreeShowOnlyThis(object? obj)
         {
             if (obj is LoggerNode node)
             {
@@ -108,7 +108,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private void ExecuteTreeShowWithChildren(object obj)
+        private void ExecuteTreeShowWithChildren(object? obj)
         {
             if (obj is LoggerNode node)
             {
@@ -130,7 +130,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private void ExecuteTreeHideWithChildren(object obj)
+        private void ExecuteTreeHideWithChildren(object? obj)
         {
             if (obj is LoggerNode node)
             {
@@ -160,7 +160,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private void ExecuteTreeShowAll(object obj)
+        private void ExecuteTreeShowAll(object? obj)
         {
             if (IsPlcTabActive)
             {

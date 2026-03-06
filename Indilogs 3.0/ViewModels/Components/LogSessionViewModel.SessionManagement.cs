@@ -17,7 +17,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 {
     public partial class LogSessionViewModel
     {
-        private void ClearLogs(object obj)
+        private void ClearLogs(object? obj)
         {
             // Clear logs
             if (_allLogsCache != null) _allLogsCache.Clear();
@@ -106,7 +106,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             StatusMessage = "Logs cleared";
         }
 
-        private void RemoveSession(object obj)
+        private void RemoveSession(object? obj)
         {
             if (obj is LogSessionData session && _loadedSessions != null && _loadedSessions.Contains(session))
             {
@@ -231,7 +231,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// Saves the current filter state into the session so it persists across switches.
         /// </summary>
-        private void SaveFilterState(LogSessionData session)
+        private void SaveFilterState(LogSessionData? session)
         {
             if (session == null) return;
 

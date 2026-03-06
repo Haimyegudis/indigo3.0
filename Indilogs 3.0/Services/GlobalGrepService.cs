@@ -33,7 +33,7 @@ namespace IndiLogs_3._0.Services
             bool searchException,
             bool searchMethod,
             bool searchData,
-            IProgress<(int current, int total, string status)> progress,
+            IProgress<(int current, int total, string status)>? progress,
             CancellationToken cancellationToken)
         {
             var results = new List<GrepResult>();
@@ -175,12 +175,12 @@ namespace IndiLogs_3._0.Services
 
         public async Task<List<GrepResult>> SearchExternalFilesAsync(
             string path, string searchQuery, bool useRegex, bool searchPLC, bool searchAPP,
-            IProgress<(int current, int total, string status)> progress, CancellationToken cancellationToken)
+            IProgress<(int current, int total, string status)>? progress, CancellationToken cancellationToken)
         {
             var results = new List<GrepResult>();
             if (string.IsNullOrWhiteSpace(path)) return results;
 
-            Regex regex = useRegex ? new Regex(searchQuery, RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(2)) : null;
+            Regex? regex = useRegex ? new Regex(searchQuery, RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(2)) : null;
             bool isZip = path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
 
             await Task.Run(() => {
@@ -191,7 +191,7 @@ namespace IndiLogs_3._0.Services
             return results.OrderBy(r => r.Timestamp).ToList();
         }
 
-        private void SearchStream(Stream stream, string filePath, string fileName, string logType, string searchQuery, Regex regex, bool useRegex, List<GrepResult> results, CancellationToken cancellationToken)
+        private void SearchStream(Stream stream, string filePath, string fileName, string logType, string searchQuery, Regex? regex, bool useRegex, List<GrepResult> results, CancellationToken cancellationToken)
         {
             int lineNumber = 0;
 
@@ -199,7 +199,7 @@ namespace IndiLogs_3._0.Services
             {
                 // IndigoLogsReader requires a seekable stream, so copy to MemoryStream if needed
                 Stream seekableStream = stream;
-                MemoryStream memoryStream = null;
+                MemoryStream? memoryStream = null;
 
                 if (!stream.CanSeek)
                 {
@@ -306,7 +306,7 @@ namespace IndiLogs_3._0.Services
             return res;
         }
 
-        private bool IsLineMatch(string line, string query, Regex regex, bool useRegex)
+        private bool IsLineMatch(string line, string query, Regex? regex, bool useRegex)
         {
             if (useRegex && regex != null) return regex.IsMatch(line);
             // Fix: use correct parameter name query instead of searchQuery
@@ -321,7 +321,7 @@ namespace IndiLogs_3._0.Services
             return t => !string.IsNullOrEmpty(t) && t.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        private bool EvaluateQueryOnText(string text, FilterNode node)
+        private bool EvaluateQueryOnText(string text, FilterNode? node)
         {
             if (node == null || string.IsNullOrEmpty(text)) return false;
             // Fix: use node.Type (Enum) instead of node.NodeType (String)
@@ -336,7 +336,7 @@ namespace IndiLogs_3._0.Services
             return (node.LogicalOperator?.Contains("NOT") == true) ? !res : res;
         }
 
-        private void SearchZipFile(string zipPath, string q, Regex r, bool u, bool plc, bool app, List<GrepResult> res, IProgress<(int, int, string)> prog, CancellationToken ct)
+        private void SearchZipFile(string zipPath, string q, Regex? r, bool u, bool plc, bool app, List<GrepResult> res, IProgress<(int, int, string)>? prog, CancellationToken ct)
         {
             using (var archive = ZipFile.OpenRead(zipPath))
             {
@@ -394,7 +394,7 @@ namespace IndiLogs_3._0.Services
             }
         }
 
-        private void SearchDirectory(string path, string q, Regex r, bool u, bool plc, bool app, List<GrepResult> res, IProgress<(int, int, string)> prog, CancellationToken ct)
+        private void SearchDirectory(string path, string q, Regex? r, bool u, bool plc, bool app, List<GrepResult> res, IProgress<(int, int, string)>? prog, CancellationToken ct)
         {
             var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Where(f => IsLogFile(f, plc, app)).ToList();
             for (int i = 0; i < files.Count; i++)

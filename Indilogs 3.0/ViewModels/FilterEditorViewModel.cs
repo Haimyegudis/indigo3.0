@@ -94,7 +94,7 @@ namespace IndiLogs_3._0.ViewModels
             });
         }
 
-        private void RemoveNode(object param)
+        private void RemoveNode(object? param)
         {
             if (param is FilterNode nodeToRemove)
             {

@@ -31,9 +31,9 @@ namespace IndiLogs_3._0.Services.Grep
         /// </summary>
         public void ProcessScanResult(
             ScheduledSearch schedule,
-            List<GrepResult> results,
-            LogStatisticsResult stats,
-            string htmlReportPath,
+            List<GrepResult>? results,
+            LogStatisticsResult? stats,
+            string? htmlReportPath,
             bool forceImmediate = false)
         {
             var config = schedule.EmailConfig;
@@ -370,7 +370,7 @@ namespace IndiLogs_3._0.Services.Grep
             return sb.ToString();
         }
 
-        private void OnDeferredTimerElapsed(object sender, ElapsedEventArgs e) => _ = OnDeferredTimerElapsedAsync();
+        private void OnDeferredTimerElapsed(object? sender, ElapsedEventArgs e) => _ = OnDeferredTimerElapsedAsync();
 
         private async Task OnDeferredTimerElapsedAsync()
         {

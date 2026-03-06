@@ -20,7 +20,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// Loads and processes log files into a new session, applying colors and updating the UI.
         /// </summary>
-        public async Task ProcessFiles(string[] filePaths, Action<LogSessionData> onLoadComplete = null)
+        public async Task ProcessFiles(string[] filePaths, Action<LogSessionData>? onLoadComplete = null)
         {
             bool isWatchableFile = false; // Track if we should start auto-refresh after loading
 
@@ -62,7 +62,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                     if (isLiveFile)
                     {
-                        _liveVM.StartLiveMonitoring(filePath);
+                        _liveVM?.StartLiveMonitoring(filePath);
                         return;
                     }
                     // Otherwise, continue to load as static file below — but mark for auto-refresh
@@ -71,8 +71,8 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
 
             // --- Tab Selection Dialog: show for ZIP files before parsing ---
-            TabSelectionConfig tabSelection = null;
-            TabSelectionConfig preScan = null;
+            TabSelectionConfig? tabSelection = null;
+            TabSelectionConfig? preScan = null;
             bool hasZipFile = filePaths.Any(f => f.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
             if (hasZipFile)
             {
@@ -80,7 +80,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 preScan = await Task.Run(() => _logService.PreScanZip(zipPath));
 
                 // Show the dialog on the UI thread
-                var dialog = _viewFactory.Create<Views.TabSelectionWindow>(preScan);
+                var dialog = _viewFactory.Create<Views.TabSelectionWindow>(preScan!);
                 dialog.Owner = _windowOwner.GetOwner();
                 if (dialog.ShowDialog() != true)
                 {
@@ -148,7 +148,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 SaveFilterState(_selectedSession);
                 _selectedSession = newSession;
                 OnPropertyChanged(nameof(SelectedSession));
-                _parent?.NotifyPropertyChanged(nameof(_parent.HasSessionLoaded));
+                _parent.NotifyPropertyChanged(nameof(_parent.HasSessionLoaded));
 
                 // Update SessionVM with ALL loaded data
                 // Share reference instead of copying to avoid doubling memory usage
@@ -229,7 +229,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                                     if (diffMin > maxDiffMin) break; // sorted → no closer matches further out
 
                                     var plcLog = plcEventLogs[j];
-                                    bool isMatch = plcLog.Message.StartsWith(sendPrefix, StringComparison.OrdinalIgnoreCase)
+                                    bool isMatch = plcLog.Message!.StartsWith(sendPrefix, StringComparison.OrdinalIgnoreCase)
                                                 || plcLog.Message.StartsWith(enqueuePrefix, StringComparison.OrdinalIgnoreCase);
                                     if (isMatch && diffMin < bestPairDiff)
                                     {
@@ -306,7 +306,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     newSession.TerminalLogFiles != null && newSession.TerminalLogFiles.Any() ||
                     newSession.TerminalCsvBytes != null && newSession.TerminalCsvBytes.Any())
                 {
-                    _configVM.LoadConfigurationFiles();
+                    _configVM?.LoadConfigurationFiles();
                 }
                 _parent.CurrentPluginColumns = newSession.PluginColumns;
                 _parent.NotifyPropertyChanged(nameof(_parent.DbConfigTabHeader));
@@ -323,18 +323,18 @@ namespace IndiLogs_3._0.ViewModels.Components
                     _parent.WindowTitle = $"IndiLogs 3.0 - {newSession.FileName}";
 
                 // Build logger tree panels (must happen before filter application)
-                _filterVM.BuildLoggerTree(AllAppLogsCache);
-                _filterVM.BuildPlcLoggerTree(AllLogsCache);
+                _filterVM?.BuildLoggerTree(AllAppLogsCache);
+                _filterVM?.BuildPlcLoggerTree(AllLogsCache);
 
                 // Load saved configs for the dropdown
-                _caseVM.LoadSavedConfigs(newSession.HasBinaryAppLogs);
+                _caseVM?.LoadSavedConfigs(newSession.HasBinaryAppLogs);
 
                 // Restore chart state (null for new sessions = clear chart)
                 _parent.ChartVM?.RestoreChartState(newSession.SavedChartState);
 
                 // Apply initial filters (this is the FIRST and ONLY filter application)
-                _filterVM.ApplyMainLogsFilter();
-                _filterVM.ApplyAppLogsFilter();
+                _filterVM?.ApplyMainLogsFilter();
+                _filterVM?.ApplyAppLogsFilter();
 
                 // Scroll all tabs to last row after loading
                 // Use ApplicationIdle priority to ensure DataGrid virtualization is fully rendered
@@ -362,7 +362,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 // Start auto-refresh for .file files so new logs are picked up automatically
                 if (isWatchableFile && filePaths.Length == 1 && newSession.Logs.Count > 0)
                 {
-                    _liveVM.StartFileWatcher(filePaths[0], newSession);
+                    _liveVM?.StartFileWatcher(filePaths[0], newSession);
                 }
             }
             catch (Exception ex)
@@ -426,7 +426,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                 if (componentName == "Configuration" || componentName == "TerminalLogs" || componentName == "Lrs")
                 {
-                    _configVM.LoadConfigurationFiles();
+                    _configVM?.LoadConfigurationFiles();
                     _parent.NotifyPropertyChanged(nameof(_parent.DbConfigTabHeader));
                 }
 
@@ -489,13 +489,13 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                 // Rebuild logger trees if log data changed
                 if (componentName == "Plc" || componentName == "ManagerThread")
-                    _filterVM.BuildPlcLoggerTree(AllLogsCache);
+                    _filterVM?.BuildPlcLoggerTree(AllLogsCache);
                 if (componentName == "App")
-                    _filterVM.BuildLoggerTree(AllAppLogsCache);
+                    _filterVM?.BuildLoggerTree(AllAppLogsCache);
 
                 // Re-apply filters
-                _filterVM.ApplyMainLogsFilter();
-                _filterVM.ApplyAppLogsFilter();
+                _filterVM?.ApplyMainLogsFilter();
+                _filterVM?.ApplyAppLogsFilter();
 
                 StatusMessage = $"{componentName} loaded successfully.";
                 CurrentProgress = 100;

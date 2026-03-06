@@ -128,7 +128,8 @@ namespace IndiLogs.Tests
         public void Reload_HandlesInvalidDllGracefully()
         {
             var loader = new PluginLoader();
-            var invalidDll = Path.Combine(PluginLoader.PluginsFolder, "InvalidPlugin_Test.dll");
+            // Use a unique filename per test run to avoid file lock race conditions
+            var invalidDll = Path.Combine(PluginLoader.PluginsFolder, $"InvalidPlugin_{Guid.NewGuid():N}.dll");
 
             try
             {
@@ -141,10 +142,7 @@ namespace IndiLogs.Tests
             }
             finally
             {
-                if (File.Exists(invalidDll))
-                {
-                    try { File.Delete(invalidDll); } catch { }
-                }
+                try { if (File.Exists(invalidDll)) File.Delete(invalidDll); } catch { }
             }
         }
 

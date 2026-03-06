@@ -76,7 +76,7 @@ namespace IndiLogs_3._0.Views
                             // Get total row count
                             using (var cmd = new SqliteCommand($"SELECT COUNT(*) FROM \"{AppConstants.EscapeSqlIdentifier(_tableName)}\"", connection))
                             {
-                                _totalRowCount = (long)cmd.ExecuteScalar();
+                                _totalRowCount = (long)(cmd.ExecuteScalar() ?? 0L);
                             }
 
                             // Get column names for search
@@ -120,8 +120,8 @@ namespace IndiLogs_3._0.Views
         {
             try
             {
-                DataTable dataTable = null;
-                DataTable compactTable = null;
+                DataTable? dataTable = null;
+                DataTable? compactTable = null;
 
                 using (var connection = new SqliteConnection($"Data Source={_tempDbPath}"))
                 {
@@ -145,6 +145,7 @@ namespace IndiLogs_3._0.Views
                         // OPTIMIZATION: Use SQL LIKE for search with parameterized query
                         var whereConditions = new List<string>();
 
+                        if (_columnNames == null) return;
                         foreach (var colName in _columnNames)
                         {
                             whereConditions.Add($"CAST([{AppConstants.EscapeSqlBracketId(colName)}] AS TEXT) LIKE @searchParam");
@@ -247,7 +248,7 @@ namespace IndiLogs_3._0.Views
                         }
                         else
                         {
-                            var strValue = value.ToString();
+                            var strValue = value.ToString() ?? "";
                             // Check if value is already JSON - parse it to preserve structure
                             if (IsJson(strValue))
                             {
@@ -283,7 +284,7 @@ namespace IndiLogs_3._0.Views
 
         #region JSON Flattening
 
-        private DataTable FlattenJsonColumns(DataTable sourceTable)
+        private DataTable? FlattenJsonColumns(DataTable? sourceTable)
         {
             if (sourceTable == null || sourceTable.Rows.Count == 0)
                 return sourceTable;
@@ -952,12 +953,12 @@ namespace IndiLogs_3._0.Views
             if (_tempDbPath == null || _columnNames == null)
                 return;
 
-            string searchText = SearchTextBox.Text?.Trim();
+            string? searchText = SearchTextBox.Text?.Trim();
 
             // OPTIMIZATION: Use SQL query instead of DataView.RowFilter - MUCH FASTER!
             System.Threading.Tasks.Task.Run(() =>
             {
-                LoadDataWithSearch(searchText);
+                LoadDataWithSearch(searchText ?? "");
             });
         }
 
@@ -967,7 +968,7 @@ namespace IndiLogs_3._0.Views
             if (_dataTable == null)
                 return;
 
-            string searchText = SearchTextBox?.Text?.Trim();
+            string? searchText = SearchTextBox?.Text?.Trim();
             int currentCount = _dataTable.Rows.Count;
 
             if (string.IsNullOrWhiteSpace(searchText))
@@ -1023,6 +1024,7 @@ namespace IndiLogs_3._0.Views
 
         private void ExportToCsv(string filePath)
         {
+            if (_dataTable == null) return;
             var sb = new StringBuilder();
 
             // Write headers

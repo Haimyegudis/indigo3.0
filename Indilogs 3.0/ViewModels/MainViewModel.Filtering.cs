@@ -182,7 +182,7 @@ namespace IndiLogs_3._0.ViewModels
 
         // ── Filter window ──
 
-        private async Task OpenFilterWindow(object obj)
+        private async Task OpenFilterWindow(object? obj)
         {
             try
             {
@@ -237,7 +237,7 @@ namespace IndiLogs_3._0.ViewModels
 
         // ── Filter actions ──
 
-        private void ResetTimeFocus(object obj)
+        private void ResetTimeFocus(object? obj)
         {
             if (VisualTimelineVM != null)
             {
@@ -271,7 +271,7 @@ namespace IndiLogs_3._0.ViewModels
             SessionVM.StatusMessage ="Filter reset. Showing all data.";
         }
 
-        private void FilterToState(object obj)
+        private void FilterToState(object? obj)
         {
             if (obj is StateEntry state)
             {
@@ -324,7 +324,7 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
-        private void FilterAppErrors(object obj)
+        private void FilterAppErrors(object? obj)
         {
             if (SessionVM.AllAppLogsCache == null || !SessionVM.AllAppLogsCache.Any()) return;
             SessionVM.IsBusy = true;

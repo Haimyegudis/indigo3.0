@@ -41,21 +41,21 @@ namespace IndiLogs_3._0.ViewModels
             string analyticsSummary = "", loggerChartCount = "", stateChartCount = "", timelineInfo = "";
             bool plcHasGaps = false, appHasGaps = false, plcHasLogs = false, appHasLogs = false;
 
-            List<ErrorStat> plcErrorStats = null, appThreadErrorStats = null, appMethodErrorStats = null;
-            List<LoadStat> plcThreadStats = null, appThreadStats = null, appMethodStats = null;
-            List<GapInfo> plcGaps = null, appGaps = null;
+            List<ErrorStat>? plcErrorStats = null, appThreadErrorStats = null, appMethodErrorStats = null;
+            List<LoadStat>? plcThreadStats = null, appThreadStats = null, appMethodStats = null;
+            List<GapInfo>? plcGaps = null, appGaps = null;
 
             // Chart data built on background
-            List<(string Name, int Count, List<LogEntry> Logs)> barChartData = null;
-            List<(string State, int Count, List<LogEntry> Logs)> pieChartData = null;
-            int[] timelineBuckets = null;
-            List<LogEntry>[] timelineBucketLogs = null;
+            List<(string Name, int Count, List<LogEntry> Logs)>? barChartData = null;
+            List<(string State, int Count, List<LogEntry> Logs)>? pieChartData = null;
+            int[]? timelineBuckets = null;
+            List<LogEntry>[]? timelineBucketLogs = null;
             DateTime timelineFirstTime = default;
             double timelineBucketSize = 0;
             int timelineBucketCount = 0;
-            List<StateEntry> timelineStateEntries = null;
-            List<(string Logger, int Count)> loggerData = null;
-            List<(string State, int Count)> stateData = null;
+            List<StateEntry>? timelineStateEntries = null;
+            List<(string Logger, int Count)>? loggerData = null;
+            List<(string State, int Count)>? stateData = null;
 
             await Task.Run(() =>
             {
@@ -114,7 +114,7 @@ namespace IndiLogs_3._0.ViewModels
                     appGaps = FindGaps(_appLogs);
                     appHasGaps = appGaps != null && appGaps.Count > 0;
                     if (appHasGaps)
-                        appGapSummary = $"Found {appGaps.Count} gap(s) >= 2s. Total: {FormatDuration(TimeSpan.FromSeconds(appGaps.Sum(g => g.Duration.TotalSeconds)))}";
+                        appGapSummary = $"Found {appGaps!.Count} gap(s) >= 2s. Total: {FormatDuration(TimeSpan.FromSeconds(appGaps.Sum(g => g.Duration.TotalSeconds)))}";
                     else
                         appGapSummary = "No significant time gaps.";
                 }
@@ -454,7 +454,7 @@ namespace IndiLogs_3._0.ViewModels
             foreach (var error in plcErrors)
             {
                 int lo = 0, hi = stateEntries.Count - 1;
-                StateEntry foundState = null;
+                StateEntry? foundState = null;
                 while (lo <= hi)
                 {
                     int mid = (lo + hi) / 2;

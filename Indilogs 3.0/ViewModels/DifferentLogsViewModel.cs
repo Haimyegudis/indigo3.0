@@ -47,7 +47,7 @@ namespace IndiLogs_3._0.ViewModels
         /// Returns the FilePath of the currently selected session (the loaded ZIP path),
         /// or null if no session is loaded. Set by MainViewModel after construction.
         /// </summary>
-        public Func<string>? GetCurrentZipPath { get; set; }
+        public Func<string?>? GetCurrentZipPath { get; set; }
 
         // ── Observable data ─────────────────────────────────────────
         public ObservableCollection<LogEntryDto> Entries { get; } = new ObservableCollection<LogEntryDto>();

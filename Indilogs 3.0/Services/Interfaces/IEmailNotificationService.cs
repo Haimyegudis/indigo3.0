@@ -10,9 +10,9 @@ namespace IndiLogs_3._0.Services.Interfaces
     {
         void ProcessScanResult(
             ScheduledSearch schedule,
-            List<GrepResult> results,
-            LogStatisticsResult stats,
-            string htmlReportPath,
+            List<GrepResult>? results,
+            LogStatisticsResult? stats,
+            string? htmlReportPath,
             bool forceImmediate = false);
 
         Task<(bool Success, string Message)> TestConnectionAsync(

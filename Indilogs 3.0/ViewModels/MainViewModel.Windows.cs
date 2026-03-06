@@ -19,7 +19,7 @@ namespace IndiLogs_3._0.ViewModels
     {
         // ── Window management methods ──
 
-        private void OpenStatesWindow(object obj)
+        private void OpenStatesWindow(object? obj)
         {
             if (IsAnalysisRunning)
             {
@@ -43,7 +43,7 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
-        private void RunAnalysis(object obj)
+        private void RunAnalysis(object? obj)
         {
             if (SessionVM.SelectedSession == null)
             {
@@ -128,7 +128,7 @@ namespace IndiLogs_3._0.ViewModels
             _windowManager.OpenWindow(_analysisWindow);
         }
 
-        private void OpenSettingsWindow(object obj)
+        private void OpenSettingsWindow(object? obj)
         {
             var win = _viewFactory.Create<SettingsWindow>();
             win.DataContext = this;
@@ -182,9 +182,9 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
-        private void OpenFontsWindow(object obj) { var w = _viewFactory.Create<FontsWindow>(); w.DataContext = this; _windowManager.ShowDialog(w); }
+        private void OpenFontsWindow(object? obj) { var w = _viewFactory.Create<FontsWindow>(); w.DataContext = this; _windowManager.ShowDialog(w); }
 
-        private void OpenMarkedLogsWindow(object obj) => CaseVM?.OpenMarkedWindowCommand.Execute(obj);
+        private void OpenMarkedLogsWindow(object? obj) => CaseVM?.OpenMarkedWindowCommand.Execute(obj);
 
         private void OpenGlobalGrepWindow()
         {
@@ -193,12 +193,12 @@ namespace IndiLogs_3._0.ViewModels
 
             var viewModel = new GlobalGrepViewModel(
                 sessions,
-                Bootstrapper.Resolve<IGlobalGrepService>(),
-                Bootstrapper.Resolve<ISearchLocationService>(),
-                Bootstrapper.Resolve<ISearchConfigService>(),
-                Bootstrapper.Resolve<ISearchSchedulerService>(),
-                Bootstrapper.Resolve<IWindowsTaskSchedulerService>(),
-                Bootstrapper.Resolve<IEmailNotificationService>(),
+                _grepBundle.GrepService,
+                _grepBundle.LocationService,
+                _grepBundle.ConfigService,
+                _grepBundle.SchedulerService,
+                _grepBundle.TaskSchedulerService,
+                _grepBundle.EmailService,
                 _dialogService, _viewFactory, _dispatcher, _windowOwner);
 
             var window = _viewFactory.Create<GlobalGrepWindow>(viewModel, (Action<GrepResult>)NavigateToGrepResult, (Action<List<(string FilePath, string SessionName)>>)LoadMultipleFiles);
@@ -258,20 +258,20 @@ namespace IndiLogs_3._0.ViewModels
             catch (Exception ex) { AppLogger.Error("OpenStripeAnalysisWindow failed", ex); }
         }
 
-        private void OpenSnakeGame(object obj)
+        private void OpenSnakeGame(object? obj)
         {
             var snakeWindow = _viewFactory.Create<IndiLogs_3._0.Views.SnakeWindow>();
             _windowManager.ShowDialog(snakeWindow);
         }
 
-        private void OpenIndigoInvaders(object obj)
+        private void OpenIndigoInvaders(object? obj)
         {
             var invadersWindow = _viewFactory.Create<IndiLogs_3._0.Views.IndigoInvadersWindow>();
             invadersWindow.Owner = _windowOwner.GetOwner();
             invadersWindow.ShowDialog();
         }
 
-        private void ViewLogDetails(object parameter)
+        private void ViewLogDetails(object? parameter)
         {
             if (parameter is LogEntry log)
             {
@@ -299,12 +299,12 @@ namespace IndiLogs_3._0.ViewModels
             catch (Exception ex) { AppLogger.Error($"OpenUrl failed for '{url}'", ex); }
         }
 
-        private void OpenOutlook(object obj) { try { Process.Start(new ProcessStartInfo("outlook.exe", "/c ipm.note") { UseShellExecute = true }); } catch (Exception ex) { AppLogger.Warn($"Outlook launch failed: {ex.Message}"); OpenUrl("mailto:"); } }
+        private void OpenOutlook(object? obj) { try { Process.Start(new ProcessStartInfo("outlook.exe", "/c ipm.note") { UseShellExecute = true }); } catch (Exception ex) { AppLogger.Warn($"Outlook launch failed: {ex.Message}"); OpenUrl("mailto:"); } }
 
         /// <summary>
         /// Opens Kibana in the default browser using the machine name from the Readme file.
         /// </summary>
-        private void OpenKibana(object obj)
+        private void OpenKibana(object? obj)
         {
             string machineName = string.Empty;
 

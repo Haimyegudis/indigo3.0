@@ -17,7 +17,7 @@ namespace IndiLogs_3._0.ViewModels
         public void ProcessFiles(string[] filePaths, Action<LogSessionData>? onLoadComplete = null)
             => SessionVM?.ProcessFiles(filePaths, onLoadComplete);
 
-        private async Task LoadFile(object obj)
+        private async Task LoadFile(object? obj)
         {
             try
             {
@@ -59,7 +59,7 @@ namespace IndiLogs_3._0.ViewModels
             catch (Exception ex) { AppLogger.Error("LoadFile failed", ex); }
         }
 
-        private async Task ExportParsedData(object obj)
+        private async Task ExportParsedData(object? obj)
         {
             try
             {

@@ -14,7 +14,7 @@ namespace IndiLogs_3._0.ViewModels.Components
     {
         private bool IsPlcTabActive => _parent?.IsPLCTabSelected == true;
 
-        private async Task OpenFilterWindow(object obj)
+        private async Task OpenFilterWindow(object? obj)
         {
             try
             {
@@ -167,7 +167,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// Opens the filter window targeting the Different Logs tab (tab 12).
         /// Uses dynamic fields from the loaded plugin columns.
         /// </summary>
-        private async Task OpenDifferentLogsFilterWindow(object obj)
+        private async Task OpenDifferentLogsFilterWindow(object? obj)
         {
             try
             {
@@ -245,7 +245,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             catch (Exception ex) { AppLogger.Error("OpenDifferentLogsFilterWindow failed", ex); }
         }
 
-        private void FilterOut(object p)
+        private void FilterOut(object? p)
         {
             if (_parent.SelectedLog == null) return;
             var w = _viewFactory.Create<Views.FilterOutWindow>(_parent.SelectedLog.Message);
@@ -266,7 +266,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private void FilterOutThread(object obj)
+        private void FilterOutThread(object? obj)
         {
             if (_parent.SelectedLog == null) return;
             var win = _viewFactory.Create<Views.FilterOutWindow>(_parent.SelectedLog.ThreadName ?? "");
@@ -295,7 +295,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private void OpenThreadFilter(object obj)
+        private void OpenThreadFilter(object? obj)
         {
             // Check which tab is active and use appropriate cache
             bool isAppTab = _parent.SelectedTabIndex == 1;
@@ -463,7 +463,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private void OpenLoggerFilter(object obj)
+        private void OpenLoggerFilter(object? obj)
         {
             bool isAppTab = _parent.SelectedTabIndex == 1;
 
@@ -520,7 +520,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private void OpenMethodFilter(object obj)
+        private void OpenMethodFilter(object? obj)
         {
             bool isAppTab = _parent.SelectedTabIndex == 1;
             if (!isAppTab) return;
@@ -601,7 +601,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private void FilterContext(object obj)
+        private void FilterContext(object? obj)
         {
             if (_parent.SelectedLog == null) return;
             _sessionVM.IsBusy = true;
@@ -651,7 +651,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             });
         }
 
-        private void StartRange(object obj)
+        private void StartRange(object? obj)
         {
             if (_parent.SelectedLog == null) return;
             _rangeStartLog = _parent.SelectedLog;
@@ -659,7 +659,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             _sessionVM.StatusMessage = $"Range Start: {_rangeStartLog.Date:HH:mm:ss.ffffff} — Now scroll to end and select 'End Range'";
         }
 
-        private void EndRange(object obj)
+        private void EndRange(object? obj)
         {
             if (_parent.SelectedLog == null || _rangeStartLog == null) return;
 
@@ -741,7 +741,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             HasRangeStart = false;
         }
 
-        private void ClearRange(object obj)
+        private void ClearRange(object? obj)
         {
             _rangeStartLog = null;
             HasRangeStart = false;
@@ -775,7 +775,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             _sessionVM.StatusMessage = "Range selection cleared";
         }
 
-        private void UndoFilterOut(object obj)
+        private void UndoFilterOut(object? obj)
         {
             bool isAppTab = _parent?.SelectedTabIndex == 1;
             if (isAppTab)
@@ -800,7 +800,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private void OpenTimeRangeFilter(object obj)
+        private void OpenTimeRangeFilter(object? obj)
         {
             // Get earliest and latest log times from all caches
             DateTime? earliestLog = null;

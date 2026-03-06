@@ -163,7 +163,7 @@ namespace IndiLogs_3._0.Services.Charts
 
                     if (timeIndexLookup.TryGetValue(logs[li].Date, out int idx))
                     {
-                        signal.SparsePoints.Add(new KeyValuePair<int, double>(idx, value));
+                        signal.SparsePoints!.Add(new KeyValuePair<int, double>(idx, value));
                     }
 
                     fieldStart = fieldEnd + 1;
@@ -394,7 +394,7 @@ namespace IndiLogs_3._0.Services.Charts
 
                     if (timeIndexLookup.TryGetValue(logs[li].Date, out int idx))
                     {
-                        signal.SparsePoints.Add(new KeyValuePair<int, double>(idx, value));
+                        signal.SparsePoints!.Add(new KeyValuePair<int, double>(idx, value));
                     }
 
                     fieldStart = fieldEnd + 1;

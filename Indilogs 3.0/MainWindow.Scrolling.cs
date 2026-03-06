@@ -114,7 +114,7 @@ namespace IndiLogs_3._0
         {
             if (log == null) return;
 
-            DataGrid targetGrid = FindGridForLog(log);
+            DataGrid? targetGrid = FindGridForLog(log);
 
             if (targetGrid == null) return;
 
@@ -124,7 +124,7 @@ namespace IndiLogs_3._0
                 if (logIndex < 0) return;
 
                 // Try to get ScrollViewer from cache first
-                ScrollViewer scrollViewer = null;
+                ScrollViewer? scrollViewer = null;
                 string gridName = targetGrid.Name;
 
                 if (!string.IsNullOrEmpty(gridName) && _scrollViewerCache.ContainsKey(gridName))
@@ -224,7 +224,7 @@ namespace IndiLogs_3._0
         {
             try
             {
-                DataGrid grid = null;
+                DataGrid? grid = null;
                 switch (tabName)
                 {
                     case "PLC":
@@ -283,7 +283,7 @@ namespace IndiLogs_3._0
             {
                 try
                 {
-                    DataGrid targetGrid = FindGridForLog(log);
+                    DataGrid? targetGrid = FindGridForLog(log);
                     string gridName = targetGrid?.Name ?? "";
 
                     if (targetGrid == null)
@@ -331,7 +331,7 @@ namespace IndiLogs_3._0
                     _scrollPreserveRetryCount = 0;
 
                     // Get or find the ScrollViewer
-                    ScrollViewer scrollViewer = null;
+                    ScrollViewer? scrollViewer = null;
                     if (!string.IsNullOrEmpty(gridName) && _scrollViewerCache.ContainsKey(gridName))
                     {
                         scrollViewer = _scrollViewerCache[gridName];
@@ -405,7 +405,7 @@ namespace IndiLogs_3._0
 
             try
             {
-                DataGrid targetGrid = FindGridForLog(log);
+                DataGrid? targetGrid = FindGridForLog(log);
                 string gridName = targetGrid?.Name ?? "";
 
                 if (targetGrid == null) return;
@@ -414,7 +414,7 @@ namespace IndiLogs_3._0
                 if (logIndex < 0) return;
 
                 // Get ScrollViewer
-                ScrollViewer scrollViewer = null;
+                ScrollViewer? scrollViewer = null;
                 if (!string.IsNullOrEmpty(gridName) && _scrollViewerCache.ContainsKey(gridName))
                 {
                     scrollViewer = _scrollViewerCache[gridName];

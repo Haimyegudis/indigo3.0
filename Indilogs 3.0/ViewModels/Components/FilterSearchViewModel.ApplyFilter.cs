@@ -75,7 +75,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 query = query.Where(l => _activeMethodFilters.Contains(l.Method));
 
             // 4. Advanced Filter (only if checkbox checked)
-            if (hasAdvancedFilter)
+            if (hasAdvancedFilter && _appFilterRoot != null)
                 query = query.Where(l => EvaluateFilterNode(l, _appFilterRoot));
 
             // 5. Tree Filter (only if checkbox checked)
@@ -121,11 +121,11 @@ namespace IndiLogs_3._0.ViewModels.Components
             // 6. Search (always applied, regardless of checkbox)
             if (hasSearch)
             {
-                string search = SearchText;
-                if (QueryParserService.HasBooleanOperators(SearchText))
+                string search = SearchText ?? "";
+                if (QueryParserService.HasBooleanOperators(search))
                 {
                     var parser = new QueryParserService();
-                    var filterTree = parser.Parse(SearchText, out string errorMessage);
+                    var filterTree = parser.Parse(search, out string? errorMessage);
                     if (filterTree != null)
                         query = query.Where(l => EvaluateFilterNode(l, filterTree));
                     else
@@ -198,7 +198,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 }
 
                 // Apply advanced filter from FilterWindow (only if checkbox is checked)
-                if (hasAdvancedFilter)
+                if (hasAdvancedFilter && _mainFilterRoot != null)
                 {
                     currentLogs = currentLogs.Where(l => EvaluateFilterNode(l, _mainFilterRoot));
                 }
@@ -213,11 +213,11 @@ namespace IndiLogs_3._0.ViewModels.Components
                 // Search text filter (always apply search, regardless of checkbox)
                 if (hasSearchText)
                 {
-                    string searchText = SearchText;
-                    if (QueryParserService.HasBooleanOperators(SearchText))
+                    string searchText = SearchText ?? "";
+                    if (QueryParserService.HasBooleanOperators(searchText))
                     {
                         var parser = new QueryParserService();
-                        var filterTree = parser.Parse(SearchText, out string errorMessage);
+                        var filterTree = parser.Parse(searchText, out string? errorMessage);
                         if (filterTree != null)
                             currentLogs = currentLogs.Where(l => EvaluateFilterNode(l, filterTree));
                         else
@@ -339,7 +339,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     // Filter mode: take only events in range (already sorted, Where preserves order)
                     eventsToShow = _sessionVM.AllEvents
-                        .Where(e => e.Time >= GlobalTimeRangeStart.Value && e.Time <= GlobalTimeRangeEnd.Value)
+                        .Where(e => e.Time >= GlobalTimeRangeStart!.Value && e.Time <= GlobalTimeRangeEnd!.Value)
                         .ToList();
                 }
 
@@ -365,12 +365,12 @@ namespace IndiLogs_3._0.ViewModels.Components
             {
                 _sessionVM.StatusMessage = "Time range filter cleared";
             }
-            else
+            else if (_sessionVM != null)
             {
-                var plcCount = (_sessionVM?.Logs as ICollection<LogEntry>)?.Count ?? 0;
+                var plcCount = (_sessionVM.Logs as ICollection<LogEntry>)?.Count ?? 0;
                 var appCount = (AppDevLogsFiltered?.Count) ?? 0;
                 var filteredCount = (FilteredLogs?.Count) ?? 0;
-                var eventsCount = (_sessionVM?.Events?.Count) ?? 0;
+                var eventsCount = (_sessionVM.Events?.Count) ?? 0;
                 _sessionVM.StatusMessage = $"Time Range Filter: PLC={plcCount}, APP={appCount}, FILTERED={filteredCount}, Events={eventsCount}";
             }
 

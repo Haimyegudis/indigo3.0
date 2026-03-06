@@ -31,12 +31,12 @@ namespace IndiLogs_3._0.Services.Grep
         /// <summary>
         /// Raised when a scheduled search starts.
         /// </summary>
-        public event Action<ScheduledSearch> SearchStarted;
+        public event Action<ScheduledSearch>? SearchStarted;
 
         /// <summary>
         /// Raised when a scheduled search completes (or fails).
         /// </summary>
-        public event Action<ScheduledSearch, int, string> SearchCompleted;
+        public event Action<ScheduledSearch, int, string?>? SearchCompleted;
 
         public SearchSchedulerService(IGlobalGrepService grepService, ISearchLocationService locationService, IEmailNotificationService emailService)
         {
@@ -85,7 +85,7 @@ namespace IndiLogs_3._0.Services.Grep
         /// Manually run a scheduled search now.
         /// Returns the HTML report path if generated, null otherwise.
         /// </summary>
-        public async Task<string> RunNowAsync(ScheduledSearch schedule, CancellationToken ct = default)
+        public async Task<string?> RunNowAsync(ScheduledSearch schedule, CancellationToken ct = default)
         {
             return await ExecuteScheduledSearchAsync(schedule, ct).ConfigureAwait(false);
         }
@@ -124,7 +124,7 @@ namespace IndiLogs_3._0.Services.Grep
             }
         }
 
-        private void OnTimerElapsed(object sender, ElapsedEventArgs e) => _ = OnTimerElapsedAsync();
+        private void OnTimerElapsed(object? sender, ElapsedEventArgs e) => _ = OnTimerElapsedAsync();
 
         private async Task OnTimerElapsedAsync()
         {
@@ -264,13 +264,13 @@ namespace IndiLogs_3._0.Services.Grep
             return result;
         }
 
-        private async Task<string> ExecuteScheduledSearchAsync(ScheduledSearch schedule, CancellationToken ct)
+        private async Task<string?> ExecuteScheduledSearchAsync(ScheduledSearch schedule, CancellationToken ct)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
             SearchStarted?.Invoke(schedule);
 
             // --- Resolve relative time ranges to absolute dates ---
-            var criteria = schedule.Criteria;
+            var criteria = schedule.Criteria ?? new SearchCriteria();
             if (criteria.FileTimeFilter != null)
                 criteria.FileTimeFilter = criteria.FileTimeFilter.Resolve();
             if (criteria.ResultTimeFilter != null)
@@ -332,7 +332,7 @@ namespace IndiLogs_3._0.Services.Grep
             if (criteria.ResultTimeFilter != null)
                 AppLogger.Info($"[Scheduler] Result time filter: {criteria.ResultTimeFilter.From?.ToString("yyyy-MM-dd HH:mm") ?? "any"} → {criteria.ResultTimeFilter.To?.ToString("yyyy-MM-dd HH:mm") ?? "any"}");
 
-            string htmlReportPath = null;
+            string? htmlReportPath = null;
 
             // Mark as run NOW to prevent the timer from triggering a duplicate run
             schedule.LastRunTime = DateTime.Now;
@@ -340,8 +340,8 @@ namespace IndiLogs_3._0.Services.Grep
 
             try
             {
-                List<GrepResult> results = null;
-                LogStatisticsResult stats = null;
+                List<GrepResult>? results = null;
+                LogStatisticsResult? stats = null;
                 bool doSearch = schedule.ScanMode == ScanMode.SearchOnly || schedule.ScanMode == ScanMode.SearchAndStatistics;
                 bool doStats = schedule.ScanMode == ScanMode.StatisticsOnly || schedule.ScanMode == ScanMode.SearchAndStatistics;
 
@@ -405,7 +405,7 @@ namespace IndiLogs_3._0.Services.Grep
                     var reportParams = new SearchReportParams
                     {
                         LocationNames = activeLocations.Select(l => l.Name).ToList(),
-                        QueryText = null,
+                        QueryText = "",
                         CriteriaSummary = $"Scheduled scan: {schedule.Name} ({schedule.ScanMode})",
                         SearchDuration = $"{sw.ElapsedMilliseconds:N0}ms",
                         LogTypes = (criteria.SearchPLC && criteria.SearchAPP) ? "PLC + APP"
@@ -413,9 +413,9 @@ namespace IndiLogs_3._0.Services.Grep
                     };
 
                     if (doStats && !doSearch)
-                        SearchReportService.GenerateStatisticsReport(htmlReportPath, reportParams, stats);
+                        SearchReportService.GenerateStatisticsReport(htmlReportPath, reportParams, stats!);
                     else if (doStats)
-                        SearchReportService.GenerateHtmlReport(htmlReportPath, reportParams, results ?? new List<GrepResult>(), stats);
+                        SearchReportService.GenerateHtmlReport(htmlReportPath, reportParams, results ?? new List<GrepResult>(), stats!);
                     else
                         SearchReportService.GenerateHtmlReport(htmlReportPath, reportParams, results ?? new List<GrepResult>());
 
@@ -470,7 +470,7 @@ namespace IndiLogs_3._0.Services.Grep
             }
         }
 
-        private static string Escape(string s)
+        private static string Escape(string? s)
         {
             if (string.IsNullOrEmpty(s)) return "";
             if (s.Contains(',') || s.Contains('"') || s.Contains('\n'))
@@ -497,7 +497,7 @@ namespace IndiLogs_3._0.Services.Grep
         {
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(ScheduleFile));
+                Directory.CreateDirectory(Path.GetDirectoryName(ScheduleFile)!);
                 File.WriteAllText(ScheduleFile, JsonConvert.SerializeObject(Schedules, Formatting.Indented));
             }
             catch (Exception ex)

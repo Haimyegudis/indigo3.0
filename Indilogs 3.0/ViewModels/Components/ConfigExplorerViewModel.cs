@@ -389,7 +389,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         content.TrimStart().StartsWith("{") ||
                         content.TrimStart().StartsWith("["))
                     {
-                        dynamic parsedJson = JsonConvert.DeserializeObject(content, AppConstants.SafeJsonSettings);
+                        dynamic? parsedJson = JsonConvert.DeserializeObject(content, AppConstants.SafeJsonSettings);
                         ConfigFileContent = JsonConvert.SerializeObject(parsedJson, Formatting.Indented);
                     }
                     else
@@ -497,8 +497,8 @@ namespace IndiLogs_3._0.ViewModels.Components
                 _allDbTreeNodes.Clear();
             });
 
-            DbTreeNode tablesRoot = null;
-            string tempDbPath = null;
+            DbTreeNode? tablesRoot = null;
+            string? tempDbPath = null;
 
             try
             {
@@ -512,7 +512,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     {
                         NodeType = "Root",
                         IsExpanded = true,
-                        DatabaseFileName = SelectedConfigFile // Store DB file name
+                        DatabaseFileName = SelectedConfigFile ?? ""
                     };
 
                     using (var connection = new SqliteConnection($"Data Source={tempDbPath};Mode=ReadOnly"))
@@ -543,7 +543,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                                 Schema = tableSql,
                                 NodeType = "Table",
                                 IsExpanded = false,
-                                DatabaseFileName = SelectedConfigFile // Store DB file name
+                                DatabaseFileName = SelectedConfigFile ?? ""
                             };
 
                             // Get column info using PRAGMA
@@ -604,7 +604,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private void BrowseTable(object obj)
+        private void BrowseTable(object? obj)
         {
             if (obj is DbTreeNode node && node.NodeType == "Table")
             {
@@ -649,7 +649,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private void RefreshConfigExplorer(object obj)
+        private void RefreshConfigExplorer(object? obj)
         {
             LoadSelectedFileContent();
         }
@@ -718,7 +718,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             CsvDataView = null;
         }
 
-        private DataView ParseCsvToDataView(string csvContent)
+        private DataView? ParseCsvToDataView(string csvContent)
         {
             try
             {
@@ -726,7 +726,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 using (var reader = new StringReader(csvContent))
                 {
                     // Parse header
-                    string headerLine = reader.ReadLine();
+                    string? headerLine = reader.ReadLine();
                     if (string.IsNullOrEmpty(headerLine)) return null;
 
                     var headers = headerLine.Split(',');
@@ -743,7 +743,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                     // Bulk insert mode — disables index maintenance during load
                     dt.BeginLoadData();
-                    string line;
+                    string? line;
                     while ((line = reader.ReadLine()) != null)
                     {
                         if (string.IsNullOrEmpty(line)) continue;

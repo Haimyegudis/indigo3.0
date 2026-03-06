@@ -12,7 +12,7 @@ namespace IndiLogs_3._0.ViewModels.Components
     {
         // ── Marked Logs: mark/unmark, window management, navigation ──
 
-        private void MarkRow(object obj)
+        private void MarkRow(object? obj)
         {
             if (_parent.SelectedLog != null)
             {
@@ -44,7 +44,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private void UnmarkLog(object obj)
+        private void UnmarkLog(object? obj)
         {
             // Placeholder for future unmark functionality
         }
@@ -52,7 +52,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// Opens marked logs window - combined or separate based on IsMarkedLogsCombined setting
         /// </summary>
-        private void OpenMarkedLogsWindow(object obj)
+        private void OpenMarkedLogsWindow(object? obj)
         {
             if (IsMarkedLogsCombined)
             {
@@ -144,7 +144,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// Navigate to the next marked log entry
         /// </summary>
-        private void GoToNextMarked(object obj)
+        private void GoToNextMarked(object? obj)
         {
             var logs = GetActiveLogCollection();
             if (!logs.Any()) return;
@@ -177,7 +177,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// Navigate to the previous marked log entry
         /// </summary>
-        private void GoToPrevMarked(object obj)
+        private void GoToPrevMarked(object? obj)
         {
             var logs = GetActiveLogCollection();
             if (!logs.Any()) return;

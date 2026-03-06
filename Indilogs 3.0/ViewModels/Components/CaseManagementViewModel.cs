@@ -174,7 +174,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         // ── Annotation Methods ──
 
-        private void CloseAnnotation(object obj)
+        private void CloseAnnotation(object? obj)
         {
             if (obj is LogEntry log)
             {
@@ -194,7 +194,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// Toggle annotation expansion for a log entry
         /// </summary>
-        private void ToggleAnnotation(object obj)
+        private void ToggleAnnotation(object? obj)
         {
             if (obj is LogEntry log && log.HasAnnotation)
             {
@@ -246,7 +246,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             return selectedLog != null && LogAnnotations.ContainsKey(selectedLog);
         }
 
-        private void DeleteAnnotation(object parameter)
+        private void DeleteAnnotation(object? parameter)
         {
             LogEntry log = parameter as LogEntry ?? _parent?.SelectedLog;
 

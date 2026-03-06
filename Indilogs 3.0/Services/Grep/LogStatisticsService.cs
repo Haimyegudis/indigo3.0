@@ -122,7 +122,7 @@ namespace IndiLogs_3._0.Services.Grep
             ParseLogsFromLocations(
                 IReadOnlyList<SearchLocation> locations,
                 SearchCriteria criteria,
-                IProgress<(int current, int total, string status)> progress,
+                IProgress<(int current, int total, string status)>? progress,
                 CancellationToken ct)
         {
             var plcBag = new ConcurrentBag<LogEntry>();

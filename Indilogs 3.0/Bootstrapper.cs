@@ -76,8 +76,11 @@ namespace IndiLogs_3._0
             var updateService = new UpdateService(dialogService, dispatcher);
             Register<IUpdateService>(updateService);
 
+            var grepBundle = new GrepServiceBundle(globalGrepService, searchLocationService, searchConfigService, searchSchedulerService, windowsTaskSchedulerService, emailNotificationService);
+            Register<GrepServiceBundle>(grepBundle);
+
             // --- ViewModels ---
-            var mainVM = new MainViewModel(logFileService, coloringService, csvService, defaultConfigService, dialogService, viewFactory, dispatcher, windowOwner, windowManager);
+            var mainVM = new MainViewModel(logFileService, coloringService, csvService, defaultConfigService, dialogService, viewFactory, dispatcher, windowOwner, windowManager, grepBundle);
             Register<MainViewModel>(mainVM);
 
             _configured = true;

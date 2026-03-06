@@ -34,7 +34,7 @@ namespace IndiLogs_3._0.Services.Interfaces
         Task<List<GrepResult>> SearchMultiLocationAsync(
             SearchCriteria criteria,
             IReadOnlyList<SearchLocation> locations,
-            IProgress<(int current, int total, string status)> progress,
+            IProgress<(int current, int total, string status)>? progress,
             CancellationToken cancellationToken,
             Action<GrepResult>? onResult = null);
 

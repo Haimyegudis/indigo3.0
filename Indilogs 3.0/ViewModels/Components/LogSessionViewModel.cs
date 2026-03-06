@@ -293,7 +293,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             return filter.ToString();
         }
 
-        private async Task LoadFile(object obj)
+        private async Task LoadFile(object? obj)
         {
             try
             {

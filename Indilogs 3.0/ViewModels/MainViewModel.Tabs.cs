@@ -73,7 +73,7 @@ namespace IndiLogs_3._0.ViewModels
 
         private TabSelectionConfig? _lastTabSelection;
 
-        public void ApplyTabSelection(TabSelectionConfig selection, TabSelectionConfig preScan)
+        public void ApplyTabSelection(TabSelectionConfig? selection, TabSelectionConfig? preScan)
         {
             _lastTabSelection = selection;
 

@@ -1,5 +1,6 @@
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
+using IndiLogs_3._0.Services.Grep;
 using IndiLogs_3._0.Services.Interfaces;
 using IndiLogs_3._0.ViewModels;
 using IndiLogs.PluginAPI;
@@ -107,13 +108,25 @@ namespace IndiLogs.Tests
         private readonly TestWindowOwnerProvider _windowOwner = new();
         private readonly TestWindowManager _windowManager = new();
 
+        private static GrepServiceBundle CreateTestGrepBundle()
+        {
+            return new GrepServiceBundle(
+                new GlobalGrepService(),
+                new SearchLocationService(),
+                new SearchConfigService(),
+                new SearchSchedulerService(new GlobalGrepService(), new SearchLocationService(), new EmailNotificationService()),
+                new WindowsTaskSchedulerService(),
+                new EmailNotificationService());
+        }
+
         private MainViewModel? TryCreateVM()
         {
             try
             {
                 return new MainViewModel(
                     _logService, _coloringService, _csvService, _defaultConfigService,
-                    _dialogService, _viewFactory, _dispatcher, _windowOwner, _windowManager);
+                    _dialogService, _viewFactory, _dispatcher, _windowOwner, _windowManager,
+                    CreateTestGrepBundle());
             }
             catch (Exception)
             {

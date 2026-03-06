@@ -1006,7 +1006,7 @@ namespace IndiLogs_3._0.Services
                                 try
                                 {
                                     session.SetupInfo = File.ReadAllText(filePath);
-                                    string plcVer = ExtractPlcVersionFromSetupInfo(session.SetupInfo);
+                                    string? plcVer = ExtractPlcVersionFromSetupInfo(session.SetupInfo);
                                     if (!string.IsNullOrEmpty(plcVer)) detectedPlcVersion = plcVer;
                                 }
                                 catch (Exception ex) { AppLogger.Error("Parsing setup info JSON failed", ex); }

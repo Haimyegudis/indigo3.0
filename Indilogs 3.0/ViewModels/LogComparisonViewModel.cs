@@ -250,12 +250,12 @@ namespace IndiLogs_3._0.ViewModels
         /// </summary>
         public ICommand GoToSourceCommand { get; }
 
-        private bool CanExecuteGoToSource(object param)
+        private bool CanExecuteGoToSource(object? param)
         {
             return param is LogEntry;
         }
 
-        private void ExecuteGoToSource(object param)
+        private void ExecuteGoToSource(object? param)
         {
             if (param is LogEntry log)
             {

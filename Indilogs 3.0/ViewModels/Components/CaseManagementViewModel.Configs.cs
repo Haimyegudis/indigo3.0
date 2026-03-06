@@ -17,7 +17,7 @@ namespace IndiLogs_3._0.ViewModels.Components
     {
         // ── Saved Configurations: CRUD, apply, defaults ──
 
-        private void SaveConfig(object obj)
+        private void SaveConfig(object? obj)
         {
             var existingNames = SavedConfigs.Select(c => c.Name).ToList();
             var dlg = _viewFactory.Create<Views.SaveConfigWindow>(existingNames);
@@ -41,7 +41,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private void LoadConfig(object obj)
+        private void LoadConfig(object? obj)
         {
             var dlg = new OpenFileDialog
             {
@@ -101,7 +101,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private void DeleteConfig(object obj)
+        private void DeleteConfig(object? obj)
         {
             var configToDelete = SelectedConfig;
             if (configToDelete != null && _dialogService.ShowConfirm($"Delete '{configToDelete.Name}'?", "Confirm") == DialogResult.Yes)

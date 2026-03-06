@@ -23,7 +23,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// </summary>
         public bool IsLoadingCase => _isLoadingCase;
 
-        private void SaveCase(object parameter)
+        private void SaveCase(object? parameter)
         {
             try
             {
@@ -97,7 +97,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// Loads an investigation case from a .indi-case file
         /// </summary>
-        private void LoadCase(object parameter)
+        private void LoadCase(object? parameter)
         {
             try
             {
@@ -341,7 +341,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             catch (Exception ex) { AppLogger.Error("ApplyCaseSettings failed", ex); }
         }
 
-        private async Task OpenColoringWindow(object obj)
+        private async Task OpenColoringWindow(object? obj)
         {
             // ── Different Logs tab (index 12): route to its own coloring logic ──
             if (_parent.SelectedTabIndex == 12)
@@ -405,7 +405,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// Opens the coloring window targeting the Different Logs tab (tab 12).
         /// Uses dynamic fields from the loaded plugin columns.
         /// </summary>
-        private async Task OpenDifferentLogsColoringWindow(object obj)
+        private async Task OpenDifferentLogsColoringWindow(object? obj)
         {
             try
             {
