@@ -37,8 +37,8 @@ namespace IndiLogs.Tests
 
     internal class TestLogColoringService : ILogColoringService
     {
-        public List<ColoringCondition> UserDefaultMainRules { get; set; } = new();
-        public List<ColoringCondition> UserDefaultAppRules { get; set; } = new();
+        public List<ColoringCondition>? UserDefaultMainRules { get; set; } = new();
+        public List<ColoringCondition>? UserDefaultAppRules { get; set; } = new();
         public Task ApplyDefaultColorsAsync(IEnumerable<LogEntry> logs, bool isAppLog) => Task.CompletedTask;
         public Task ApplyCustomColoringAsync(IEnumerable<LogEntry> logs, List<ColoringCondition> conditions) => Task.CompletedTask;
     }

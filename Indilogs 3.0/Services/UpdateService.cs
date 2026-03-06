@@ -348,10 +348,9 @@ namespace IndiLogs_3._0.Services
         {
             try
             {
-                var rawCert = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(filePath);
-                if (rawCert != null)
+                var cert = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadCertificateFromFile(filePath);
+                if (cert != null)
                 {
-                    var cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(rawCert);
                     using (var chain = new System.Security.Cryptography.X509Certificates.X509Chain())
                     {
                         chain.ChainPolicy.RevocationMode = System.Security.Cryptography.X509Certificates.X509RevocationMode.Online;

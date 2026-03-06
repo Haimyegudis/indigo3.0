@@ -44,7 +44,7 @@ namespace IndiLogs.Tests
         public void AddRange_NullCollection_Throws()
         {
             var collection = new ObservableRangeCollection<int>();
-            Assert.Throws<ArgumentNullException>(() => collection.AddRange(null));
+            Assert.Throws<ArgumentNullException>(() => collection.AddRange(null!));
         }
 
         [Fact]
@@ -64,7 +64,7 @@ namespace IndiLogs.Tests
         public void ReplaceAll_NullCollection_Throws()
         {
             var collection = new ObservableRangeCollection<int>();
-            Assert.Throws<ArgumentNullException>(() => collection.ReplaceAll(null));
+            Assert.Throws<ArgumentNullException>(() => collection.ReplaceAll(null!));
         }
 
         [Fact]
@@ -114,7 +114,7 @@ namespace IndiLogs.Tests
         public void InsertRange_NullCollection_Throws()
         {
             var collection = new ObservableRangeCollection<int>();
-            Assert.Throws<ArgumentNullException>(() => collection.InsertRange(0, null));
+            Assert.Throws<ArgumentNullException>(() => collection.InsertRange(0, null!));
         }
 
         [Fact]

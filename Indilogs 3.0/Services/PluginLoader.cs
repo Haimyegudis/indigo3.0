@@ -167,10 +167,9 @@ namespace IndiLogs_3._0.Services
             try
             {
                 // Check for Authenticode signature with chain validation
-                var rawCert = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(dllPath);
-                if (rawCert != null)
+                var cert = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadCertificateFromFile(dllPath);
+                if (cert != null)
                 {
-                    var cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(rawCert);
                     using (var chain = new System.Security.Cryptography.X509Certificates.X509Chain())
                     {
                         chain.ChainPolicy.RevocationMode = System.Security.Cryptography.X509Certificates.X509RevocationMode.Online;

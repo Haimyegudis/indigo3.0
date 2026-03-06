@@ -20,6 +20,7 @@ namespace IndiLogs.Tests
         {
             var node = TextFilterParser.Parse("StartsWith([Thread], 'main')");
 
+            Assert.NotNull(node);
             Assert.Equal(NodeType.Condition, node.Type);
             Assert.Equal("ThreadName", node.Field);
             Assert.Equal("Begins With", node.Operator);
@@ -31,6 +32,7 @@ namespace IndiLogs.Tests
         {
             var node = TextFilterParser.Parse("Contains([Message], 'error')");
 
+            Assert.NotNull(node);
             Assert.Equal(NodeType.Condition, node.Type);
             Assert.Equal("Message", node.Field);
             Assert.Equal("Contains", node.Operator);
@@ -42,6 +44,7 @@ namespace IndiLogs.Tests
         {
             var node = TextFilterParser.Parse("EndsWith([Level], 'Error')");
 
+            Assert.NotNull(node);
             Assert.Equal(NodeType.Condition, node.Type);
             Assert.Equal("Level", node.Field);
             Assert.Equal("Ends With", node.Operator);
@@ -53,6 +56,7 @@ namespace IndiLogs.Tests
         {
             var node = TextFilterParser.Parse("Equals([Logger], 'MyClass')");
 
+            Assert.NotNull(node);
             Assert.Equal(NodeType.Condition, node.Type);
             Assert.Equal("Logger", node.Field);
             Assert.Equal("Equals", node.Operator);
@@ -63,6 +67,7 @@ namespace IndiLogs.Tests
         public void Parse_ThreadFieldAlias_MapsToThreadName()
         {
             var node = TextFilterParser.Parse("Contains([Thread], 'worker')");
+            Assert.NotNull(node);
             Assert.Equal("ThreadName", node.Field);
         }
 
@@ -70,6 +75,7 @@ namespace IndiLogs.Tests
         public void Parse_UnknownField_PassedThrough()
         {
             var node = TextFilterParser.Parse("Contains([CustomField], 'val')");
+            Assert.NotNull(node);
             Assert.Equal("CustomField", node.Field);
         }
 
@@ -77,6 +83,7 @@ namespace IndiLogs.Tests
         public void Parse_UnknownFunction_DefaultsToContains()
         {
             var node = TextFilterParser.Parse("Like([Message], 'test')");
+            Assert.NotNull(node);
             Assert.Equal("Contains", node.Operator);
         }
 
@@ -86,6 +93,7 @@ namespace IndiLogs.Tests
             var node = TextFilterParser.Parse(
                 "Contains([Message], 'a') Or Contains([Message], 'b')");
 
+            Assert.NotNull(node);
             Assert.Equal(NodeType.Group, node.Type);
             Assert.Equal("OR", node.LogicalOperator);
             Assert.Equal(2, node.Children.Count);
@@ -97,6 +105,7 @@ namespace IndiLogs.Tests
             var node = TextFilterParser.Parse(
                 "Contains([Message], 'a') And Contains([Level], 'Error')");
 
+            Assert.NotNull(node);
             Assert.Equal(NodeType.Group, node.Type);
             Assert.Equal("AND", node.LogicalOperator);
             Assert.Equal(2, node.Children.Count);
@@ -109,6 +118,7 @@ namespace IndiLogs.Tests
             var node = TextFilterParser.Parse(
                 "Contains([Message], 'a') Or Contains([Message], 'b') And Contains([Message], 'c')");
 
+            Assert.NotNull(node);
             Assert.Equal(NodeType.Group, node.Type);
             Assert.Equal("OR", node.LogicalOperator);
             Assert.Equal(2, node.Children.Count);
@@ -127,6 +137,7 @@ namespace IndiLogs.Tests
             var node = TextFilterParser.Parse(
                 "(Contains([Message], 'a') Or Contains([Message], 'b')) And Contains([Message], 'c')");
 
+            Assert.NotNull(node);
             Assert.Equal(NodeType.Group, node.Type);
             Assert.Equal("AND", node.LogicalOperator);
             Assert.Equal(2, node.Children.Count);

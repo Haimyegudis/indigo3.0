@@ -86,7 +86,7 @@ namespace IndiLogs.Tests
         public void PropertyChanged_Fires()
         {
             var node = new FilterNode();
-            string changedProperty = null;
+            string? changedProperty = null;
             node.PropertyChanged += (s, e) => changedProperty = e.PropertyName;
 
             node.Value = "new value";

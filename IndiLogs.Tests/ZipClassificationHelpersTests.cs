@@ -22,7 +22,7 @@ namespace IndiLogs.Tests
         [InlineData(null, false)]
         public void IsCustomTerminalLog_MatchesKnownPrefixes(string? fileName, bool expected)
         {
-            Assert.Equal(expected, ZipClassificationHelpers.IsCustomTerminalLog(fileName));
+            Assert.Equal(expected, ZipClassificationHelpers.IsCustomTerminalLog(fileName!));
         }
 
         [Fact]
@@ -46,7 +46,7 @@ namespace IndiLogs.Tests
         [InlineData(null, false)]
         public void IsSystabFile_MatchesDiagnosticsLogsPath(string? path, bool expected)
         {
-            Assert.Equal(expected, ZipClassificationHelpers.IsSystabFile(path));
+            Assert.Equal(expected, ZipClassificationHelpers.IsSystabFile(path!));
         }
 
         // ── IsPluginCandidateExtension ──
@@ -84,7 +84,7 @@ namespace IndiLogs.Tests
         [InlineData(null, false)]
         public void IsGlobalsXmlFile_MatchesGlobalsPath(string? path, bool expected)
         {
-            Assert.Equal(expected, ZipClassificationHelpers.IsGlobalsXmlFile(path));
+            Assert.Equal(expected, ZipClassificationHelpers.IsGlobalsXmlFile(path!));
         }
 
         // ── IsTerminalLogsPath ──
@@ -135,7 +135,7 @@ namespace IndiLogs.Tests
         [InlineData(null, false)]
         public void IsEmStatisticsFile_MatchesCorrectFiles(string? name, bool expected)
         {
-            Assert.Equal(expected, ZipClassificationHelpers.IsEmStatisticsFile(name));
+            Assert.Equal(expected, ZipClassificationHelpers.IsEmStatisticsFile(name!));
         }
 
         // ── ShouldSkipEntry ──

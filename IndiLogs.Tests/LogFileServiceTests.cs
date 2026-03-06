@@ -61,7 +61,7 @@ namespace IndiLogs.Tests
         public void StringPool_Intern_NullReturnsNull()
         {
             var pool = new LogFileService.StringPool();
-            Assert.Null(pool.Intern(null));
+            Assert.Null(pool.Intern(null!));
         }
 
         [Fact]
@@ -120,7 +120,7 @@ namespace IndiLogs.Tests
         {
             var service = new LogFileService(new PluginLoader());
             var progress = new Progress<(double, string)>();
-            var session = await service.LoadSessionAsync(null, progress);
+            var session = await service.LoadSessionAsync(null!, progress);
 
             Assert.NotNull(session);
             // Logs may be null or empty list depending on code path

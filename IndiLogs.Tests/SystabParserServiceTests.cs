@@ -11,7 +11,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void ParseRegContent_NullOrEmpty_ReturnsEmptyDictionary()
         {
-            Assert.Empty(SystabParserService.ParseRegContent(null));
+            Assert.Empty(SystabParserService.ParseRegContent(null!));
             Assert.Empty(SystabParserService.ParseRegContent(""));
         }
 
@@ -87,7 +87,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void ExtractTopicInfo_NullOrEmpty_ReturnsNulls()
         {
-            var (topic, station, index) = SystabParserService.ExtractTopicInfo(null);
+            var (topic, station, index) = SystabParserService.ExtractTopicInfo(null!);
             Assert.Null(topic);
             Assert.Null(station);
             Assert.Null(index);
@@ -107,7 +107,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void BuildSystabTree_NullInput_ReturnsEmptyCollection()
         {
-            var result = SystabParserService.BuildSystabTree(null);
+            var result = SystabParserService.BuildSystabTree(null!);
             Assert.Empty(result);
         }
 

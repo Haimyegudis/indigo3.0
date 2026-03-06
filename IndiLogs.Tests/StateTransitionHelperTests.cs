@@ -69,7 +69,7 @@ namespace IndiLogs.Tests
         {
             var log = new LogEntry
             {
-                ThreadName = null,
+                ThreadName = null!,
                 Message = "PlcMngr: Idle -> Running"
             };
             Assert.False(StateTransitionHelper.IsS6StateTransition(log));
@@ -81,7 +81,7 @@ namespace IndiLogs.Tests
             var log = new LogEntry
             {
                 ThreadName = "Manager",
-                Message = null
+                Message = null!
             };
             Assert.False(StateTransitionHelper.IsS6StateTransition(log));
         }
@@ -92,7 +92,7 @@ namespace IndiLogs.Tests
         public void TryParseTransition_ParsesValidMessage()
         {
             bool result = StateTransitionHelper.TryParseTransition(
-                "PlcMngr: Idle -> Running", out string from, out string to);
+                "PlcMngr: Idle -> Running", out string? from, out string? to);
 
             Assert.True(result);
             Assert.Equal("Idle", from);
@@ -103,7 +103,7 @@ namespace IndiLogs.Tests
         public void TryParseTransition_ReturnsFalseForNull()
         {
             bool result = StateTransitionHelper.TryParseTransition(
-                null, out string from, out string to);
+                null, out string? from, out string? to);
 
             Assert.False(result);
             Assert.Null(from);
@@ -114,7 +114,7 @@ namespace IndiLogs.Tests
         public void TryParseTransition_ReturnsFalseForNoArrow()
         {
             bool result = StateTransitionHelper.TryParseTransition(
-                "PlcMngr: Just a message", out string from, out string to);
+                "PlcMngr: Just a message", out string? from, out string? to);
 
             Assert.False(result);
         }
@@ -123,7 +123,7 @@ namespace IndiLogs.Tests
         public void TryParseTransition_HandlesMultipleArrows()
         {
             bool result = StateTransitionHelper.TryParseTransition(
-                "PlcMngr: A -> B -> C", out string from, out string to);
+                "PlcMngr: A -> B -> C", out string? from, out string? to);
 
             Assert.True(result);
             Assert.Equal("A", from);

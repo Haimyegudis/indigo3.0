@@ -95,7 +95,7 @@ namespace IndiLogs.Tests
 
             Assert.True(_engine.IsMaskPatternValid);
 
-            string masked = _engine.ApplyMask("error 123 at line 456");
+            string? masked = _engine.ApplyMask("error 123 at line 456");
             Assert.Equal("error # at line #", masked);
         }
 
@@ -121,7 +121,7 @@ namespace IndiLogs.Tests
         public void ApplyMask_NullText_ReturnsNull()
         {
             _engine.IgnoreMaskPattern = @"\d+";
-            string result = _engine.ApplyMask(null);
+            string? result = _engine.ApplyMask(null);
             Assert.Null(result);
         }
 

@@ -39,7 +39,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void TruncateMessage_Null_ReturnsEmpty()
         {
-            Assert.Equal("(empty)", LogStatisticsService.TruncateMessage(null, 100));
+            Assert.Equal("(empty)", LogStatisticsService.TruncateMessage(null!, 100));
         }
 
         [Fact]
@@ -77,7 +77,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void GetShortLoggerName_Null_ReturnsUnknown()
         {
-            Assert.Equal("Unknown", LogStatisticsService.GetShortLoggerName(null));
+            Assert.Equal("Unknown", LogStatisticsService.GetShortLoggerName(null!));
         }
 
         [Fact]
@@ -196,7 +196,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void GetErrorLogs_NullLevel_Excluded()
         {
-            var logs = new List<LogEntry> { new LogEntry { Level = null } };
+            var logs = new List<LogEntry> { new LogEntry { Level = null! } };
             Assert.Empty(LogStatisticsService.GetErrorLogs(logs));
         }
 
@@ -243,7 +243,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void FindGaps_NullLogs_ReturnsEmpty()
         {
-            Assert.Empty(LogStatisticsService.FindGaps(null));
+            Assert.Empty(LogStatisticsService.FindGaps(null!));
         }
 
         // ── CalculateErrorHistogram ──

@@ -11,7 +11,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void Parse_SingleWord_ReturnsConditionNode()
         {
-            var result = _parser.Parse("error", out string error);
+            var result = _parser.Parse("error", out string? error);
 
             Assert.Null(error);
             Assert.NotNull(result);
@@ -24,7 +24,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void Parse_ExactPhrase_ReturnsConditionWithPhraseValue()
         {
-            var result = _parser.Parse("\"disk full\"", out string error);
+            var result = _parser.Parse("\"disk full\"", out string? error);
 
             Assert.Null(error);
             Assert.NotNull(result);
@@ -35,7 +35,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void Parse_TwoWordsImplicitAnd_ReturnsAndGroup()
         {
-            var result = _parser.Parse("error disk", out string error);
+            var result = _parser.Parse("error disk", out string? error);
 
             Assert.Null(error);
             Assert.NotNull(result);
@@ -49,7 +49,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void Parse_OrOperator_ReturnsOrGroup()
         {
-            var result = _parser.Parse("error OR warning", out string error);
+            var result = _parser.Parse("error OR warning", out string? error);
 
             Assert.Null(error);
             Assert.NotNull(result);
@@ -61,7 +61,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void Parse_NotOperator_ReturnsNotAndGroup()
         {
-            var result = _parser.Parse("-error", out string error);
+            var result = _parser.Parse("-error", out string? error);
 
             Assert.Null(error);
             Assert.NotNull(result);
@@ -74,7 +74,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void Parse_Parentheses_GroupsCorrectly()
         {
-            var result = _parser.Parse("(error OR warning) crash", out string error);
+            var result = _parser.Parse("(error OR warning) crash", out string? error);
 
             Assert.Null(error);
             Assert.NotNull(result);
@@ -87,7 +87,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void Parse_EmptyQuery_ReturnsNullWithError()
         {
-            var result = _parser.Parse("", out string error);
+            var result = _parser.Parse("", out string? error);
 
             Assert.Null(result);
             Assert.NotNull(error);
@@ -97,7 +97,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void Parse_UnclosedQuote_ReturnsNullWithError()
         {
-            var result = _parser.Parse("\"unclosed", out string error);
+            var result = _parser.Parse("\"unclosed", out string? error);
 
             Assert.Null(result);
             Assert.NotNull(error);
@@ -106,7 +106,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void Parse_PipeAsOr_ReturnsOrGroup()
         {
-            var result = _parser.Parse("error | warning", out string error);
+            var result = _parser.Parse("error | warning", out string? error);
 
             Assert.Null(error);
             Assert.NotNull(result);
@@ -117,7 +117,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void Parse_ExplicitAnd_ReturnsAndGroup()
         {
-            var result = _parser.Parse("error AND warning", out string error);
+            var result = _parser.Parse("error AND warning", out string? error);
 
             Assert.Null(error);
             Assert.NotNull(result);
@@ -140,7 +140,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void HasBooleanOperators_NullOrEmpty_ReturnsFalse()
         {
-            Assert.False(QueryParserService.HasBooleanOperators(null));
+            Assert.False(QueryParserService.HasBooleanOperators(null!));
             Assert.False(QueryParserService.HasBooleanOperators(""));
             Assert.False(QueryParserService.HasBooleanOperators("   "));
         }
@@ -148,7 +148,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void Parse_ComplexNested_ParsesCorrectly()
         {
-            var result = _parser.Parse("(error OR warning) AND -\"ignore this\"", out string error);
+            var result = _parser.Parse("(error OR warning) AND -\"ignore this\"", out string? error);
 
             Assert.Null(error);
             Assert.NotNull(result);

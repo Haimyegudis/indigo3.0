@@ -98,14 +98,14 @@ namespace IndiLogs.Tests
         [Fact]
         public void ParseLogEntry_NullEntry_NoException()
         {
-            LogParserService.ParseLogEntry(null);
+            LogParserService.ParseLogEntry(null!);
             // Should not throw
         }
 
         [Fact]
         public void ParseLogEntry_NullMessage_NoException()
         {
-            var entry = new LogEntry { Message = null };
+            var entry = new LogEntry { Message = null! };
             LogParserService.ParseLogEntry(entry);
             Assert.Empty(entry.Pattern);
             Assert.Empty(entry.Data);

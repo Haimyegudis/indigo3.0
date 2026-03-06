@@ -54,7 +54,7 @@ namespace IndiLogs.Tests
         public void GetDllPath_NullPlugin_ReturnsNull()
         {
             var loader = new PluginLoader();
-            Assert.Null(loader.GetDllPath(null));
+            Assert.Null(loader.GetDllPath(null!));
         }
 
         [Fact]

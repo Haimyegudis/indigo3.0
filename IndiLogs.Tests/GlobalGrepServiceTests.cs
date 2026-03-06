@@ -16,8 +16,8 @@ namespace IndiLogs.Tests
             string logger = "MyApp.Service",
             string threadName = "Main",
             string method = "DoWork",
-            string data = null,
-            string exception = null)
+            string? data = null,
+            string? exception = null)
         {
             return new LogEntry
             {
@@ -26,8 +26,8 @@ namespace IndiLogs.Tests
                 Logger = logger,
                 ThreadName = threadName,
                 Method = method,
-                Data = data,
-                Exception = exception
+                Data = data ?? "",
+                Exception = exception ?? ""
             };
         }
 
@@ -330,7 +330,7 @@ namespace IndiLogs.Tests
         [Fact]
         public void DetermineMatchedFields_NoCriteria_ReturnsEmpty()
         {
-            var criteria = new SearchCriteria { Groups = null };
+            var criteria = new SearchCriteria { Groups = null! };
             Assert.Equal("", _service.DetermineMatchedFields(MakeEntry(), criteria));
         }
     }
