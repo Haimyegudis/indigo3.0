@@ -396,7 +396,7 @@ namespace IndiLogs_3._0.Services
 
         private void SearchDirectory(string path, string q, Regex? r, bool u, bool plc, bool app, List<GrepResult> res, IProgress<(int, int, string)>? prog, CancellationToken ct)
         {
-            var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Where(f => IsLogFile(f, plc, app)).ToList();
+            var files = Directory.EnumerateFiles(path, "*.*", SearchOption.AllDirectories).Where(f => IsLogFile(f, plc, app)).ToList();
             for (int i = 0; i < files.Count; i++)
             {
                 if (ct.IsCancellationRequested) break;

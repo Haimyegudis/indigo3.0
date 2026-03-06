@@ -142,7 +142,12 @@ namespace IndiLogs.Tests
             }
             finally
             {
-                try { if (File.Exists(invalidDll)) File.Delete(invalidDll); } catch { }
+                // Retry cleanup — assembly probing may briefly lock the file
+                for (int i = 0; i < 3; i++)
+                {
+                    try { if (File.Exists(invalidDll)) File.Delete(invalidDll); break; }
+                    catch { if (i < 2) System.Threading.Thread.Sleep(50); }
+                }
             }
         }
 

@@ -137,7 +137,7 @@ namespace IndiLogs_3._0.Services
                     try
                     {
                         var dates = new List<DateTime>();
-                        foreach (var f in Directory.GetFiles(location.BasePath, "*.*", SearchOption.AllDirectories).Take(20))
+                        foreach (var f in Directory.EnumerateFiles(location.BasePath, "*.*", SearchOption.AllDirectories).Take(20))
                         {
                             try { dates.Add(File.GetLastWriteTime(f)); } catch (Exception ex) { AppLogger.Warn($"[Grep] File date access failed: {ex.Message}"); }
                         }
