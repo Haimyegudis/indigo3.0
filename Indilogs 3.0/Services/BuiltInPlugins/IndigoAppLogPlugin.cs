@@ -32,7 +32,7 @@ using System.Threading;
 
 namespace IndiLogs_3._0.Services.BuiltInPlugins
 {
-    internal class IndigoAppLogPlugin : ILogFilePlugin
+    internal partial class IndigoAppLogPlugin : ILogFilePlugin
     {
         public string Name    => "INDIGO APP Log (Built-in)";
         public string Version => "1.0.0";
@@ -43,20 +43,19 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         // ── Detection helpers ──────────────────────────────────────────────────
 
         // Timestamp prefix: yyyy-MM-dd HH:mm:ss,fff[ffff] (3-7 fractional digits)
-        private static readonly Regex _tsPrefix = new Regex(
-            @"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3,7}",
-            RegexOptions.Compiled, TimeSpan.FromSeconds(2));
+        [GeneratedRegex(@"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3,7}",
+            RegexOptions.None, matchTimeoutMilliseconds: 2000)]
+        private static partial Regex TsPrefixRegex();
 
         // Old format: timestamp immediately followed by \x1e
-        private static readonly Regex _oldFormatDetect = new Regex(
-            @"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3,7}\x1e",
-            RegexOptions.Compiled, TimeSpan.FromSeconds(2));
+        [GeneratedRegex(@"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3,7}\x1e",
+            RegexOptions.None, matchTimeoutMilliseconds: 2000)]
+        private static partial Regex OldFormatDetectRegex();
 
         // New format: timestamp followed by space + pipe + content + pipe + space + pipe
-        // e.g. "2026-01-29 10:32:38,073 |Thread-1| |abc| |def|..."
-        private static readonly Regex _newFormatDetect = new Regex(
-            @"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3,7}\s+\|[^|]*\|\s+\|",
-            RegexOptions.Compiled, TimeSpan.FromSeconds(2));
+        [GeneratedRegex(@"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3,7}\s+\|[^|]*\|\s+\|",
+            RegexOptions.None, matchTimeoutMilliseconds: 2000)]
+        private static partial Regex NewFormatDetectRegex();
 
         public bool CanHandle(string fileName, string[]? sampleLines)
         {
@@ -65,8 +64,8 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             foreach (var line in sampleLines)
             {
                 if (string.IsNullOrEmpty(line)) continue;
-                if (_oldFormatDetect.IsMatch(line)) return true;
-                if (_newFormatDetect.IsMatch(line)) return true;
+                if (OldFormatDetectRegex().IsMatch(line)) return true;
+                if (NewFormatDetectRegex().IsMatch(line)) return true;
             }
             return false;
         }
@@ -88,7 +87,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         // ── Full regex parsers ─────────────────────────────────────────────────
 
         // Old format (\x1e delimited): one entry per accumulated buffer
-        private static readonly Regex _oldFmt = new Regex(
+        [GeneratedRegex(
             @"(?<Timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3,7})\x1e" +
             @"(?<Thread>[^\x1e]*)\x1e" +
             @"(?<RootIFlowId>[^\x1e]*)\x1e" +
@@ -101,10 +100,11 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             @"(?<Message>.*?)\x1e" +
             @"(?<Exception>.*?)\x1e" +
             @"(?<Data>.*?)(\x1e|$)",
-            RegexOptions.Singleline | RegexOptions.Compiled, TimeSpan.FromSeconds(2));
+            RegexOptions.Singleline, matchTimeoutMilliseconds: 2000)]
+        private static partial Regex OldFmtRegex();
 
         // New pipe format (multi-line, entry ends with ||)
-        private static readonly Regex _newFmt = new Regex(
+        [GeneratedRegex(
             @"^(?<Timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3,7})\s*" +
             @"\|(?<Thread>[^|]*)\|\s*" +
             @"\|(?<RootIFlowId>[^|]*)\|\s*" +
@@ -115,7 +115,8 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             @"(?<Level>\w+)\s+(?<Logger>[^\r\n]*)[\r\n]+" +
             @"\|(?<Location>[^|]*)\|[\r\n]+" +
             @"(?<Message>.*?)\s*\|\|",
-            RegexOptions.Singleline | RegexOptions.Compiled, TimeSpan.FromSeconds(2));
+            RegexOptions.Singleline, matchTimeoutMilliseconds: 2000)]
+        private static partial Regex NewFmtRegex();
 
         // ── Parse ──────────────────────────────────────────────────────────────
 
@@ -147,7 +148,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
                     if (isOldFormat == null && !string.IsNullOrWhiteSpace(line))
                         isOldFormat = line.Contains("\x1e");
 
-                    bool startsEntry = _tsPrefix.IsMatch(line);
+                    bool startsEntry = TsPrefixRegex().IsMatch(line);
 
                     if (startsEntry)
                     {
@@ -188,7 +189,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         {
             try
             {
-                var m = _oldFmt.Match(text);
+                var m = OldFmtRegex().Match(text);
                 if (!m.Success) return null;
 
                 return BuildEntry(
@@ -213,7 +214,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         {
             try
             {
-                var m = _newFmt.Match(text);
+                var m = NewFmtRegex().Match(text);
                 if (!m.Success) return null;
 
                 return BuildEntry(

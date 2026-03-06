@@ -26,7 +26,7 @@ using System.Xml;
 
 namespace IndiLogs_3._0.Services.BuiltInPlugins
 {
-    internal class Log4NetPlugin : ILogFilePlugin
+    internal partial class Log4NetPlugin : ILogFilePlugin
     {
         public string Name    => "log4net / log4j (Built-in)";
         public string Version => "1.0.0";
@@ -50,7 +50,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
                     return true;
 
                 // PatternLayout: "yyyy-MM-dd HH:mm:ss,fff [Thread] LEVEL Logger - message"
-                if (_rxPattern.IsMatch(line))
+                if (RxPatternRegex().IsMatch(line))
                     return true;
             }
             return false;
@@ -71,9 +71,9 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
 
         // ── PatternLayout regex ────────────────────────────────────────────────
         // Matches: 2026-01-15 10:32:01,123 [Thread] LEVEL Logger - message
-        private static readonly Regex _rxPattern = new Regex(
-            @"^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[.,]\d+)\s+\[([^\]]+)\]\s+(FATAL|ERROR|WARN(?:ING)?|INFO(?:RMATION)?|DEBUG|TRACE)\s+(\S+)\s+-\s+(.*)$",
-            RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
+        [GeneratedRegex(@"^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[.,]\d+)\s+\[([^\]]+)\]\s+(FATAL|ERROR|WARN(?:ING)?|INFO(?:RMATION)?|DEBUG|TRACE)\s+(\S+)\s+-\s+(.*)$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 2000)]
+        private static partial Regex RxPatternRegex();
 
         private static readonly string[] _dateFmts =
         {
@@ -218,7 +218,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
 
                     if (string.IsNullOrWhiteSpace(line)) continue;
 
-                    var m = _rxPattern.Match(line);
+                    var m = RxPatternRegex().Match(line);
                     if (m.Success)
                     {
                         if (current != null) yield return current;
@@ -276,10 +276,6 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         }
 
         // ── Helper: concatenate streams ───────────────────────────────────────
-        /// <summary>
-        /// Wraps a stream and replaces null bytes (0x00) and other invalid XML 1.0 characters
-        /// with spaces to prevent XmlReader from crashing on corrupted log files.
-        /// </summary>
         private class XmlSanitizingStream : Stream
         {
             private readonly Stream _inner;

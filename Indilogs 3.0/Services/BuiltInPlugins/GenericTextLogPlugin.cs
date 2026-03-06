@@ -24,7 +24,7 @@ using System.Threading;
 
 namespace IndiLogs_3._0.Services.BuiltInPlugins
 {
-    internal class GenericTextLogPlugin : ILogFilePlugin
+    internal partial class GenericTextLogPlugin : ILogFilePlugin
     {
         public string Name    => "Generic Text Log (Built-in)";
         public string Version => "1.0.0";
@@ -65,37 +65,33 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             };
         }
 
-        // ── Regex patterns (compiled for performance) ─────────────────────────
-        private const RegexOptions _rxOpts =
-            RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
-
-        private const string _levelGroup =
-            @"(FATAL|CRITICAL|ERROR|WARN(?:ING)?|INFO(?:RMATION)?|DEBUG|TRACE|VERBOSE)";
+        // ── Regex patterns (source-generated) ─────────────────────────────────
+        // _levelGroup inlined: (FATAL|CRITICAL|ERROR|WARN(?:ING)?|INFO(?:RMATION)?|DEBUG|TRACE|VERBOSE)
 
         // 1: ISO timestamp with ms + optional bracketed level
-        private static readonly Regex _rx1 = new Regex(
-            @"^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[.,]\d+)\s+\[?" + _levelGroup + @"\]?\s+(.+)$",
-            _rxOpts, TimeSpan.FromSeconds(2));
+        [GeneratedRegex(@"^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[.,]\d+)\s+\[?(FATAL|CRITICAL|ERROR|WARN(?:ING)?|INFO(?:RMATION)?|DEBUG|TRACE|VERBOSE)\]?\s+(.+)$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 2000)]
+        private static partial Regex Rx1();
 
         // 2: ISO timestamp without ms + level + colon optional
-        private static readonly Regex _rx2 = new Regex(
-            @"^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2})\s+" + _levelGroup + @":?\s+(.+)$",
-            _rxOpts, TimeSpan.FromSeconds(2));
+        [GeneratedRegex(@"^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2})\s+(FATAL|CRITICAL|ERROR|WARN(?:ING)?|INFO(?:RMATION)?|DEBUG|TRACE|VERBOSE):?\s+(.+)$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 2000)]
+        private static partial Regex Rx2();
 
         // 3: [ISO timestamp] [level] or [ISO timestamp] level
-        private static readonly Regex _rx3 = new Regex(
-            @"^\[(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[^\]]*)\]\s*\[?" + _levelGroup + @"\]?\s+(.+)$",
-            _rxOpts, TimeSpan.FromSeconds(2));
+        [GeneratedRegex(@"^\[(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[^\]]*)\]\s*\[?(FATAL|CRITICAL|ERROR|WARN(?:ING)?|INFO(?:RMATION)?|DEBUG|TRACE|VERBOSE)\]?\s+(.+)$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 2000)]
+        private static partial Regex Rx3();
 
         // 4: level first, then ISO timestamp
-        private static readonly Regex _rx4 = new Regex(
-            @"^" + _levelGroup + @"\s+(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[.,]?\d*)\s+(.+)$",
-            _rxOpts, TimeSpan.FromSeconds(2));
+        [GeneratedRegex(@"^(FATAL|CRITICAL|ERROR|WARN(?:ING)?|INFO(?:RMATION)?|DEBUG|TRACE|VERBOSE)\s+(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[.,]?\d*)\s+(.+)$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 2000)]
+        private static partial Regex Rx4();
 
         // 5: syslog — "Jan 15 10:32:01 hostname process: message"
-        private static readonly Regex _rx5 = new Regex(
-            @"^(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+\S+\s+\S+:\s+(.+)$",
-            _rxOpts, TimeSpan.FromSeconds(2));
+        [GeneratedRegex(@"^(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+\S+\s+\S+:\s+(.+)$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 2000)]
+        private static partial Regex Rx5();
 
         // ── Parse ─────────────────────────────────────────────────────────────
         public IEnumerable<LogEntryDto> Parse(
@@ -158,27 +154,27 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             Match m;
 
             // Pattern 1: ISO + ms + level
-            m = _rx1.Match(line);
+            m = Rx1().Match(line);
             if (m.Success)
                 return Make(m.Groups[1].Value, m.Groups[2].Value, m.Groups[3].Value);
 
             // Pattern 2: ISO without ms + level
-            m = _rx2.Match(line);
+            m = Rx2().Match(line);
             if (m.Success)
                 return Make(m.Groups[1].Value, m.Groups[2].Value, m.Groups[3].Value);
 
             // Pattern 3: [timestamp] level
-            m = _rx3.Match(line);
+            m = Rx3().Match(line);
             if (m.Success)
                 return Make(m.Groups[1].Value, m.Groups[2].Value, m.Groups[3].Value);
 
             // Pattern 4: level first
-            m = _rx4.Match(line);
+            m = Rx4().Match(line);
             if (m.Success)
                 return Make(m.Groups[2].Value, m.Groups[1].Value, m.Groups[3].Value);
 
             // Pattern 5: syslog (no level — default Info)
-            m = _rx5.Match(line);
+            m = Rx5().Match(line);
             if (m.Success)
                 return Make(m.Groups[1].Value, "Info", m.Groups[2].Value);
 
