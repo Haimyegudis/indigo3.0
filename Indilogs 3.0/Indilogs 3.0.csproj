@@ -44,9 +44,13 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="OxyPlot.Wpf" Version="2.2.0" />
     <PackageReference Include="SkiaSharp" Version="3.119.0" />
-    <PackageReference Include="SkiaSharp.Views.WPF" Version="3.119.0" />
+    <PackageReference Include="SkiaSharp.Views.WPF" Version="3.119.0">
+      <NoWarn>NU1701</NoWarn>
+    </PackageReference>
     <PackageReference Include="HarfBuzzSharp" Version="8.3.1.1" />
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.3" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.3">
+      <NoWarn>NU1510</NoWarn>
+    </PackageReference>
     <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -56,7 +60,9 @@
   <!-- Exclude OpenTK transitive dependency (not needed, not compatible with .NET 10) -->
   <ItemGroup>
     <PackageReference Include="OpenTK" Version="3.3.1" ExcludeAssets="all" PrivateAssets="all" />
-    <PackageReference Include="OpenTK.GLWpfControl" Version="3.3.0" ExcludeAssets="all" PrivateAssets="all" />
+    <PackageReference Include="OpenTK.GLWpfControl" Version="3.3.0" ExcludeAssets="all" PrivateAssets="all">
+      <NoWarn>NU1701</NoWarn>
+    </PackageReference>
   </ItemGroup>
 
   <!-- Indigo.Infra DLLs (legacy .NET Framework 4.7.1 — loaded via compatibility shim) -->
