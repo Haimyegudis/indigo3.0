@@ -27,7 +27,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 Directory.CreateDirectory(dir);
                 var cfg = new SavedConfiguration
                 {
-                    Name = dlg.ConfigName,
+                    Name = dlg.ConfigName ?? "",
                     CreatedDate = DateTime.Now,
                     FilePath = Path.Combine(dir, $"{AppPaths.ConfigPrefix}{dlg.ConfigName}.json"),
                     MainColoringRules = MainColoringRules ?? new List<ColoringCondition>(),
@@ -82,7 +82,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 else
                 {
                     // ── Normal JSON load ──────────────────────────────────────────────
-                    c          = JsonConvert.DeserializeObject<SavedConfiguration>(File.ReadAllText(dlg.FileName), AppConstants.SafeJsonSettings);
+                    c          = JsonConvert.DeserializeObject<SavedConfiguration>(File.ReadAllText(dlg.FileName), AppConstants.SafeJsonSettings) ?? new SavedConfiguration();
                     c.FilePath = dlg.FileName;
                     _sessionVM.StatusMessage = $"Configuration '{c.Name}' loaded";
                 }
@@ -234,6 +234,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     try
                     {
                         var c = JsonConvert.DeserializeObject<SavedConfiguration>(File.ReadAllText(f), AppConstants.SafeJsonSettings);
+                        if (c == null) continue;
                         c.FilePath = f;
 
                         // Hide the non-matching built-in default by file stem

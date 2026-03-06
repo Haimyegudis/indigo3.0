@@ -8,7 +8,7 @@ namespace IndiLogs_3._0.Services.Interfaces
     public interface IDefaultConfigurationService
     {
         /// <summary>Gets the currently loaded default configuration.</summary>
-        DefaultConfiguration CurrentDefaults { get; }
+        DefaultConfiguration? CurrentDefaults { get; }
 
         /// <summary>Loads the default configuration from disk.</summary>
         void Load();

@@ -319,8 +319,8 @@ namespace IndiLogs_3._0.Services
 
                             // Time filter helper — returns filtered list or original if no filter active
                             bool timeFilterActive = sel.UseTimeFilter && sel.FilterStartTime.HasValue && sel.FilterEndTime.HasValue;
-                            DateTime tfStart = timeFilterActive ? sel.FilterStartTime.Value : DateTime.MinValue;
-                            DateTime tfEnd = timeFilterActive ? sel.FilterEndTime.Value : DateTime.MaxValue;
+                            DateTime tfStart = timeFilterActive ? sel.FilterStartTime!.Value : DateTime.MinValue;
+                            DateTime tfEnd = timeFilterActive ? sel.FilterEndTime!.Value : DateTime.MaxValue;
 
                             if (item.Type == FileType.MainLog)
                             {

@@ -209,14 +209,14 @@ namespace IndiLogs_3._0.ViewModels
 
                         _dispatcher.Post(() =>
                         {
-                            SessionVM.StatusMessage = $"\ud83d\udd17 Synced to {targetGrid} @ {nearestLog.Date:HH:mm:ss.fff} (\u00b1{timeDiff.TotalMilliseconds:F0}ms) - switch tab to see";
+                            if (SessionVM != null) SessionVM.StatusMessage = $"\ud83d\udd17 Synced to {targetGrid} @ {nearestLog.Date:HH:mm:ss.fff} (\u00b1{timeDiff.TotalMilliseconds:F0}ms) - switch tab to see";
                         });
                     }
                     else
                     {
                         _dispatcher.Post(() =>
                         {
-                            SessionVM.StatusMessage = $"\u26a0 No correlated logs within 60s (closest: {timeDiff.TotalSeconds:F1}s)";
+                            if (SessionVM != null) SessionVM.StatusMessage = $"\u26a0 No correlated logs within 60s (closest: {timeDiff.TotalSeconds:F1}s)";
                         });
                     }
                 }

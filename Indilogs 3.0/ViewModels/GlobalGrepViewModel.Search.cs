@@ -73,7 +73,7 @@ namespace IndiLogs_3._0.ViewModels
                 bool hasLocations = activeLocations.Any();
                 bool hasLoadedSessions = LoadedSessions?.Any() == true;
 
-                string searchPattern = hasSearchText ? SearchQuery : "(no quick-search text)";
+                string searchPattern = hasSearchText ? SearchQuery ?? "" : "(no quick-search text)";
                 string conditionsSummary = hasConditions ? BuildCriteriaSummary() : "(no structured conditions)";
 
                 AppLogger.Info($"[Grep] ════════════════════════════════════════════════════");
@@ -113,12 +113,12 @@ namespace IndiLogs_3._0.ViewModels
                 }
                 else if (hasLoadedSessions)
                 {
-                    var sessionsList = LoadedSessions.ToList();
+                    var sessionsList = (LoadedSessions ?? Enumerable.Empty<LogSessionData>()).ToList();
                     AppLogger.Info($"[Grep] MODE: In-memory loaded sessions ({sessionsList.Count} session(s))");
                     foreach (var s in sessionsList)
                         AppLogger.Info($"[Grep]   Session: \"{s.FileName}\" — PLC:{s.Logs?.Count ?? 0} entries, APP:{s.AppDevLogs?.Count ?? 0} entries");
                     await _grepService.SearchLoadedSessionsWithCriteriaAsync(
-                        LoadedSessions, criteria, progress, _cancellationTokenSource.Token, onResult);
+                        LoadedSessions!, criteria, progress, _cancellationTokenSource.Token, onResult);
                 }
                 else
                 {
@@ -156,12 +156,12 @@ namespace IndiLogs_3._0.ViewModels
                     _lastSearchParams = new SearchReportParams
                     {
                         LocationNames = locationNames,
-                        QueryText = SearchQuery,
+                        QueryText = SearchQuery ?? "",
                         CriteriaSummary = BuildCriteriaSummary(),
                         SearchDuration = $"{sw.ElapsedMilliseconds:N0}ms",
                         LogTypes = (SearchPLC && SearchAPP) ? "PLC + APP" : SearchPLC ? "PLC" : SearchAPP ? "APP" : "None",
-                        FileTimeRange = FormatTimeRange(FileTimeFrom, FileTimeTo),
-                        ResultTimeRange = FormatTimeRange(ResultTimeFrom, ResultTimeTo)
+                        FileTimeRange = FormatTimeRange(FileTimeFrom, FileTimeTo) ?? "",
+                        ResultTimeRange = FormatTimeRange(ResultTimeFrom, ResultTimeTo) ?? ""
                     };
                 });
             }
@@ -203,7 +203,7 @@ namespace IndiLogs_3._0.ViewModels
                         {
                             Field = c.Field,
                             Operator = c.Operator,
-                            Value = c.Value,
+                            Value = c.Value ?? "",
                             Negate = c.Negate
                         }).ToList()
                 }).Where(g => g.Conditions.Count > 0).ToList()
@@ -236,7 +236,7 @@ namespace IndiLogs_3._0.ViewModels
                             {
                                 Field = SelectedQuickSearchField,
                                 Operator = UseRegex ? SearchOperator.Regex : SearchOperator.Contains,
-                                Value = SearchQuery
+                                Value = SearchQuery ?? ""
                             }
                         }
                     }
@@ -268,7 +268,7 @@ namespace IndiLogs_3._0.ViewModels
 
         private void FindFirstOccurrence()
         {
-            var first = Results.Where(r => r.Timestamp.HasValue).OrderBy(r => r.Timestamp.Value).FirstOrDefault();
+            var first = Results.Where(r => r.Timestamp.HasValue).OrderBy(r => r.Timestamp!.Value).FirstOrDefault();
             if (first != null)
             {
                 SelectedResult = first;

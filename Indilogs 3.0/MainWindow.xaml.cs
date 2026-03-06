@@ -238,7 +238,7 @@ namespace IndiLogs_3._0
         {
             if (args != null && args.Length > 0 && DataContext is MainViewModel vm)
             {
-                vm.OnFilesDropped(args);
+                _ = vm.OnFilesDropped(args);
             }
         }
 
@@ -247,7 +247,7 @@ namespace IndiLogs_3._0
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
-                if (DataContext is MainViewModel vm) vm.OnFilesDropped(files);
+                if (DataContext is MainViewModel vm) _ = vm.OnFilesDropped(files);
             }
         }
 
@@ -272,9 +272,10 @@ namespace IndiLogs_3._0
 
         private void CopySelectedLogsToClipboard()
         {
-            if (PlcLogsTab?.LogsGrid?.InnerDataGrid?.SelectedItems.Count == 0) return;
+            var innerGrid = PlcLogsTab?.LogsGrid?.InnerDataGrid;
+            if (innerGrid == null || innerGrid.SelectedItems.Count == 0) return;
             var sb = new StringBuilder();
-            var selectedLogs = PlcLogsTab.LogsGrid.InnerDataGrid.SelectedItems.Cast<LogEntry>().OrderBy(l => l.Date).ToList();
+            var selectedLogs = innerGrid.SelectedItems.Cast<LogEntry>().OrderBy(l => l.Date).ToList();
             int maxTime = 24;
             int maxLevel = Math.Max(5, selectedLogs.Max(l => (l.Level ?? "").Length));
             int maxThread = Math.Max(10, selectedLogs.Max(l => (l.ThreadName ?? "").Length));
@@ -298,13 +299,13 @@ namespace IndiLogs_3._0
 
         private void TreeViewItem_PreviewMouseRightButtonDown(object? sender, MouseButtonEventArgs e)
         {
-            TreeViewItem treeViewItem = VisualUpwardSearch(e.OriginalSource as DependencyObject);
+            TreeViewItem? treeViewItem = VisualUpwardSearch(e.OriginalSource as DependencyObject);
             if (treeViewItem != null) { treeViewItem.Focus(); e.Handled = true; }
         }
 
-        static TreeViewItem VisualUpwardSearch(DependencyObject source)
+        static TreeViewItem? VisualUpwardSearch(DependencyObject? source)
         {
-            while (source != null && !(source is TreeViewItem))
+            while (source != null && source is not TreeViewItem)
                 source = source is Visual || source is System.Windows.Media.Media3D.Visual3D
                     ? VisualTreeHelper.GetParent(source)
                     : LogicalTreeHelper.GetParent(source);
@@ -318,7 +319,7 @@ namespace IndiLogs_3._0
             {
                 System.ComponentModel.ListSortDirection direction = (e.Column.SortDirection != System.ComponentModel.ListSortDirection.Ascending) ? System.ComponentModel.ListSortDirection.Ascending : System.ComponentModel.ListSortDirection.Descending;
                 e.Column.SortDirection = direction;
-                vm.SortAppLogs(e.Column.SortMemberPath, direction == System.ComponentModel.ListSortDirection.Ascending);
+                _ = vm.SortAppLogs(e.Column.SortMemberPath, direction == System.ComponentModel.ListSortDirection.Ascending);
             }
         }
 
@@ -326,7 +327,7 @@ namespace IndiLogs_3._0
         //  FIXED SCREENSHOTS LOGIC (Zoom & Drag)
         // ==========================================
 
-        private ScrollViewer GetScreenshotScrollViewer() => this.FindName("ScreenshotScrollViewer") as ScrollViewer;
+        private ScrollViewer? GetScreenshotScrollViewer() => this.FindName("ScreenshotScrollViewer") as ScrollViewer;
 
         private void OnScreenshotMouseWheel(object? sender, MouseWheelEventArgs e)
         {
@@ -416,7 +417,7 @@ namespace IndiLogs_3._0
 
                 // Execute deferred scroll-to-bottom for tabs that weren't rendered on initial load
                 // MainTabs indices: 0=PLC, 1=APP
-                string tabName = null;
+                string? tabName = null;
                 switch (newTabIndex)
                 {
                     case 0: tabName = "PLC"; break;

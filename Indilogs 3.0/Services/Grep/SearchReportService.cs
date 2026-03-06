@@ -130,7 +130,7 @@ namespace IndiLogs_3._0.Services.Grep
 
             // Matches per level
             var byLevel = results.Where(r => r.ReferencedLogEntry?.Level != null)
-                                 .GroupBy(r => r.ReferencedLogEntry.Level)
+                                 .GroupBy(r => r.ReferencedLogEntry!.Level)
                                  .OrderByDescending(g => g.Count()).ToList();
             if (byLevel.Count > 0)
             {
@@ -192,7 +192,7 @@ namespace IndiLogs_3._0.Services.Grep
             } // end if (hasResults)
 
             // Statistics sections (after search results)
-            if (hasStats)
+            if (hasStats && stats != null)
                 AppendStatisticsHtml(sb, stats);
 
             sb.AppendLine("</body></html>");
@@ -305,7 +305,7 @@ namespace IndiLogs_3._0.Services.Grep
                     .Select(g => new
                     {
                         State = g.Key,
-                        TotalDuration = TimeSpan.FromTicks(g.Sum(s => (s.EndTime.Value - s.StartTime).Ticks)),
+                        TotalDuration = TimeSpan.FromTicks(g.Sum(s => (s.EndTime!.Value - s.StartTime).Ticks)),
                         Count = g.Count()
                     })
                     .OrderByDescending(x => x.TotalDuration)
@@ -334,12 +334,12 @@ namespace IndiLogs_3._0.Services.Grep
                 sb.AppendLine("<div class=\"section\">");
                 sb.AppendLine($"<details><summary class=\"collapsible-header\"><h2 style=\"display:inline;\">Gap Analysis (>= 2 seconds)</h2> <span class=\"gap-count\">{totalGaps} gap(s)</span></summary>");
                 sb.AppendLine("<div class=\"collapsible-content\">");
-                if (hasPlcGaps)
+                if (hasPlcGaps && stats.PlcGaps != null)
                 {
                     sb.AppendLine($"<h3>PLC Gaps ({stats.PlcGaps.Count})</h3>");
                     AppendGapTable(sb, stats.PlcGaps);
                 }
-                if (hasAppGaps)
+                if (hasAppGaps && stats.AppGaps != null)
                 {
                     sb.AppendLine($"<h3>APP Gaps ({stats.AppGaps.Count})</h3>");
                     AppendGapTable(sb, stats.AppGaps);
@@ -384,7 +384,7 @@ namespace IndiLogs_3._0.Services.Grep
             sb.AppendLine("<table class=\"summary\"><tr><th>#</th><th>Duration</th><th>Start</th><th>End</th><th>Last Log Before Gap</th></tr>");
             foreach (var g in gaps)
             {
-                sb.AppendLine($"<tr><td>{g.Index}</td><td><strong>{Enc(g.DurationText)}</strong></td><td>{g.StartTime:HH:mm:ss.ffffff}</td><td>{g.EndTime:HH:mm:ss.ffffff}</td><td>{Enc(LogStatisticsService.TruncateMessage(g.LastMessageBeforeGap, 80))}</td></tr>");
+                sb.AppendLine($"<tr><td>{g.Index}</td><td><strong>{Enc(g.DurationText)}</strong></td><td>{g.StartTime:HH:mm:ss.ffffff}</td><td>{g.EndTime:HH:mm:ss.ffffff}</td><td>{Enc(LogStatisticsService.TruncateMessage(g.LastMessageBeforeGap ?? "", 80))}</td></tr>");
             }
             sb.AppendLine("</table>");
         }

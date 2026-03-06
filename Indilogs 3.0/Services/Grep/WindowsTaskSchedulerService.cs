@@ -19,7 +19,7 @@ namespace IndiLogs_3._0.Services.Grep
 
         private static string ExePath =>
             Environment.ProcessPath
-            ?? Process.GetCurrentProcess().MainModule.FileName;
+            ?? Process.GetCurrentProcess().MainModule!.FileName;
 
         /// <summary>
         /// Creates or updates a Windows Scheduled Task for the given schedule.
@@ -163,7 +163,7 @@ namespace IndiLogs_3._0.Services.Grep
                     CreateNoWindow = true
                 };
 
-                using (var proc = Process.Start(psi))
+                using (var proc = Process.Start(psi)!)
                 {
                     string stdout = proc.StandardOutput.ReadToEnd();
                     string stderr = proc.StandardError.ReadToEnd();

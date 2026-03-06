@@ -125,7 +125,7 @@ namespace IndiLogs_3._0.Views
             // Double-click still selects the current item and exits
             if (ThreadsList.SelectedItem != null)
             {
-                SelectedThreads = new List<string> { ThreadsList.SelectedItem.ToString() };
+                SelectedThreads = new List<string> { ThreadsList.SelectedItem.ToString()! };
                 DialogResult = true;
                 Close();
             }

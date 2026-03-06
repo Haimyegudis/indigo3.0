@@ -342,7 +342,7 @@ namespace IndiLogs_3._0.ViewModels
                             {
                                 Field = SimpleField,
                                 Operator = SimpleUseRegex ? SearchOperator.Regex : SearchOperator.Contains,
-                                Value = SimpleSearchText.Trim()
+                                Value = SimpleSearchText?.Trim() ?? ""
                             }
                         }
                     });

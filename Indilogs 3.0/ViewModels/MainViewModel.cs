@@ -536,7 +536,8 @@ namespace IndiLogs_3._0.ViewModels
                 log.IsAnnotationExpanded = newState;
 
             if (CaseVM != null) CaseVM.ShowAllAnnotations = newState;
-            SessionVM.StatusMessage = newState ? "All annotations expanded" : "All annotations collapsed";
+            if (SessionVM != null)
+                SessionVM.StatusMessage = newState ? "All annotations expanded" : "All annotations collapsed";
         }
 
         private void CloseAnnotation(object? parameter) => CaseVM?.CloseAnnotationCommand.Execute(parameter);
@@ -607,7 +608,8 @@ namespace IndiLogs_3._0.ViewModels
                     FilterVM.IsSearchPanelVisible = false;
                 }
 
-                SessionVM.Logs = new List<LogEntry>();
+                if (SessionVM != null)
+                    SessionVM.Logs = new List<LogEntry>();
 
                 ConfigVM?.ClearConfigurationFiles();
 
@@ -620,9 +622,12 @@ namespace IndiLogs_3._0.ViewModels
                 WindowTitle = "IndiLogs 3.0";
                 OnPropertyChanged(nameof(WindowTitle));
 
-                SessionVM.CurrentProgress = 0;
+                if (SessionVM != null)
+                {
+                    SessionVM.CurrentProgress = 0;
+                    SessionVM.SelectedSession = null;
+                }
                 ScreenshotZoom = 400;
-                SessionVM.SelectedSession = null;
                 SelectedLog = null;
                 IsFilterOutActive = false;
                 OnPropertyChanged(nameof(IsFilterActive));
@@ -640,7 +645,7 @@ namespace IndiLogs_3._0.ViewModels
                 LeftTabIndex = 0;
                 OnPropertyChanged(nameof(LeftTabIndex));
 
-                SessionVM.StatusMessage ="All data cleared successfully";
+                if (SessionVM != null) SessionVM.StatusMessage ="All data cleared successfully";
             }
             catch (Exception ex)
             {

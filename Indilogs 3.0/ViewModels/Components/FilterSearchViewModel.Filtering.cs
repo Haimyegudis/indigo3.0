@@ -281,7 +281,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     default:
                         // Check ExtraFields for plugin/custom fields — no fallback to Message
                         if (log.ExtraFields != null &&
-                            log.ExtraFields.TryGetValue(node.Field, out string efVal))
+                            log.ExtraFields.TryGetValue(node.Field, out string? efVal))
                             val = efVal ?? "";
                         else
                             return false; // Field not found → condition does not match
@@ -481,7 +481,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     // Handle parameterized keys like "APP_FILTER:0", "LOGGER:xxx", "COLORING:1", etc.
                     if (key.StartsWith("APP_FILTER:"))
                     {
-                        if (int.TryParse(key.Substring(11), out int appIdx))
+                        if (int.TryParse(key.Substring(11), out int appIdx) && _appFilterRoot != null)
                         {
                             RemoveFilterConditionByIndex(_appFilterRoot, appIdx);
                             // If tree is now empty, deactivate the filter entirely
@@ -496,7 +496,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     }
                     else if (key.StartsWith("MAIN_FILTER:"))
                     {
-                        if (int.TryParse(key.Substring(12), out int mainIdx))
+                        if (int.TryParse(key.Substring(12), out int mainIdx) && _mainFilterRoot != null)
                         {
                             RemoveFilterConditionByIndex(_mainFilterRoot, mainIdx);
                             // If tree is now empty, deactivate the filter entirely

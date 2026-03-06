@@ -272,9 +272,7 @@ namespace IndiLogs_3._0.Views
             _hoveredBarIndex = -1;
 
             _cachedTextPaint11.Color = _chartTextDim;
-            _cachedTextPaint11.TextAlign = SKTextAlign.Left;
             _cachedTextPaint11Bold.Color = _chartText;
-            _cachedTextPaint11Bold.TextAlign = SKTextAlign.Left;
 
             for (int i = 0; i < count; i++)
             {
@@ -420,8 +418,9 @@ namespace IndiLogs_3._0.Views
                     float lx = cx + exX + (float)(labelR * Math.Cos(midAngle * Math.PI / 180));
                     float ly = cy + exY + (float)(labelR * Math.Sin(midAngle * Math.PI / 180));
                     _cachedTextPaint11Bold.Color = SKColors.White;
-                    _cachedTextPaint11Bold.TextAlign = SKTextAlign.Center;
-                    canvas.DrawText($"{(float)item.Count / total * 100:F0}%", lx, ly + 4, _cachedTextFont11Bold, _cachedTextPaint11Bold);
+                    string pctText = $"{(float)item.Count / total * 100:F0}%";
+                    float pctWidth = _cachedTextFont11Bold.MeasureText(pctText);
+                    canvas.DrawText(pctText, lx - pctWidth / 2, ly + 4, _cachedTextFont11Bold, _cachedTextPaint11Bold);
                 }
 
                 startAngle += sweep;
@@ -431,7 +430,6 @@ namespace IndiLogs_3._0.Views
             float legendX = chartAreaW + 10;
             float legendY = 15;
             _cachedTextPaint10.Color = _chartTextDim.WithAlpha(180);
-            _cachedTextPaint10.TextAlign = SKTextAlign.Left;
 
             for (int i = 0; i < data.Count; i++)
             {
@@ -444,7 +442,6 @@ namespace IndiLogs_3._0.Views
 
                 string name = item.State.Length > 16 ? item.State.Substring(0, 13) + "..." : item.State;
                 _cachedTextPaint11.Color = isHov ? _chartText : _chartTextDim;
-                _cachedTextPaint11.TextAlign = SKTextAlign.Left;
                 canvas.DrawText(name, legendX + 18, legendY + 11, _cachedTextFont11, _cachedTextPaint11);
                 canvas.DrawText($"({item.Count})", legendX + 18, legendY + 24, _cachedTextFont10, _cachedTextPaint10);
                 legendY += 30;
@@ -537,8 +534,8 @@ namespace IndiLogs_3._0.Views
                     if (bandWidth > 40)
                     {
                         _cachedTextPaint9.Color = SKColors.Black;
-                        _cachedTextPaint9.TextAlign = SKTextAlign.Center;
-                        float labelX = x1 + bandWidth / 2;
+                        float stateTextWidth = _cachedTextFont9.MeasureText(state.StateName);
+                        float labelX = x1 + bandWidth / 2 - stateTextWidth / 2;
                         canvas.DrawText(state.StateName, labelX, topM + 11, _cachedTextFont9, _cachedTextPaint9);
                     }
                 }
@@ -634,19 +631,19 @@ namespace IndiLogs_3._0.Views
 
             // Y-axis labels
             _cachedTextPaint10.Color = _chartTextDim;
-            _cachedTextPaint10.TextAlign = SKTextAlign.Right;
             {
                 int gridLines = 4;
                 for (int i = 0; i <= gridLines; i++)
                 {
                     float y = topM + (chartH / gridLines) * i;
                     int val = (int)(maxVal * (1.0 - (double)i / gridLines));
-                    canvas.DrawText(val.ToString(), leftM - 6, y + 4, _cachedTextFont10, _cachedTextPaint10);
+                    string valStr = val.ToString();
+                    float valWidth = _cachedTextFont10.MeasureText(valStr);
+                    canvas.DrawText(valStr, leftM - 6 - valWidth, y + 4, _cachedTextFont10, _cachedTextPaint10);
                 }
             }
 
             // X-axis labels
-            _cachedTextPaint10.TextAlign = SKTextAlign.Center;
             {
                 int labelCount = Math.Min(8, visibleCount);
                 int labelStep = Math.Max(1, visibleCount / labelCount);
@@ -655,7 +652,9 @@ namespace IndiLogs_3._0.Views
                     int i = zStart + vi;
                     float x = leftM + vi * stepW + stepW / 2;
                     var time = _vm.TimelineFirstTime.AddSeconds(i * _vm.TimelineBucketSize);
-                    canvas.DrawText(time.ToString("HH:mm:ss"), x, topM + chartH + 18, _cachedTextFont10, _cachedTextPaint10);
+                    string timeStr = time.ToString("HH:mm:ss");
+                    float timeWidth = _cachedTextFont10.MeasureText(timeStr);
+                    canvas.DrawText(timeStr, x - timeWidth / 2, topM + chartH + 18, _cachedTextFont10, _cachedTextPaint10);
                 }
             }
 
@@ -664,16 +663,17 @@ namespace IndiLogs_3._0.Views
             {
                 string zoomText = $"Zoom: {visibleCount}/{_vm.TimelineBucketCount} buckets  (Scroll to zoom, Shift+Scroll to pan)";
                 _cachedTextPaint9.Color = _chartTextDim.WithAlpha(150);
-                _cachedTextPaint9.TextAlign = SKTextAlign.Right;
-                canvas.DrawText(zoomText, w - rightM, topM + chartH + 30, _cachedTextFont9, _cachedTextPaint9);
+                float zoomWidth = _cachedTextFont9.MeasureText(zoomText);
+                canvas.DrawText(zoomText, w - rightM - zoomWidth, topM + chartH + 30, _cachedTextFont9, _cachedTextPaint9);
             }
 
             // Hover tooltip
-            if (_hoveredTimelineBucket >= 0 && _hoveredTimelineBucket < _vm.TimelineBucketCount)
+            if (_hoveredTimelineBucket >= 0 && _hoveredTimelineBucket < _vm.TimelineBucketCount
+                && _vm.TimelineBucketLogs != null)
             {
                 var bucketStart = _vm.TimelineFirstTime.AddSeconds(_hoveredTimelineBucket * _vm.TimelineBucketSize);
                 var bucketEnd = bucketStart.AddSeconds(_vm.TimelineBucketSize);
-                int count = _vm.TimelineBuckets[_hoveredTimelineBucket];
+                int count = _vm.TimelineBuckets![_hoveredTimelineBucket];
                 var logs = _vm.TimelineBucketLogs[_hoveredTimelineBucket];
 
                 var sb = new StringBuilder();
@@ -742,7 +742,6 @@ namespace IndiLogs_3._0.Views
             float padding = 8, lineH = 16;
             float boxH = lines.Length * lineH + padding * 2;
 
-            _cachedTextPaint11.TextAlign = SKTextAlign.Left;
             float maxW = 0;
             foreach (var line in lines)
             {

@@ -43,7 +43,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             if (!extOk && lower.EndsWith(".log"))
             {
                 if (sampleLines == null || sampleLines.Length == 0) return false;
-                string first = sampleLines.FirstOrDefault(l => !string.IsNullOrWhiteSpace(l))?.TrimStart();
+                string? first = sampleLines.FirstOrDefault(l => !string.IsNullOrWhiteSpace(l))?.TrimStart();
                 extOk = first != null && first.StartsWith("{");
             }
 
@@ -54,7 +54,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             {
                 foreach (var s in sampleLines)
                 {
-                    string t = s?.Trim();
+                    string? t = s?.Trim();
                     if (string.IsNullOrEmpty(t) || !t.StartsWith("{")) continue;
                     try { JObject.Load(new JsonTextReader(new System.IO.StringReader(t)) { MaxDepth = AppConstants.JsonMaxDepth }); return true; }
                     catch (Exception ex) { AppLogger.Error("JSON validation failed", ex); }
@@ -166,7 +166,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
         private static LogEntryDto ParseWinston(JObject o)
         {
             var extra = BuildExtra(o, "level", "message", "timestamp", "time", "service", "logger", "name");
-            string logger = Str(o, "service") ?? Str(o, "logger") ?? Str(o, "name");
+            string? logger = Str(o, "service") ?? Str(o, "logger") ?? Str(o, "name");
             return new LogEntryDto
             {
                 Date        = ParseTime(Str(o, "timestamp") ?? Str(o, "time")),
@@ -241,7 +241,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             var extra = new Dictionary<string, string>();
             foreach (var prop in o.Properties())
                 if (!known.Contains(prop.Name))
-                    extra[prop.Name] = prop.Value?.ToString();
+                    extra[prop.Name] = prop.Value?.ToString() ?? "";
 
             return new LogEntryDto
             {
@@ -267,7 +267,7 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
             var dict    = new Dictionary<string, string>();
             foreach (var prop in o.Properties())
                 if (!skipSet.Contains(prop.Name) && prop.Value?.Type != JTokenType.Null)
-                    dict[prop.Name] = prop.Value.ToString();
+                    dict[prop.Name] = prop.Value!.ToString();
             return dict;
         }
 

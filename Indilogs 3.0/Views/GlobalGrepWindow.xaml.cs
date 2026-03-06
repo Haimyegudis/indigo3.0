@@ -39,7 +39,7 @@ namespace IndiLogs_3._0.Views
             AppLogger.Info($"[Grep] Window hidden — running scheduled search '{scheduleName}' in background");
         }
 
-        private void OnScheduledRunCompleted(string scheduleName, string reportPath)
+        private void OnScheduledRunCompleted(string scheduleName, string? reportPath)
         {
             // Reopen the window
             Show();

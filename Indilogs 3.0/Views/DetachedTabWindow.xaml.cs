@@ -175,7 +175,7 @@ namespace IndiLogs_3._0.Views
                     ? System.ComponentModel.ListSortDirection.Ascending
                     : System.ComponentModel.ListSortDirection.Descending;
                 e.Column.SortDirection = direction;
-                vm.SortAppLogs(e.Column.SortMemberPath, direction == System.ComponentModel.ListSortDirection.Ascending);
+                _ = vm.SortAppLogs(e.Column.SortMemberPath, direction == System.ComponentModel.ListSortDirection.Ascending);
             }
         }
 

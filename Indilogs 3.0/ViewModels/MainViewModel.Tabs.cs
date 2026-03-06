@@ -225,7 +225,7 @@ namespace IndiLogs_3._0.ViewModels
 
         public string ReportsButtonText => HasBinaryAppLogs ? "📊 Statistics" : "⚙ Reports";
 
-        public System.Collections.ObjectModel.ObservableCollection<Models.LoggerNode> ActiveLoggerTree =>
+        public System.Collections.ObjectModel.ObservableCollection<Models.LoggerNode>? ActiveLoggerTree =>
             _selectedTabIndex == AppConstants.TAB_APP ? FilterVM?.LoggerTreeRoot : FilterVM?.PlcLoggerTreeRoot;
 
         public string LoggerTabTitle =>

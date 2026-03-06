@@ -268,13 +268,13 @@ namespace IndiLogs_3._0.ViewModels.Components
             // Thread Filter
             if (_filterVM.ActiveThreadFilters.Any())
             {
-                if (!_filterVM.ActiveThreadFilters.Contains(log.ThreadName)) return false;
+                if (log.ThreadName == null || !_filterVM.ActiveThreadFilters.Contains(log.ThreadName)) return false;
             }
 
             // Search Text
             if (hasSearch)
             {
-                if (log.Message == null || log.Message.IndexOf(_filterVM.SearchText, StringComparison.OrdinalIgnoreCase) < 0)
+                if (log.Message == null || _filterVM.SearchText == null || log.Message.IndexOf(_filterVM.SearchText, StringComparison.OrdinalIgnoreCase) < 0)
                     return false;
             }
 
@@ -300,7 +300,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 long currentFileSize;
                 try
                 {
-                    var fileInfo = new FileInfo(_liveFilePath);
+                    var fileInfo = new FileInfo(_liveFilePath!);
                     currentFileSize = fileInfo.Length;
                 }
                 catch (Exception ex)
@@ -329,7 +329,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     try
                     {
-                        using (var fs = new FileStream(_liveFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 262144))
+                        using (var fs = new FileStream(_liveFilePath!, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 262144))
                         {
                             if (isFirstRun)
                             {
@@ -345,7 +345,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                                 if (fs.Length > oldSize)
                                 {
                                     fs.Seek(oldSize, SeekOrigin.Begin);
-                                    _cachedStream.Seek(0, SeekOrigin.End);
+                                    _cachedStream!.Seek(0, SeekOrigin.End);
                                     fs.CopyTo(_cachedStream);
                                     cacheUpdated = true;
                                 }
@@ -370,7 +370,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 // ── Parse the cached stream ───────────────────────────────────
                 if (_cachedStream == null || _cachedStream.Length == 0) return;
 
-                List<LogEntry> newLogs = null;
+                List<LogEntry>? newLogs = null;
                 int totalParsed = 0;
 
                 await Task.Run(() =>
@@ -422,7 +422,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         {
                             try
                             {
-                                _liveLogsCollection.AddRange(logsToAdd);
+                                _liveLogsCollection?.AddRange(logsToAdd);
 
                                 // Also update filtered view
                                 var filteredToAdd = logsToAdd.Where(l => ShouldShowInFilteredView(l)).ToList();
@@ -432,9 +432,9 @@ namespace IndiLogs_3._0.ViewModels.Components
                                 }
 
                                 if (wasFirstRun)
-                                    _sessionVM.StatusMessage = $"Live: Loaded {_liveLogsCollection.Count:N0} logs (watching for new data...)";
+                                    _sessionVM.StatusMessage = $"Live: Loaded {_liveLogsCollection?.Count ?? 0:N0} logs (watching for new data...)";
                                 else
-                                    _sessionVM.StatusMessage = $"Live: +{logsToAdd.Count:N0} new (Total: {_liveLogsCollection.Count:N0})";
+                                    _sessionVM.StatusMessage = $"Live: +{logsToAdd.Count:N0} new (Total: {_liveLogsCollection?.Count ?? 0:N0})";
 
                                 // Auto-scroll to bottom so user sees new entries
                                 _parent.ScrollTabToBottom("PLC");

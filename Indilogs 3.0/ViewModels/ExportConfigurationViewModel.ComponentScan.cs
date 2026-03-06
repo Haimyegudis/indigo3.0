@@ -3,6 +3,7 @@ using IndiLogs_3._0.Services;
 using IndiLogs_3._0.Services.Charts;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -35,7 +36,7 @@ namespace IndiLogs_3._0.ViewModels
                 await Task.Run(() =>
                 {
                     var svc = new IoTerminalDataService();
-                    _ioDevices = svc.ParseIoFiles(_sessionData.TerminalLogFiles, _sessionData.TerminalCsvBytes);
+                    _ioDevices = svc.ParseIoFiles(_sessionData.TerminalLogFiles ?? new Dictionary<string, string>(), _sessionData.TerminalCsvBytes);
                     var items = svc.GetAllComponents(_ioDevices);
 
                     _dispatcher.Post(() =>

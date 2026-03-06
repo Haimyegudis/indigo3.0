@@ -134,7 +134,7 @@ namespace IndiLogs_3._0.Views
                 ApplyRowFilter();
 
                 SetupDataGrid();
-                TransposeGrid.ItemsSource = _displayTable.DefaultView;
+                TransposeGrid.ItemsSource = _displayTable!.DefaultView;
 
                 UpdateInfo();
             }
@@ -150,12 +150,14 @@ namespace IndiLogs_3._0.Views
 
         private void ApplyRowFilter()
         {
+            if (_transposeTable == null) return;
+
             // Create a new table with only visible rows
             _displayTable = _transposeTable.Clone();
 
             foreach (DataRow row in _transposeTable.Rows)
             {
-                var propertyName = row["Property"]?.ToString();
+                var propertyName = row["Property"]?.ToString() ?? "";
                 if (!_hiddenProperties.Contains(propertyName))
                 {
                     _displayTable.ImportRow(row);
@@ -169,7 +171,7 @@ namespace IndiLogs_3._0.Views
 
             ApplyRowFilter();
             SetupDataGrid();
-            TransposeGrid.ItemsSource = _displayTable.DefaultView;
+            TransposeGrid.ItemsSource = _displayTable?.DefaultView;
             UpdateInfo();
         }
 
@@ -242,7 +244,7 @@ namespace IndiLogs_3._0.Views
             // Entry columns - limit column width for better performance with many columns
             int colWidth = _filteredEntries.Count > 50 ? 70 : 90;
 
-            for (int i = 1; i < _transposeTable.Columns.Count; i++)
+            for (int i = 1; i < _transposeTable!.Columns.Count; i++)
             {
                 var col = new DataGridTextColumn
                 {
@@ -473,7 +475,7 @@ namespace IndiLogs_3._0.Views
 
             // Header
             var headers = new List<string>();
-            foreach (DataColumn col in _transposeTable.Columns)
+            foreach (DataColumn col in _transposeTable!.Columns)
             {
                 headers.Add(EscapeCsv(col.ColumnName.Replace("\n", " ")));
             }
@@ -482,7 +484,7 @@ namespace IndiLogs_3._0.Views
             // Data - only export visible rows
             foreach (DataRow row in _transposeTable.Rows)
             {
-                var propertyName = row["Property"]?.ToString();
+                var propertyName = row["Property"]?.ToString() ?? "";
                 if (_hiddenProperties.Contains(propertyName))
                     continue;
 

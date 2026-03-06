@@ -237,7 +237,7 @@ namespace IndiLogs_3._0.Controls
 
                 foreach (var column in AppLogsGrid.Columns)
                 {
-                    string headerText = GetColumnHeaderText(column);
+                    string? headerText = GetColumnHeaderText(column);
                     if (!string.IsNullOrEmpty(headerText))
                     {
                         var menuItem = new MenuItem
@@ -300,7 +300,7 @@ namespace IndiLogs_3._0.Controls
             }
 
             // For other types, try ToString and extract the last part if it's a path
-            string headerText = column.Header.ToString();
+            string? headerText = column.Header.ToString();
 
             // Skip empty or type name strings
             if (string.IsNullOrEmpty(headerText) || headerText.StartsWith("System."))
@@ -448,7 +448,7 @@ namespace IndiLogs_3._0.Controls
                 try
                 {
                     string json = File.ReadAllText(SettingsFilePath);
-                    return JsonConvert.DeserializeObject<GridSettings>(json, AppConstants.SafeJsonSettings);
+                    return JsonConvert.DeserializeObject<GridSettings>(json, AppConstants.SafeJsonSettings) ?? new GridSettings();
                 }
                 catch (Exception ex)
                 {

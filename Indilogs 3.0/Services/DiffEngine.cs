@@ -47,7 +47,7 @@ namespace IndiLogs_3._0.Services
         /// <summary>
         /// Applies the mask pattern to text, replacing matched content with a placeholder.
         /// </summary>
-        public string ApplyMask(string? text)
+        public string? ApplyMask(string? text)
         {
             if (string.IsNullOrEmpty(text) || _maskRegex == null)
                 return text;
@@ -72,8 +72,8 @@ namespace IndiLogs_3._0.Services
             if (right == null) right = string.Empty;
 
             // Apply masking before comparison
-            string maskedLeft = ApplyMask(left);
-            string maskedRight = ApplyMask(right);
+            string maskedLeft = ApplyMask(left) ?? left;
+            string maskedRight = ApplyMask(right) ?? right;
 
             // Quick equality check
             if (maskedLeft == maskedRight)

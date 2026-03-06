@@ -11,7 +11,7 @@ namespace IndiLogs_3._0.Views
     public partial class AnalysisReportWindow : Window
     {
         // The property that the left-side ListBox binds to
-        public List<AnalysisResult> AllResults { get; set; }
+        public List<AnalysisResult> AllResults { get; set; } = null!;
 
         /// <summary>Called when the user double-clicks a log row — navigates the PLC tab.</summary>
         public Action<LogEntry>? JumpToLog { get; private set; }

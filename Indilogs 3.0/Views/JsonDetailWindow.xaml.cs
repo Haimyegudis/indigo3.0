@@ -12,8 +12,8 @@ namespace IndiLogs_3._0.Views
     {
         private readonly string _jsonContent;
         private readonly string _title;
-        private List<KeyValuePair<string, string>> _allItems;
-        private List<KeyValuePair<string, string>> _filteredItems;
+        private List<KeyValuePair<string, string>> _allItems = new();
+        private List<KeyValuePair<string, string>> _filteredItems = new();
 
         public JsonDetailWindow(string jsonContent, string title)
         {

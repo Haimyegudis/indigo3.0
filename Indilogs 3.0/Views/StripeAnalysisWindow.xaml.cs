@@ -328,12 +328,12 @@ namespace IndiLogs_3._0.Views
             try
             {
                 var directory = Path.GetDirectoryName(ColumnOrderFilePath);
-                if (!Directory.Exists(directory))
+                if (directory != null && !Directory.Exists(directory))
                     Directory.CreateDirectory(directory);
 
                 var columnSettings = StripeDataGrid.Columns.Select(c => new ColumnSettingsInfo
                 {
-                    Header = c.Header.ToString(),
+                    Header = c.Header?.ToString() ?? "",
                     DisplayIndex = c.DisplayIndex,
                     Width = c.ActualWidth > 0 ? c.ActualWidth : c.Width.Value,
                     IsVisible = c.Visibility == Visibility.Visible
@@ -554,7 +554,7 @@ namespace IndiLogs_3._0.Views
             ));
 
             // Data
-            foreach (IndigoStripeEntry entry in _dataView)
+            foreach (IndigoStripeEntry entry in _dataView!)
             {
                 sb.AppendLine(string.Join(",",
                     entry.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.ffffff"),

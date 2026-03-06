@@ -141,7 +141,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             _parent.CurrentPluginColumns = session.PluginColumns;
 
             // Load configuration and database files through ConfigVM
-            _configVM.LoadConfigurationFiles();
+            _configVM?.LoadConfigurationFiles();
             _parent.NotifyPropertyChanged(nameof(_parent.DbConfigTabHeader));
             _parent.NotifyPropertyChanged(nameof(_parent.HasBinaryAppLogs));
             _parent.LoadGlobalsFiles();
@@ -156,7 +156,8 @@ namespace IndiLogs_3._0.ViewModels.Components
 
             Screenshots = new ObservableCollection<BitmapImage>(session.Screenshots);
 
-            _caseVM.MarkedLogs = session.MarkedLogs;
+            if (_caseVM != null)
+                _caseVM.MarkedLogs = session.MarkedLogs;
             _parent.SetupInfo = session.SetupInfo;
             _parent.PressConfig = session.PressConfiguration;
 
@@ -168,17 +169,17 @@ namespace IndiLogs_3._0.ViewModels.Components
             AllAppLogsCache = session.AppDevLogs ?? new List<LogEntry>();
             // Note: Parsing already done in LogFileService when case logs were loaded or when saving case
 
-            _filterVM.BuildLoggerTree(AllAppLogsCache);
-            _filterVM.BuildPlcLoggerTree(AllLogsCache);
+            _filterVM?.BuildLoggerTree(AllAppLogsCache);
+            _filterVM?.BuildPlcLoggerTree(AllLogsCache);
 
             // Don't reset search/filters when loading a case - will be restored by ApplyCaseSettings
-            if (!_caseVM.IsLoadingCase)
+            if (_caseVM == null || !_caseVM.IsLoadingCase)
             {
                 // Reload saved configs filtered by session type (show only the matching default)
-                _caseVM.LoadSavedConfigs(session.HasBinaryAppLogs);
+                _caseVM?.LoadSavedConfigs(session.HasBinaryAppLogs);
 
                 // Try to restore previously saved filter state for this session
-                if (!RestoreFilterState(session))
+                if (!RestoreFilterState(session) && _filterVM != null)
                 {
                     // First time opening this session — start with no filters
                     _filterVM.SearchText = "";
@@ -205,7 +206,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
             else
             {
-                _filterVM.ApplyAppLogsFilter();
+                _filterVM?.ApplyAppLogsFilter();
             }
 
             // Restore chart state for this session (or clear if no saved state)
@@ -233,7 +234,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// </summary>
         private void SaveFilterState(LogSessionData? session)
         {
-            if (session == null) return;
+            if (session == null || _filterVM == null) return;
 
             session.SavedFilterState = new SessionFilterState
             {
@@ -263,17 +264,19 @@ namespace IndiLogs_3._0.ViewModels.Components
         private bool RestoreFilterState(LogSessionData session)
         {
             var state = session?.SavedFilterState;
-            if (state == null) return false;
+            if (state == null || _filterVM == null) return false;
 
             _filterVM.SearchText = state.SearchText ?? "";
             _filterVM.IsTimeFocusActive = state.IsTimeFocusActive;
             _filterVM.IsAppTimeFocusActive = state.IsAppTimeFocusActive;
 
             _filterVM.NegativeFilters.Clear();
-            foreach (var nf in state.NegativeFilters) _filterVM.NegativeFilters.Add(nf);
+            if (state.NegativeFilters != null)
+                foreach (var nf in state.NegativeFilters) _filterVM.NegativeFilters.Add(nf);
 
             _filterVM.ActiveThreadFilters.Clear();
-            foreach (var tf in state.ActiveThreadFilters) _filterVM.ActiveThreadFilters.Add(tf);
+            if (state.ActiveThreadFilters != null)
+                foreach (var tf in state.ActiveThreadFilters) _filterVM.ActiveThreadFilters.Add(tf);
 
             _filterVM.MainFilterRoot = state.MainFilterRoot?.DeepClone();
             _filterVM.AppFilterRoot = state.AppFilterRoot?.DeepClone();

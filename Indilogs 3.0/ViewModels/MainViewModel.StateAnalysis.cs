@@ -36,12 +36,12 @@ namespace IndiLogs_3._0.ViewModels
             for (int i = 0; i < transitionLogs.Count; i++)
             {
                 var currentLog = transitionLogs[i];
-                if (!StateTransitionHelper.TryParseTransition(currentLog.Message, out string fromStateRaw, out string toStateRaw))
+                if (!StateTransitionHelper.TryParseTransition(currentLog.Message, out string? fromStateRaw, out string? toStateRaw))
                     continue;
 
                 var entry = new StateEntry
                 {
-                    StateName = toStateRaw,
+                    StateName = toStateRaw ?? "",
                     TransitionTitle = $"{fromStateRaw} -> {toStateRaw}",
                     StartTime = currentLog.Date,
                     LogReference = currentLog,
@@ -66,7 +66,7 @@ namespace IndiLogs_3._0.ViewModels
                 {
                     if (i < transitionLogs.Count - 1)
                     {
-                        var nextLogParts = transitionLogs[i + 1].Message.Split(new[] { "->" }, StringSplitOptions.None);
+                        var nextLogParts = (transitionLogs[i + 1].Message ?? "").Split(new[] { "->" }, StringSplitOptions.None);
                         if (nextLogParts.Length >= 2 && !nextLogParts[1].Trim().Equals("DYNAMIC_READY", StringComparison.OrdinalIgnoreCase))
                         {
                             entry.Status = "FAILED";
@@ -78,7 +78,7 @@ namespace IndiLogs_3._0.ViewModels
                 {
                     if (i < transitionLogs.Count - 1)
                     {
-                        var nextLogParts = transitionLogs[i + 1].Message.Split(new[] { "->" }, StringSplitOptions.None);
+                        var nextLogParts = (transitionLogs[i + 1].Message ?? "").Split(new[] { "->" }, StringSplitOptions.None);
                         if (nextLogParts.Length >= 2 && !nextLogParts[1].Trim().Equals("STANDBY", StringComparison.OrdinalIgnoreCase))
                         {
                             entry.Status = "FAILED";

@@ -34,7 +34,7 @@ namespace IndiLogs_3._0.Converters
             var logEntry = values[0] as LogEntry;
             var viewModel = values[1] as LogComparisonViewModel;
             var paneIndicator = values[2] as string;
-            int diffVersion = values.Length > 3 && values[3] is int ? (int)values[3] : 0;
+            int diffVersion = values.Length > 3 && values[3] is int dv ? dv : 0;
 
             if (logEntry == null || viewModel == null || string.IsNullOrEmpty(paneIndicator))
             {

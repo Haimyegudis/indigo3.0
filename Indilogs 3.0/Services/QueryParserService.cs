@@ -40,7 +40,7 @@ namespace IndiLogs_3._0.Services
 
         private List<Token> _tokens = new();
         private int _currentTokenIndex;
-        private string _originalQuery = "";
+        private string? _originalQuery = "";
 
         /// <summary>
         /// Parses a boolean search query into a FilterNode tree.

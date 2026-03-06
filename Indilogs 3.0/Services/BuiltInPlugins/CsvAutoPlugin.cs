@@ -111,13 +111,13 @@ namespace IndiLogs_3._0.Services.BuiltInPlugins
                     string[] parts = SplitCsvLine(line);
 
                     // Build ExtraFields for this row
-                    Dictionary<string, string> extra = null;
+                    Dictionary<string, string>? extra = null;
                     if (extraIndices.Count > 0)
                     {
                         extra = new Dictionary<string, string>(extraIndices.Count);
                         foreach (var (idx, name) in extraIndices)
                         {
-                            string v = SafeGet(parts, idx);
+                            string? v = SafeGet(parts, idx);
                             if (!string.IsNullOrEmpty(v))
                                 extra[name] = v;
                         }

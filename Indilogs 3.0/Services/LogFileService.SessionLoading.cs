@@ -155,7 +155,7 @@ namespace IndiLogs_3._0.Services
                                         try
                                         {
                                             string fileNameOnly = Path.GetFileName(entry.Name).ToLower();
-                                            string systabKey = null;
+                                            string? systabKey = null;
                                             if (fileNameOnly.Contains("saved")) systabKey = "saved";
                                             else if (fileNameOnly.Contains("default")) systabKey = "default";
                                             else if (fileNameOnly.Contains("minimum")) systabKey = "minimum";
@@ -349,7 +349,7 @@ namespace IndiLogs_3._0.Services
                                     {
                                         if (!sel.LoadSetupInfo) continue;
                                         session.SetupInfo = ReadTextFromEntry(entry);
-                                        string plcVer = ExtractPlcVersionFromSetupInfo(session.SetupInfo);
+                                        string? plcVer = ExtractPlcVersionFromSetupInfo(session.SetupInfo);
                                         if (!string.IsNullOrEmpty(plcVer)) detectedPlcVersion = plcVer;
                                         continue;
                                     }
@@ -369,7 +369,7 @@ namespace IndiLogs_3._0.Services
                                         {
                                             var ms = CopyToMemory(entry);
                                             string[] sample = ReadSampleLines(ms, 20);
-                                            ILogFilePlugin plugin = FindPlugin(entry.Name, sample);
+                                            ILogFilePlugin? plugin = FindPlugin(entry.Name, sample);
                                             if (plugin != null)
                                             {
                                                 entryData.Type    = FileType.Plugin;
@@ -423,7 +423,7 @@ namespace IndiLogs_3._0.Services
                                 // Pipeline: parse extracted streams in parallel, merge results
                                 await RunZipParsingPipeline(archive, filesToProcess, sel, stringPool, session,
                                     mergedLogs, mergedTrans, mergedFails, mergedApps, mergedEvts,
-                                    currentFileSize, processedBytesGlobal, totalBytesAllFiles, loadSw, progress);
+                                    currentFileSize, processedBytesGlobal, totalBytesAllFiles, loadSw, progress!);
                             }
                         }
                         else
@@ -439,7 +439,7 @@ namespace IndiLogs_3._0.Services
                     if (nonZipFiles.Count > 0)
                     {
                         ProcessLooseFilesParallel(nonZipFiles, stringPool, session,
-                            mergedLogs, mergedTrans, mergedFails, mergedApps, mergedEvts, progress);
+                            mergedLogs, mergedTrans, mergedFails, mergedApps, mergedEvts, progress!);
                     }
 
                     session.VersionsInfo = $"SW: {detectedSwVersion} | PLC: {detectedPlcVersion}";

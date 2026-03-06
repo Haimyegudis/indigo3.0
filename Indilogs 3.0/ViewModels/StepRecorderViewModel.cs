@@ -320,9 +320,9 @@ namespace IndiLogs_3._0.ViewModels
                 string extractDir;
                 if (!string.IsNullOrEmpty(_zipPath) && File.Exists(_zipPath))
                 {
-                    string zipDir = Path.GetDirectoryName(_zipPath);
-                    string zipNameNoExt = Path.GetFileNameWithoutExtension(_zipPath);
-                    extractDir = Path.Combine(zipDir, zipNameNoExt, "IndigoLogs", "ISR", "Steps");
+                    string? zipDir = Path.GetDirectoryName(_zipPath);
+                    string zipNameNoExt = Path.GetFileNameWithoutExtension(_zipPath) ?? "unknown";
+                    extractDir = Path.Combine(zipDir ?? "", zipNameNoExt, "IndigoLogs", "ISR", "Steps");
                 }
                 else
                 {

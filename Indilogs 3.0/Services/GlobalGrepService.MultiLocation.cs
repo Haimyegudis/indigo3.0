@@ -43,7 +43,7 @@ namespace IndiLogs_3._0.Services
 
             // If no streaming callback, collect results into a thread-safe bag
             var collectBag = onResult == null ? new ConcurrentBag<GrepResult>() : null;
-            Action<GrepResult> effectiveCallback = onResult ?? (r => collectBag.Add(r));
+            Action<GrepResult> effectiveCallback = onResult ?? (r => collectBag!.Add(r));
 
             AppLogger.Info($"[Grep] SearchMultiLocation: {totalLocations} active location(s), PLC={criteria.SearchPLC}, APP={criteria.SearchAPP}");
 
@@ -297,7 +297,7 @@ namespace IndiLogs_3._0.Services
             try
             {
                 Stream seekableStream = stream;
-                MemoryStream memoryStream = null;
+                MemoryStream? memoryStream = null;
                 if (!stream.CanSeek)
                 {
                     memoryStream = new MemoryStream();

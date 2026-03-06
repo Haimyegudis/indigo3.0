@@ -79,8 +79,8 @@ namespace IndiLogs_3._0.ViewModels.Components
             try
             {
                 DateTime adjustedTime = targetTime.AddSeconds(TimeSyncOffsetSeconds);
-                IList<LogEntry> targetCollection = null;
-                string targetGrid = null;
+                IList<LogEntry>? targetCollection = null;
+                string? targetGrid = null;
                 int targetTabIndex = -1;
 
                 if (sourceGrid == "PLC")
@@ -213,7 +213,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             return leftDiff < rightDiff ? left : right;
         }
 
-        private LogEntry FindNearestByTime(IList<LogEntry> collection, DateTime time)
+        private LogEntry? FindNearestByTime(IList<LogEntry> collection, DateTime time)
         {
             int index = BinarySearchNearest(collection, time);
             return index >= 0 ? collection[index] : null;

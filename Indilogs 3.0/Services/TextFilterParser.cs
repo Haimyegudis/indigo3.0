@@ -160,10 +160,10 @@ namespace IndiLogs_3._0.Services
 
             Expect(tokens, ref pos, TT.RParen, ")");
 
-            if (!FieldMap.TryGetValue(fieldRaw, out string field))
+            if (!FieldMap.TryGetValue(fieldRaw, out string? field))
                 field = fieldRaw;   // unknown field — pass through as-is
 
-            if (!OperatorMap.TryGetValue(funcName, out string op))
+            if (!OperatorMap.TryGetValue(funcName, out string? op))
                 op = "Contains";    // unknown function → default to Contains
 
             return new FilterNode

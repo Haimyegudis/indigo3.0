@@ -283,7 +283,8 @@ namespace IndiLogs_3._0.Views
                 scores = scores.OrderByDescending(s => s).Take(3).ToList(); // Keep top 3
 
                 // Create directory if it doesn't exist
-                Directory.CreateDirectory(System.IO.Path.GetDirectoryName(_scoreFile));
+                var scoreDir = System.IO.Path.GetDirectoryName(_scoreFile);
+                if (scoreDir != null) Directory.CreateDirectory(scoreDir);
                 File.WriteAllText(_scoreFile, JsonConvert.SerializeObject(scores));
             }
             catch (Exception ex) { AppLogger.Error("Save scores failed", ex); }
@@ -296,7 +297,8 @@ namespace IndiLogs_3._0.Views
                 if (File.Exists(_scoreFile))
                 {
                     var scores = JsonConvert.DeserializeObject<List<int>>(File.ReadAllText(_scoreFile), AppConstants.SafeJsonSettings);
-                    HighScoresText.Text = string.Join("\n", scores.Select((s, i) => $"#{i + 1} : {s}"));
+                    if (scores != null)
+                        HighScoresText.Text = string.Join("\n", scores.Select((s, i) => $"#{i + 1} : {s}"));
                 }
             }
             catch (Exception ex) { AppLogger.Error("LoadHighScores failed", ex); HighScoresText.Text = "Error"; }

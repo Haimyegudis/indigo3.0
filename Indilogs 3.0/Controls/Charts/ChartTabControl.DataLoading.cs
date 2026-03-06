@@ -48,7 +48,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
                 // Set total data length
                 _totalDataLength = dataPackage.TimeStamps.Count;
-                if (_totalDataLength == 0 && dataPackage.Signals.Any())
+                if (_totalDataLength == 0 && dataPackage.Signals != null && dataPackage.Signals.Any())
                 {
                     _totalDataLength = dataPackage.Signals.Max(s => s.DataLength);
                 }

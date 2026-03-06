@@ -110,7 +110,7 @@ namespace IndiLogs_3._0.Controls.Charts
             var series = new SignalSeries
             {
                 Name = signalData.Name,
-                Data = signalData.Data,
+                Data = signalData.Data ?? Array.Empty<double>(),
                 Color = SignalColors[_colorIndex % SignalColors.Length],
                 IsVisible = true,
                 YAxisType = AxisType.Left
@@ -660,7 +660,7 @@ namespace IndiLogs_3._0.Controls.Charts
             if (_eventMarkers == null || _eventMarkers.Count == 0) return;
 
             // Add to the selected chart, or last chart, or create one if none exist
-            ChartViewModel chart = _selectedChart;
+            ChartViewModel? chart = _selectedChart;
             if (chart == null)
             {
                 if (_charts.Count == 0)
@@ -740,10 +740,10 @@ namespace IndiLogs_3._0.Controls.Charts
 
             // Use per-chart data length for independent-timeline Gantt charts (e.g. EM Statistics)
             bool hasOwnTimeline = chart.GanttDataLength.HasValue;
-            int dataLen = hasOwnTimeline ? chart.GanttDataLength.Value : _totalDataLength;
+            int dataLen = hasOwnTimeline ? chart.GanttDataLength!.Value : _totalDataLength;
 
             ganttView.HasOwnTimeline = hasOwnTimeline;
-            ganttView.SetStates(chart.GanttStates, dataLen);
+            ganttView.SetStates(chart.GanttStates!, dataLen);
             if (chart.EventMarkers != null)
                 ganttView.SetEventMarkers(chart.EventMarkers);
             ganttView.GetXAxisLabel = chart.GanttGetXAxisLabel ?? GetXAxisLabel;
@@ -795,12 +795,12 @@ namespace IndiLogs_3._0.Controls.Charts
                 else
                 {
                     // Single thread - use legacy method
-                    threadView.SetThreadData(chart.ThreadName, chart.ThreadMessages, _totalDataLength);
+                    threadView.SetThreadData(chart.ThreadName ?? "", chart.ThreadMessages, _totalDataLength);
                 }
             }
             else
             {
-                threadView.SetThreadData(chart.ThreadName, chart.ThreadMessages, _totalDataLength);
+                threadView.SetThreadData(chart.ThreadName ?? "", chart.ThreadMessages ?? new(), _totalDataLength);
             }
 
             if (chart.EventMarkers != null)

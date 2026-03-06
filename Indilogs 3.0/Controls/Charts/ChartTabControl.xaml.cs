@@ -458,8 +458,8 @@ namespace IndiLogs_3._0.Controls.Charts
                         if (ganttView != null)
                         {
                             bool hasOwn = chart.GanttDataLength.HasValue;
-                            int gLen = hasOwn ? chart.GanttDataLength.Value : _totalDataLength;
-                            ganttView.SetStates(chart.GanttStates, gLen);
+                            int gLen = hasOwn ? chart.GanttDataLength!.Value : _totalDataLength;
+                            ganttView.SetStates(chart.GanttStates!, gLen);
                             if (chart.EventMarkers != null)
                                 ganttView.SetEventMarkers(chart.EventMarkers);
                             // Independent-timeline charts keep their own view range
@@ -555,7 +555,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
                 case ChartViewType.Gantt:
                     var ganttView = new ChartGanttView();
-                    ganttView.SetStates(chart.GanttStates, _totalDataLength);
+                    ganttView.SetStates(chart.GanttStates!, _totalDataLength);
                     if (chart.EventMarkers != null)
                         ganttView.SetEventMarkers(chart.EventMarkers);
                     ganttView.GetXAxisLabel = GetXAxisLabel;
@@ -579,7 +579,7 @@ namespace IndiLogs_3._0.Controls.Charts
                         if (threadGroups.Count > 1)
                             threadView.SetMultipleThreadData(threadGroups, _totalDataLength);
                         else
-                            threadView.SetThreadData(chart.ThreadName, chart.ThreadMessages, _totalDataLength);
+                            threadView.SetThreadData(chart.ThreadName ?? "", chart.ThreadMessages, _totalDataLength);
                     }
                     if (chart.EventMarkers != null)
                         threadView.SetEventMarkers(chart.EventMarkers);

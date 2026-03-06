@@ -136,7 +136,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                         if (hasAdvanced)
                         {
                             var cacheCopy = _sessionVM.AllLogsCache?.ToList() ?? new List<LogEntry>();
-                            var res = cacheCopy.Where(l => EvaluateFilterNode(l, MainFilterRoot)).ToList();
+                            var res = cacheCopy.Where(l => EvaluateFilterNode(l, MainFilterRoot!)).ToList();
                             LastFilteredCache = res;
                         }
                         else LastFilteredCache = null;
@@ -187,7 +187,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 .Where(l => !string.IsNullOrEmpty(l)).Distinct().OrderBy(l => l).ToList();
 
             // Create window with dynamic fields from plugin columns
-            var win = _viewFactory.Create<Views.FilterWindow>(threads, loggers, diffVM.AvailableFields);
+            var win = _viewFactory.Create<Views.FilterWindow>(threads, loggers, diffVM.AvailableFields ?? new List<string>());
 
             // Position near button
             if (obj is FrameworkElement buttonElement)
@@ -225,7 +225,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     await Task.Run(() =>
                     {
                         var filtered = diffVM.AllLogEntries
-                            .Where(l => EvaluateFilterNode(l, newRoot))
+                            .Where(l => EvaluateFilterNode(l, newRoot!))
                             .ToList();
 
                         _dispatcher.Post(() =>
@@ -833,7 +833,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
 
             // Pass current filter values so the window shows the already-filtered range
-            var window = _viewFactory.Create<Views.TimeRangeWindow>(earliestLog.Value, latestLog.Value, GlobalTimeRangeStart, GlobalTimeRangeEnd);
+            var window = _viewFactory.Create<Views.TimeRangeWindow>(earliestLog.Value, latestLog.Value, (object)GlobalTimeRangeStart!, (object)GlobalTimeRangeEnd!);
 
             // Position window near the button that was clicked
             if (obj is FrameworkElement buttonElement)

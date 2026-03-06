@@ -166,7 +166,7 @@ namespace IndiLogs_3._0.ViewModels
         #region Properties
 
         // --- Results ---
-        private ObservableRangeCollection<GrepResult> _results;
+        private ObservableRangeCollection<GrepResult> _results = new();
         public ObservableRangeCollection<GrepResult> Results
         {
             get => _results;
@@ -321,7 +321,7 @@ namespace IndiLogs_3._0.ViewModels
         public List<LogicalGroupOperator> GroupOperatorOptions { get; }
 
         // --- Saved profiles ---
-        private ObservableCollection<string> _savedProfiles;
+        private ObservableCollection<string> _savedProfiles = new();
         public ObservableCollection<string> SavedProfiles
         {
             get => _savedProfiles;

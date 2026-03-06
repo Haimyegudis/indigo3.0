@@ -11,8 +11,8 @@ namespace IndiLogs_3._0.Services
 {
     public class CustomLiveLogReader
     {
-        public event Action<List<LogEntry>> OnLogsReceived;
-        public event Action<string> OnStatusChanged;
+        public event Action<List<LogEntry>>? OnLogsReceived;
+        public event Action<string>? OnStatusChanged;
 
         private const int BATCH_SIZE_LIMIT = 2000;
         private DateTime _lastLogTime = DateTime.MinValue; // Track the last displayed time
@@ -160,7 +160,7 @@ namespace IndiLogs_3._0.Services
             }
         }
 
-        private LogEntry MapToLogEntry(IndigoLogsReader reader)
+        private LogEntry? MapToLogEntry(IndigoLogsReader reader)
         {
             if (reader.Current == null) return null;
 

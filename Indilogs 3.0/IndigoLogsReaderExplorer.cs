@@ -87,7 +87,7 @@ public class IndigoLogsReaderTests
                         var positionProp = reader.GetType().GetProperty("CurrentLogStartPosition");
                         if (positionProp != null && positionProp.CanRead)
                         {
-                            long position = (long)positionProp.GetValue(reader);
+                            long position = (long)positionProp.GetValue(reader)!;
                             positions.Add(position);
                         }
                     }
@@ -124,7 +124,7 @@ public class IndigoLogsReaderTests
                 var streamPosProp = reader.GetType().GetProperty("StreamPosition");
                 if (streamPosProp != null && streamPosProp.CanRead)
                 {
-                    long savedPosition = (long)streamPosProp.GetValue(reader);
+                    long savedPosition = (long)streamPosProp.GetValue(reader)!;
 
                     // Create new stream starting from saved position
                     using (var fs2 = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))

@@ -185,7 +185,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// Gets annotation for a specific log entry, or null if none exists
         /// </summary>
-        public LogAnnotation GetAnnotation(LogEntry log)
+        public LogAnnotation? GetAnnotation(LogEntry? log)
         {
             if (log == null) return null;
             return _logAnnotations.TryGetValue(log, out var annotation) ? annotation : null;
@@ -248,7 +248,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
         private void DeleteAnnotation(object? parameter)
         {
-            LogEntry log = parameter as LogEntry ?? _parent?.SelectedLog;
+            LogEntry? log = parameter as LogEntry ?? _parent?.SelectedLog;
 
             if (log == null || !log.HasAnnotation) return;
 
@@ -263,7 +263,7 @@ namespace IndiLogs_3._0.ViewModels.Components
 
                 log.HasAnnotation = false;
                 log.IsAnnotationExpanded = false;
-                log.AnnotationContent = null;
+                log.AnnotationContent = "";
 
                 _sessionVM.StatusMessage = "Annotation deleted";
             }
@@ -280,14 +280,14 @@ namespace IndiLogs_3._0.ViewModels.Components
                 Logger = log.Logger,
                 Thread = log.ThreadName,
                 Level = log.Level,
-                Snippet = log.Message?.Length > 100 ? log.Message.Substring(0, 100) : log.Message
+                Snippet = log.Message?.Length > 100 ? log.Message.Substring(0, 100) : log.Message ?? ""
             };
         }
 
         /// <summary>
         /// Finds a log entry matching the soft link target
         /// </summary>
-        public LogEntry FindLogByTarget(LogTarget target, IEnumerable<LogEntry> logs)
+        public LogEntry? FindLogByTarget(LogTarget? target, IEnumerable<LogEntry>? logs)
         {
             if (target == null || logs == null) return null;
 

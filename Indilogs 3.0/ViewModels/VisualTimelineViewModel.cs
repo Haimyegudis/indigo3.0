@@ -92,7 +92,7 @@ namespace IndiLogs_3._0.ViewModels
                         {
                             Type = TimelineMarkerType.Error,
                             Time = log.Date,
-                            Message = log.Message,
+                            Message = log.Message ?? "",
                             Color = Colors.Red,
                             Severity = "Error",
                             OriginalLog = log

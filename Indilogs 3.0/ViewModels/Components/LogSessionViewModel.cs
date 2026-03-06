@@ -63,7 +63,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// Complete unfiltered cache of all APP developer log entries for the current session.
         /// </summary>
-        private IList<LogEntry> _allAppLogsCache;
+        private IList<LogEntry> _allAppLogsCache = new List<LogEntry>();
         public IList<LogEntry> AllAppLogsCache
         {
             get => _allAppLogsCache;
@@ -158,7 +158,8 @@ namespace IndiLogs_3._0.ViewModels.Components
                     _selectedSession = value;
                     OnPropertyChanged();
                     _parent?.NotifyPropertyChanged(nameof(_parent.HasSessionLoaded));
-                    SwitchToSession(_selectedSession);
+                    if (_selectedSession != null)
+                        SwitchToSession(_selectedSession);
                 }
             }
         }
@@ -332,7 +333,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                             }
                         }
                     }
-                    ProcessFiles(logFiles);
+                    await ProcessFiles(logFiles);
                 }
             }
             }

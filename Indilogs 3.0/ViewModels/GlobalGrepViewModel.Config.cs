@@ -204,9 +204,9 @@ namespace IndiLogs_3._0.ViewModels
             var reportParams = _lastSearchParams ?? new SearchReportParams
             {
                 LocationNames = Locations.Where(l => l.IsActive).Select(l => l.Name).ToList(),
-                QueryText = SearchQuery,
+                QueryText = SearchQuery ?? "",
                 CriteriaSummary = BuildCriteriaSummary(),
-                SearchDuration = SearchDuration,
+                SearchDuration = SearchDuration ?? "",
                 LogTypes = (SearchPLC && SearchAPP) ? "PLC + APP" : SearchPLC ? "PLC" : SearchAPP ? "APP" : "None"
             };
 

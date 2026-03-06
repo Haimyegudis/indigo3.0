@@ -133,7 +133,7 @@ namespace IndiLogs_3._0.ViewModels
                 IsLoading = false;
 
                 // Attach EM Statistics CSV if checkbox is checked
-                if (IncludeEmStatistics && HasEmStatisticsData)
+                if (IncludeEmStatistics && HasEmStatisticsData && dataPackage != null)
                     dataPackage.EmStatisticsCsvContent = _sessionData.EmStatisticsCsvContent;
 
                 if (dataPackage == null || (dataPackage.Signals.Count == 0 && dataPackage.States.Count == 0
@@ -265,7 +265,7 @@ namespace IndiLogs_3._0.ViewModels
                 for (int k = 0; k < devKeys.Count; k++)
                 {
                     var (key, col) = devKeys[k];
-                    if (row.Values.TryGetValue(col, out string strVal) &&
+                    if (row.Values.TryGetValue(col, out string? strVal) &&
                         double.TryParse(strVal, System.Globalization.NumberStyles.Any,
                                         System.Globalization.CultureInfo.InvariantCulture, out double dval))
                     {
@@ -337,7 +337,7 @@ namespace IndiLogs_3._0.ViewModels
 
                 for (int i = 0; i < allRows.Count; i++)
                 {
-                    string rowState = allRows[i].row.MachineState;
+                    string? rowState = allRows[i].row.MachineState;
                     if (string.IsNullOrEmpty(rowState)) rowState = currentState; // forward-fill
 
                     if (rowState != currentState)

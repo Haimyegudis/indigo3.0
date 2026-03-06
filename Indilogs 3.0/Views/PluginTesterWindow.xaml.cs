@@ -95,7 +95,7 @@ namespace IndiLogs_3._0.Views
                 }
                 catch (ReflectionTypeLoadException rtle)
                 {
-                    types = rtle.Types?.Where(t => t != null).ToArray() ?? Array.Empty<Type>();
+                    types = rtle.Types?.Where(t => t != null).Cast<Type>().ToArray() ?? Array.Empty<Type>();
                 }
 
                 var pluginTypes = types
@@ -106,7 +106,8 @@ namespace IndiLogs_3._0.Views
                 {
                     try
                     {
-                        var plugin = (ILogFilePlugin)Activator.CreateInstance(type);
+                        var plugin = Activator.CreateInstance(type) as ILogFilePlugin;
+                        if (plugin == null) continue;
                         if (_tempPlugins.Any(p => p.Name == plugin.Name && p.Version == plugin.Version))
                             continue;
                         _tempPlugins.Add(plugin);
@@ -220,7 +221,7 @@ namespace IndiLogs_3._0.Views
         // ── Run Test ──────────────────────────────────────────────────
         private async void RunTestBtn_Click(object? sender, RoutedEventArgs e)
         {
-            string filePath = FilePathBox.Text?.Trim();
+            string? filePath = FilePathBox.Text?.Trim();
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
             {
                 MessageBox.Show("Please select a valid test file.", "Plugin Manager",
@@ -271,7 +272,7 @@ namespace IndiLogs_3._0.Views
                 }
 
                 // Apply column layout from plugin (before binding data)
-                ApplyResultColumns(plugin);
+                ApplyResultColumns(plugin!);
 
                 // Parse in background
                 var sw     = Stopwatch.StartNew();
@@ -280,7 +281,7 @@ namespace IndiLogs_3._0.Views
 
                 try
                 {
-                    var capturedPlugin = plugin;
+                    var capturedPlugin = plugin!;
                     entries = await Task.Run(() =>
                     {
                         var list    = new List<LogEntryDto>();
@@ -316,7 +317,7 @@ namespace IndiLogs_3._0.Views
                 TimeLabel.Text    = $"{sw.ElapsedMilliseconds} ms";
 
                 // Column count stat
-                var cols = GetPluginColumns(plugin);
+                var cols = GetPluginColumns(plugin!);
                 ColsLabel.Text = cols?.Count.ToString() ?? "—";
 
                 if (entries != null && entries.Count > 0)
@@ -514,7 +515,7 @@ namespace IndiLogs_3._0.Views
         private Button MakeSmallBtn(string label, ILogFilePlugin plugin,
                                     Action<ILogFilePlugin> onClick, bool danger)
         {
-            Brush fg = danger
+            Brush? fg = danger
                 ? new SolidColorBrush(Color.FromRgb(0xF4, 0x43, 0x36))
                 : TryFindResource("TextSecondary") as Brush;
 
@@ -593,7 +594,7 @@ namespace IndiLogs_3._0.Views
                 var lines = new List<string>();
                 using (var sr = new StreamReader(filePath, Encoding.UTF8, true))
                 {
-                    string line;
+                    string? line;
                     while (lines.Count < count && (line = sr.ReadLine()) != null)
                         lines.Add(line);
                 }

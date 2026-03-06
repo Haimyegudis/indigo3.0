@@ -100,7 +100,7 @@ namespace IndiLogs_3._0.Services
             {
                 Header = header,
                 OriginalIndex = originalIndex,
-                Content = content,
+                Content = content!,
                 TabItem = tabItem,
                 Window = floatingWindow
             };

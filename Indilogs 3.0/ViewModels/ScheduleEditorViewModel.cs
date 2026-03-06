@@ -20,7 +20,7 @@ namespace IndiLogs_3._0.ViewModels
     {
         private readonly ScheduledSearch _schedule;
         private readonly List<SearchLocation> _allLocations;
-        private readonly IDialogService _dialogService;
+        private readonly IDialogService? _dialogService;
         private readonly IViewFactory? _viewFactory;
         private readonly ISearchLocationService? _locationService;
         private readonly IEmailNotificationService? _emailService;

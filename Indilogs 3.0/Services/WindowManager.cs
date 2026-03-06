@@ -323,7 +323,7 @@ namespace IndiLogs_3._0.Services
 
             foreach (var weakRef in _childWindows)
             {
-                if (weakRef.TryGetTarget(out Window window) && window.IsVisible)
+                if (weakRef.TryGetTarget(out Window? window) && window.IsVisible)
                 {
                     yield return window;
                 }

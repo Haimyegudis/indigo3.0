@@ -155,7 +155,7 @@ namespace IndiLogs_3._0.Controls
 
                 foreach (var column in grid.Columns)
                 {
-                    string headerText = GetColumnHeaderText(column);
+                    string? headerText = GetColumnHeaderText(column);
                     if (!string.IsNullOrEmpty(headerText))
                     {
                         var menuItem = new MenuItem
@@ -208,7 +208,7 @@ namespace IndiLogs_3._0.Controls
             if (column.Header is string headerString)
                 return headerString;
 
-            string headerText = column.Header.ToString();
+            string? headerText = column.Header.ToString();
 
             if (string.IsNullOrEmpty(headerText) || headerText.StartsWith("System."))
                 return null;
@@ -235,7 +235,7 @@ namespace IndiLogs_3._0.Controls
 
                 foreach (var column in grid.Columns)
                 {
-                    string header = GetColumnHeaderText(column);
+                    string? header = GetColumnHeaderText(column);
                     if (!string.IsNullOrEmpty(header))
                     {
                         columnSettings.ColumnWidths[header] = column.ActualWidth;
@@ -255,7 +255,7 @@ namespace IndiLogs_3._0.Controls
                     else gridSettings.PlcColumns = columnSettings;
                 }
 
-                Directory.CreateDirectory(Path.GetDirectoryName(SettingsFilePath));
+                Directory.CreateDirectory(Path.GetDirectoryName(SettingsFilePath)!);
                 string json = JsonConvert.SerializeObject(gridSettings, Formatting.Indented);
                 File.WriteAllText(SettingsFilePath, json);
             }
@@ -278,7 +278,7 @@ namespace IndiLogs_3._0.Controls
 
                 foreach (var column in grid.Columns)
                 {
-                    string header = GetColumnHeaderText(column);
+                    string? header = GetColumnHeaderText(column);
                     if (!string.IsNullOrEmpty(header))
                     {
                         if (columnSettings.ColumnWidths.ContainsKey(header))
@@ -305,7 +305,7 @@ namespace IndiLogs_3._0.Controls
                 try
                 {
                     string json = File.ReadAllText(SettingsFilePath);
-                    return JsonConvert.DeserializeObject<GridSettings>(json, AppConstants.SafeJsonSettings);
+                    return JsonConvert.DeserializeObject<GridSettings>(json, AppConstants.SafeJsonSettings) ?? new GridSettings();
                 }
                 catch (Exception ex)
                 {

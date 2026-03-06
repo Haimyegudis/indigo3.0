@@ -90,7 +90,7 @@ namespace IndiLogs_3._0.ViewModels
                 return;
             }
 
-            if (SessionVM.SelectedSession.CachedAnalysis != null && SessionVM.SelectedSession.CachedAnalysis.Any())
+            if (SessionVM?.SelectedSession?.CachedAnalysis != null && SessionVM.SelectedSession.CachedAnalysis.Any())
             {
                 OpenAnalysisWindow(SessionVM.SelectedSession.CachedAnalysis);
             }
@@ -116,7 +116,7 @@ namespace IndiLogs_3._0.ViewModels
             }
 
             // Create the window with both parameters and a callback for filtering
-            var statsWindow = _viewFactory.Create<Views.StatsWindow>(plcLogs, appLogs, (Action<string, string>)ApplyChartDrillDownFilter, (Action<LogEntry>)NavigateToLogFromStats, IsDarkMode, HasBinaryAppLogs);
+            var statsWindow = _viewFactory.Create<Views.StatsWindow>((object)plcLogs!, (object)appLogs!, (Action<string, string>)ApplyChartDrillDownFilter, (Action<LogEntry>)NavigateToLogFromStats, IsDarkMode, HasBinaryAppLogs);
             statsWindow.Title = "Log Statistics Dashboard";
             _windowManager.OpenWindow(statsWindow);
         }

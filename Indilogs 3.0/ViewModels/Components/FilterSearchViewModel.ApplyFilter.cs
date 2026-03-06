@@ -363,7 +363,8 @@ namespace IndiLogs_3._0.ViewModels.Components
             // 3. Update status and notify UI
             if (!IsGlobalTimeRangeActive)
             {
-                _sessionVM.StatusMessage = "Time range filter cleared";
+                if (_sessionVM != null)
+                    _sessionVM.StatusMessage = "Time range filter cleared";
             }
             else if (_sessionVM != null)
             {

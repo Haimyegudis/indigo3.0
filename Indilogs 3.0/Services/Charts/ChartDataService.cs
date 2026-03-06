@@ -22,9 +22,9 @@ namespace IndiLogs_3._0.Services.Charts
     /// </summary>
     public class ChartDataService : IDisposable
     {
-        private FileStream _fileStream;
-        private MemoryMappedFile _mmf;
-        private MemoryMappedViewAccessor _accessor;
+        private FileStream? _fileStream;
+        private MemoryMappedFile? _mmf;
+        private MemoryMappedViewAccessor? _accessor;
         private unsafe byte* _ptr;
         private long _fileLength;
         private List<long> _lineOffsets;
@@ -34,7 +34,7 @@ namespace IndiLogs_3._0.Services.Charts
         public int TotalRows => _lineOffsets.Count;
         public int DataStartRow { get; private set; } = 3;
         public CsvFormat DetectedFormat { get; private set; } = CsvFormat.Unknown;
-        public string LoadedFilePath { get; private set; }
+        public string? LoadedFilePath { get; private set; }
         public bool IsLoaded => _mmf != null;
 
         public ChartDataService()

@@ -352,7 +352,7 @@ namespace IndiLogs_3._0.ViewModels
 
             try
             {
-                CprGraphResult result = null;
+                CprGraphResult? result = null;
 
                 switch (_selectedGraphType)
                 {
@@ -380,7 +380,7 @@ namespace IndiLogs_3._0.ViewModels
                     case CprGraphType.Revolutions:
                         // Don't filter by revolution — the graph needs all revolution types
                         var revFilter = BuildFilterState();
-                        revFilter.Revolution = null;
+                        revFilter.Revolution = "";
                         var allData = _dataService.ApplyBaseFilters(revFilter);
                         result = _analysisService.ComputeRevolutions(allData, filter, pairs[0]);
                         break;
@@ -475,21 +475,21 @@ namespace IndiLogs_3._0.ViewModels
 
             // Revolutions
             Revolutions.Clear();
-            foreach (var r in _dataService.GetRevolutions(_selectedMachine, _selectedCalibTime))
+            foreach (var r in _dataService.GetRevolutions(_selectedMachine, _selectedCalibTime ?? ""))
                 Revolutions.Add(r);
             if (Revolutions.Count > 0)
                 SelectedRevolution = Revolutions[0];
 
             // Iterations
             Iterations.Clear();
-            foreach (var it in _dataService.GetIterations(_selectedMachine, _selectedCalibTime))
+            foreach (var it in _dataService.GetIterations(_selectedMachine, _selectedCalibTime ?? ""))
                 Iterations.Add(it);
             if (Iterations.Count > 0)
                 SelectedIteration = Iterations[0];
 
             // Cycles
             Cycles.Clear();
-            foreach (var c in _dataService.GetCycles(_selectedMachine, _selectedCalibTime))
+            foreach (var c in _dataService.GetCycles(_selectedMachine, _selectedCalibTime ?? ""))
                 Cycles.Add(c);
             if (Cycles.Count > 0)
             {
@@ -499,7 +499,7 @@ namespace IndiLogs_3._0.ViewModels
 
             // Columns
             Columns.Clear();
-            foreach (var col in _dataService.GetColumns(_selectedMachine, _selectedCalibTime))
+            foreach (var col in _dataService.GetColumns(_selectedMachine, _selectedCalibTime ?? ""))
                 Columns.Add(col);
             if (Columns.Count > 0)
             {
@@ -521,8 +521,8 @@ namespace IndiLogs_3._0.ViewModels
             return new CprFilterState
             {
                 MachineSN = _selectedMachine,
-                CalibrationTime = _selectedCalibTime,
-                Revolution = _selectedRevolution,
+                CalibrationTime = _selectedCalibTime ?? "",
+                Revolution = _selectedRevolution ?? "",
                 Iteration = _selectedIteration,
                 CycleFrom = _selectedCycleFrom,
                 CycleTo = _selectedCycleTo,

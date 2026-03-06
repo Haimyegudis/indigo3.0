@@ -63,7 +63,7 @@ namespace IndiLogs_3._0.Services.Grep
                     Config = config,
                     Subject = subject,
                     PlainTextBody = plainTextBody,
-                    HtmlReportPath = htmlReportPath,
+                    HtmlReportPath = htmlReportPath ?? "",
                     ScheduleName = schedule.Name,
                     SendTime = config.SendTime,
                     QueuedAt = DateTime.Now
@@ -102,7 +102,7 @@ namespace IndiLogs_3._0.Services.Grep
             EmailNotificationConfig config,
             string subject,
             string plainTextBody,
-            string htmlReportPath,
+            string? htmlReportPath,
             string scheduleName)
         {
             try
@@ -143,7 +143,7 @@ namespace IndiLogs_3._0.Services.Grep
             }
         }
 
-        private string BuildSubject(ScheduledSearch schedule, int matchCount, LogStatisticsResult stats)
+        private string BuildSubject(ScheduledSearch schedule, int matchCount, LogStatisticsResult? stats)
         {
             if (!string.IsNullOrWhiteSpace(schedule.EmailConfig?.CustomSubject))
                 return schedule.EmailConfig.CustomSubject;
@@ -168,8 +168,8 @@ namespace IndiLogs_3._0.Services.Grep
 
         internal static string BuildPlainTextBody(
             ScheduledSearch schedule,
-            List<GrepResult> results,
-            LogStatisticsResult stats)
+            List<GrepResult>? results,
+            LogStatisticsResult? stats)
         {
             var sb = new StringBuilder(8192);
             bool hasResults = results != null && results.Count > 0;
@@ -187,7 +187,7 @@ namespace IndiLogs_3._0.Services.Grep
             sb.AppendLine();
 
             // ═══ SEARCH RESULTS (first) ═══
-            if (hasResults)
+            if (hasResults && results != null)
             {
                 sb.AppendLine("--- SEARCH RESULTS ---");
                 sb.AppendLine($"  Total matches: {results.Count:N0}");
@@ -204,7 +204,7 @@ namespace IndiLogs_3._0.Services.Grep
                 // By Level
                 var byLevel = results
                     .Where(r => r.ReferencedLogEntry?.Level != null)
-                    .GroupBy(r => r.ReferencedLogEntry.Level)
+                    .GroupBy(r => r.ReferencedLogEntry!.Level)
                     .OrderByDescending(g => g.Count());
                 if (byLevel.Any())
                 {
@@ -228,7 +228,7 @@ namespace IndiLogs_3._0.Services.Grep
             }
 
             // ═══ STATISTICS (after search results) ═══
-            if (hasStats)
+            if (hasStats && stats != null)
             {
                 sb.AppendLine("--- LOG STATISTICS OVERVIEW ---");
                 sb.AppendLine($"  PLC Logs:   {stats.TotalPlcLogs:N0}");
@@ -324,7 +324,7 @@ namespace IndiLogs_3._0.Services.Grep
                         .Select(g => new
                         {
                             State = g.Key,
-                            TotalDuration = TimeSpan.FromTicks(g.Sum(s => (s.EndTime.Value - s.StartTime).Ticks)),
+                            TotalDuration = TimeSpan.FromTicks(g.Sum(s => (s.EndTime!.Value - s.StartTime).Ticks)),
                             Count = g.Count()
                         })
                         .OrderByDescending(x => x.TotalDuration)

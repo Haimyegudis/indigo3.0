@@ -86,7 +86,7 @@ namespace IndiLogs_3._0.Services
                                 try
                                 {
                                     string fileNameOnly = Path.GetFileName(innerEntry.Name).ToLower();
-                                    string systabKey = null;
+                                    string? systabKey = null;
                                     if (fileNameOnly.Contains("saved")) systabKey = "saved";
                                     else if (fileNameOnly.Contains("default")) systabKey = "default";
                                     else if (fileNameOnly.Contains("minimum")) systabKey = "minimum";

@@ -22,7 +22,7 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         private SystabTopicNode? _selectedSystabNode;
-        public SystabTopicNode SelectedSystabNode
+        public SystabTopicNode? SelectedSystabNode
         {
             get => _selectedSystabNode;
             set

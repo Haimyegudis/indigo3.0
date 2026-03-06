@@ -122,7 +122,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     // Check if log files exist and collect paths
                     var logFilesToLoad = new List<string>();
                     bool filesFound = true;
-                    var caseDir = Path.GetDirectoryName(dialog.FileName);
+                    var caseDir = Path.GetDirectoryName(dialog.FileName) ?? "";
 
                     foreach (var resource in caseFile.Resources)
                     {
@@ -303,7 +303,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                 {
                     await Task.Run(() =>
                     {
-                        var res = _sessionVM.AllLogsCache.Where(l => _filterVM.EvaluateFilterNode(l, _filterVM.MainFilterRoot)).ToList();
+                        var res = (_sessionVM.AllLogsCache ?? Array.Empty<LogEntry>()).Where(l => _filterVM.EvaluateFilterNode(l, _filterVM.MainFilterRoot)).ToList();
                         _filterVM.LastFilteredCache = res;
                     });
                 }
@@ -417,7 +417,7 @@ namespace IndiLogs_3._0.ViewModels.Components
                     diffVM.BuildAvailableFields();
 
                 // Create window with dynamic fields from plugin columns
-                var win = _viewFactory.Create<ColoringWindow>(diffVM.AvailableFields);
+                var win = _viewFactory.Create<ColoringWindow>(diffVM.AvailableFields ?? new List<string>());
 
                 // Load existing rules if any
                 var rulesCopy = diffVM.ColoringRules.Select(r => r.Clone()).ToList();

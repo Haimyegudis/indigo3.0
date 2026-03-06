@@ -53,7 +53,7 @@ namespace IndiLogs_3._0.ViewModels
             if (QueryParserService.HasBooleanOperators(FilterVM.SearchText))
             {
                 var parser = new QueryParserService();
-                var result = parser.Parse(FilterVM.SearchText, out string errorMessage);
+                var result = parser.Parse(FilterVM.SearchText, out string? errorMessage);
 
                 if (result == null)
                 {
@@ -205,15 +205,15 @@ namespace IndiLogs_3._0.ViewModels
                         FilterVM.MainFilterRoot = newRoot;
                         if (hasAdvanced)
                         {
-                            IList<LogEntry> cacheRef;
+                            IList<LogEntry>? cacheRef;
                             lock (_collectionLock)
                             {
                                 cacheRef = _allLogsCache;
                             }
-                            var res = cacheRef.Where(l => EvaluateFilterNode(l, FilterVM.MainFilterRoot)).ToList();
+                            var res = (cacheRef ?? Array.Empty<LogEntry>()).Where(l => EvaluateFilterNode(l, FilterVM.MainFilterRoot!)).ToList();
                             FilterVM.LastFilteredCache = res;
                         }
-                        else FilterVM.LastFilteredCache.Clear();
+                        else FilterVM.LastFilteredCache?.Clear();
                     }
                 });
 
@@ -307,13 +307,13 @@ namespace IndiLogs_3._0.ViewModels
                             if (IsVisualMode && VisualTimelineVM != null)
                             {
                                 // Use filtered logs if time range is active
-                                var logsForVisual = FilterVM.IsGlobalTimeRangeActive ? SessionVM.Logs : (IEnumerable<LogEntry>)SessionVM.AllLogsCache;
+                                var logsForVisual = (FilterVM?.IsGlobalTimeRangeActive == true) ? SessionVM.Logs : (IEnumerable<LogEntry>)SessionVM.AllLogsCache;
                                 var eventsToShow = HasBinaryAppLogs ? null : SessionVM?.Events;
                                 VisualTimelineVM.LoadData(logsForVisual, eventsToShow);
                                 VisualTimelineVM.FocusOnState(state.StateName);
                             }
 
-                            SessionVM.IsBusy =false;
+                            SessionVM!.IsBusy =false;
                         });
                     }
                     else
@@ -337,8 +337,11 @@ namespace IndiLogs_3._0.ViewModels
                     FilterVM?.AppDevLogsFiltered?.ReplaceAll(errors);
                     SessionVM.IsBusy =false;
                     SessionVM.StatusMessage =$"Showing {errors.Count} Errors";
-                    FilterVM.IsAppErrorFilterActive = true;
-                    FilterVM.IsAppFilterActive = true;
+                    if (FilterVM != null)
+                    {
+                        FilterVM.IsAppErrorFilterActive = true;
+                        FilterVM.IsAppFilterActive = true;
+                    }
                     OnPropertyChanged(nameof(IsFilterActive));
                     OnPropertyChanged(nameof(ActiveFilters));
                     OnPropertyChanged(nameof(HasActiveFilters));

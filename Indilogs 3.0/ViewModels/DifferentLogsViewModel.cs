@@ -163,7 +163,7 @@ namespace IndiLogs_3._0.ViewModels
         private async Task BrowseAsync()
         {
             // If a ZIP session is loaded, show the fast ZIP browser (reads entries instantly, no full extraction)
-            string zipPath = GetCurrentZipPath?.Invoke();
+            string? zipPath = GetCurrentZipPath?.Invoke();
             if (!string.IsNullOrEmpty(zipPath) &&
                 zipPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) &&
                 File.Exists(zipPath))
@@ -179,7 +179,7 @@ namespace IndiLogs_3._0.ViewModels
                 else if (result == true && !string.IsNullOrEmpty(picker.SelectedEntryName))
                 {
                     // Extract only the selected entry to a temp file (instant for a single file)
-                    string tempFile = await Task.Run(() => ExtractSingleZipEntry(zipPath, picker.SelectedEntryName));
+                    string? tempFile = await Task.Run(() => ExtractSingleZipEntry(zipPath!, picker.SelectedEntryName));
                     if (tempFile == null)
                     {
                         _dialogService.ShowWarning("Could not extract the selected file from the ZIP.",
@@ -224,7 +224,7 @@ namespace IndiLogs_3._0.ViewModels
         /// <summary>
         /// Extracts a single entry from a ZIP to a temp file. Returns the temp file path, or null on failure.
         /// </summary>
-        private static string ExtractSingleZipEntry(string zipPath, string entryFullName)
+        private static string? ExtractSingleZipEntry(string zipPath, string entryFullName)
         {
             try
             {
@@ -308,7 +308,7 @@ namespace IndiLogs_3._0.ViewModels
             StatusText = $"Loading with plugin \"{plugin.Name}\"…";
 
             // Apply column definitions before data arrives so DataGrid rebuilds
-            IReadOnlyList<PluginColumnDef> pluginCols;
+            IReadOnlyList<PluginColumnDef>? pluginCols;
             try { pluginCols = plugin.GetColumns(); } catch (Exception ex) { AppLogger.Error("GetColumns failed", ex); pluginCols = null; }
             Columns = (pluginCols != null && pluginCols.Count > 0) ? pluginCols : BuildDefaultColumns();
 

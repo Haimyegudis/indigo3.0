@@ -113,7 +113,7 @@ namespace IndiLogs_3._0.ViewModels
         private string LoadSqliteContent(byte[] dbBytes)
         {
             var sb = new System.Text.StringBuilder();
-            string tempDbPath = null;
+            string? tempDbPath = null;
 
             try
             {

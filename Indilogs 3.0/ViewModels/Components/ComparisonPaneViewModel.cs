@@ -430,7 +430,7 @@ namespace IndiLogs_3._0.ViewModels.Components
         /// <summary>
         /// Gets the log entry at the specified index, or null if out of range.
         /// </summary>
-        public LogEntry GetLogAtIndex(int index)
+        public LogEntry? GetLogAtIndex(int index)
         {
             if (index >= 0 && index < FilteredLogs.Count)
                 return FilteredLogs[index];

@@ -201,9 +201,9 @@ namespace IndiLogs_3._0.Services
         private struct PreparedCondition
         {
             public ColoringCondition Rule;
-            public Regex CachedRegex;
-            public string FieldLower;
-            public string OpLower;
+            public Regex? CachedRegex;
+            public string? FieldLower;
+            public string? OpLower;
         }
 
         private List<PreparedCondition> PrepareConditions(List<ColoringCondition> rawRules)
@@ -230,7 +230,7 @@ namespace IndiLogs_3._0.Services
 
         private bool EvaluateConditionOptimized(LogEntry log, PreparedCondition cond)
         {
-            string textToCheck = null;
+            string? textToCheck = null;
             switch (cond.FieldLower)
             {
                 case "message": textToCheck = log.Message; break;

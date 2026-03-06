@@ -95,7 +95,7 @@ namespace IndiLogs_3._0.Services
                     catch (Exception readEx)
                     {
                         UpdateLogger.Log($"[ERROR] Cannot read version file: {readEx.Message}");
-                        return (null, (Version?)null);
+                        return ((string?)null, (Version?)null);
                     }
                     UpdateLogger.Log($"Server version text (raw): '{versionText}'");
                     UpdateLogger.Log($"Server version text length: {versionText.Length}");
@@ -104,7 +104,7 @@ namespace IndiLogs_3._0.Services
                     {
                         UpdateLogger.Log($"[ERROR] Failed to parse server version: '{versionText}'");
                         UpdateLogger.Log("Expected format: X.X.X.X (e.g., 1.0.0.2)");
-                        return (null, (Version?)null);
+                        return ((string?)null, (Version?)null);
                     }
                     return (versionText, (Version?)parsed);
                 }).ConfigureAwait(false);

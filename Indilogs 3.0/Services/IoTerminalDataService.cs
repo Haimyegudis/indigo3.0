@@ -150,7 +150,7 @@ namespace IndiLogs_3._0.Services
 
                 // Parse rows — use known column count for pre-sized split
                 int colCount = headers.Length;
-                string line;
+                string? line;
                 while ((line = reader.ReadLine()) != null)
                 {
                     if (string.IsNullOrWhiteSpace(line)) continue;
@@ -166,7 +166,7 @@ namespace IndiLogs_3._0.Services
 
                     for (int i = 0; i < ioColIdx.Count; i++)
                     {
-                        string v = SafeGet(parts, ioColIdx[i]);
+                        string? v = SafeGet(parts, ioColIdx[i]);
                         // Always store value (even null → "") so chart builder TryGetValue succeeds.
                         // Empty strings will fail double.TryParse → NaN → forward-fill handles gaps.
                         row.Values[ioCols[i]] = v ?? "";
@@ -284,7 +284,7 @@ namespace IndiLogs_3._0.Services
                         foreach (var (_, _, header) in colMap)
                         {
                             sb.Append(',');
-                            if (lastValues.TryGetValue(header, out string v))
+                            if (lastValues.TryGetValue(header, out string? v))
                                 sb.Append(v);
                         }
                         writer.WriteLine(sb.ToString());

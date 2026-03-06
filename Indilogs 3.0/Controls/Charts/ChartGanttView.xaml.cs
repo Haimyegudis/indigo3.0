@@ -700,8 +700,8 @@ namespace IndiLogs_3._0.Controls.Charts
                     if (!string.IsNullOrEmpty(hInterval.StateName))
                         tooltipSb.AppendLine($"Step: {hInterval.StateName}");
 
-                    string startTime = GetXAxisLabel?.Invoke(hInterval.StartIndex);
-                    string endTime = GetXAxisLabel?.Invoke(hInterval.EndIndex);
+                    string? startTime = GetXAxisLabel?.Invoke(hInterval.StartIndex);
+                    string? endTime = GetXAxisLabel?.Invoke(hInterval.EndIndex);
                     if (!string.IsNullOrEmpty(startTime) && !string.IsNullOrEmpty(endTime))
                         tooltipSb.AppendLine($"{startTime} - {endTime}");
                 }

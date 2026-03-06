@@ -27,7 +27,7 @@ namespace IndiLogs_3._0.ViewModels
 
         // IoTerminal data (S4-5 with Io-*.csv files in TerminalLogs)
         private bool _hasIoTerminalData;
-        private List<IoDeviceData> _ioDevices;
+        private List<IoDeviceData> _ioDevices = new();
 
         public ObservableCollection<SelectableItem> IOComponents { get; set; }
         public ObservableCollection<SelectableItem> AxisComponents { get; set; }
@@ -41,7 +41,7 @@ namespace IndiLogs_3._0.ViewModels
         private List<SelectableItem>? _cachedThreadFiltered;
 
         // Debounce timer for search - prevents lag while typing
-        private DispatcherTimer _searchDebounceTimer;
+        private DispatcherTimer? _searchDebounceTimer;
         private const int SEARCH_DEBOUNCE_MS = 300;
         private bool _ioSearchPending = false;
         private bool _axisSearchPending = false;
@@ -272,7 +272,7 @@ namespace IndiLogs_3._0.ViewModels
         // Timer tick - execute pending searches
         private void SearchDebounceTimer_Tick(object? sender, EventArgs e)
         {
-            _searchDebounceTimer.Stop();
+            _searchDebounceTimer?.Stop();
 
             // Execute only pending searches
             if (_ioSearchPending)
@@ -359,7 +359,7 @@ namespace IndiLogs_3._0.ViewModels
         /// <summary>
         /// Action to close the window (set by the view)
         /// </summary>
-        public Action CloseWindow { get; set; }
+        public Action? CloseWindow { get; set; }
 
         protected override void Dispose(bool disposing)
         {
@@ -391,7 +391,7 @@ namespace IndiLogs_3._0.ViewModels
     /// </summary>
     public class SignalProgressItem : INotifyPropertyChanged
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = "";
 
         private string _status = "pending";
         public string Status
@@ -418,6 +418,6 @@ namespace IndiLogs_3._0.ViewModels
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
     }
 }

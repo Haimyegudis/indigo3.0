@@ -20,7 +20,9 @@ namespace IndiLogs_3._0.Views
 
             // Display version from AssemblyInfo
             var version = Assembly.GetExecutingAssembly().GetName().Version;
-            VersionText.Text = $"IndiLogs v{version.Major}.{version.Minor}.{version.Build}.{version.Revision}";
+            VersionText.Text = version != null
+                ? $"IndiLogs v{version.Major}.{version.Minor}.{version.Build}.{version.Revision}"
+                : "IndiLogs";
         }
 
         private void SettingsWindow_Deactivated(object? sender, System.EventArgs e)
@@ -79,7 +81,7 @@ namespace IndiLogs_3._0.Views
 
                 if (hasFilter)
                 {
-                    config.PlcFilteredDefaultFilter = newRoot.DeepClone();
+                    config.PlcFilteredDefaultFilter = newRoot!.DeepClone();
                     config.HasCustomPlcFilter = true;
                 }
                 else
