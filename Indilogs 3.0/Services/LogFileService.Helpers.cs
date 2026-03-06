@@ -206,8 +206,8 @@ namespace IndiLogs_3._0.Services
         {
             try
             {
-                var sw = Regex.Match(content, @"Version[:=]\s*(.+)", RegexOptions.IgnoreCase);
-                var plc = Regex.Match(content, @"PressPlcVersion[:=]\s*(.+)", RegexOptions.IgnoreCase);
+                var sw = Regex.Match(content, @"Version[:=]\s*(.+)", RegexOptions.IgnoreCase, AppConstants.RegexTimeout);
+                var plc = Regex.Match(content, @"PressPlcVersion[:=]\s*(.+)", RegexOptions.IgnoreCase, AppConstants.RegexTimeout);
                 return (sw.Success ? sw.Groups[1].Value.Trim() : "Unknown", plc.Success ? plc.Groups[1].Value.Trim() : "Unknown");
             }
             catch (Exception ex) { AppLogger.Error("ParseReadmeVersions failed", ex); return ("Unknown", "Unknown"); }
@@ -217,7 +217,7 @@ namespace IndiLogs_3._0.Services
         {
             try
             {
-                var match = Regex.Match(jsonContent, @"\""Name\""\s*:\s*\""press-content-mcs-plc\""[\s\S]*?\""Version\""\s*:\s*\""(?<ver>[^\""]+)\""", RegexOptions.IgnoreCase);
+                var match = Regex.Match(jsonContent, @"\""Name\""\s*:\s*\""press-content-mcs-plc\""[\s\S]*?\""Version\""\s*:\s*\""(?<ver>[^\""]+)\""", RegexOptions.IgnoreCase, AppConstants.RegexTimeout);
                 if (match.Success) return match.Groups["ver"].Value.Trim();
             }
             catch (Exception ex) { AppLogger.Error("ExtractPlcVersionFromSetupInfo failed", ex); }

@@ -138,7 +138,7 @@ namespace IndiLogs_3._0.Services.Grep
                 if (lastSlash >= 0) name = name.Substring(lastSlash + 1);
 
                 if (name.StartsWith(TaskPrefix, StringComparison.OrdinalIgnoreCase)
-                    && Regex.IsMatch(name, @"^IndiLogs_Scan_[0-9a-fA-F]{32}$")
+                    && Regex.IsMatch(name, @"^IndiLogs_Scan_[0-9a-fA-F]{32}$", RegexOptions.None, AppConstants.RegexTimeout)
                     && !validTaskNames.Contains(name))
                 {
                     RunSchtasks($"/Delete /TN \"{name}\" /F");

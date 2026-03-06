@@ -357,6 +357,11 @@ namespace IndiLogs_3._0.Services
                         chain.ChainPolicy.RevocationFlag = System.Security.Cryptography.X509Certificates.X509RevocationFlag.EntireChain;
                         if (chain.Build(cert))
                         {
+                            if (!IsTrustedSubject(cert.Subject))
+                            {
+                                UpdateLogger.Log($"[AUTO-UPDATE] Binary signed by untrusted publisher: {cert.Subject}");
+                                return false;
+                            }
                             UpdateLogger.Log($"[AUTO-UPDATE] Binary signed by (chain valid): {cert.Subject}");
                             return true;
                         }
@@ -374,6 +379,11 @@ namespace IndiLogs_3._0.Services
             }
             return false;
         }
+
+        private static bool IsTrustedSubject(string subject) =>
+            subject.Contains("HP", StringComparison.OrdinalIgnoreCase)
+            || subject.Contains("Hewlett", StringComparison.OrdinalIgnoreCase)
+            || subject.Contains("Indigo", StringComparison.OrdinalIgnoreCase);
 
         // ── DPAPI-encrypted credential storage for network share access ──
 

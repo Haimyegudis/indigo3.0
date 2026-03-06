@@ -176,6 +176,11 @@ namespace IndiLogs_3._0.Services
                         chain.ChainPolicy.RevocationFlag = System.Security.Cryptography.X509Certificates.X509RevocationFlag.EntireChain;
                         if (chain.Build(cert))
                         {
+                            if (!IsTrustedSubject(cert.Subject))
+                            {
+                                AppLogger.Warn($"Plugin signed by untrusted publisher: {cert.Subject}");
+                                return false;
+                            }
                             AppLogger.Info($"Plugin signed by (chain valid): {cert.Subject}");
                             return true;
                         }
@@ -213,6 +218,11 @@ namespace IndiLogs_3._0.Services
             AppLogger.Warn($"REJECTED unsigned/unverified plugin: {Path.GetFileName(dllPath)}");
             return false;
         }
+
+        private static bool IsTrustedSubject(string subject) =>
+            subject.Contains("HP", StringComparison.OrdinalIgnoreCase)
+            || subject.Contains("Hewlett", StringComparison.OrdinalIgnoreCase)
+            || subject.Contains("Indigo", StringComparison.OrdinalIgnoreCase);
 
         private void LoadPluginsFromAssembly(string dllPath)
         {

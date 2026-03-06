@@ -88,7 +88,7 @@ namespace IndiLogs_3._0.Services
             if (string.IsNullOrEmpty(path))
                 return (null, null, null);
 
-            var match = Regex.Match(path, @"Indigo\\Unicorn\\[^\\]+\\([^\\]+)\\([^\\]+)\\([^\\]+)$", RegexOptions.IgnoreCase);
+            var match = Regex.Match(path, @"Indigo\\Unicorn\\[^\\]+\\([^\\]+)\\([^\\]+)\\([^\\]+)$", RegexOptions.IgnoreCase, AppConstants.RegexTimeout);
             if (match.Success)
             {
                 string station = match.Groups[1].Value;
