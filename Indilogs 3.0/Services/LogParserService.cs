@@ -5,22 +5,19 @@ using System.Text.RegularExpressions;
 
 namespace IndiLogs_3._0.Services
 {
-    public static class LogParserService
+    public static partial class LogParserService
     {
-        // Pattern examples:
-        // "Pattern: SomePattern" or "pattern=SomeValue"
-        private static readonly Regex PatternRegex = new Regex(@"(?:Pattern[:=]\s*)([^\s,;]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(2));
+        [GeneratedRegex(@"(?:Pattern[:=]\s*)([^\s,;]+)", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 2000)]
+        private static partial Regex PatternRegex();
 
-        // Data examples:
-        // "Data: {...}" or "data={...}" or JSON-like structures
-        private static readonly Regex DataRegex = new Regex(@"(?:Data[:=]\s*)(\{[^}]*\}|[^\s,;]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(2));
+        [GeneratedRegex(@"(?:Data[:=]\s*)(\{[^}]*\}|[^\s,;]+)", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 2000)]
+        private static partial Regex DataRegex();
 
-        // Exception examples:
-        // "Exception: ..." or "Error: ..." or full exception stack traces
-        private static readonly Regex ExceptionRegex = new Regex(@"(?:Exception[:=]\s*|Error[:=]\s*)(.+?)(?=\s*(?:at |$))", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline, TimeSpan.FromSeconds(2));
+        [GeneratedRegex(@"(?:Exception[:=]\s*|Error[:=]\s*)(.+?)(?=\s*(?:at |$))", RegexOptions.IgnoreCase | RegexOptions.Singleline, matchTimeoutMilliseconds: 2000)]
+        private static partial Regex ExceptionRegex();
 
-        // Alternative: Look for common exception class names
-        private static readonly Regex ExceptionClassRegex = new Regex(@"\b(\w+Exception):", RegexOptions.Compiled, TimeSpan.FromSeconds(2));
+        [GeneratedRegex(@"\b(\w+Exception):", RegexOptions.None, matchTimeoutMilliseconds: 2000)]
+        private static partial Regex ExceptionClassRegex();
 
         /// <summary>
         /// Parse a log entry message to extract Pattern, Data, and Exception fields
@@ -45,7 +42,7 @@ namespace IndiLogs_3._0.Services
             // Parse Pattern - only if likely to have one
             if (hasPattern)
             {
-                var patternMatch = PatternRegex.Match(message);
+                var patternMatch = PatternRegex().Match(message);
                 if (patternMatch.Success)
                 {
                     log.Pattern = patternMatch.Groups[1].Value.Trim();
@@ -55,7 +52,7 @@ namespace IndiLogs_3._0.Services
             // Parse Data - only if likely to have data
             if (hasData)
             {
-                var dataMatch = DataRegex.Match(message);
+                var dataMatch = DataRegex().Match(message);
                 if (dataMatch.Success)
                 {
                     log.Data = dataMatch.Groups[1].Value.Trim();
@@ -66,7 +63,7 @@ namespace IndiLogs_3._0.Services
             if (hasException)
             {
                 // Try detailed exception pattern first
-                var exceptionMatch = ExceptionRegex.Match(message);
+                var exceptionMatch = ExceptionRegex().Match(message);
                 if (exceptionMatch.Success)
                 {
                     log.Exception = exceptionMatch.Groups[1].Value.Trim();
@@ -74,7 +71,7 @@ namespace IndiLogs_3._0.Services
                 else
                 {
                     // Try to find exception class name
-                    var exceptionClassMatch = ExceptionClassRegex.Match(message);
+                    var exceptionClassMatch = ExceptionClassRegex().Match(message);
                     if (exceptionClassMatch.Success)
                     {
                         // Extract from exception class to end of message or next log indicator

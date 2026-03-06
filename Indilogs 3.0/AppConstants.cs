@@ -7,7 +7,7 @@ namespace IndiLogs_3._0
     /// <summary>
     /// Application-wide constants to avoid magic numbers and repeated values.
     /// </summary>
-    internal static class AppConstants
+    internal static partial class AppConstants
     {
         /// <summary>
         /// Default timeout for user-supplied regex patterns to prevent ReDoS attacks.
@@ -72,21 +72,19 @@ namespace IndiLogs_3._0
         public const int TAB_STEP_RECORDER = 11;
         public const int TAB_DIFFERENT_LOGS = 12;
 
-        // ── Shared Regex Patterns ─────────────────────────────────────
+        // ── Shared Regex Patterns (source-generated) ────────────────────
         /// <summary>
         /// S4-5 binary PLC state transitions: "STATE_STANDBY - Enter ======" / "STATE_SERVICE - Exit ======"
         /// </summary>
-        public static readonly Regex S4StateRegex = new Regex(
-            @"STATE_(\w+)\s*-\s*(Enter|Exit)",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled, RegexTimeout);
+        [GeneratedRegex(@"STATE_(\w+)\s*-\s*(Enter|Exit)", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 2000)]
+        public static partial Regex S4StateRegex();
 
         /// <summary>
         /// Matches timestamps like 2024-01-15T14-30-00 or 2024-01-15_14-30-00 embedded in file names.
         /// Groups: 1=year, 2=month, 3=day, 4=hour, 5=minute, 6=second.
         /// </summary>
-        public static readonly Regex FileTimestampRegex = new Regex(
-            @"(\d{4})-(\d{2})-(\d{2})[T_](\d{2})-(\d{2})-(\d{2})",
-            RegexOptions.Compiled, RegexTimeout);
+        [GeneratedRegex(@"(\d{4})-(\d{2})-(\d{2})[T_](\d{2})-(\d{2})-(\d{2})", RegexOptions.None, matchTimeoutMilliseconds: 2000)]
+        public static partial Regex FileTimestampRegex();
 
         // ── SQL Helpers ───────────────────────────────────────────────
 

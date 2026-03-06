@@ -411,7 +411,7 @@ namespace IndiLogs_3._0.Services.Grep
             {
                 DateTime fileTime;
                 string fileName = Path.GetFileNameWithoutExtension(f);
-                var match = AppConstants.FileTimestampRegex.Match(fileName);
+                var match = AppConstants.FileTimestampRegex().Match(fileName);
                 if (match.Success)
                 {
                     fileTime = new DateTime(

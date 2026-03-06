@@ -154,7 +154,7 @@ namespace IndiLogs_3._0.ViewModels
                     // ── S4-5 state transitions: STATE_XXX - Enter/Exit ====== ──
                     else if (log.Message != null && log.Message.Contains("==== STATE"))
                     {
-                        var match = AppConstants.S4StateRegex.Match(log.Message);
+                        var match = AppConstants.S4StateRegex().Match(log.Message);
                         if (match.Success)
                         {
                             string stateName = match.Groups[1].Value.ToUpperInvariant();

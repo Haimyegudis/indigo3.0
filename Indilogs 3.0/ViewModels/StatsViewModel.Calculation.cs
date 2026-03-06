@@ -605,7 +605,7 @@ namespace IndiLogs_3._0.ViewModels
                 var l = plcLogs[i];
                 if (l.Message != null && l.Message.Contains("==== STATE"))
                 {
-                    var match = AppConstants.S4StateRegex.Match(l.Message);
+                    var match = AppConstants.S4StateRegex().Match(l.Message);
                     if (match.Success && match.Groups[2].Value.Equals("Enter", StringComparison.OrdinalIgnoreCase))
                     {
                         enterLogs.Add((l, match.Groups[1].Value.ToUpperInvariant()));

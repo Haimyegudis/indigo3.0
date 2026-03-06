@@ -213,7 +213,7 @@ namespace IndiLogs_3._0.Services.Charts
                 var enterLogs = new List<(LogEntry Log, string StateName)>();
                 foreach (var log in s4StateLogs)
                 {
-                    var match = AppConstants.S4StateRegex.Match(log.Message);
+                    var match = AppConstants.S4StateRegex().Match(log.Message);
                     if (match.Success && match.Groups[2].Value.Equals("Enter", StringComparison.OrdinalIgnoreCase))
                     {
                         enterLogs.Add((log, match.Groups[1].Value.ToUpperInvariant()));

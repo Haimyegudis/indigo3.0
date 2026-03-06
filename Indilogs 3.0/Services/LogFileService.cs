@@ -1,6 +1,5 @@
 using IndiLogs_3._0.Services.Interfaces;
 using System;
-using System.Text.RegularExpressions;
 
 namespace IndiLogs_3._0.Services
 {
@@ -43,30 +42,5 @@ namespace IndiLogs_3._0.Services
         }
         // ------------------------------------------------------
 
-        // Regex for parsing application logs - old format with \x1e as separator
-        private readonly Regex _appDevRegex = new Regex(
-            @"(?<Timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3,7})\x1e" +
-            @"(?<Thread>[^\x1e]*)\x1e" +
-            @"(?<RootIFlowId>[^\x1e]*)\x1e" +
-            @"(?<IFlowId>[^\x1e]*)\x1e" +
-            @"(?<IFlowName>[^\x1e]*)\x1e" +
-            @"(?<Pattern>[^\x1e]*)\x1e" +
-            @"(?<Context>[^\x1e]*)\x1e" +
-            @"(?<Level>\w+)\s(?<Logger>[^\x1e]*)\x1e" +
-            @"(?<Location>[^\x1e]*)\x1e" +
-            @"(?<Message>.*?)\x1e" +
-            @"(?<Exception>.*?)\x1e" +
-            @"(?<Data>.*?)(\x1e|$)",
-            RegexOptions.Singleline | RegexOptions.Compiled, TimeSpan.FromSeconds(2));
-
-        // Regex for parsing application logs - new format with | as separator
-        // Format: 2026-01-29 10:32:38,073 |Thread| |RootIFlowId| |IFlowId| |IFlowName| |Pattern| |Context| LEVEL  Logger
-        // Next line: |Method|
-        // Next lines: --> or <-- or message text, followed by optional data/JSON, ending with ||
-        private readonly Regex _appDevRegexPipe = new Regex(
-            @"^(?<Timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3,7})\s*\|(?<Thread>[^|]*)\|\s*\|(?<RootIFlowId>[^|]*)\|\s*\|(?<IFlowId>[^|]*)\|\s*\|(?<IFlowName>[^|]*)\|\s*\|(?<Pattern>[^|]*)\|\s*\|(?<Context>[^|]*)\|\s*(?<Level>\w+)\s+(?<Logger>[^\r\n]*)[\r\n]+\|(?<Location>[^|]*)\|[\r\n]+(?<Message>.*?)\s*\|\|",
-            RegexOptions.Singleline | RegexOptions.Compiled, TimeSpan.FromSeconds(2));
-
-        private readonly Regex _dateStartPattern = new Regex(@"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3,7}", RegexOptions.Compiled, TimeSpan.FromSeconds(2));
     }
 }
