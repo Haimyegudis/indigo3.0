@@ -68,6 +68,7 @@ echo [1/4] Restoring NuGet packages...
 dotnet restore "%TEST_PROJECT%" --verbosity quiet
 if !ERRORLEVEL! neq 0 (
     echo       RESTORE FAILED
+    pause
     exit /b 1
 )
 echo       OK
@@ -86,6 +87,7 @@ echo [2/4] Building main project [%CONFIG%]...
 dotnet build "%MAIN_PROJECT%" --no-restore --configuration %CONFIG% --verbosity quiet
 if !ERRORLEVEL! neq 0 (
     echo       BUILD FAILED - main project
+    pause
     exit /b 1
 )
 echo       Main project OK
@@ -94,6 +96,7 @@ echo       Building test project...
 dotnet build "%TEST_PROJECT%" --no-restore --configuration %CONFIG% --verbosity quiet
 if !ERRORLEVEL! neq 0 (
     echo       BUILD FAILED - test project
+    pause
     exit /b 1
 )
 echo       Test project OK
@@ -149,12 +152,14 @@ if !TEST_EXIT! neq 0 (
     echo.
     echo  TESTS FAILED [exit code !TEST_EXIT!]
     echo.
+    pause
     exit /b !TEST_EXIT!
 )
 
 echo.
 echo  ALL TESTS PASSED
 echo.
+pause
 exit /b 0
 
 :: -------------------------------------------------------------------

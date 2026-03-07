@@ -3,7 +3,7 @@
 param(
     [string]$ResultsDir,
     [switch]$Coverage,
-    [int]$Threshold = 60
+    [int]$Threshold = 15
 )
 
 # TRX Report

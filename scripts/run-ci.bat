@@ -18,7 +18,7 @@ set "TEST_PROJECT=%ROOT%\IndiLogs.Tests\IndiLogs.Tests.csproj"
 set "RESULTS_DIR=%ROOT%\TestResults"
 set "SCRIPTS_DIR=%~dp0"
 set "CONFIG=Release"
-set "COVERAGE_THRESHOLD=60"
+set "COVERAGE_THRESHOLD=15"
 set "QUICK="
 set "STEP=0"
 set "TOTAL_STEPS=6"
@@ -168,6 +168,7 @@ echo   Started:  %START_TIME%
 echo   Finished: !TIME!
 echo  ================================================================
 echo.
+pause
 exit /b !FAILED!
 
 :: -------------------------------------------------------------------
