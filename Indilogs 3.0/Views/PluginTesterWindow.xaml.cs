@@ -25,11 +25,7 @@ namespace IndiLogs_3._0.Views
         private readonly Dictionary<ILogFilePlugin, string> _tempDllPaths = new Dictionary<ILogFilePlugin, string>();
 
         // Built-in field names that bind directly on LogEntryDto
-        private static readonly HashSet<string> _builtInFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "Date", "Level", "Message", "ThreadName", "Logger",
-            "ProcessName", "Source", "LineNumber"
-        };
+        private static readonly System.Collections.Frozen.FrozenSet<string> _builtInFields = AppConstants.BuiltInFields;
 
         // ── Construction ──────────────────────────────────────────────
         public PluginTesterWindow()

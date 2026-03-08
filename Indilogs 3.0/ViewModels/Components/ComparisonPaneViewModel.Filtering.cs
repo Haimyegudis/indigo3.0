@@ -166,12 +166,11 @@ namespace IndiLogs_3._0.ViewModels.Components
             // Apply search filter if present
             if (!string.IsNullOrWhiteSpace(_searchText))
             {
-                var searchLower = _searchText.ToLowerInvariant();
                 result = result.Where(l =>
-                    (l.Message?.ToLowerInvariant().Contains(searchLower) ?? false) ||
-                    (l.Logger?.ToLowerInvariant().Contains(searchLower) ?? false) ||
-                    (l.ThreadName?.ToLowerInvariant().Contains(searchLower) ?? false) ||
-                    (l.Method?.ToLowerInvariant().Contains(searchLower) ?? false));
+                    (l.Message?.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (l.Logger?.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (l.ThreadName?.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (l.Method?.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ?? false));
             }
 
             FilteredLogs.ReplaceAll(result.OrderBy(l => l.Date));

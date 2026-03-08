@@ -68,6 +68,34 @@ namespace IndiLogs_3._0.Models.Grep
         public SearchOperator Operator { get; set; } = SearchOperator.Contains;
         public string Value { get; set; } = "";
         public bool Negate { get; set; }
+
+        // Cached compiled regex — avoids per-entry recompilation for Regex operator
+        [Newtonsoft.Json.JsonIgnore]
+        private System.Text.RegularExpressions.Regex? _compiledRegex;
+        [Newtonsoft.Json.JsonIgnore]
+        private string? _compiledRegexPattern;
+
+        [Newtonsoft.Json.JsonIgnore]
+        public System.Text.RegularExpressions.Regex? CompiledRegex
+        {
+            get
+            {
+                if (Operator != SearchOperator.Regex || string.IsNullOrEmpty(Value))
+                    return null;
+                if (_compiledRegex == null || _compiledRegexPattern != Value)
+                {
+                    _compiledRegexPattern = Value;
+                    try
+                    {
+                        _compiledRegex = new System.Text.RegularExpressions.Regex(Value,
+                            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled,
+                            TimeSpan.FromSeconds(2));
+                    }
+                    catch (ArgumentException) { _compiledRegex = null; }
+                }
+                return _compiledRegex;
+            }
+        }
     }
 
     /// <summary>

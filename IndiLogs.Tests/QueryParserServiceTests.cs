@@ -154,5 +154,143 @@ namespace IndiLogs.Tests
             Assert.NotNull(result);
             Assert.Equal(NodeType.Group, result.Type);
         }
+
+        [Fact]
+        public void Parse_NotKeyword()
+        {
+            var result = _parser.Parse("NOT error", out string? error);
+            Assert.Null(error);
+            Assert.NotNull(result);
+            Assert.Contains("NOT", result!.LogicalOperator);
+        }
+
+        [Fact]
+        public void Parse_NotWithPhrase()
+        {
+            var result = _parser.Parse("-\"debug message\"", out string? error);
+            Assert.Null(error);
+            Assert.NotNull(result);
+            Assert.Contains("NOT", result!.LogicalOperator);
+            Assert.Equal("debug message", result.Children[0].Value);
+        }
+
+        [Fact]
+        public void Parse_MultipleNots()
+        {
+            var result = _parser.Parse("-error -warning", out string? error);
+            Assert.Null(error);
+            Assert.NotNull(result);
+            Assert.Equal("AND", result!.LogicalOperator);
+        }
+
+        [Fact]
+        public void Parse_ThreeOrTerms()
+        {
+            var result = _parser.Parse("error OR warning OR fatal", out string? error);
+            Assert.Null(error);
+            Assert.NotNull(result);
+            Assert.Equal("OR", result!.LogicalOperator);
+        }
+
+        [Fact]
+        public void Parse_NestedParentheses()
+        {
+            var result = _parser.Parse("((a OR b) AND c)", out string? error);
+            Assert.Null(error);
+            Assert.NotNull(result);
+        }
+
+        [Fact]
+        public void Parse_UnclosedParen_Error()
+        {
+            var result = _parser.Parse("(hello", out string? error);
+            Assert.Null(result);
+            Assert.NotNull(error);
+        }
+
+        [Fact]
+        public void Parse_WhitespaceOnly_ReturnsNull()
+        {
+            var result = _parser.Parse("   ", out string? error);
+            Assert.Null(result);
+        }
+
+        [Theory]
+        [InlineData("hello AND world", true)]
+        [InlineData("hello NOT world", true)]
+        [InlineData("a | b", true)]
+        [InlineData("nope", false)]
+        public void HasBooleanOperators_MoreCases(string query, bool expected)
+        {
+            Assert.Equal(expected, QueryParserService.HasBooleanOperators(query));
+        }
+
+        [Fact]
+        public void Parse_MixedOperators_ParsesWithoutError()
+        {
+            var result = _parser.Parse("error AND -debug OR warning", out string? error);
+            Assert.Null(error);
+            Assert.NotNull(result);
+        }
+
+        [Fact]
+        public void Parse_QuotedPhraseWithAnd()
+        {
+            var result = _parser.Parse("\"connection error\" AND timeout", out string? error);
+            Assert.Null(error);
+            Assert.NotNull(result);
+            Assert.Equal("AND", result!.LogicalOperator);
+        }
+    }
+
+    public class TextFilterParserExtraTests
+    {
+        [Fact]
+        public void Parse_ProcessNameField()
+        {
+            var result = TextFilterParser.Parse("Contains([ProcessName], 'app')");
+            Assert.NotNull(result);
+            Assert.Equal("ProcessName", result!.Field);
+        }
+
+        [Fact]
+        public void Parse_AndOrPrecedence()
+        {
+            var result = TextFilterParser.Parse("Contains([Message], 'a') Or Contains([Message], 'b') And Contains([Message], 'c')");
+            Assert.NotNull(result);
+            Assert.Equal("OR", result!.LogicalOperator);
+            Assert.Equal("AND", result.Children[1].LogicalOperator);
+        }
+
+        [Fact]
+        public void Parse_ParenthesizedGrouping()
+        {
+            var result = TextFilterParser.Parse("(Contains([Message], 'a') Or Contains([Message], 'b')) And Contains([Level], 'Error')");
+            Assert.NotNull(result);
+            Assert.Equal("AND", result!.LogicalOperator);
+            Assert.Equal("OR", result.Children[0].LogicalOperator);
+        }
+
+        [Fact]
+        public void Parse_ThreeConditionsAnd()
+        {
+            var result = TextFilterParser.Parse("Contains([Message], 'a') And Contains([Message], 'b') And Contains([Message], 'c')");
+            Assert.NotNull(result);
+            Assert.Equal("AND", result!.LogicalOperator);
+        }
+
+        [Fact]
+        public void Parse_CaseInsensitiveKeywords()
+        {
+            var result = TextFilterParser.Parse("contains([message], 'test') or startswith([thread], 'Main')");
+            Assert.NotNull(result);
+            Assert.Equal("OR", result!.LogicalOperator);
+        }
+
+        [Fact]
+        public void Parse_MissingField_Throws()
+        {
+            Assert.Throws<System.FormatException>(() => TextFilterParser.Parse("Contains(, 'value')"));
+        }
     }
 }

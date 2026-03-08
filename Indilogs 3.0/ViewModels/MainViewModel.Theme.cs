@@ -62,7 +62,7 @@ namespace IndiLogs_3._0.ViewModels
                 // ── Row selection / highlights ──
                 UpdateResource(dict, "RowSelectedBg", new SolidColorBrush(Color.FromRgb(0xFF, 0xFA, 0xCD))); // #FFFACD
                 UpdateResource(dict, "RowMarkedBg", new SolidColorBrush(Color.FromRgb(0x90, 0xEE, 0x90)));   // #90EE90
-                UpdateResource(dict, "RowErrorFg", new SolidColorBrush(Color.FromRgb(0xFF, 0x6B, 0x6B)));    // #FF6B6B
+                UpdateResource(dict, "RowErrorFg", new SolidColorBrush(Color.FromRgb(0xFF, 0x8A, 0x8A)));    // #FF8A8A — bright coral red, readable on dark bg
             }
             else
             {

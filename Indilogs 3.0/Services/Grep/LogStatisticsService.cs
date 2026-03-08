@@ -11,8 +11,7 @@ namespace IndiLogs_3._0.Services.Grep
     /// </summary>
     public static partial class LogStatisticsService
     {
-        private static readonly HashSet<string> ErrorLevels =
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Error", "Fatal" };
+        private static readonly System.Collections.Frozen.FrozenSet<string> ErrorLevels = AppConstants.ErrorLevels;
 
 
 

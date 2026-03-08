@@ -1,0 +1,2651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IndiLogs 3.0 — Interactive User Guide</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg-dark:#0D1B2A;--bg-panel:#1B2838;--bg-card:#1E3A5F;--bg-card-hover:#274472;
+--text-primary:#FFFFFF;--text-secondary:#B4B4B9;--border:#2D4A6F;
+--primary:#3B82F6;--primary-hover:#60A5FA;--primary-glow:rgba(59,130,246,.13);
+--danger:#EF4444;--warning:#F59E0B;--success:#10B981;
+--cyan:#06B6D4;--purple:#8B5CF6;--pink:#EC4899;--amber:#F59E0B;--sky:#0EA5E9;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif;background:var(--bg-dark);color:var(--text-primary);line-height:1.6;overflow-x:hidden}
+a{color:var(--primary-hover);text-decoration:none}
+a:hover{text-decoration:underline}
+code,.code{font-family:Consolas,'JetBrains Mono','Cascadia Code',monospace;font-size:.85em;background:var(--bg-card);color:var(--success);padding:2px 6px;border-radius:4px}
+pre{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px;overflow-x:auto;font-family:Consolas,monospace;font-size:13px;color:var(--success);margin:12px 0}
+h1{font-size:2em;color:var(--primary)}
+h2{font-size:1.5em;color:var(--primary);margin:32px 0 16px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+h3{font-size:1.15em;color:var(--primary-hover);margin:20px 0 10px}
+h4{font-size:1em;color:var(--text-primary);margin:14px 0 8px}
+p{margin:8px 0;color:var(--text-secondary)}
+ul,ol{margin:8px 0 8px 24px;color:var(--text-secondary)}
+li{margin:4px 0}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.9em}
+th{background:var(--bg-card);color:var(--primary-hover);text-align:left;padding:10px 12px;border:1px solid var(--border)}
+td{padding:8px 12px;border:1px solid var(--border);color:var(--text-secondary)}
+tr:hover td{background:var(--bg-card)}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.75em;font-weight:600;color:#fff;margin:0 2px}
+.badge-blue{background:var(--primary)}.badge-red{background:var(--danger)}.badge-green{background:var(--success)}
+.badge-orange{background:var(--warning);color:#000}.badge-purple{background:var(--purple)}.badge-cyan{background:var(--cyan)}
+.badge-pink{background:var(--pink)}.badge-amber{background:var(--amber);color:#000}.badge-sky{background:var(--sky)}
+
+/* Layout */
+#sidebar{position:fixed;top:0;left:0;width:280px;height:100vh;background:var(--bg-panel);border-right:1px solid var(--border);overflow-y:auto;z-index:100;transition:transform .3s}
+#sidebar.hidden{transform:translateX(-280px)}
+#sidebar-toggle{position:fixed;top:12px;left:12px;z-index:101;background:var(--primary);color:#fff;border:none;border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:18px;display:none}
+#sidebar.hidden~#sidebar-toggle{display:flex;align-items:center;justify-content:center}
+#content{margin-left:280px;padding:32px 48px 80px;max-width:1100px;transition:margin .3s}
+#sidebar.hidden~#content{margin-left:0}
+
+/* Sidebar */
+.sidebar-header{padding:20px;border-bottom:1px solid var(--border);text-align:center}
+.sidebar-header h2{font-size:1.1em;border:none;margin:0;padding:0;color:var(--text-primary)}
+.sidebar-header .version{color:var(--text-secondary);font-size:.8em}
+#search-box{width:calc(100% - 32px);margin:12px 16px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:.9em;outline:none}
+#search-box:focus{border-color:var(--primary)}
+#search-box::placeholder{color:var(--text-secondary)}
+.nav-section{padding:4px 0}
+.nav-section-title{padding:8px 16px;font-size:.7em;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);font-weight:700}
+.nav-link{display:block;padding:6px 16px 6px 24px;color:var(--text-secondary);font-size:.88em;cursor:pointer;border-left:3px solid transparent;transition:all .15s}
+.nav-link:hover{background:var(--bg-card);color:var(--text-primary);text-decoration:none}
+.nav-link.active{border-left-color:var(--primary);color:var(--primary-hover);background:var(--primary-glow)}
+.nav-sub{padding-left:40px;font-size:.82em}
+
+/* Hero */
+.hero{text-align:center;padding:40px 0 30px;border-bottom:1px solid var(--border);margin-bottom:32px}
+.hero h1{font-size:2.4em;margin-bottom:8px}
+.hero .subtitle{color:var(--text-secondary);font-size:1.1em}
+.hero .badges{margin-top:14px}
+.hero .badges .badge{font-size:.85em;padding:4px 12px}
+
+/* Cards */
+.card{background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;padding:20px;margin:16px 0}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin:16px 0}
+.card-sm{background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px;transition:border-color .2s}
+.card-sm:hover{border-color:var(--primary)}
+.card-sm h4{margin-top:0}
+
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin:16px 0 0}
+.tab-btn{padding:8px 18px;background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:.9em;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s}
+.tab-btn:hover{color:var(--text-primary)}
+.tab-btn.active{color:var(--primary-hover);border-bottom-color:var(--primary)}
+.tab-content{display:none;padding:16px 0}.tab-content.active{display:block}
+
+/* Accordion */
+.accordion{border:1px solid var(--border);border-radius:8px;margin:8px 0;overflow:hidden}
+.accordion-header{padding:12px 16px;background:var(--bg-panel);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:600;transition:.15s}
+.accordion-header:hover{background:var(--bg-card)}
+.accordion-header::after{content:'+';font-size:1.2em;color:var(--text-secondary);transition:transform .2s}
+.accordion.open .accordion-header::after{content:'-'}
+.accordion-body{max-height:0;overflow:hidden;transition:max-height .3s ease-out}
+.accordion.open .accordion-body{max-height:5000px}
+.accordion-body-inner{padding:16px}
+
+/* UI Mockup */
+.mockup{background:var(--bg-dark);border:2px solid var(--border);border-radius:10px;overflow:hidden;margin:16px 0;font-size:13px}
+.mockup-btn{padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);transition:.15s;white-space:nowrap}
+.mockup-btn:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
+.mockup-body{display:flex;height:380px}
+.mockup-left{background:var(--bg-panel);border-right:1px solid var(--border);padding:8px;flex-shrink:0;overflow-y:auto}
+.mockup-center{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.mockup-right{background:var(--bg-panel);border-left:1px solid var(--border);padding:8px;flex-shrink:0;overflow-y:auto}
+.mockup-tabs{display:flex;background:var(--bg-panel);border-bottom:1px solid var(--border);overflow-x:auto}
+.mockup-tab{padding:6px 12px;font-size:11px;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:.1s;user-select:none}
+.mockup-tab:hover{color:var(--text-primary)}
+.mockup-tab.active{color:var(--primary-hover);border-bottom-color:var(--primary);background:var(--primary-glow)}
+.mockup-grid{flex:1;padding:0;overflow:auto;min-height:0}
+.mockup-row{display:flex;padding:3px 8px;border-bottom:1px solid rgba(45,74,111,.3);font-size:11px;color:var(--text-secondary);gap:12px;align-items:center;cursor:default;user-select:none}
+.mockup-row:hover{background:rgba(255,255,255,.05)}
+.mockup-row.mu-selected{background:rgba(255,250,205,.12);outline:1px solid rgba(255,250,205,.3)}
+.mockup-row.mu-marked{background:rgba(144,238,144,.15)}
+.mockup-row.mu-marked.mu-selected{background:rgba(144,238,144,.25)}
+.mu-header-row{font-weight:600;color:var(--text-primary)!important;border-bottom:1px solid var(--border)!important;cursor:default}
+.mu-header-row:hover{background:transparent!important}
+.mockup-statusbar{background:var(--primary);padding:4px 12px;display:flex;gap:20px;font-size:11px;color:rgba(255,255,255,.9)}
+.mockup-panel-title{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-secondary);letter-spacing:1px;padding:4px 0;margin-bottom:4px}
+.mockup-session{padding:4px 6px;font-size:11px;color:var(--text-secondary);display:flex;align-items:center;gap:4px;border-radius:4px;cursor:pointer}
+.mockup-session:hover{background:var(--bg-card)}
+.mockup-session.active{background:var(--primary);color:#fff;font-weight:600}
+.mockup-filter-badge{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-size:10px;margin:3px 0;color:#fff;cursor:pointer;transition:.15s}
+.mockup-filter-badge:hover{opacity:.8}
+.mockup-heatmap{width:12px;background:var(--bg-card);position:relative;flex-shrink:0}
+.mockup-heatmap-tick{position:absolute;width:100%;height:2px;left:0}
+/* Mockup interactive elements */
+.mu-icon-btn{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;color:var(--text-secondary);font-size:13px;transition:.15s;border:none;background:transparent;flex-shrink:0}
+.mu-icon-btn:hover{background:var(--bg-card);color:var(--text-primary)}
+.mu-icon-btn.active{background:var(--primary);color:#fff}
+.mu-open-btn{background:var(--primary);color:#fff;border:none;border-radius:6px;padding:5px 16px;font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:.15s}
+.mu-open-btn:hover{background:var(--primary-hover)}
+.mu-action-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:2px 4px;display:flex;align-items:center;gap:2px}
+.mu-panel-tab{padding:6px 10px;font-size:10px;font-weight:700;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;letter-spacing:.5px;transition:.15s;user-select:none}
+.mu-panel-tab:hover{color:var(--text-primary)}
+.mu-panel-tab.active{color:var(--primary-hover);border-bottom-color:var(--primary)}
+.mu-dots-btn{width:36px;height:36px;border-radius:50%;background:var(--bg-card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);font-size:14px;letter-spacing:2px;transition:.15s}
+.mu-dots-btn:hover{border-color:var(--primary);color:var(--primary)}
+.mu-dots-btn.open{background:var(--bg-card);color:var(--text-primary)}
+.mu-menu-btn{display:block;width:100%;padding:7px 12px;margin:4px 0;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);font-size:11px;cursor:pointer;text-align:center;transition:.15s;font-weight:500}
+.mu-menu-btn:hover{border-color:var(--primary);color:var(--text-primary);background:var(--bg-card-hover)}
+.mu-menu-btn.danger{background:var(--danger);color:#fff;border-color:var(--danger);font-weight:700}
+.mu-menu-btn.danger:hover{background:#DC2626}
+.mu-menu-btn.success{background:var(--success);color:#fff;border-color:var(--success);font-weight:700}
+.mu-menu-btn.success:hover{background:#059669}
+.mu-menu-btn.danger-text{color:var(--danger);border-color:var(--danger)}
+.mu-menu-btn.danger-text:hover{background:rgba(239,68,68,.1)}
+.mu-text-btn{padding:4px 14px;border-radius:14px;border:1px solid var(--primary);background:transparent;color:var(--primary);font-size:10px;font-weight:700;cursor:pointer;transition:.15s}
+.mu-text-btn.active{background:var(--primary);color:#fff}
+.mu-tab-panel{display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden}
+.mu-tab-panel.active{display:flex}
+/* Chart mockup */
+.mu-chart-tool-btn{padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);font-size:11px;cursor:pointer;transition:.15s;white-space:nowrap}
+.mu-chart-tool-btn:hover{border-color:var(--primary);color:var(--text-primary)}
+.mu-chart-tool-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.mu-chart-tool-btn.green{background:#10B981;color:#fff;border-color:#10B981}
+.mu-chart-tool-btn.green:hover{background:#059669}
+.mu-sig-tab{padding:3px 8px;font-size:10px;font-weight:700;color:var(--text-secondary);cursor:pointer;border-radius:4px;transition:.15s;user-select:none}
+.mu-sig-tab:hover{color:var(--text-primary)}
+.mu-sig-tab.active{background:var(--purple);color:#fff}
+.mu-signal-item{display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:11px;color:var(--text-secondary);cursor:pointer;border-left:3px solid transparent;transition:.1s;white-space:nowrap}
+.mu-signal-item:hover{background:var(--bg-card)}
+.mu-signal-item.active{background:var(--primary-glow);border-left-color:var(--primary);color:var(--text-primary)}
+.mu-sig-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.mu-sig-badge.purple{background:var(--purple)}
+.mu-sig-badge.green{background:var(--success)}
+.mu-sig-badge.blue{background:var(--primary)}
+.mu-sig-badge.orange{background:var(--warning)}
+.mu-sig-badge.red{background:var(--danger)}
+.mu-sig-count{font-size:9px;opacity:.6;margin-left:auto}
+.mu-axis-badge{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:3px;font-size:9px;font-weight:700;color:var(--primary);border:1px solid var(--primary);background:transparent}
+
+/* Diagram */
+.arch-diagram{display:flex;flex-direction:column;gap:12px;align-items:center;margin:20px 0}
+.arch-layer{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;width:100%}
+.arch-box{background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:12px 18px;text-align:center;min-width:120px;transition:.2s;cursor:default}
+.arch-box:hover{border-color:var(--primary);transform:translateY(-2px)}
+.arch-box .label{font-size:.7em;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:4px}
+.arch-box .name{font-weight:600;color:var(--text-primary)}
+.arch-arrow{color:var(--text-secondary);font-size:1.5em}
+
+/* File tree */
+.file-tree{font-family:Consolas,monospace;font-size:13px;line-height:1.8}
+.file-tree .folder{color:var(--primary-hover);cursor:pointer}
+.file-tree .folder:hover{text-decoration:underline}
+.file-tree .file{color:var(--text-secondary)}
+.file-tree .count{color:var(--text-secondary);font-size:.8em;opacity:.7}
+.file-tree .indent{display:inline-block}
+
+/* Tooltip */
+.tip{position:relative;border-bottom:1px dashed var(--text-secondary);cursor:help}
+.tip .tiptext{visibility:hidden;background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border);padding:8px 12px;border-radius:6px;position:absolute;z-index:10;bottom:125%;left:50%;transform:translateX(-50%);width:250px;font-size:.85em;box-shadow:0 4px 20px rgba(0,0,0,.4);opacity:0;transition:opacity .2s}
+.tip:hover .tiptext{visibility:visible;opacity:1}
+
+/* Interactive filter demo */
+.filter-demo{background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px;margin:12px 0}
+.filter-demo .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.filter-demo input[type=text]{padding:6px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-size:.85em;width:200px}
+.filter-demo input[type=text]:focus{outline:none;border-color:var(--primary)}
+.filter-demo button{padding:6px 14px;border-radius:4px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:.85em;transition:.15s}
+.filter-demo button:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
+.filter-demo button.active{background:var(--primary);color:#fff}
+.filter-demo button.danger{border-color:var(--danger)}
+.filter-demo button.danger:hover,.filter-demo button.danger.active{background:var(--danger)}
+.filter-demo .log-line{padding:4px 8px;font-family:Consolas,monospace;font-size:12px;border-bottom:1px solid rgba(45,74,111,.2);transition:.2s}
+.filter-demo .log-line.hidden{display:none}
+.filter-demo .log-line.highlight{background:rgba(59,130,246,.15);border-left:3px solid var(--primary)}
+.filter-demo .log-line.filtered-out{opacity:.3;text-decoration:line-through}
+.filter-demo .log-line .ts{color:var(--text-secondary)}.filter-demo .log-line .lvl-err{color:var(--danger)}.filter-demo .log-line .lvl-warn{color:var(--warning)}.filter-demo .log-line .lvl-info{color:var(--cyan)}.filter-demo .log-line .msg{color:var(--text-primary)}
+
+/* Coloring demo */
+.color-demo-row{display:flex;align-items:center;gap:8px;padding:4px 8px;font-family:Consolas,monospace;font-size:12px;border-bottom:1px solid rgba(45,74,111,.2)}
+.color-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+
+/* Keyboard shortcuts */
+kbd{display:inline-block;padding:2px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;font-family:Consolas,monospace;font-size:.85em;box-shadow:0 2px 0 var(--border);color:var(--text-primary)}
+
+/* Responsive */
+@media(max-width:900px){
+#sidebar{transform:translateX(-280px)}#sidebar.show{transform:translateX(0)}
+#sidebar-toggle{display:flex!important}
+#content{margin-left:0!important;padding:20px}
+.card-grid{grid-template-columns:1fr}
+.mockup-body{flex-direction:column}.mockup-left,.mockup-right{width:100%}
+}
+
+/* Scroll indicator */
+.scroll-top{position:fixed;bottom:24px;right:24px;width:40px;height:40px;background:var(--primary);color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:18px;opacity:0;transition:.3s;z-index:50}
+.scroll-top.visible{opacity:1}
+
+/* Search highlight */
+mark{background:var(--warning);color:#000;padding:0 2px;border-radius:2px}
+.search-count{padding:4px 16px;font-size:.8em;color:var(--text-secondary)}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+<div class="sidebar-header">
+<h2 style="border:none;margin:0;padding:0">INDILOGS 3.0</h2>
+<div class="version">Interactive User Guide</div>
+</div>
+<input type="text" id="search-box" placeholder="Search documentation..." autocomplete="off">
+<div class="search-count" id="search-count" style="display:none"></div>
+
+<div class="nav-section">
+<div class="nav-section-title">Getting Started</div>
+<a class="nav-link" href="#overview">Overview</a>
+<a class="nav-link" href="#ui-layout">UI Layout</a>
+<a class="nav-link" href="#loading-files">Loading Files</a>
+</div>
+<div class="nav-section">
+<div class="nav-section-title">Tabs</div>
+<a class="nav-link" href="#tab-plc">PLC Logs</a>
+<a class="nav-link" href="#tab-app">APP Logs</a>
+<a class="nav-link" href="#tab-events">Events</a>
+<a class="nav-link" href="#tab-screenshots">Screenshots</a>
+<a class="nav-link" href="#tab-config">Config</a>
+<a class="nav-link" href="#tab-terminals">DB & Terminals</a>
+<a class="nav-link" href="#tab-setupinfo">Setup Info</a>
+<a class="nav-link" href="#tab-globals">Globals</a>
+<a class="nav-link" href="#tab-systab">Systab</a>
+<a class="nav-link" href="#tab-charts">Charts</a>
+<a class="nav-link" href="#tab-cpr">CPR Analysis</a>
+<a class="nav-link" href="#tab-steprec">Step Recorder</a>
+<a class="nav-link" href="#tab-difflog">Different Logs</a>
+</div>
+<div class="nav-section">
+<div class="nav-section-title">Features</div>
+<a class="nav-link" href="#feat-search">Search & Navigation</a>
+<a class="nav-link" href="#feat-filtering">Filtering</a>
+<a class="nav-link" href="#feat-filterout">Filter Out</a>
+<a class="nav-link" href="#feat-coloring">Coloring Rules</a>
+<a class="nav-link" href="#feat-timerange">Time Range</a>
+<a class="nav-link" href="#feat-timesync">Time Sync</a>
+<a class="nav-link" href="#feat-marking">Marking & Annotations</a>
+<a class="nav-link" href="#feat-loggertree">Logger Tree</a>
+<a class="nav-link" href="#feat-globalgrep">Global Grep</a>
+<a class="nav-link" href="#feat-export">Export & Reports</a>
+<a class="nav-link" href="#feat-cases">Cases & Configs</a>
+<a class="nav-link" href="#feat-live">Live Monitoring</a>
+<a class="nav-link" href="#feat-compare">Compare</a>
+<a class="nav-link" href="#feat-analysis">Analysis Tools</a>
+<a class="nav-link" href="#feat-plugins">Plugin System</a>
+<a class="nav-link" href="#feat-chartpattern">Chart from Pattern</a>
+<a class="nav-link" href="#feat-heatmap">Heatmap</a>
+<a class="nav-link" href="#feat-external">External Tools</a>
+</div>
+<div class="nav-section">
+<div class="nav-section-title">Architecture</div>
+<a class="nav-link" href="#arch-overview">Architecture Overview</a>
+<a class="nav-link" href="#arch-mvvm">MVVM Pattern</a>
+<a class="nav-link" href="#arch-di">Dependency Injection</a>
+<a class="nav-link" href="#arch-folders">Folder Structure</a>
+<a class="nav-link" href="#arch-services">Services</a>
+<a class="nav-link" href="#arch-viewmodels">ViewModels</a>
+<a class="nav-link" href="#arch-models">Models</a>
+<a class="nav-link" href="#arch-performance">Performance</a>
+<a class="nav-link" href="#arch-security">Security</a>
+<a class="nav-link" href="#arch-testing">Testing</a>
+</div>
+<div class="nav-section">
+<div class="nav-section-title">Reference</div>
+<a class="nav-link" href="#ref-shortcuts">Keyboard Shortcuts</a>
+<a class="nav-link" href="#ref-files">File Locations</a>
+<a class="nav-link" href="#ref-configs">Configuration Types</a>
+</div>
+</nav>
+
+<button id="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('hidden');document.getElementById('sidebar').classList.toggle('show')">&#9776;</button>
+
+<!-- Main Content -->
+<main id="content">
+
+<!-- Hero -->
+<section class="hero" id="top">
+<h1>IndiLogs 3.0</h1>
+<p class="subtitle">HP Indigo Digital Press Log Analysis Tool</p>
+<div class="badges">
+<span class="badge badge-blue">.NET 10.0</span>
+<span class="badge badge-purple">WPF + SkiaSharp</span>
+<span class="badge badge-green">MVVM Architecture</span>
+<span class="badge badge-cyan">C# Latest</span>
+</div>
+</section>
+
+<!-- Overview -->
+<section id="overview">
+<h2>Overview</h2>
+<p>IndiLogs 3.0 is a WPF desktop application for analyzing log files from HP Indigo digital presses. It processes ZIP archives containing PLC logs, APP logs, configuration files, screenshots, chart data, and more — providing powerful filtering, coloring, searching, charting, and analysis tools.</p>
+
+<div class="card-grid">
+<div class="card-sm">
+<h4>13 Analysis Tabs</h4>
+<p>PLC, APP, Events, Screenshots, Config, DB/Terminals, Setup Info, Globals, Systab, Charts, CPR, Step Recorder, Different Logs</p>
+</div>
+<div class="card-sm">
+<h4>Advanced Filtering</h4>
+<p>Boolean search (AND/OR/NOT), filter trees, thread filters, logger tree, time ranges, filter out with undo</p>
+</div>
+<div class="card-sm">
+<h4>Interactive Charts</h4>
+<p>SkiaSharp-rendered line charts, Gantt charts, state timelines, signal browser with zoom/pan/measure</p>
+</div>
+<div class="card-sm">
+<h4>CPR Analysis</h4>
+<p>10 graph types for Color Patterning & Registration analysis with station comparison and DFT</p>
+</div>
+<div class="card-sm">
+<h4>Global Grep</h4>
+<p>Multi-location search across file systems and ZIP archives with scheduled searches and email notifications</p>
+</div>
+<div class="card-sm">
+<h4>Plugin System</h4>
+<p>Extensible log format support via ILogFilePlugin interface with 5 built-in parsers (CSV, JSON, Log4Net, etc.)</p>
+</div>
+</div>
+</section>
+
+<!-- UI Layout -->
+<section id="ui-layout">
+<h2>UI Layout</h2>
+<p>The main window is organized into distinct areas: a toolbar at the top, collapsible side panels, a center content area with 13 tabs, and a status bar.</p>
+
+<div class="mockup" id="app-mockup">
+<!-- Windows Title Bar -->
+<div style="background:#0a0f1a;padding:4px 8px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #181f30">
+<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect width='16' height='16' rx='3' fill='%233B82F6'/%3E%3Ctext x='3' y='12' font-size='10' fill='white' font-weight='bold'%3EiL%3C/text%3E%3C/svg%3E" style="width:16px;height:16px">
+<span style="color:var(--text-secondary);font-size:12px">IndiLogs 3.0</span>
+<span style="flex:1"></span>
+<span style="color:var(--text-secondary);font-size:14px;cursor:pointer;padding:0 6px" title="Minimize">&#x2500;</span>
+<span style="color:var(--text-secondary);font-size:12px;cursor:pointer;padding:0 6px" title="Maximize">&#9633;</span>
+<span style="color:var(--text-secondary);font-size:14px;cursor:pointer;padding:0 6px" title="Close">&#10005;</span>
+</div>
+
+<!-- Toolbar — matching screenshot exactly -->
+<div style="background:var(--bg-panel);padding:8px 15px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">
+<!-- Left: Settings + branding + OPEN -->
+<div style="display:flex;align-items:center;gap:10px">
+<div class="mu-icon-btn" title="Settings">&#9881;</div>
+<div style="line-height:1">
+<div style="font-weight:700;font-size:13px;color:var(--text-primary);letter-spacing:1px">INDILOGS</div>
+<div style="font-size:7px;color:var(--primary);text-align:right;margin-top:-2px">VERSION 3.0</div>
+</div>
+<button class="mu-open-btn" title="Open Files (Drag & Drop)">&#128194; OPEN</button>
+</div>
+
+<span style="flex:1"></span>
+
+<!-- Center: Action buttons in rounded card -->
+<div class="mu-action-card">
+<div class="mu-icon-btn" id="mu-mark-btn" title="Mark Row (Space)" onclick="mockupMarkSelected()">&#128204;</div>
+<div class="mu-icon-btn" title="Next Marked (Down)" onclick="mockupNextMarked()">&#8595;</div>
+<div class="mu-icon-btn" title="Previous Marked (Up)" onclick="mockupPrevMarked()">&#8593;</div>
+<div class="mu-icon-btn" id="mu-sync-btn" title="Toggle Time-Sync" onclick="this.classList.toggle('active')">&#128279;</div>
+<div class="mu-icon-btn" title="Toggle Annotations">&#128172;</div>
+<div class="mu-icon-btn" title="Show Failures">&#128027;</div>
+</div>
+
+<span style="flex:1"></span>
+
+<!-- Right: External tools -->
+<div style="display:flex;align-items:center;gap:4px">
+<div class="mu-icon-btn" title="Open JIRA" style="color:#10B981">&#9752;</div>
+<div class="mu-icon-btn" title="Open Kibana" style="color:#EC4899">&#9670;</div>
+<div class="mu-icon-btn" title="Send Email">&#9993;</div>
+<div class="mu-icon-btn" title="Plugin Tester">&#129513;</div>
+<div class="mu-icon-btn" title="Help (F1)">&#10067;</div>
+</div>
+</div>
+
+<!-- Main Body -->
+<div class="mockup-body">
+<!-- Left Panel -->
+<div class="mockup-left" id="mu-left-panel" style="width:180px;display:flex;flex-direction:column">
+<!-- Explorer / Loggers tabs -->
+<div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin:-8px -8px 0;padding:0 8px">
+<div class="mu-panel-tab active" onclick="mockupPanelTab(this,'mu-explorer-content','mu-loggers-content')">EXPLORER</div>
+<div class="mu-panel-tab" onclick="mockupPanelTab(this,'mu-loggers-content','mu-explorer-content')">LOGGERS</div>
+</div>
+
+<!-- Explorer content -->
+<div id="mu-explorer-content" style="flex:1;padding-top:8px">
+<div class="mockup-panel-title" style="margin-top:4px">OPEN SESSIONS</div>
+<div id="mu-sessions">
+<div class="mockup-session active" onclick="mockupSelectSession(this)">&#128196; session_2025-03-07.zip</div>
+<div class="mockup-session" onclick="mockupSelectSession(this)">&#128196; session_2025-03-06.zip</div>
+</div>
+</div>
+
+<!-- Loggers content (hidden by default) -->
+<div id="mu-loggers-content" style="flex:1;padding-top:8px;display:none">
+<div class="mockup-panel-title" style="margin-top:4px">LOGGERS</div>
+<div style="font-size:10px;color:var(--text-secondary);padding-left:4px">
+<div style="cursor:pointer" onclick="this.querySelector('span').textContent=this.querySelector('span').textContent==='&#10003;'?'&#10007;':'&#10003;';this.querySelector('span').style.color=this.querySelector('span').textContent==='&#10003;'?'var(--success)':'var(--danger)'"><span style="color:var(--success)">&#10003;</span> com.hp (1,240)</div>
+<div style="padding-left:12px;cursor:pointer" onclick="this.querySelector('span').textContent=this.querySelector('span').textContent==='&#10003;'?'&#10007;':'&#10003;';this.querySelector('span').style.color=this.querySelector('span').textContent==='&#10003;'?'var(--success)':'var(--danger)'"><span style="color:var(--success)">&#10003;</span> logger (830)</div>
+<div style="padding-left:24px;cursor:pointer" onclick="this.querySelector('span').textContent=this.querySelector('span').textContent==='&#10003;'?'&#10007;':'&#10003;';this.querySelector('span').style.color=this.querySelector('span').textContent==='&#10003;'?'var(--success)':'var(--danger)'"><span style="color:var(--success)">&#10003;</span> subsystem (410)</div>
+<div style="padding-left:12px;cursor:pointer" onclick="this.querySelector('span').textContent=this.querySelector('span').textContent==='&#10003;'?'&#10007;':'&#10003;';this.querySelector('span').style.color=this.querySelector('span').textContent==='&#10003;'?'var(--success)':'var(--danger)'"><span style="color:var(--danger)">&#10007;</span> debug (410)</div>
+</div>
+</div>
+
+<!-- Actions menu (toggled) -->
+<div id="mu-left-menu" style="display:none;margin-top:8px">
+<div style="border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--bg-panel)">
+<div style="font-size:10px;font-weight:600;color:var(--text-secondary);margin-bottom:6px">Actions</div>
+<button class="mu-menu-btn danger" title="Clear all loaded sessions">&#128465; Clear All</button>
+<button class="mu-menu-btn" title="Show marked log lines">&#128204; Marked Lines</button>
+<button class="mu-menu-btn" title="Open Global Grep window">&#128270; Global Grep</button>
+<button class="mu-menu-btn" title="Show state transitions">&#128260; States</button>
+<button class="mu-menu-btn" title="Export data to CSV">&#128202; Export CSV</button>
+<button class="mu-menu-btn" title="Generate analysis reports">&#9881; Reports</button>
+<div style="font-size:10px;font-weight:600;color:var(--text-secondary);margin:10px 0 6px">Case File</div>
+<button class="mu-menu-btn" title="Save current analysis state">&#128190; Save Case</button>
+<button class="mu-menu-btn" title="Load a saved case file">&#128194; Load Case</button>
+</div>
+</div>
+
+<!-- Bottom dots / close button -->
+<div style="margin-top:auto;padding-top:8px">
+<div class="mu-dots-btn" onclick="toggleLeftMenu()" id="mu-left-dots" title="Actions menu">&#8943;&#8943;</div>
+</div>
+</div>
+
+<!-- Center content -->
+<div class="mockup-center">
+<!-- Tab bar (hidden when empty, shown when session loaded) -->
+<div class="mockup-tabs" id="mu-tabbar">
+<div class="mockup-tab active" onclick="mockupSwitchTab(this,0)">PLC LOGS</div>
+<div class="mockup-tab" onclick="mockupSwitchTab(this,1)">APP</div>
+<div class="mockup-tab" onclick="mockupSwitchTab(this,2)">EVENTS</div>
+<div class="mockup-tab" onclick="mockupSwitchTab(this,3)">SCREENSHOTS</div>
+<div class="mockup-tab" onclick="mockupSwitchTab(this,4)">CONFIG</div>
+<div class="mockup-tab" onclick="mockupSwitchTab(this,5)">TERMINALS</div>
+<div class="mockup-tab" onclick="mockupSwitchTab(this,6)">SETUP INFO</div>
+<div class="mockup-tab" onclick="mockupSwitchTab(this,7)">GLOBALS</div>
+<div class="mockup-tab" onclick="mockupSwitchTab(this,8)">SYSTAB</div>
+<div class="mockup-tab" onclick="mockupSwitchTab(this,9)">CHARTS</div>
+<div class="mockup-tab" onclick="mockupSwitchTab(this,10)">CPR</div>
+<div class="mockup-tab" onclick="mockupSwitchTab(this,11)">STEP REC</div>
+<div class="mockup-tab" onclick="mockupSwitchTab(this,12)">DIFF LOGS</div>
+</div>
+
+<!-- Tab content panels -->
+<div style="display:flex;flex:1;min-height:0;overflow:hidden">
+<!-- TAB 0: PLC LOGS -->
+<div class="mu-tab-panel active" id="mu-tab-0">
+<!-- TEXT mode (default) -->
+<div id="mu-plc-text" style="display:flex;flex:1;min-height:0">
+<div class="mockup-grid" id="mu-plc-grid" style="flex:1;overflow:auto">
+<div class="mockup-row mu-header-row">
+<span style="width:24px"></span><span style="width:110px">Timestamp</span><span style="width:40px">Level</span><span style="width:55px">Thread</span><span style="flex:1">Message</span>
+</div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:01.123" data-thread="Main" data-level="INFO" data-logger="com.hp.system" data-msg="System initialized successfully">
+<span style="width:24px"></span><span style="width:110px">14:30:01.123</span><span style="width:40px;color:var(--cyan)">INFO</span><span style="width:55px">Main</span><span style="flex:1">System initialized successfully</span></div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:02.456" data-thread="PLC" data-level="INFO" data-logger="com.hp.plc" data-msg="State transition: STANDBY -> GET_READY">
+<span style="width:24px"></span><span style="width:110px">14:30:02.456</span><span style="width:40px;color:var(--cyan)">INFO</span><span style="width:55px">PLC</span><span style="flex:1">State transition: STANDBY → GET_READY</span></div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:03.789" data-thread="Motor" data-level="WARN" data-logger="com.hp.motor" data-msg="Web tension exceeding threshold: 4.2N">
+<span style="width:24px;color:var(--warning)">&#9888;</span><span style="width:110px">14:30:03.789</span><span style="width:40px;color:var(--warning)">WARN</span><span style="width:55px">Motor</span><span style="flex:1">Web tension exceeding threshold: 4.2N</span></div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:04.012" data-thread="Print" data-level="INFO" data-logger="com.hp.print" data-msg="Print job started: Job_2025_001">
+<span style="width:24px"></span><span style="width:110px">14:30:04.012</span><span style="width:40px;color:var(--cyan)">INFO</span><span style="width:55px">Print</span><span style="flex:1">Print job started: Job_2025_001</span></div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:05.345" data-thread="Sensor" data-level="ERROR" data-logger="com.hp.sensor" data-msg="Temperature sensor out of range" style="color:var(--danger)">
+<span style="width:24px">&#9888;</span><span style="width:110px">14:30:05.345</span><span style="width:40px">ERROR</span><span style="width:55px">Sensor</span><span style="flex:1">Temperature sensor out of range</span></div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:06.678" data-thread="PLC" data-level="INFO" data-logger="com.hp.plc" data-msg="Impression count: 1,234">
+<span style="width:24px"></span><span style="width:110px">14:30:06.678</span><span style="width:40px;color:var(--cyan)">INFO</span><span style="width:55px">PLC</span><span style="flex:1">Impression count: 1,234</span></div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:07.901" data-thread="IO" data-level="DEBUG" data-logger="com.hp.debug" data-msg="BIM[0] status check completed">
+<span style="width:24px"></span><span style="width:110px">14:30:07.901</span><span style="width:40px;color:var(--text-secondary)">DEBUG</span><span style="width:55px">IO</span><span style="flex:1">BIM[0] status check completed</span></div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:08.234" data-thread="PLC" data-level="ERROR" data-logger="com.hp.plc" data-msg="PLC_FAILURE_STATE_CHANGE detected" style="color:var(--danger)">
+<span style="width:24px">&#9888;</span><span style="width:110px">14:30:08.234</span><span style="width:40px">ERROR</span><span style="width:55px">PLC</span><span style="flex:1">PLC_FAILURE_STATE_CHANGE detected</span></div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:09.567" data-thread="PLC" data-level="INFO" data-logger="com.hp.plc" data-msg="Recovery initiated: RECOVERY state entered">
+<span style="width:24px"></span><span style="width:110px">14:30:09.567</span><span style="width:40px;color:var(--cyan)">INFO</span><span style="width:55px">PLC</span><span style="flex:1">Recovery initiated: RECOVERY state</span></div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:10.890" data-thread="Motor" data-level="INFO" data-logger="com.hp.motor" data-msg="Web tension normalized: 3.8N">
+<span style="width:24px"></span><span style="width:110px">14:30:10.890</span><span style="width:40px;color:var(--cyan)">INFO</span><span style="width:55px">Motor</span><span style="flex:1">Web tension normalized: 3.8N</span></div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:11.234" data-thread="PLC" data-level="INFO" data-logger="com.hp.plc" data-msg="State transition: RECOVERY -> STANDBY">
+<span style="width:24px"></span><span style="width:110px">14:30:11.234</span><span style="width:40px;color:var(--cyan)">INFO</span><span style="width:55px">PLC</span><span style="flex:1">State transition: RECOVERY → STANDBY</span></div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:14.123" data-thread="PLC" data-level="INFO" data-logger="com.hp.plc" data-msg="State transition: STANDBY -> GET_READY">
+<span style="width:24px"></span><span style="width:110px">14:30:14.123</span><span style="width:40px;color:var(--cyan)">INFO</span><span style="width:55px">PLC</span><span style="flex:1">State transition: STANDBY → GET_READY</span></div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:16.789" data-thread="Ink" data-level="WARN" data-logger="com.hp.ink" data-msg="Ink level low: Cyan at 15%" style="color:var(--warning)">
+<span style="width:24px;color:var(--warning)">&#9888;</span><span style="width:110px">14:30:16.789</span><span style="width:40px">WARN</span><span style="width:55px">Ink</span><span style="flex:1">Ink level low: Cyan at 15%</span></div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:17.012" data-thread="PLC" data-level="INFO" data-logger="com.hp.plc" data-msg="State transition: GET_READY -> PRINTING">
+<span style="width:24px"></span><span style="width:110px">14:30:17.012</span><span style="width:40px;color:var(--cyan)">INFO</span><span style="width:55px">PLC</span><span style="flex:1">State transition: GET_READY → PRINTING</span></div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:18.345" data-thread="Print" data-level="INFO" data-logger="com.hp.print" data-msg="Impression #1,235 completed">
+<span style="width:24px"></span><span style="width:110px">14:30:18.345</span><span style="width:40px;color:var(--cyan)">INFO</span><span style="width:55px">Print</span><span style="flex:1">Impression #1,235 completed</span></div>
+</div>
+<!-- Heatmap sidebar -->
+<div class="mockup-heatmap">
+<div class="mockup-heatmap-tick" style="top:5%;background:var(--cyan)" title="State transition"></div>
+<div class="mockup-heatmap-tick" style="top:15%;background:var(--warning)" title="Warning"></div>
+<div class="mockup-heatmap-tick" style="top:25%;background:var(--danger)" title="Error"></div>
+<div class="mockup-heatmap-tick" style="top:40%;background:var(--danger)" title="Error"></div>
+<div class="mockup-heatmap-tick" style="top:55%;background:var(--cyan)" title="State transition"></div>
+<div class="mockup-heatmap-tick" style="top:75%;background:var(--warning)" title="Warning"></div>
+<div class="mockup-heatmap-tick" style="top:85%;background:var(--cyan)" title="State transition"></div>
+</div>
+</div>
+<!-- VISUAL mode (hidden by default, toggled by TEXT/VISUAL buttons) -->
+<div id="mu-plc-visual" style="display:none;flex:1;flex-direction:column;min-height:0;overflow:auto">
+<!-- State timeline Gantt -->
+<div style="padding:6px 8px;font-size:10px;font-weight:700;color:var(--text-secondary)">STATE TIMELINE</div>
+<div style="position:relative;height:28px;margin:0 8px;background:var(--bg-card);border-radius:4px;overflow:hidden">
+<div style="position:absolute;left:0;top:0;width:8%;height:100%;background:#808080;opacity:.7" title="OFF"></div>
+<div style="position:absolute;left:8%;top:0;width:12%;height:100%;background:#FFFF00;opacity:.6" title="STANDBY">
+<span style="position:absolute;left:4px;top:6px;font-size:8px;color:#000;font-weight:600">STANDBY</span></div>
+<div style="position:absolute;left:20%;top:0;width:10%;height:100%;background:#FFA500;opacity:.7" title="GET_READY">
+<span style="position:absolute;left:4px;top:6px;font-size:8px;color:#000;font-weight:600">GET_READY</span></div>
+<div style="position:absolute;left:30%;top:0;width:8%;height:100%;background:#228B22;opacity:.7" title="PRINTING">
+<span style="position:absolute;left:4px;top:6px;font-size:8px;color:#fff;font-weight:600">PRINT</span></div>
+<div style="position:absolute;left:38%;top:0;width:8%;height:100%;background:#C62828;opacity:.7" title="FAILURE">
+<span style="position:absolute;left:4px;top:6px;font-size:8px;color:#fff;font-weight:600">FAIL</span></div>
+<div style="position:absolute;left:46%;top:0;width:10%;height:100%;background:#EC407A;opacity:.7" title="RECOVERY">
+<span style="position:absolute;left:4px;top:6px;font-size:8px;color:#fff;font-weight:600">RECOVERY</span></div>
+<div style="position:absolute;left:56%;top:0;width:10%;height:100%;background:#FFFF00;opacity:.6" title="STANDBY">
+<span style="position:absolute;left:4px;top:6px;font-size:8px;color:#000;font-weight:600">STANDBY</span></div>
+<div style="position:absolute;left:66%;top:0;width:10%;height:100%;background:#FFA500;opacity:.7" title="GET_READY">
+<span style="position:absolute;left:4px;top:6px;font-size:8px;color:#000;font-weight:600">GET_READY</span></div>
+<div style="position:absolute;left:76%;top:0;width:24%;height:100%;background:#228B22;opacity:.7" title="PRINTING">
+<span style="position:absolute;left:4px;top:6px;font-size:8px;color:#fff;font-weight:600">PRINTING</span></div>
+</div>
+<!-- Time axis -->
+<div style="display:flex;justify-content:space-between;padding:2px 8px;font-size:8px;color:var(--text-secondary)">
+<span>14:30:00</span><span>14:30:05</span><span>14:30:10</span><span>14:30:15</span><span>14:30:20</span>
+</div>
+<!-- Thread Gantt bars -->
+<div style="padding:4px 8px;font-size:10px;font-weight:700;color:var(--text-secondary);margin-top:4px">THREAD ACTIVITY</div>
+<div style="padding:0 8px">
+<div style="display:flex;align-items:center;gap:6px;margin:3px 0;font-size:9px">
+<span style="width:50px;color:var(--text-primary);text-overflow:ellipsis;overflow:hidden;white-space:nowrap">Manager</span>
+<div style="flex:1;height:14px;background:var(--bg-card);border-radius:2px;position:relative;overflow:hidden">
+<div style="position:absolute;left:5%;width:10%;height:100%;background:var(--primary);border-radius:2px;opacity:.8"></div>
+<div style="position:absolute;left:20%;width:5%;height:100%;background:var(--primary);border-radius:2px;opacity:.8"></div>
+<div style="position:absolute;left:38%;width:8%;height:100%;background:var(--danger);border-radius:2px;opacity:.8"></div>
+<div style="position:absolute;left:55%;width:5%;height:100%;background:var(--primary);border-radius:2px;opacity:.8"></div>
+<div style="position:absolute;left:75%;width:15%;height:100%;background:var(--primary);border-radius:2px;opacity:.8"></div>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:6px;margin:3px 0;font-size:9px">
+<span style="width:50px;color:var(--text-primary)">Motor</span>
+<div style="flex:1;height:14px;background:var(--bg-card);border-radius:2px;position:relative;overflow:hidden">
+<div style="position:absolute;left:10%;width:6%;height:100%;background:var(--warning);border-radius:2px;opacity:.8"></div>
+<div style="position:absolute;left:28%;width:12%;height:100%;background:var(--success);border-radius:2px;opacity:.8"></div>
+<div style="position:absolute;left:60%;width:8%;height:100%;background:var(--success);border-radius:2px;opacity:.8"></div>
+<div style="position:absolute;left:80%;width:15%;height:100%;background:var(--success);border-radius:2px;opacity:.8"></div>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:6px;margin:3px 0;font-size:9px">
+<span style="width:50px;color:var(--text-primary)">Print</span>
+<div style="flex:1;height:14px;background:var(--bg-card);border-radius:2px;position:relative;overflow:hidden">
+<div style="position:absolute;left:22%;width:8%;height:100%;background:var(--cyan);border-radius:2px;opacity:.8"></div>
+<div style="position:absolute;left:76%;width:20%;height:100%;background:var(--cyan);border-radius:2px;opacity:.8"></div>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:6px;margin:3px 0;font-size:9px">
+<span style="width:50px;color:var(--text-primary)">Sensor</span>
+<div style="flex:1;height:14px;background:var(--bg-card);border-radius:2px;position:relative;overflow:hidden">
+<div style="position:absolute;left:18%;width:4%;height:100%;background:var(--danger);border-radius:2px;opacity:.8"></div>
+<div style="position:absolute;left:50%;width:3%;height:100%;background:var(--success);border-radius:2px;opacity:.8"></div>
+<div style="position:absolute;left:85%;width:8%;height:100%;background:var(--success);border-radius:2px;opacity:.8"></div>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:6px;margin:3px 0;font-size:9px">
+<span style="width:50px;color:var(--text-primary)">Ink</span>
+<div style="flex:1;height:14px;background:var(--bg-card);border-radius:2px;position:relative;overflow:hidden">
+<div style="position:absolute;left:65%;width:4%;height:100%;background:var(--warning);border-radius:2px;opacity:.8"></div>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:6px;margin:3px 0;font-size:9px">
+<span style="width:50px;color:var(--text-primary)">IO</span>
+<div style="flex:1;height:14px;background:var(--bg-card);border-radius:2px;position:relative;overflow:hidden">
+<div style="position:absolute;left:30%;width:3%;height:100%;background:var(--text-secondary);border-radius:2px;opacity:.6"></div>
+</div>
+</div>
+</div>
+<!-- Legend -->
+<div style="display:flex;gap:12px;padding:6px 8px;flex-wrap:wrap;font-size:8px;color:var(--text-secondary);margin-top:4px;border-top:1px solid var(--border)">
+<span><span style="display:inline-block;width:8px;height:8px;background:#FFFF00;border-radius:2px;margin-right:2px"></span>STANDBY</span>
+<span><span style="display:inline-block;width:8px;height:8px;background:#FFA500;border-radius:2px;margin-right:2px"></span>GET_READY</span>
+<span><span style="display:inline-block;width:8px;height:8px;background:#228B22;border-radius:2px;margin-right:2px"></span>PRINTING</span>
+<span><span style="display:inline-block;width:8px;height:8px;background:#C62828;border-radius:2px;margin-right:2px"></span>FAILURE</span>
+<span><span style="display:inline-block;width:8px;height:8px;background:#EC407A;border-radius:2px;margin-right:2px"></span>RECOVERY</span>
+</div>
+</div>
+</div>
+
+<!-- TAB 1: APP -->
+<div class="mu-tab-panel" id="mu-tab-1">
+<div class="mockup-grid">
+<div class="mockup-row mu-header-row"><span style="width:30px"></span><span style="width:40px">Lvl</span><span style="width:150px">Timestamp</span><span style="flex:1">Message</span><span style="width:120px">Pattern</span><span style="width:150px">Data</span></div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:01.100" data-thread="AppMain" data-level="INFO" data-logger="Application" data-msg="Application startup complete"><span style="width:30px"></span><span style="width:40px;color:var(--cyan)">INFO</span><span style="width:150px">14:30:01.100</span><span style="flex:1">Application startup complete</span><span style="width:120px;color:var(--text-secondary)">{action}</span><span style="width:150px;color:var(--text-secondary)">startup</span></div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:02.200" data-thread="Worker" data-level="WARN" data-logger="JobManager" data-msg="Queue depth exceeding threshold" style="color:var(--warning)"><span style="width:30px"></span><span style="width:40px">WARN</span><span style="width:150px">14:30:02.200</span><span style="flex:1">Queue depth exceeding threshold</span><span style="width:120px;color:var(--text-secondary)">{metric}</span><span style="width:150px;color:var(--text-secondary)">depth=42</span></div>
+<div class="mockup-row mu-log-row" onclick="mockupSelectRow(this)" data-ts="14:30:03.300" data-thread="Worker" data-level="ERROR" data-logger="PrintEngine" data-msg="Print head temperature critical" style="color:var(--danger)"><span style="width:30px">&#9888;</span><span style="width:40px">ERROR</span><span style="width:150px">14:30:03.300</span><span style="flex:1">Print head temperature critical</span><span style="width:120px;color:var(--text-secondary)">{alert}</span><span style="width:150px;color:var(--text-secondary)">temp=95C</span></div>
+</div>
+</div>
+
+<!-- TAB 2: EVENTS -->
+<div class="mu-tab-panel" id="mu-tab-2">
+<div class="mockup-grid">
+<div class="mockup-row mu-header-row"><span style="width:150px">Timestamp</span><span style="width:100px">Event Type</span><span style="flex:1">Description</span></div>
+<div class="mockup-row"><span style="width:150px">14:30:02.456</span><span style="width:100px">STATE</span><span style="flex:1">STANDBY -> GET_READY</span></div>
+<div class="mockup-row"><span style="width:150px">14:30:08.234</span><span style="width:100px;color:var(--danger)">FAILURE</span><span style="flex:1">PLC_FAILURE_STATE_CHANGE</span></div>
+<div class="mockup-row"><span style="width:150px">14:30:09.567</span><span style="width:100px">STATE</span><span style="flex:1">-> RECOVERY</span></div>
+</div>
+</div>
+
+<!-- TAB 3: SCREENSHOTS -->
+<div class="mu-tab-panel" id="mu-tab-3">
+<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary)">
+<div style="text-align:center"><div style="font-size:48px;opacity:.3">&#128247;</div><div>Screenshots from ZIP will appear here</div></div>
+</div>
+</div>
+
+<!-- TAB 4: CONFIG -->
+<div class="mu-tab-panel" id="mu-tab-4">
+<div style="padding:12px;font-family:Consolas,monospace;font-size:12px;color:var(--success)">
+{<br>&nbsp;&nbsp;"PressType": "HP Indigo 12000",<br>&nbsp;&nbsp;"SerialNumber": "IND-2025-0042",<br>&nbsp;&nbsp;"FirmwareVersion": "3.14.159",<br>&nbsp;&nbsp;"PrintMode": "Production",<br>&nbsp;&nbsp;"MaxSpeed": 4800<br>}
+</div>
+</div>
+
+<!-- TAB 5: TERMINALS -->
+<div class="mu-tab-panel" id="mu-tab-5">
+<div style="padding:12px;font-size:12px;color:var(--text-secondary)">Terminal setup information and database browser. IO Terminal data shown for S4-5 configurations.</div>
+</div>
+
+<!-- TAB 6: SETUP INFO -->
+<div class="mu-tab-panel" id="mu-tab-6">
+<div style="padding:12px;font-size:12px;color:var(--text-secondary)">
+<div style="font-weight:700;color:var(--text-primary);margin-bottom:8px">Press Configuration (Readme)</div>
+<div style="font-family:Consolas,monospace;font-size:11px;line-height:1.8;background:var(--bg-card);padding:10px;border-radius:6px">
+Machine name: MANUAL-FP-4<br>
+Press Type: HP Indigo 12000 HD<br>
+Serial Number: IND-2025-0042<br>
+Software Version: 3.14.159<br>
+IP Address: 10.0.1.42<br>
+Config Date: 2025-02-15 10:30:00
+</div>
+</div>
+</div>
+
+<!-- TAB 7: GLOBALS -->
+<div class="mu-tab-panel" id="mu-tab-7">
+<div style="padding:8px;display:flex;flex-direction:column;height:100%">
+<!-- File selector + search + diff toggle -->
+<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+<select style="padding:4px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-size:11px;min-width:140px">
+<option>GlobalsOrig.xml</option>
+<option>GlobalsSaved.xml</option>
+</select>
+<input type="text" placeholder="Search globals..." id="mu-globals-search" oninput="muGlobalsSearch(this.value)" style="flex:1;padding:4px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-size:11px">
+<button class="mockup-btn mu-diff-btn" style="font-size:10px" onclick="this.classList.toggle('active');this.style.background=this.classList.contains('active')?'var(--warning)':'';this.style.color=this.classList.contains('active')?'#000':'';muGlobalsDiff(this.classList.contains('active'))">DIFF ON</button>
+</div>
+<!-- Globals grid -->
+<div style="flex:1;overflow:auto" id="mu-globals-grid">
+<div class="mockup-row mu-header-row"><span style="flex:2">Name</span><span style="width:80px">Value</span><span style="width:80px">Default</span><span style="width:50px;text-align:center">Rel</span></div>
+<div class="mockup-row mu-global-row" data-diff="0"><span style="flex:2;font-family:Consolas,monospace;font-size:11px">MaxPrintSpeed</span><span style="width:80px">4800</span><span style="width:80px">4800</span><span style="width:50px;text-align:center">&#9745;</span></div>
+<div class="mockup-row mu-global-row" data-diff="1" style="background:rgba(255,215,0,.12)"><span style="flex:2;font-family:Consolas,monospace;font-size:11px;color:var(--warning)">WebTensionLimit</span><span style="width:80px;color:var(--warning)">4.5</span><span style="width:80px">4.0</span><span style="width:50px;text-align:center">&#9745;</span></div>
+<div class="mockup-row mu-global-row" data-diff="0"><span style="flex:2;font-family:Consolas,monospace;font-size:11px">PrintMode</span><span style="width:80px">Production</span><span style="width:80px">Production</span><span style="width:50px;text-align:center">&#9745;</span></div>
+<div class="mockup-row mu-global-row" data-diff="1" style="background:rgba(255,215,0,.12)"><span style="flex:2;font-family:Consolas,monospace;font-size:11px;color:var(--warning)">BimCalibOffset</span><span style="width:80px;color:var(--warning)">-0.032</span><span style="width:80px">0.000</span><span style="width:50px;text-align:center">&#9745;</span></div>
+<div class="mockup-row mu-global-row" data-diff="0"><span style="flex:2;font-family:Consolas,monospace;font-size:11px">MaxImpressions</span><span style="width:80px">99999</span><span style="width:80px">99999</span><span style="width:50px;text-align:center">&#9744;</span></div>
+<div class="mockup-row mu-global-row" data-diff="0"><span style="flex:2;font-family:Consolas,monospace;font-size:11px">InkLevelThreshold</span><span style="width:80px">15</span><span style="width:80px">15</span><span style="width:50px;text-align:center">&#9745;</span></div>
+<div class="mockup-row mu-global-row" data-diff="1" style="background:rgba(255,215,0,.12)"><span style="flex:2;font-family:Consolas,monospace;font-size:11px;color:var(--warning)">MotorAccelRate</span><span style="width:80px;color:var(--warning)">1200</span><span style="width:80px">1000</span><span style="width:50px;text-align:center">&#9745;</span></div>
+<div class="mockup-row mu-global-row" data-diff="0"><span style="flex:2;font-family:Consolas,monospace;font-size:11px">SensorPollingMs</span><span style="width:80px">50</span><span style="width:80px">50</span><span style="width:50px;text-align:center">&#9744;</span></div>
+<div class="mockup-row mu-global-row" data-diff="0"><span style="flex:2;font-family:Consolas,monospace;font-size:11px">HeadCleanCycles</span><span style="width:80px">3</span><span style="width:80px">3</span><span style="width:50px;text-align:center">&#9744;</span></div>
+<div class="mockup-row mu-global-row" data-diff="1" style="background:rgba(255,215,0,.12)"><span style="flex:2;font-family:Consolas,monospace;font-size:11px;color:var(--warning)">DuplexAlignment</span><span style="width:80px;color:var(--warning)">0.15</span><span style="width:80px">0.00</span><span style="width:50px;text-align:center">&#9745;</span></div>
+</div>
+</div>
+</div>
+
+<!-- TAB 8: SYSTAB -->
+<div class="mu-tab-panel" id="mu-tab-8">
+<div style="display:flex;height:100%">
+<!-- Tree panel -->
+<div style="width:160px;border-right:1px solid var(--border);padding:6px;font-size:10px;color:var(--text-secondary);overflow-y:auto">
+<div style="font-weight:700;margin-bottom:4px;color:var(--text-primary);font-size:11px">Topics</div>
+<div class="mu-systab-topic active" onclick="muSystabSelect(this,0)" style="cursor:pointer;padding:3px 6px;border-radius:4px;background:var(--primary-glow);color:var(--primary-hover)">&#9660; Motors (24)</div>
+<div class="mu-systab-topic" onclick="muSystabSelect(this,1)" style="cursor:pointer;padding:3px 6px;border-radius:4px">&#9654; Sensors (18) <span style="color:var(--warning)">*</span></div>
+<div class="mu-systab-topic" onclick="muSystabSelect(this,2)" style="cursor:pointer;padding:3px 6px;border-radius:4px">&#9654; Print Head (12)</div>
+<div class="mu-systab-topic" onclick="muSystabSelect(this,3)" style="cursor:pointer;padding:3px 6px;border-radius:4px">&#9654; Web Transport (8) <span style="color:var(--warning)">*</span></div>
+<div class="mu-systab-topic" onclick="muSystabSelect(this,4)" style="cursor:pointer;padding:3px 6px;border-radius:4px">&#9654; Ink System (16)</div>
+<div class="mu-systab-topic" onclick="muSystabSelect(this,5)" style="cursor:pointer;padding:3px 6px;border-radius:4px">&#9654; Image Quality (9)</div>
+<div class="mu-systab-topic" onclick="muSystabSelect(this,6)" style="cursor:pointer;padding:3px 6px;border-radius:4px">&#9654; Calibration (14) <span style="color:var(--warning)">*</span></div>
+</div>
+<!-- Search + Diffs Only -->
+<div style="flex:1;display:flex;flex-direction:column;min-height:0">
+<div style="display:flex;gap:6px;padding:6px 8px;align-items:center;border-bottom:1px solid var(--border)">
+<span style="font-size:10px;color:var(--text-secondary);font-weight:600">Search:</span>
+<input type="text" placeholder="Filter parameters..." style="flex:1;padding:3px 6px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-size:10px">
+<label style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--text-secondary);font-weight:600;cursor:pointer;white-space:nowrap"><input type="checkbox" style="accent-color:var(--warning)"> Diffs Only</label>
+</div>
+<!-- Parameter grid -->
+<div style="flex:1;overflow:auto;font-size:11px" id="mu-systab-grid">
+<div class="mockup-row mu-header-row"><span style="flex:2">Parameter</span><span style="width:70px">Saved</span><span style="width:70px">Default</span><span style="width:60px">Min</span><span style="width:60px">Max</span></div>
+<div class="mockup-row"><span style="flex:2;font-family:Consolas,monospace">MainMotorSpeed</span><span style="width:70px">4800</span><span style="width:70px">4800</span><span style="width:60px">0</span><span style="width:60px">6000</span></div>
+<div class="mockup-row"><span style="flex:2;font-family:Consolas,monospace">MainMotorAccel</span><span style="width:70px">1200</span><span style="width:70px">1200</span><span style="width:60px">100</span><span style="width:60px">2000</span></div>
+<div class="mockup-row" style="background:rgba(255,215,0,.12)"><span style="flex:2;font-family:Consolas,monospace;color:var(--warning)">DrumMotorTorque</span><span style="width:70px;color:var(--warning)">85</span><span style="width:70px">80</span><span style="width:60px">0</span><span style="width:60px">100</span></div>
+<div class="mockup-row"><span style="flex:2;font-family:Consolas,monospace">BlanketMotorPWM</span><span style="width:70px">72</span><span style="width:70px">72</span><span style="width:60px">0</span><span style="width:60px">100</span></div>
+<div class="mockup-row" style="background:rgba(255,215,0,.12)"><span style="flex:2;font-family:Consolas,monospace;color:var(--warning)">FuserRollerSpeed</span><span style="width:70px;color:var(--warning)">3200</span><span style="width:70px">3000</span><span style="width:60px">1000</span><span style="width:60px">5000</span></div>
+<div class="mockup-row"><span style="flex:2;font-family:Consolas,monospace">CoronaVoltage</span><span style="width:70px">550</span><span style="width:70px">550</span><span style="width:60px">200</span><span style="width:60px">800</span></div>
+</div>
+</div><!-- end search+grid wrapper -->
+</div>
+</div>
+
+<!-- TAB 9: CHARTS -->
+<div class="mu-tab-panel" id="mu-tab-9">
+<div style="display:flex;flex-direction:column;height:100%;overflow:auto">
+
+<!-- Chart Toolbar -->
+<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--bg-panel);border-bottom:1px solid var(--border);flex-wrap:wrap;font-size:11px">
+<div class="mu-icon-btn" title="Detach chart tab" style="font-size:11px">&#9634;</div>
+<button class="mu-chart-tool-btn green" title="Load CSV">&#8592; Load CSV</button>
+<button class="mu-chart-tool-btn" title="Export data">&#128190; Export</button>
+<span style="color:var(--border);margin:0 2px">|</span>
+<div class="mu-icon-btn" title="Play" style="font-size:14px">&#9654;</div>
+<div class="mu-icon-btn" title="Stop" style="font-size:14px">&#9632;</div>
+<div style="width:20px;height:20px;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;cursor:pointer" title="Color picker"></div>
+<div class="mu-icon-btn" title="Zoom In">+</div>
+<div class="mu-icon-btn" title="Zoom Out">-</div>
+<span style="color:var(--border);margin:0 2px">|</span>
+<label style="color:var(--text-secondary);display:flex;align-items:center;gap:3px;cursor:pointer"><input type="checkbox" checked style="accent-color:var(--primary)"> States</label>
+<label style="color:var(--text-secondary);display:flex;align-items:center;gap:3px"><input type="checkbox" style="accent-color:var(--primary)"> Smooth</label>
+<input type="range" min="1" max="50" value="10" style="width:80px;accent-color:var(--primary)">
+<span style="color:var(--text-secondary);font-size:10px">10</span>
+<button class="mu-chart-tool-btn" title="Fit view">Fit</button>
+<span style="color:var(--border);margin:0 2px">|</span>
+<button class="mu-chart-tool-btn active" title="Line chart mode">&#128200; Line</button>
+<div class="mu-icon-btn" title="Grid view" style="background:var(--primary);color:#fff;border-radius:4px;width:24px;height:24px;font-size:10px">&#9638;</div>
+</div>
+
+<!-- State Timeline Bar -->
+<div style="display:flex;height:22px;background:var(--bg-dark);border-bottom:1px solid var(--border);position:relative;overflow:hidden">
+<div style="position:absolute;left:0;top:0;width:5%;height:100%;background:#2563EB;opacity:.6" title="GET_READY"></div>
+<div style="position:absolute;left:5%;top:0;width:25%;height:100%;background:#F59E0B;opacity:.6" title="POST_PRINT">
+<span style="position:absolute;right:4px;top:2px;font-size:9px;color:var(--warning);font-weight:600">GET_READY</span>
+</div>
+<div style="position:absolute;left:30%;top:0;width:70%;height:100%;background:#F59E0B;opacity:.4" title="POST_PRINT"></div>
+</div>
+
+<!-- Scrollbar area -->
+<div style="display:flex;align-items:center;padding:3px 8px;gap:4px;background:var(--bg-dark);border-bottom:1px solid var(--border)">
+<div style="width:24px;height:24px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);font-size:12px">&#9664;</div>
+<div style="flex:1;height:6px;background:var(--bg-card);border-radius:3px;position:relative">
+<div style="position:absolute;left:10%;right:10%;top:0;height:100%;background:var(--text-secondary);border-radius:3px;cursor:grab"></div>
+</div>
+<div style="width:24px;height:24px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);font-size:12px">&#9654;</div>
+</div>
+
+<!-- Main chart area -->
+<div style="display:flex;flex:1;min-height:0">
+
+<!-- Signal List (left) -->
+<div style="width:200px;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg-panel);flex-shrink:0">
+<!-- Category tabs -->
+<div style="display:flex;gap:0;padding:4px 6px;flex-wrap:wrap">
+<span class="mu-sig-tab" onclick="this.parentElement.querySelectorAll('.mu-sig-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active')">ALL</span>
+<span class="mu-sig-tab" onclick="this.parentElement.querySelectorAll('.mu-sig-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active')">AXIS</span>
+<span class="mu-sig-tab" onclick="this.parentElement.querySelectorAll('.mu-sig-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active')">IO</span>
+<span class="mu-sig-tab" onclick="this.parentElement.querySelectorAll('.mu-sig-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active')">CHS</span>
+<span class="mu-sig-tab active" onclick="this.parentElement.querySelectorAll('.mu-sig-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active')">THR</span>
+<span class="mu-sig-tab" onclick="this.parentElement.querySelectorAll('.mu-sig-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active')">EVEN</span>
+</div>
+<div style="font-size:10px;color:var(--text-secondary);padding:2px 8px">377 items</div>
+<!-- Search -->
+<div style="padding:4px 6px">
+<div style="display:flex;align-items:center;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:3px 6px">
+<span style="color:var(--text-secondary);font-size:12px;margin-right:4px">&#128269;</span>
+<input type="text" placeholder="Search signals..." style="background:transparent;border:none;color:var(--text-primary);font-size:11px;width:100%;outline:none">
+</div>
+</div>
+<!-- Signal items -->
+<div style="flex:1;overflow-y:auto;padding:2px 0">
+<div class="mu-signal-item" onclick="this.parentElement.querySelectorAll('.mu-signal-item').forEach(s=>s.classList.remove('active'));this.classList.add('active')"><span class="mu-sig-badge purple">T</span> BidEng_1AF <span class="mu-sig-count">(4153 msgs)</span></div>
+<div class="mu-signal-item" onclick="this.parentElement.querySelectorAll('.mu-signal-item').forEach(s=>s.classList.remove('active'));this.classList.add('active')"><span class="mu-sig-badge purple">T</span> BidEng_1AR <span class="mu-sig-count">(3574 msgs)</span> <span style="display:inline-block;width:8px;height:8px;background:var(--text-secondary);border-radius:1px;vertical-align:middle;margin-left:auto"></span></div>
+<div class="mu-signal-item" onclick="this.parentElement.querySelectorAll('.mu-signal-item').forEach(s=>s.classList.remove('active'));this.classList.add('active')"><span class="mu-sig-badge purple">T</span> BidEng_1B <span class="mu-sig-count">(24959 msgs)</span></div>
+<div class="mu-signal-item" onclick="this.parentElement.querySelectorAll('.mu-signal-item').forEach(s=>s.classList.remove('active'));this.classList.add('active')"><span class="mu-sig-badge purple">T</span> BidEng_1BF <span class="mu-sig-count">(57575 msgs)</span></div>
+<div class="mu-signal-item" onclick="this.parentElement.querySelectorAll('.mu-signal-item').forEach(s=>s.classList.remove('active'));this.classList.add('active')"><span class="mu-sig-badge purple">T</span> BidEng_1BR <span class="mu-sig-count">(49295 msgs)</span></div>
+<div class="mu-signal-item" onclick="this.parentElement.querySelectorAll('.mu-signal-item').forEach(s=>s.classList.remove('active'));this.classList.add('active')"><span class="mu-sig-badge purple">T</span> BidEng_1C <span class="mu-sig-count">(25180 msgs)</span></div>
+<div class="mu-signal-item" onclick="this.parentElement.querySelectorAll('.mu-signal-item').forEach(s=>s.classList.remove('active'));this.classList.add('active')"><span class="mu-sig-badge purple">T</span> BidEng_1CF <span class="mu-sig-count">(78120 msgs)</span></div>
+<div class="mu-signal-item active" onclick="this.parentElement.querySelectorAll('.mu-signal-item').forEach(s=>s.classList.remove('active'));this.classList.add('active')"><span class="mu-sig-badge purple">T</span> BidEng_1CR <span class="mu-sig-count">(48632 msgs)</span></div>
+<div class="mu-signal-item" onclick="this.parentElement.querySelectorAll('.mu-signal-item').forEach(s=>s.classList.remove('active'));this.classList.add('active')"><span class="mu-sig-badge purple">T</span> BidEng_2B <span class="mu-sig-count">(25210 msgs)</span></div>
+<div class="mu-signal-item" onclick="this.parentElement.querySelectorAll('.mu-signal-item').forEach(s=>s.classList.remove('active'));this.classList.add('active')"><span class="mu-sig-badge purple">T</span> BidEng_2BF <span class="mu-sig-count">(55307 msgs)</span></div>
+<div class="mu-signal-item" onclick="this.parentElement.querySelectorAll('.mu-signal-item').forEach(s=>s.classList.remove('active'));this.classList.add('active')"><span class="mu-sig-badge purple">T</span> BidEng_2BR <span class="mu-sig-count">(44863 msgs)</span></div>
+</div>
+</div>
+
+<!-- Charts grid (2x2) -->
+<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:0;min-width:0;min-height:0">
+
+<!-- Upper-left: Line chart (signal) -->
+<div style="border-right:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;flex-direction:column;min-height:0;overflow:hidden">
+<!-- Chart header with signal badge -->
+<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:11px">
+<input type="checkbox" checked style="accent-color:var(--primary)">
+<span style="color:#EF4444;font-weight:700">&#9644;&#9644;</span>
+<span style="color:var(--text-secondary)">BID_Eng_3_Stn_1_BID_E...</span>
+<span class="mu-axis-badge">L</span>
+<span style="color:var(--text-primary);font-weight:600">8239.70</span>
+</div>
+<!-- SVG Chart -->
+<div style="flex:1;position:relative;min-height:0;background:var(--bg-dark);overflow:hidden">
+<!-- State background label -->
+<div style="position:absolute;top:4px;left:50%;color:var(--primary);font-size:10px;font-weight:600;opacity:.7">POST_PRINT</div>
+<!-- Y axis labels -->
+<div style="position:absolute;left:2px;top:4px;font-size:8px;color:var(--text-secondary)">90087.9</div>
+<div style="position:absolute;left:2px;top:25%;font-size:8px;color:var(--text-secondary)">-130737.3</div>
+<div style="position:absolute;left:2px;top:50%;font-size:8px;color:var(--text-secondary)">-351562.5</div>
+<div style="position:absolute;left:2px;top:75%;font-size:8px;color:var(--text-secondary)">-572387.7</div>
+<div style="position:absolute;left:2px;bottom:14px;font-size:8px;color:var(--text-secondary)">-793212.9</div>
+<!-- Grid lines -->
+<svg width="100%" height="100%" style="position:absolute;top:0;left:50px;right:0;bottom:0" viewBox="0 0 400 200" preserveAspectRatio="none">
+<line x1="0" y1="50" x2="400" y2="50" stroke="#2D4A6F" stroke-width="0.5" stroke-dasharray="4"/>
+<line x1="0" y1="100" x2="400" y2="100" stroke="#2D4A6F" stroke-width="0.5" stroke-dasharray="4"/>
+<line x1="0" y1="150" x2="400" y2="150" stroke="#2D4A6F" stroke-width="0.5" stroke-dasharray="4"/>
+<!-- Signal line (spike down) -->
+<polyline points="20,20 25,18 30,15 35,10 37,5 38,25 39,80 40,140 41,180 42,170 44,120 50,50 60,30 80,28 120,28 200,28 300,28 380,28" fill="none" stroke="#EF4444" stroke-width="1.5"/>
+<!-- Blue cursor line -->
+<line x1="200" y1="0" x2="200" y2="200" stroke="#3B82F6" stroke-width="1" stroke-dasharray="3"/>
+</svg>
+<!-- X axis labels -->
+<div style="position:absolute;bottom:2px;left:55px;font-size:8px;color:var(--text-secondary)">00:21:10</div>
+<div style="position:absolute;bottom:2px;left:25%;font-size:8px;color:var(--text-secondary)">00:21:13</div>
+<div style="position:absolute;bottom:2px;left:42%;font-size:8px;color:var(--text-secondary)">00:21:20</div>
+<div style="position:absolute;bottom:2px;left:58%;font-size:8px;color:var(--text-secondary)">00:21:26</div>
+<div style="position:absolute;bottom:2px;left:74%;font-size:8px;color:var(--text-secondary)">00:21:34</div>
+<div style="position:absolute;bottom:2px;right:4px;font-size:8px;color:var(--text-secondary)">00:21:41</div>
+</div>
+</div>
+
+<!-- Upper-right: Line chart (tension) -->
+<div style="border-bottom:1px solid var(--border);display:flex;flex-direction:column;min-height:0;overflow:hidden">
+<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:11px">
+<input type="checkbox" checked style="accent-color:var(--primary)">
+<span style="color:#F59E0B;font-weight:700">&#9644;&#9644;</span>
+<span style="color:var(--text-secondary)">BKT_TensionFront_MotT...</span>
+<span class="mu-axis-badge">L</span>
+<span style="color:var(--text-primary);font-weight:600">32.30</span>
+</div>
+<div style="flex:1;position:relative;min-height:0;background:var(--bg-dark);overflow:hidden">
+<div style="position:absolute;top:4px;right:30%;color:var(--primary);font-size:10px;font-weight:600;opacity:.7">POST_PRINT</div>
+<!-- Y axis -->
+<div style="position:absolute;left:2px;top:4px;font-size:8px;color:var(--text-secondary)">32.31</div>
+<div style="position:absolute;left:2px;top:30%;font-size:8px;color:var(--text-secondary)">32.28</div>
+<div style="position:absolute;left:2px;top:55%;font-size:8px;color:var(--text-secondary)">32.25</div>
+<div style="position:absolute;left:2px;top:75%;font-size:8px;color:var(--text-secondary)">32.22</div>
+<div style="position:absolute;left:2px;bottom:14px;font-size:8px;color:var(--text-secondary)">32.19</div>
+<svg width="100%" height="100%" style="position:absolute;top:0;left:40px" viewBox="0 0 400 200" preserveAspectRatio="none">
+<line x1="0" y1="50" x2="400" y2="50" stroke="#2D4A6F" stroke-width="0.5" stroke-dasharray="4"/>
+<line x1="0" y1="100" x2="400" y2="100" stroke="#2D4A6F" stroke-width="0.5" stroke-dasharray="4"/>
+<line x1="0" y1="150" x2="400" y2="150" stroke="#2D4A6F" stroke-width="0.5" stroke-dasharray="4"/>
+<!-- Orange signal line (tension - mostly flat with slight variation) -->
+<polyline points="5,40 30,40 50,38 55,35 60,30 65,28 70,30 80,35 100,38 120,40 150,42 180,38 200,36 220,38 250,40 280,42 300,40 320,38 350,40 380,40" fill="none" stroke="#F59E0B" stroke-width="1.5"/>
+<line x1="200" y1="0" x2="200" y2="200" stroke="#3B82F6" stroke-width="1" stroke-dasharray="3"/>
+</svg>
+<div style="position:absolute;bottom:2px;left:45px;font-size:8px;color:var(--text-secondary)">00:21:10</div>
+<div style="position:absolute;bottom:2px;left:25%;font-size:8px;color:var(--text-secondary)">00:21:13</div>
+<div style="position:absolute;bottom:2px;left:42%;font-size:8px;color:var(--text-secondary)">00:21:20</div>
+<div style="position:absolute;bottom:2px;left:58%;font-size:8px;color:var(--text-secondary)">00:21:26</div>
+<div style="position:absolute;bottom:2px;left:74%;font-size:8px;color:var(--text-secondary)">00:21:34</div>
+<div style="position:absolute;bottom:2px;right:4px;font-size:8px;color:var(--text-secondary)">00:21:41</div>
+</div>
+</div>
+
+<!-- Lower-left: Gantt chart -->
+<div style="border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0;overflow:hidden">
+<!-- Gantt header -->
+<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:11px;border-bottom:1px solid var(--border)">
+<span style="color:var(--text-primary);font-weight:600">GANTT:</span>
+<span style="color:var(--text-secondary)">WHS>Master_Main, BidEng_2C>CH_GoToPosFront</span>
+<span style="flex:1"></span>
+<button class="mu-chart-tool-btn" style="font-size:10px">&#9634; Detach</button>
+<button class="mu-chart-tool-btn" style="font-size:10px">&#10005; Close</button>
+</div>
+<div style="flex:1;position:relative;background:var(--bg-dark);overflow:hidden;padding:4px 0">
+<!-- Gantt rows -->
+<div style="display:flex;align-items:center;height:22px;padding:0 8px;font-size:9px;gap:4px">
+<span style="width:90px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">WHS>Master_Mai...</span>
+<div style="flex:1;height:16px;position:relative;border-radius:2px;overflow:hidden">
+<div style="position:absolute;left:0;top:0;width:30%;height:100%;background:linear-gradient(90deg,#D4A574,#C4956A);border-radius:2px" title="Standby"></div>
+<div style="position:absolute;left:30%;top:0;width:15%;height:100%;background:#8B5CF6;border-radius:2px;font-size:8px;color:#fff;display:flex;align-items:center;padding:0 2px" title="Service">Svc</div>
+<div style="position:absolute;left:45%;top:0;width:55%;height:100%;background:#D4A574;border-radius:2px" title="Standby"></div>
+</div>
+</div>
+<div style="display:flex;align-items:center;height:22px;padding:0 8px;font-size:9px;gap:4px">
+<span style="width:90px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">BidEng_2C>CH_G...</span>
+<div style="flex:1;height:16px;position:relative;border-radius:2px;overflow:hidden">
+<div style="position:absolute;left:0;top:0;width:25%;height:100%;background:#10B981;border-radius:2px" title="GO TO"></div>
+<div style="position:absolute;left:25%;top:0;width:75%;height:100%;background:#06B6D4;border-radius:2px;font-size:8px;color:#fff;display:flex;align-items:center;padding:0 2px" title="Running"></div>
+</div>
+</div>
+<!-- Gantt tooltip -->
+<div style="position:absolute;left:40%;top:35%;background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-size:9px;color:var(--text-secondary);line-height:1.6;box-shadow:0 4px 12px rgba(0,0,0,.4);z-index:2;pointer-events:none">
+WHS > Master_Main<br>
+CHStep: Master_Main<br>
+Step: Standby<br>
+State: 7<br>
+Parent: WHS<br>
+SubsysID: WHS<br>
+PrevState: 25
+</div>
+<!-- X axis -->
+<div style="position:absolute;bottom:2px;left:100px;font-size:8px;color:var(--text-secondary)">00:21:10</div>
+<div style="position:absolute;bottom:2px;left:30%;font-size:8px;color:var(--text-secondary)">00:21:13</div>
+<div style="position:absolute;bottom:2px;left:50%;font-size:8px;color:var(--text-secondary)">00:21:20</div>
+<div style="position:absolute;bottom:2px;right:4px;font-size:8px;color:var(--text-secondary)">00:21:35</div>
+</div>
+</div>
+
+<!-- Lower-right: Thread chart -->
+<div style="display:flex;flex-direction:column;min-height:0;overflow:hidden">
+<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:11px;border-bottom:1px solid var(--border)">
+<span style="color:var(--text-primary);font-weight:600">THREAD:</span>
+<span style="color:var(--text-secondary)">BidEng_1CR (48632 msgs)</span>
+<span style="flex:1"></span>
+<button class="mu-chart-tool-btn" style="font-size:10px">&#9634; Detach</button>
+<button class="mu-chart-tool-btn" style="font-size:10px">&#10005; Close</button>
+</div>
+<div style="flex:1;position:relative;background:var(--bg-dark);overflow:hidden;padding:4px 0">
+<div style="display:flex;align-items:center;height:22px;padding:0 8px;font-size:9px;gap:4px">
+<span style="width:50px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">BidEng...</span>
+<div style="flex:1;height:16px;position:relative;border-radius:2px;overflow:hidden">
+<div style="position:absolute;left:20%;top:0;width:3%;height:100%;background:#EF4444;border-radius:2px" title="Message block"></div>
+<div style="position:absolute;left:35%;top:0;width:3%;height:100%;background:#EF4444;border-radius:2px" title="Message block"></div>
+</div>
+</div>
+<!-- X axis -->
+<div style="position:absolute;bottom:2px;left:60px;font-size:8px;color:var(--text-secondary)">00:21:10</div>
+<div style="position:absolute;bottom:2px;left:30%;font-size:8px;color:var(--text-secondary)">00:21:13</div>
+<div style="position:absolute;bottom:2px;left:50%;font-size:8px;color:var(--text-secondary)">00:21:20</div>
+<div style="position:absolute;bottom:2px;left:70%;font-size:8px;color:var(--text-secondary)">00:21:28</div>
+<div style="position:absolute;bottom:2px;right:4px;font-size:8px;color:var(--text-secondary)">00:21:35</div>
+</div>
+</div>
+
+</div><!-- end charts grid -->
+</div><!-- end signal list + charts flex -->
+</div><!-- end chart column -->
+</div>
+
+<!-- TAB 10: CPR -->
+<div class="mu-tab-panel" id="mu-tab-10">
+<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary)">
+<div style="text-align:center"><div style="font-size:48px;opacity:.3">&#128200;</div><div>CPR Analysis — Color Patterning & Registration</div><div style="font-size:10px;margin-top:4px">Load a CPR CSV file to begin analysis</div></div>
+</div>
+</div>
+
+<!-- TAB 11: STEP RECORDER -->
+<div class="mu-tab-panel" id="mu-tab-11">
+<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary)">
+<div style="text-align:center"><div style="font-size:48px;opacity:.3">&#127910;</div><div>ISR Step Recorder playback</div><div style="font-size:10px;margin-top:4px">Image sequences from IndigoLogs/ISR/</div></div>
+</div>
+</div>
+
+<!-- TAB 12: DIFFERENT LOGS -->
+<div class="mu-tab-panel" id="mu-tab-12">
+<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary)">
+<div style="text-align:center"><div style="font-size:48px;opacity:.3">&#128196;</div><div>Plugin-driven log format viewer</div><div style="font-size:10px;margin-top:4px">Supports CSV, JSON, Log4Net, Generic Text</div></div>
+</div>
+</div>
+</div>
+
+<!-- Bottom filter bar -->
+<div style="padding:6px 12px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;font-size:11px;flex-wrap:wrap">
+<button class="mockup-btn" style="display:flex;align-items:center;gap:4px">&#128270; Edit Filters...</button>
+<button class="mockup-btn" style="display:flex;align-items:center;gap:4px">&#127912; Color Rules...</button>
+<div class="mu-icon-btn" title="Time Range Filter" style="font-size:14px">&#127760;</div>
+<span style="color:var(--border)">|</span>
+<label style="color:var(--text-secondary);display:flex;align-items:center;gap:4px;cursor:pointer;font-weight:600"><input type="checkbox" id="mu-filterout-chk" style="accent-color:var(--primary)"> APPLY FILTER OUT</label>
+<label style="color:var(--text-secondary);display:flex;align-items:center;gap:4px;cursor:pointer;font-weight:600"><input type="checkbox" id="mu-filter-chk" style="accent-color:var(--primary)"> APPLY FILTER</label>
+<span style="flex:1"></span>
+<button class="mu-text-btn active" id="mu-btn-text" onclick="muToggleView('text')" title="Text view">TEXT</button>
+<button class="mu-text-btn" id="mu-btn-visual" onclick="muToggleView('visual')" title="Visual timeline">VISUAL</button>
+</div>
+</div>
+
+<!-- Right Panel -->
+<div class="mockup-right" id="mu-right-panel" style="width:200px;display:flex;flex-direction:column">
+<div style="flex:1">
+<div class="mockup-panel-title" style="font-weight:700">ACTIVE FILTERS</div>
+<div id="mu-active-filters">
+<div style="font-size:11px;color:var(--text-secondary);font-style:italic;padding:4px 0">No active filters</div>
+</div>
+</div>
+
+<!-- Divider -->
+<div style="border-top:2px solid var(--primary);margin:8px -8px"></div>
+
+<div style="flex:1">
+<div class="mockup-panel-title" style="font-weight:700">SAVED CONFIGURATIONS</div>
+<div id="mu-saved-configs"></div>
+
+<!-- Config actions menu (toggled) -->
+<div id="mu-right-menu" style="display:none;margin-top:8px">
+<button class="mu-menu-btn success" title="Save current filter & coloring state">&#128190; Save Current</button>
+<button class="mu-menu-btn" title="Apply selected configuration">&#128194; Load Selected</button>
+<button class="mu-menu-btn" title="Open configs folder">&#128193; Show Folder</button>
+<button class="mu-menu-btn danger-text" title="Delete selected configuration">&#128465; Delete Selected</button>
+</div>
+</div>
+
+<!-- Bottom dots / close button -->
+<div style="margin-top:auto;padding-top:8px;text-align:right">
+<div class="mu-dots-btn" onclick="toggleRightMenu()" id="mu-right-dots" title="Config actions">&#8943;&#8943;</div>
+</div>
+</div>
+</div>
+
+<!-- LOG DETAILS panel -->
+<div style="border-top:1px solid var(--border);background:var(--bg-dark)">
+<div style="display:flex;align-items:center;padding:4px 12px;border-bottom:1px solid var(--border)">
+<span style="font-size:10px;font-weight:700;color:var(--text-secondary)">LOG DETAILS</span>
+<span style="flex:1"></span>
+<span style="color:var(--text-secondary);font-size:12px;cursor:pointer;padding:0 4px" title="Pin details panel">&#128204;</span>
+<span style="color:var(--text-secondary);font-size:14px;cursor:pointer;padding:0 4px" title="Close details panel">&#10005;</span>
+</div>
+<div style="padding:6px 12px;display:flex;gap:12px;align-items:center;font-size:11px;flex-wrap:wrap">
+<label style="color:var(--text-secondary)">Time <input type="text" id="mu-detail-time" readonly style="width:130px;padding:3px 6px;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;color:var(--text-primary);font-size:11px;font-family:Consolas,monospace"></label>
+<label style="color:var(--text-secondary)">Thread <input type="text" id="mu-detail-thread" readonly style="width:100px;padding:3px 6px;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;color:var(--text-primary);font-size:11px;font-family:Consolas,monospace"></label>
+<label style="color:var(--text-secondary)">Level <input type="text" id="mu-detail-level" readonly style="width:60px;padding:3px 6px;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;color:var(--text-primary);font-size:11px;font-family:Consolas,monospace"></label>
+<label style="color:var(--text-secondary)">Logger <input type="text" id="mu-detail-logger" readonly style="flex:1;min-width:100px;padding:3px 6px;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;color:var(--text-primary);font-size:11px;font-family:Consolas,monospace"></label>
+</div>
+<div style="padding:4px 12px 8px;display:flex;gap:8px;align-items:start">
+<select style="padding:3px 4px;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;color:var(--text-primary);font-size:10px"><option>Message</option><option>Exception</option><option>Data</option><option>Method</option></select>
+<div id="mu-detail-msg" style="flex:1;padding:4px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;color:var(--text-primary);font-size:11px;font-family:Consolas,monospace;min-height:24px;max-height:80px;overflow:auto"></div>
+</div>
+</div>
+
+<!-- Status Bar -->
+<div class="mockup-statusbar">
+<span id="mu-status-plc">PLC: 10</span>
+<span id="mu-status-app">APP: 3</span>
+<span id="mu-status-events">Events: 3</span>
+<span style="flex:1;text-align:right;opacity:.8">Ready</span>
+</div>
+</div>
+
+<div class="card" style="margin-top:16px">
+<h4>Main Window Areas</h4>
+<table>
+<tr><th>Area</th><th>Description</th></tr>
+<tr><td><strong>Toolbar</strong></td><td>Settings, branding, Open button, mark/navigation buttons, time-sync toggle, annotations toggle, failures button, external tool links (JIRA, Kibana, Email), Plugin Tester, Help (F1)</td></tr>
+<tr><td><strong>Left Panel</strong> (200px)</td><td>Two tabs: <strong>Explorer</strong> (open sessions, action buttons, case management) and <strong>Loggers</strong> (hierarchical logger tree with show/hide controls). Collapsible.</td></tr>
+<tr><td><strong>Center</strong></td><td>13 tabs for different data views. Bottom filter bar with Edit Filters, Color Rules, Time Range, and filter toggles. Search panel (Ctrl+F) floats top-right.</td></tr>
+<tr><td><strong>Right Panel</strong> (200px)</td><td><strong>Active Filters</strong> (color-coded badges: blue=filter, red=filter out, purple=time range, cyan=thread, green=logger) and <strong>Saved Configurations</strong>. Collapsible.</td></tr>
+<tr><td><strong>Heatmap</strong></td><td>Vertical bar alongside the log grid showing state transitions (cyan), marked rows (green), and errors (red). Click to jump.</td></tr>
+<tr><td><strong>Status Bar</strong></td><td>Shows PLC/APP/Events counts and status messages. Blue background.</td></tr>
+<tr><td><strong>Log Details</strong></td><td>Expandable panel below logs (PLC/APP tabs). Shows Time, Thread, Level, Logger, and a field selector (Message/Exception/Data/Method). Pinnable.</td></tr>
+</table>
+</div>
+</section>
+
+<!-- Loading Files -->
+<section id="loading-files">
+<h2>Loading Files</h2>
+<p>IndiLogs accepts ZIP archives from HP Indigo digital presses. There are two configuration types:</p>
+<div class="card-grid">
+<div class="card-sm">
+<h4><span class="badge badge-blue">S4-5</span> Configuration</h4>
+<p>ZIP contains a <strong>binary</strong> APP file. Features: IO Terminal data, EM Statistics Gantt, AXIS/CHSTEP components for chart export. Systab tab available.</p>
+</div>
+<div class="card-sm">
+<h4><span class="badge badge-purple">S6</span> Configuration</h4>
+<p>APP is <strong>not binary</strong> (text format). Features: State analysis, PLC state transitions. Different parsing pipeline.</p>
+</div>
+</div>
+<h3>How to Load</h3>
+<ul>
+<li><strong>Open Button</strong> — Click the OPEN button in the toolbar to browse for ZIP files</li>
+<li><strong>Drag & Drop</strong> — Drag ZIP files directly onto the main window</li>
+<li><strong>Multi-session</strong> — Load multiple ZIPs; switch between them in the Explorer panel</li>
+<li><strong>Tab Pre-selection</strong> — After loading, a dialog lets you choose which tabs to populate (deferred parsing for faster load)</li>
+</ul>
+<p>The loading dialog shows an animated spinner with progress percentage. Files are parsed in the background with parallel processing.</p>
+</section>
+
+<!-- Tabs -->
+<section id="tab-plc">
+<h2>Tab: PLC Logs</h2>
+<p>The primary log view showing PLC (Programmable Logic Controller) logs in a sortable, filterable data grid.</p>
+<h3>Columns</h3>
+<table>
+<tr><th>Column</th><th>Description</th></tr>
+<tr><td>Timestamp</td><td>Log entry time with millisecond precision</td></tr>
+<tr><td>Level</td><td>INFO, WARN, ERROR, DEBUG</td></tr>
+<tr><td>Thread</td><td>Originating thread name</td></tr>
+<tr><td>Message</td><td>Log message content (primary search target)</td></tr>
+<tr><td>Plugin Columns</td><td>Dynamic columns added by loaded plugins</td></tr>
+</table>
+<h3>Features</h3>
+<ul>
+<li><strong>Visual Timeline Mode</strong> — Toggle between table and visual timeline view at the bottom</li>
+<li><strong>Context Menu</strong> — Right-click for time focus filter, annotations, filter out, range markers, and <strong>Create Chart from Pattern</strong></li>
+<li><strong>Double-click</strong> — Opens log detail window with full entry content</li>
+<li><strong>Detach</strong> — Pop the tab into a separate floating window</li>
+<li><strong>Column Manager</strong> — Reorder, resize, show/hide columns</li>
+</ul>
+</section>
+
+<section id="tab-app">
+<h2>Tab: APP Logs</h2>
+<p>Application-level logs. For S4-5, these are parsed from binary APP files; for S6, from text format.</p>
+<h3>Columns</h3>
+<table>
+<tr><th>Column</th><th>Width</th><th>Description</th></tr>
+<tr><td>Annotation</td><td>30px</td><td>Icon indicator for annotated rows</td></tr>
+<tr><td>Level</td><td>50px</td><td>Log severity level</td></tr>
+<tr><td>Timestamp</td><td>180px</td><td>Entry timestamp</td></tr>
+<tr><td>Message</td><td>flexible</td><td>Main log message</td></tr>
+<tr><td>Pattern</td><td>150px</td><td>Message pattern/template</td></tr>
+<tr><td>Data</td><td>200px</td><td>Structured data fields</td></tr>
+<tr><td>Exception</td><td>250px</td><td>Exception details (initially hidden)</td></tr>
+</table>
+</section>
+
+<section id="tab-events">
+<h2>Tab: Events</h2>
+<p>System events extracted from the session. Auto-generated columns with 24px row height. Status bar shows event count. Events can be filtered by the global time range filter.</p>
+</section>
+
+<section id="tab-screenshots">
+<h2>Tab: Screenshots</h2>
+<p>Extracted screenshot images from the ZIP archive. Displayed in a scrollable grid with zoom control via mouse wheel (Ctrl+Plus/Minus).</p>
+</section>
+
+<section id="tab-config">
+<h2>Tab: Config</h2>
+<p>Read-only view of the press configuration file in JSON/text format. Part of the ConfigExplorerViewModel which also includes a database browser for SQLite tables and columns.</p>
+</section>
+
+<section id="tab-terminals">
+<h2>Tab: DB & Terminals</h2>
+<p>Shows setup information and terminal data. For S4-5 configurations, this includes IO Terminal CSV data from devices like BIM, ECM, PDC. The ConfigExplorer provides a tree-based database browser with search.</p>
+</section>
+
+<section id="tab-setupinfo">
+<h2>Tab: Setup Info</h2>
+<p>Displays press configuration from the Readme file in the ZIP. Shows machine name, press type, serial number, software version, and IP address. Used for quick identification of the press being analyzed.</p>
+</section>
+
+<section id="tab-globals">
+<h2>Tab: Globals</h2>
+<p>Press global variables parsed from XML. Features:</p>
+<ul>
+<li><strong>File selector</strong> — Dropdown to choose between globals files</li>
+<li><strong>Search bar</strong> — Filter by parameter name with clear button</li>
+<li><strong>Diff toggle</strong> — "DIFF ON" button shows only entries where Value differs from Default</li>
+<li><strong>Columns</strong>: Name, Value, Default, IsRelevant</li>
+<li>Virtualized for performance with large datasets</li>
+</ul>
+</section>
+
+<section id="tab-systab">
+<h2>Tab: Systab</h2>
+<p><span class="badge badge-blue">S4-5 only</span> System tables with a split view:</p>
+<ul>
+<li><strong>Left panel</strong> — TreeView of topics (collapsed). Shows item counts and asterisk (*) for entries with differences from default values</li>
+<li><strong>Right panel</strong> — DataGrid with columns: Parameter, Saved, Default, Minimum, Maximum</li>
+<li>Rows with differences are highlighted yellow</li>
+<li>"Diffs Only" checkbox to filter to changed parameters</li>
+<li>Search bar to find specific parameters</li>
+</ul>
+</section>
+
+<section id="tab-charts">
+<h2>Tab: Charts</h2>
+<p>Interactive charting powered by SkiaSharp. Supports multiple chart types with pan, zoom, and measurement tools.</p>
+
+<div class="tabs">
+<button class="tab-btn active" onclick="showTab(this,'chart-line')">Line/Signal Chart</button>
+<button class="tab-btn" onclick="showTab(this,'chart-gantt')">Gantt Chart</button>
+<button class="tab-btn" onclick="showTab(this,'chart-signals')">Signal Browser</button>
+<button class="tab-btn" onclick="showTab(this,'chart-features')">Features</button>
+<button class="tab-btn" onclick="showTab(this,'chart-pattern')">Chart from Pattern</button>
+</div>
+<div id="chart-line" class="tab-content active">
+<h4>Line/Signal Chart (ChartGraphView)</h4>
+<p>Multi-series line chart with dual Y-axes. Rendered with SkiaSharp for high performance.</p>
+<ul>
+<li><strong>Multiple signals</strong> — Each series assignable to left (L) or right (R) Y-axis</li>
+<li><strong>Reference lines</strong> — Horizontal/vertical dashed lines with labels and custom colors</li>
+<li><strong>State intervals</strong> — Semi-transparent background regions showing machine state changes (STANDBY, PRINT, etc.)</li>
+<li><strong>Thread markers</strong> — Vertical dashed lines with thread names and 6 distinct colors</li>
+<li><strong>Time gaps</strong> — Red semi-transparent overlay showing periods with no data</li>
+<li><strong>Event markers</strong> — Red dots with tooltips for system events/alarms</li>
+<li><strong>Smoothing</strong> — Moving average filter (window=10) to reduce noise</li>
+</ul>
+</div>
+<div id="chart-gantt" class="tab-content">
+<h4>Gantt Chart (ChartGanttView)</h4>
+<p>Horizontal timeline showing state intervals as colored bars. Each component/channel gets its own row (24px height).</p>
+<ul>
+<li><strong>State colors</strong> — 10 distinct colors for CHSTEP states (teal, red, green, orange, purple, blue, pink, brown, blue-grey, lime)</li>
+<li><strong>Hover tooltips</strong> — Show state name and duration</li>
+<li><strong>Click-to-filter</strong> — Click a state bar to filter the time window</li>
+<li><strong>EM Statistics</strong> — Optional independent timeline from EM_Statistics.csv</li>
+<li><strong>Cursor sync</strong> — Red vertical line synchronized with other chart views</li>
+</ul>
+</div>
+<div id="chart-signals" class="tab-content">
+<h4>Signal Browser (ChartSignalList)</h4>
+<p>Categorized signal browser for adding signals to charts:</p>
+<table>
+<tr><th>Category</th><th>Color</th><th>Content</th></tr>
+<tr><td>Axis/Motion</td><td><span class="badge badge-green">Green</span></td><td>Position, velocity, speed signals</td></tr>
+<tr><td>IO/Sensors</td><td><span class="badge badge-blue">Blue</span></td><td>Input/output and sensor signals</td></tr>
+<tr><td>CHSTEP</td><td><span class="badge badge-orange">Orange</span></td><td>Component state data for Gantt</td></tr>
+<tr><td>Thread Messages</td><td><span class="badge badge-purple">Purple</span></td><td>Async task/thread events</td></tr>
+<tr><td>Events</td><td><span class="badge badge-red">Red</span></td><td>System events/alarms</td></tr>
+<tr><td>EM Statistics</td><td><span class="badge badge-cyan">Teal</span></td><td>Efficiency/maintenance stats</td></tr>
+</table>
+<p>Double-click a signal to add it to the active chart. Search with 150ms debounce.</p>
+</div>
+<div id="chart-features" class="tab-content">
+<h4>Chart Interaction</h4>
+<ul>
+<li><strong>Pan</strong> — Click and drag to move the view</li>
+<li><strong>Zoom</strong> — Mouse wheel to zoom in/out</li>
+<li><strong>Measure</strong> — Ctrl+Click to mark two points and display distance/time delta</li>
+<li><strong>Cursor sync</strong> — Cursor position synchronized across all chart views</li>
+<li><strong>Log sync</strong> — Click chart point to navigate to corresponding log entry</li>
+<li><strong>Theme-aware</strong> — Adapts to light/dark mode</li>
+<li><strong>DPI-aware</strong> — Correct scaling on high-DPI displays</li>
+</ul>
+<h4>Machine States</h4>
+<p>19 recognized states with distinct colors: UNDEFINED, INIT, POWER_DISABLE, OFF, SERVICE, MECH_INIT, STANDBY, GET_READY, READY, PRE_PRINT, PRINT, POST_PRINT, PAUSE, RECOVERY, GO_TO_OFF, GO_TO_STANDBY, GO_TO_SERVICE, SML_OFF, DYNAMIC_READY</p>
+</div>
+<div id="chart-pattern" class="tab-content">
+<h4>Chart from Pattern (Graph per Demand) <span class="badge badge-green">New</span></h4>
+<p>Create a chart from <strong>any</strong> log line by extracting values with a regex pattern. Right-click a log row and select <strong>"Create Chart from Pattern..."</strong> to open the pattern dialog.</p>
+<h4>How It Works</h4>
+<ol>
+<li><strong>Right-click</strong> any row in the PLC Logs or APP Logs grid</li>
+<li>Select <strong>"Create Chart from Pattern..."</strong> from the context menu</li>
+<li>The dialog shows the original message. Click <strong>Auto-Detect</strong> to generate a regex pattern automatically</li>
+<li>The auto-detect prioritizes <code>key=value</code> patterns — it finds the <strong>last</strong> <code>=number</code> in the message and builds a capture group for the value</li>
+<li>Edit the regex if needed — a live preview shows the captured value from the original message</li>
+<li>Choose the <strong>search field</strong> (Message, Logger, or ThreadName)</li>
+<li>Optionally <strong>include machine state</strong> to show state transitions as a Gantt track alongside the chart</li>
+<li>Click <strong>Create Chart</strong> — all logs are scanned in a background thread, values extracted, and the chart appears in the Charts tab</li>
+</ol>
+<h4>Supported Value Types</h4>
+<table>
+<tr><th>Type</th><th>Detection</th><th>Chart Style</th><th>Example</th></tr>
+<tr><td><strong>Numeric</strong></td><td>Captured group parses as a number</td><td>Analog line chart</td><td><code>Temp: 25.3 C</code> &rarr; pattern <code>Temp:\s*(-?\d+\.?\d*)</code></td></tr>
+<tr><td><strong>Boolean</strong></td><td>Captured group is <code>True</code>/<code>False</code></td><td>Digital (0/1) chart</td><td><code>Valve: True</code> &rarr; pattern <code>Valve:\s*(True|False)</code></td></tr>
+</table>
+<h4>Auto-Detect Examples</h4>
+<table>
+<tr><th>Message</th><th>Auto-Generated Pattern</th><th>Captured Value</th></tr>
+<tr><td><code>Engage Rear DiffPosition =-37</code></td><td><code>Engage\ Rear\ DiffPosition\ \=\s*(-?\d+\.?\d*)</code></td><td><code>-37</code></td></tr>
+<tr><td><code>IO_Mon: Pressure = 1013.5 bar</code></td><td><code>IO_Mon:\ Pressure\ \=\s*(-?\d+\.?\d*)</code></td><td><code>1013.5</code></td></tr>
+<tr><td><code>Sensor status: True</code></td><td><code>Sensor\ status:\ (True|False)</code></td><td><code>True</code> &rarr; 1.0</td></tr>
+</table>
+<h4>Tips</h4>
+<ul>
+<li>The pattern must contain at least one <strong>capture group</strong> <code>(...)</code> — the first group is used as the chart value</li>
+<li>For <code>key=value</code> messages, auto-detect picks the <strong>last</strong> <code>=number</code> pair (the most specific value)</li>
+<li>Machine state is parsed from S6 <code>PlcMngr: STATE1 -&gt; STATE2</code> transitions or S4-5 <code>==== STATE_XXX - Enter</code> patterns</li>
+<li>Extraction runs on a background thread — large log sets (millions of rows) are handled without freezing the UI</li>
+</ul>
+</div>
+</section>
+
+<section id="tab-cpr">
+<h2>Tab: CPR Analysis</h2>
+<p><strong>CPR = Color Patterning & Registration Analysis.</strong> Analyzes print quality defects by measuring registration errors at multiple print stations.</p>
+
+<h3>Layout</h3>
+<table>
+<tr><th>Area</th><th>Content</th></tr>
+<tr><td><strong>Top Bar</strong></td><td>Choose File, Compare, Remove Compare, Detach, Export Plot</td></tr>
+<tr><td><strong>Left Panel</strong> (210px)</td><td>Graph type selector (10 types), filters (revolution, iteration, cycle/column range), options (Remove DC, Auto Y, smoothing), axis selector</td></tr>
+<tr><td><strong>Center</strong></td><td>SkiaSharp chart view + optional comparison chart below</td></tr>
+<tr><td><strong>Right Panel</strong> (200px)</td><td>Press SN, Calibration Time, 6 station pairs (Test vs Reference)</td></tr>
+<tr><td><strong>Bottom</strong></td><td>Stats tables (95th/99th percentile per station, offset/skew metrics)</td></tr>
+</table>
+
+<h3>10 Graph Types</h3>
+<div class="card-grid">
+<div class="card-sm"><h4>1. Colors</h4><p>Mean CPR error per station at each Y position (process direction)</p></div>
+<div class="card-sm"><h4>2. Columns</h4><p>CPR error per column (X position)</p></div>
+<div class="card-sm"><h4>3. Blanket Cycles</h4><p>Analysis of specific blanket revolution cycles</p></div>
+<div class="card-sm"><h4>4. X Scaling</h4><p>Horizontal scaling errors</p></div>
+<div class="card-sm"><h4>5. DFT</h4><p>Frequency domain analysis with reference markers (ASiD, T1, ITM, Stir, CR)</p></div>
+<div class="card-sm"><h4>6. Histogram</h4><p>Distribution of CPR errors with normal curve overlay</p></div>
+<div class="card-sm"><h4>7. Revolutions</h4><p>Error data per blanket revolution</p></div>
+<div class="card-sm"><h4>8. Missing Data</h4><p>Visualization of data gaps</p></div>
+<div class="card-sm"><h4>9. Skew</h4><p>Multiple subplots showing skew per station</p></div>
+<div class="card-sm"><h4>10. Skew Along Bracket</h4><p>Skew variation across the print bracket</p></div>
+</div>
+
+<h3>Station Colors</h3>
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin:8px 0">
+<span><span class="color-swatch" style="display:inline-block;width:14px;height:14px;background:purple;border-radius:3px;vertical-align:middle"></span> St1</span>
+<span><span class="color-swatch" style="display:inline-block;width:14px;height:14px;background:orange;border-radius:3px;vertical-align:middle"></span> St2</span>
+<span><span class="color-swatch" style="display:inline-block;width:14px;height:14px;background:firebrick;border-radius:3px;vertical-align:middle"></span> St3</span>
+<span><span class="color-swatch" style="display:inline-block;width:14px;height:14px;background:royalblue;border-radius:3px;vertical-align:middle"></span> St4</span>
+<span><span class="color-swatch" style="display:inline-block;width:14px;height:14px;background:black;border:1px solid var(--border);border-radius:3px;vertical-align:middle"></span> St5</span>
+<span><span class="color-swatch" style="display:inline-block;width:14px;height:14px;background:green;border-radius:3px;vertical-align:middle"></span> St6</span>
+</div>
+</section>
+
+<section id="tab-steprec">
+<h2>Tab: Step Recorder</h2>
+<p>Playback of ISR (In-Service Recording) image sequences from the ZIP's IndigoLogs/ISR/ folder.</p>
+<ul>
+<li><strong>Navigation</strong> — Previous/Next buttons, frame counter (X of Y)</li>
+<li><strong>Playback</strong> — Play/Stop with DispatcherTimer auto-advance</li>
+<li><strong>Screenshot</strong> — Export current frame to image file</li>
+<li><strong>Lazy loading</strong> — Bitmap images loaded on demand and cached</li>
+<li><strong>Open Folder</strong> — Open extracted ISR folder in Windows Explorer</li>
+</ul>
+</section>
+
+<section id="tab-difflog">
+<h2>Tab: Different Logs</h2>
+<p>Plugin-driven log format support for non-standard file types. When a file doesn't match built-in formats, plugins are tried until one succeeds.</p>
+<ul>
+<li>Dynamic columns from plugin definitions</li>
+<li>Same filtering infrastructure as PLC/APP (advanced filter tree, thread filters)</li>
+<li>Column persistence across sessions</li>
+</ul>
+</section>
+
+<!-- Features -->
+<section id="feat-search">
+<h2>Search & Navigation</h2>
+<p>Press <kbd>Ctrl</kbd>+<kbd>F</kbd> to open the floating search panel (top-right of the content area).</p>
+<ul>
+<li><strong>Simple search</strong> — Type text to filter across Message + ExtraFields</li>
+<li><strong>Boolean operators</strong> — Use <code>AND</code>, <code>OR</code>, <code>NOT</code> for complex queries</li>
+<li><strong>Syntax validation</strong> — Invalid queries show error tooltip; search only applies boolean mode when operators are detected</li>
+<li>250ms debounce to avoid UI lag during typing</li>
+<li>Press <kbd>Esc</kbd> to close the search panel</li>
+</ul>
+<h3>Example Queries</h3>
+<pre>motor AND error
+temperature OR pressure
+NOT debug
+(error OR warning) AND motor NOT routine</pre>
+</section>
+
+<section id="feat-filtering">
+<h2>Filtering</h2>
+<p>The filtering system is the core of IndiLogs. Multiple filter types work together in a pipeline:</p>
+
+<div class="card">
+<h4>Filter Pipeline (in order)</h4>
+<ol>
+<li><strong>Advanced Filter Tree</strong> — AND/OR/NOT nodes with conditions (field, operator, value)</li>
+<li><strong>Thread Filters</strong> — Multi-select thread names (separate lists for PLC and APP)</li>
+<li><strong>Logger/Method Filters</strong> — APP only, filter by logger name or method</li>
+<li><strong>Logger Tree Filters</strong> — Show-only or hide entire logger branches</li>
+<li><strong>Search Text</strong> — Always-on contains search (or boolean expression)</li>
+<li><strong>Global Time Range</strong> — DateTime start/end applied across all tabs</li>
+<li><strong>Negative Filters (Filter Out)</strong> — Applied last, removes matching entries</li>
+</ol>
+</div>
+
+<h3>Filter Condition Operators</h3>
+<table>
+<tr><th>Operator</th><th>Description</th></tr>
+<tr><td>Equals</td><td>Exact match</td></tr>
+<tr><td>Contains</td><td>Substring match</td></tr>
+<tr><td>Begins With</td><td>Starts with value</td></tr>
+<tr><td>Ends With</td><td>Ends with value</td></tr>
+<tr><td>Regex</td><td>Regular expression (2s timeout for safety)</td></tr>
+</table>
+
+<h3>Interactive Filter Demo</h3>
+<div class="filter-demo">
+<div class="controls">
+<input type="text" id="demo-filter" placeholder="Type to filter..." oninput="runFilterDemo()">
+<button id="demo-filterout-btn" onclick="toggleFilterOut()" class="danger">Filter Out: OFF</button>
+<button onclick="clearFilterDemo()">Clear</button>
+</div>
+<div id="demo-logs">
+<div class="log-line" data-text="system initialized successfully"><span class="ts">14:30:01.123</span> <span class="lvl-info">INFO </span> <span class="msg">System initialized successfully</span></div>
+<div class="log-line" data-text="state transition standby to get_ready"><span class="ts">14:30:02.456</span> <span class="lvl-info">INFO </span> <span class="msg">State transition: STANDBY -> GET_READY</span></div>
+<div class="log-line" data-text="web tension exceeding threshold 4.2n"><span class="ts">14:30:03.789</span> <span class="lvl-warn">WARN </span> <span class="msg">Web tension exceeding threshold: 4.2N</span></div>
+<div class="log-line" data-text="motor controller error code 0x4f"><span class="ts">14:30:04.012</span> <span class="lvl-err">ERROR</span> <span class="msg">Motor controller error code 0x4F</span></div>
+<div class="log-line" data-text="print job started job_2025_001"><span class="ts">14:30:04.567</span> <span class="lvl-info">INFO </span> <span class="msg">Print job started: Job_2025_001</span></div>
+<div class="log-line" data-text="temperature sensor reading out of range"><span class="ts">14:30:05.345</span> <span class="lvl-err">ERROR</span> <span class="msg">Temperature sensor reading out of range</span></div>
+<div class="log-line" data-text="blanket cycle completed iteration 5"><span class="ts">14:30:06.678</span> <span class="lvl-info">INFO </span> <span class="msg">Blanket cycle completed, iteration 5</span></div>
+<div class="log-line" data-text="debug routine maintenance check skipped"><span class="ts">14:30:07.901</span> <span class="lvl-info">DEBUG</span> <span class="msg">Debug routine maintenance check skipped</span></div>
+</div>
+<div id="demo-status" style="margin-top:8px;font-size:12px;color:var(--text-secondary)">Showing 8 of 8 entries</div>
+</div>
+
+<h3>Active Filters Panel</h3>
+<p>The right panel shows all currently active filters with color-coded badges. Double-click any badge to remove that filter.</p>
+<div style="display:flex;flex-wrap:wrap;gap:4px;margin:8px 0">
+<span class="badge badge-blue">FILTER</span>
+<span class="badge badge-red">FILTER OUT</span>
+<span class="badge badge-orange">SEARCH</span>
+<span class="badge badge-purple">TIME RANGE</span>
+<span class="badge badge-cyan">THREAD</span>
+<span class="badge badge-green">LOGGER</span>
+<span class="badge badge-amber">METHOD</span>
+<span class="badge badge-pink">RANGE</span>
+<span class="badge badge-sky">PLC LOGGER</span>
+</div>
+</section>
+
+<section id="feat-filterout">
+<h2>Filter Out</h2>
+<p>Negative filtering — excludes matching entries from results. Applied <em>after</em> all include filters.</p>
+<ul>
+<li><strong>Add</strong> — Select text in a log message, right-click > Filter Out. Adds the text to the negative filter list.</li>
+<li><strong>Thread filter out</strong> — Right-click > Filter Out Thread to exclude by thread name</li>
+<li><strong>Undo</strong> — <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes the last filter out (LIFO undo stack)</li>
+<li><strong>Toggle</strong> — "APPLY FILTER OUT" checkbox in the bottom bar enables/disables all negative filters at once</li>
+<li>Separate negative filter lists for PLC and APP tabs</li>
+</ul>
+</section>
+
+<section id="feat-coloring">
+<h2>Coloring Rules</h2>
+<p>Apply custom colors to log rows based on field conditions. Each session can have its own coloring rules.</p>
+
+<h3>How It Works</h3>
+<ol>
+<li>Click <strong>Color Rules</strong> in the bottom bar to open the Coloring Window</li>
+<li>Add rules: choose a <strong>Field</strong> (Message, Level, Thread, etc.), <strong>Operator</strong> (Contains, Equals, Regex), <strong>Value</strong>, and pick a <strong>Color</strong></li>
+<li>Rules are applied in parallel (<code>Parallel.ForEach</code>) for performance</li>
+<li>Colors are <strong>frozen WPF Brushes</strong> — shared across all matching LogEntry objects to save memory</li>
+</ol>
+
+<h3>Coloring Example</h3>
+<div class="card" style="padding:12px">
+<div class="color-demo-row"><span class="color-swatch" style="background:#EF4444"></span><span style="color:var(--text-secondary);width:200px">Level = ERROR</span><span style="color:#EF4444">Motor controller error code 0x4F</span></div>
+<div class="color-demo-row"><span class="color-swatch" style="background:#F59E0B"></span><span style="color:var(--text-secondary);width:200px">Level = WARN</span><span style="color:#F59E0B">Web tension exceeding threshold</span></div>
+<div class="color-demo-row"><span class="color-swatch" style="background:#3B82F6"></span><span style="color:var(--text-secondary);width:200px">Message contains "state"</span><span style="color:#3B82F6">State transition: STANDBY -> GET_READY</span></div>
+<div class="color-demo-row"><span class="color-swatch" style="background:#10B981"></span><span style="color:var(--text-secondary);width:200px">Message regex "Job_\d+"</span><span style="color:#10B981">Print job started: Job_2025_001</span></div>
+</div>
+
+<h3>Default vs Session Rules</h3>
+<ul>
+<li><strong>User defaults</strong> — <code>UserDefaultMainRules</code> / <code>UserDefaultAppRules</code> applied when no session-specific rules exist</li>
+<li><strong>Session rules</strong> — <code>MainColoringRules</code> / <code>AppColoringRules</code> override defaults for the active session</li>
+<li><strong>Compiled Regex</strong> — Patterns used in coloring rules are compiled (<code>RegexOptions.Compiled</code>) for hot-path performance</li>
+<li><strong>Cached regex</strong> — <code>ConcurrentDictionary&lt;string, Regex&gt;</code> prevents re-compilation</li>
+</ul>
+</section>
+
+<section id="feat-timerange">
+<h2>Time Range Filtering</h2>
+<p>Three time-based filtering mechanisms:</p>
+
+<div class="accordion" onclick="this.classList.toggle('open')">
+<div class="accordion-header">Global Time Range</div>
+<div class="accordion-body"><div class="accordion-body-inner">
+<p>Click <strong>Time Range</strong> in the bottom bar to open a DateTime picker. Set start and/or end times to filter <em>all</em> tabs (PLC, APP, Events) simultaneously.</p>
+<p>Status bar shows: "Time Range Filter: PLC=X, APP=Y, Events=Z"</p>
+<p>The filter uses the min/max timestamps from both PLC and APP caches for picker bounds.</p>
+</div></div>
+</div>
+
+<div class="accordion" onclick="this.classList.toggle('open')">
+<div class="accordion-header">Context Time Focus</div>
+<div class="accordion-body"><div class="accordion-body-inner">
+<p>Right-click a log entry > <strong>Filter Context</strong>. Shows all logs within ±N seconds/minutes around the selected entry.</p>
+<p>The context window size is configurable (ContextSeconds property). Useful for investigating what happened around an error.</p>
+</div></div>
+</div>
+
+<div class="accordion" onclick="this.classList.toggle('open')">
+<div class="accordion-header">Range Selection</div>
+<div class="accordion-body"><div class="accordion-body-inner">
+<p>Two-step selection process:</p>
+<ol>
+<li><strong>Start Range</strong> — Select a log entry and mark it as range start</li>
+<li><strong>End Range</strong> — Select another entry to close the range</li>
+</ol>
+<p>All logs between the two markers are shown. Uses <code>List&lt;T&gt;.GetRange()</code> for efficiency (not LINQ Skip/Take). Shows count and time window in status.</p>
+</div></div>
+</div>
+</section>
+
+<section id="feat-timesync">
+<h2>Time Sync</h2>
+<p>Synchronizes scrolling between PLC and APP tabs using timestamps. Toggle with the <strong>Sync</strong> button in the toolbar.</p>
+<h3>How It Works</h3>
+<ul>
+<li><strong>Binary search</strong> — Finds the nearest log entry at the target time (O(log N))</li>
+<li><strong>Clock conversion</strong> — PLC and APP may run on different clocks. <code>TimeSyncOffsetSeconds</code> (double precision) adjusts for drift</li>
+<li><strong>SyncedTime</strong> — Each PLC LogEntry stores an APP-clock timestamp for tick-precision correlation</li>
+<li><strong>60-second max distance</strong> — If no log within 60 seconds, sync is skipped</li>
+<li><strong>Tab-aware</strong> — Sync is applied when switching between PLC and APP tabs</li>
+<li><strong>Chart sync</strong> — Charts cursor position can also sync with log views</li>
+</ul>
+</section>
+
+<section id="feat-marking">
+<h2>Marking & Annotations</h2>
+<h3>Marking</h3>
+<ul>
+<li>Press <kbd>Space</kbd> to mark/unmark the selected row (light green background)</li>
+<li><strong>Next/Previous Marked</strong> buttons in toolbar to navigate between marks</li>
+<li>Open <strong>Marked Lines</strong> window to see all marked entries (PLC and APP can be combined or separate)</li>
+<li>Marked rows show as green ticks in the heatmap sidebar</li>
+</ul>
+<h3>Annotations</h3>
+<ul>
+<li>Right-click a log entry > <strong>Add Annotation</strong></li>
+<li>Each annotation stores: time, author, text</li>
+<li><strong>Show All Annotations</strong> toggle in toolbar — persistent display vs hover-only</li>
+<li>Annotation icon indicator in the first column (APP logs)</li>
+<li>Annotations are saved with case files</li>
+</ul>
+</section>
+
+<section id="feat-loggertree">
+<h2>Logger Tree</h2>
+<p>The left panel's "Loggers" tab shows a hierarchical view of all loggers, built from dot-notation names (e.g., <code>com.hp.logger.subsystem</code>).</p>
+<h3>Operations (Right-Click Menu)</h3>
+<table>
+<tr><th>Action</th><th>Effect</th></tr>
+<tr><td>Show This</td><td>Make a hidden logger visible again</td></tr>
+<tr><td>Hide This</td><td>Exclude this logger from results</td></tr>
+<tr><td>Show Only This</td><td>Show only this logger (hide all others)</td></tr>
+<tr><td>Show With Children</td><td>Show this logger and all descendants</td></tr>
+<tr><td>Hide With Children</td><td>Hide this logger and all descendants</td></tr>
+<tr><td>Show All</td><td>Reset all logger filters</td></tr>
+</table>
+<p>Each node shows its entry count. Hidden loggers appear greyed out; active loggers have a green checkmark.</p>
+<p>Separate tree filters exist for PLC loggers (<code>PlcLoggerTreeRoot</code>) and APP loggers (<code>LoggerTreeRoot</code>).</p>
+</section>
+
+<section id="feat-globalgrep">
+<h2>Global Grep</h2>
+<p>Multi-location search across file systems, ZIP archives, and loaded sessions.</p>
+<h3>Features</h3>
+<ul>
+<li><strong>Structured criteria</strong> — AND/OR condition groups for complex searches</li>
+<li><strong>Streaming results</strong> — Background threads enqueue results; UI timer flushes them in batches</li>
+<li><strong>Multiple locations</strong> — Search across network paths, local folders, SMB shares</li>
+<li><strong>Profiles</strong> — Save and load search criteria + locations</li>
+<li><strong>Scheduled searches</strong> — Recurring searches with Windows Task Scheduler integration</li>
+<li><strong>Email notifications</strong> — Send search results via email (SMTP with DPAPI-encrypted credentials)</li>
+<li><strong>HTML reports</strong> — Export search results as formatted reports</li>
+<li><strong>Cancellation</strong> — Cancel mid-search with CancellationToken</li>
+</ul>
+</section>
+
+<section id="feat-export">
+<h2>Export & Reports</h2>
+<p>Export log data and chart data to CSV files with configurable presets.</p>
+<h3>Export Options</h3>
+<ul>
+<li><strong>PLC + APP logs</strong> with selected columns</li>
+<li><strong>Events</strong> data</li>
+<li><strong>Machine state transitions</strong></li>
+<li><strong>IO Terminal data</strong> <span class="badge badge-blue">S4-5</span> — Merged from Io-*.csv files</li>
+<li><strong>EM Statistics</strong> <span class="badge badge-blue">S4-5</span> — Gantt timeline data</li>
+<li><strong>Log statistics</strong> — Distribution tables</li>
+<li><strong>Unix timestamps</strong> — Optional inclusion</li>
+</ul>
+<h3>Chart Export</h3>
+<p>Two modes: <strong>In-memory transfer</strong> to the Charts tab (no file I/O) via ChartDataTransferService, or <strong>CSV file export</strong> for external tools.</p>
+</section>
+
+<section id="feat-cases">
+<h2>Cases & Configurations</h2>
+<h3>Cases</h3>
+<p>Save the current analysis state as a "case file" that includes all filters, coloring rules, marked logs, and annotations. Load cases to restore previous investigation states.</p>
+<h3>Saved Configurations</h3>
+<p>Save and load filter/coloring snapshots from the right panel. Double-click a saved config to apply it instantly.</p>
+<ul>
+<li><strong>Save Current</strong> — Snapshot current filter + coloring state</li>
+<li><strong>Load Selected</strong> — Apply saved configuration</li>
+<li><strong>Show Folder</strong> — Open <code>%AppData%\IndiLogs3.0\Configs\</code></li>
+<li><strong>Delete Selected</strong> — Remove saved configuration</li>
+</ul>
+</section>
+
+<section id="feat-live">
+<h2>Live Monitoring</h2>
+<p>Real-time log monitoring by polling external servers. When active, the toolbar shows Resume/Pause/Clear buttons.</p>
+<ul>
+<li><span style="color:var(--success)">&#9654; RESUME</span> — Continue polling for new entries</li>
+<li><span style="color:var(--warning)">&#9208; PAUSE</span> — Pause polling (keeps current data)</li>
+<li><span style="color:var(--danger)">&#9940; CLEAR</span> — Clear all live data</li>
+<li>Color rules apply in real-time</li>
+<li>Configurable polling interval</li>
+</ul>
+</section>
+
+<section id="feat-compare">
+<h2>Compare</h2>
+<p>Side-by-side log comparison between sessions. Features synchronized scrolling, diff highlighting, and time-range alignment.</p>
+</section>
+
+<section id="feat-analysis">
+<h2>Analysis Tools</h2>
+<p>Access via the <strong>Analysis</strong> toolbar button or the left panel menu. <span class="badge badge-blue">S4-5</span> goes directly to Statistics. <span class="badge badge-purple">S6</span> shows a menu to choose Failures or Statistics.</p>
+
+<h3>Statistics Dashboard</h3>
+<p>Full log analytics window with PLC and APP tabs, showing error histograms, thread load distribution, gap analysis, and timeline.</p>
+<div class="mockup" style="max-width:700px">
+<div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px">
+<span style="font-weight:700;font-size:14px;color:var(--text-primary)">LOG STATISTICS DASHBOARD</span>
+<span style="color:var(--text-secondary);font-size:11px">PLC: 42,318 entries | APP: 12,450 entries | Time span: 2h 15m</span>
+</div>
+<div style="display:flex;border-bottom:1px solid var(--border)">
+<div style="padding:8px 20px;background:var(--primary);color:#fff;font-weight:700;font-size:12px;border-radius:8px 8px 0 0">PLC LOGS</div>
+<div style="padding:8px 20px;color:var(--text-secondary);font-size:12px">APP LOGS</div>
+</div>
+<div style="display:flex;gap:12px;padding:12px">
+<!-- Top 10 Errors -->
+<div style="flex:1;background:var(--bg-card);border-radius:8px;padding:12px">
+<div style="font-weight:700;color:var(--danger);font-size:12px;margin-bottom:8px">TOP 10 MOST COMMON ERRORS <span style="color:var(--text-secondary);font-weight:400">(847 total)</span></div>
+<div style="font-size:10px">
+<div style="margin:4px 0"><span style="color:var(--text-primary)">Temperature sensor out of range</span><div style="display:flex;align-items:center;gap:6px"><div style="height:12px;background:var(--danger);border-radius:3px;width:80%"></div><span style="color:var(--danger);font-weight:700">234</span></div></div>
+<div style="margin:4px 0"><span style="color:var(--text-primary)">PLC_FAILURE_STATE_CHANGE</span><div style="display:flex;align-items:center;gap:6px"><div style="height:12px;background:var(--danger);border-radius:3px;width:55%"></div><span style="color:var(--danger);font-weight:700">156</span></div></div>
+<div style="margin:4px 0"><span style="color:var(--text-primary)">Web tension exceeded limit</span><div style="display:flex;align-items:center;gap:6px"><div style="height:12px;background:var(--danger);border-radius:3px;width:40%"></div><span style="color:var(--danger);font-weight:700">112</span></div></div>
+<div style="margin:4px 0"><span style="color:var(--text-primary)">BIM calibration timeout</span><div style="display:flex;align-items:center;gap:6px"><div style="height:12px;background:var(--danger);border-radius:3px;width:25%"></div><span style="color:var(--danger);font-weight:700">78</span></div></div>
+</div>
+</div>
+<!-- Thread Distribution -->
+<div style="flex:1;background:var(--bg-card);border-radius:8px;padding:12px">
+<div style="font-weight:700;color:var(--primary);font-size:12px;margin-bottom:8px">THREAD LOAD DISTRIBUTION <span style="color:var(--text-secondary);font-weight:400">(8 threads)</span></div>
+<div style="font-size:10px">
+<div style="display:flex;align-items:center;gap:6px;margin:4px 0"><span style="width:60px;color:var(--text-primary)">Manager</span><div style="flex:1;height:12px;background:var(--bg-panel);border-radius:3px;overflow:hidden"><div style="height:100%;background:var(--primary);width:85%;border-radius:3px"></div></div><span style="color:var(--text-secondary);min-width:60px;text-align:right">12,450 (29%)</span></div>
+<div style="display:flex;align-items:center;gap:6px;margin:4px 0"><span style="width:60px;color:var(--text-primary)">Motor</span><div style="flex:1;height:12px;background:var(--bg-panel);border-radius:3px;overflow:hidden"><div style="height:100%;background:var(--primary);width:60%;border-radius:3px"></div></div><span style="color:var(--text-secondary);min-width:60px;text-align:right">8,234 (19%)</span></div>
+<div style="display:flex;align-items:center;gap:6px;margin:4px 0"><span style="width:60px;color:var(--text-primary)">Print</span><div style="flex:1;height:12px;background:var(--bg-panel);border-radius:3px;overflow:hidden"><div style="height:100%;background:var(--primary);width:45%;border-radius:3px"></div></div><span style="color:var(--text-secondary);min-width:60px;text-align:right">6,120 (14%)</span></div>
+<div style="display:flex;align-items:center;gap:6px;margin:4px 0"><span style="width:60px;color:var(--text-primary)">Sensor</span><div style="flex:1;height:12px;background:var(--bg-panel);border-radius:3px;overflow:hidden"><div style="height:100%;background:var(--primary);width:35%;border-radius:3px"></div></div><span style="color:var(--text-secondary);min-width:60px;text-align:right">5,014 (12%)</span></div>
+</div>
+</div>
+</div>
+<!-- Gap Analysis -->
+<div style="padding:0 12px 12px">
+<div style="background:var(--bg-card);border-radius:8px;padding:12px">
+<div style="font-weight:700;color:var(--warning);font-size:12px;margin-bottom:4px">GAP ANALYSIS <span style="color:var(--text-secondary);font-weight:400">(Time gaps >= 2 seconds)</span></div>
+<div style="font-size:10px;color:var(--text-secondary);margin-bottom:6px">Found 5 gaps totaling 45.2 seconds. Largest gap: 18.3s</div>
+<div style="font-size:10px">
+<div class="mockup-row mu-header-row" style="font-size:10px"><span style="width:140px">Start Time</span><span style="width:140px">End Time</span><span style="width:70px">Duration</span><span style="flex:1">Context</span></div>
+<div class="mockup-row" style="font-size:10px"><span style="width:140px">14:30:08.234</span><span style="width:140px">14:30:26.534</span><span style="width:70px;color:var(--warning);font-weight:600">18.3s</span><span style="flex:1">After PLC_FAILURE_STATE_CHANGE</span></div>
+<div class="mockup-row" style="font-size:10px"><span style="width:140px">14:31:45.100</span><span style="width:140px">14:31:52.800</span><span style="width:70px;color:var(--warning);font-weight:600">7.7s</span><span style="flex:1">During recovery sequence</span></div>
+</div>
+</div>
+</div>
+</div>
+
+<h3>States Window</h3>
+<p>Shows detected state transitions with timing and status. Double-click to filter logs to a state's time range.</p>
+<div class="mockup" style="max-width:700px">
+<div style="padding:10px 16px;border-bottom:1px solid var(--border)">
+<span style="font-weight:700;font-size:13px;color:var(--text-primary)">Detected States (Thread: Manager)</span>
+</div>
+<div style="padding:6px 8px;font-size:11px">
+<div class="mockup-row mu-header-row"><span style="flex:2">Transition (From → To)</span><span style="width:70px">Result</span><span style="width:140px">Start Time</span><span style="width:140px">End Time</span><span style="width:70px">Duration</span></div>
+<div class="mockup-row" onclick="this.classList.toggle('mu-selected')"><span style="flex:2;font-weight:600">STANDBY → GET_READY</span><span style="width:70px;color:var(--success);font-weight:700">OK</span><span style="width:140px">14:30:02.456</span><span style="width:140px">14:30:04.012</span><span style="width:70px">1.556s</span></div>
+<div class="mockup-row" onclick="this.classList.toggle('mu-selected')"><span style="flex:2;font-weight:600">GET_READY → PRINTING</span><span style="width:70px;color:var(--success);font-weight:700">OK</span><span style="width:140px">14:30:04.012</span><span style="width:140px">14:30:05.345</span><span style="width:70px">1.333s</span></div>
+<div class="mockup-row" onclick="this.classList.toggle('mu-selected')" style="background:rgba(239,68,68,.1)"><span style="flex:2;font-weight:600">PRINTING → FAILURE</span><span style="width:70px;color:var(--danger);font-weight:700">FAIL</span><span style="width:140px">14:30:05.345</span><span style="width:140px">14:30:08.234</span><span style="width:70px;color:var(--danger)">2.889s</span></div>
+<div class="mockup-row" onclick="this.classList.toggle('mu-selected')"><span style="flex:2;font-weight:600">FAILURE → RECOVERY</span><span style="width:70px;color:var(--warning);font-weight:700">WARN</span><span style="width:140px">14:30:08.234</span><span style="width:140px">14:30:09.567</span><span style="width:70px">1.333s</span></div>
+<div class="mockup-row" onclick="this.classList.toggle('mu-selected')"><span style="flex:2;font-weight:600">RECOVERY → STANDBY</span><span style="width:70px;color:var(--success);font-weight:700">OK</span><span style="width:140px">14:30:09.567</span><span style="width:140px">14:30:11.234</span><span style="width:70px">1.667s</span></div>
+<div class="mockup-row" onclick="this.classList.toggle('mu-selected')"><span style="flex:2;font-weight:600">STANDBY → GET_READY</span><span style="width:70px;color:var(--success);font-weight:700">OK</span><span style="width:140px">14:30:14.123</span><span style="width:140px">14:30:17.012</span><span style="width:70px">2.889s</span></div>
+<div class="mockup-row" onclick="this.classList.toggle('mu-selected')"><span style="flex:2;font-weight:600">GET_READY → PRINTING</span><span style="width:70px;color:var(--success);font-weight:700">OK</span><span style="width:140px">14:30:17.012</span><span style="width:140px">14:30:18.345</span><span style="width:70px">1.333s</span></div>
+</div>
+</div>
+
+<h3>Other Analysis Tools</h3>
+<div class="card-grid">
+<div class="card-sm">
+<h4>Failures Analysis</h4>
+<p><span class="badge badge-purple">S6</span> Detailed report of critical state failures with surrounding context, root cause indicators, and severity classification.</p>
+</div>
+<div class="card-sm">
+<h4>Stripe Analysis</h4>
+<p>Color register (stripe) data analysis for print quality assessment. Parses stripeDescriptor JSON from APP logs.</p>
+</div>
+</div>
+</section>
+
+<section id="feat-plugins">
+<h2>Plugin System</h2>
+<p>IndiLogs supports external plugins for custom log format parsing.</p>
+<h3>Plugin Architecture</h3>
+<ul>
+<li><strong>Contract</strong> — <code>IndiLogs.PluginAPI</code> project defines the <code>ILogFilePlugin</code> interface</li>
+<li><strong>Discovery</strong> — Scans <code>%AppData%\IndiLogs3.0\Plugins\</code> for DLL files</li>
+<li><strong>Validation</strong> — Authenticode signature with chain validation, or whitelisted strong-name public key token. Dev mode via <code>INDILOGS_ALLOW_UNSIGNED_PLUGINS=1</code></li>
+<li><strong>Lazy loading</strong> — Plugins instantiated on demand</li>
+<li><strong>Custom columns</strong> — Plugins define their own grid columns via <code>GetColumns()</code></li>
+</ul>
+<h3>5 Built-In Plugins</h3>
+<table>
+<tr><th>Plugin</th><th>Format</th></tr>
+<tr><td>CsvAutoPlugin</td><td>Auto-detect CSV format</td></tr>
+<tr><td>GenericTextLogPlugin</td><td>Generic text log files</td></tr>
+<tr><td>IndigoAppLogPlugin</td><td>HP Indigo APP log format</td></tr>
+<tr><td>JsonLogPlugin</td><td>JSON structured logs</td></tr>
+<tr><td>Log4NetPlugin</td><td>Apache Log4Net format</td></tr>
+</table>
+<p>Use the <strong>Plugin Tester</strong> (toolbar button) to test and develop plugins.</p>
+</section>
+
+<section id="feat-chartpattern">
+<h2>Chart from Pattern (Graph per Demand) <span class="badge badge-green">New</span></h2>
+<p>Create instant charts from any log line by extracting values with a regex pattern. Available via right-click context menu on both PLC and APP log grids.</p>
+
+<div class="card">
+<h4>Workflow</h4>
+<ol>
+<li><strong>Right-click</strong> any row in the PLC Logs or APP Logs grid and select <strong>"Create Chart from Pattern..."</strong></li>
+<li>The dialog shows the original message content. Click <strong>Auto-Detect</strong> to auto-generate a regex extraction pattern</li>
+<li>Auto-detect finds the last <code>=value</code> pair in the message and creates a capture group for the number — ideal for log formats like <code>DiffPosition =-37</code> or <code>Monitor.s = 486799</code></li>
+<li>Optionally edit the regex, choose which field to search (Message, Logger, ThreadName), name the chart, and toggle machine state inclusion</li>
+<li>Click <strong>Create Chart</strong> — all logs are scanned on a background thread and the chart appears in the Charts tab</li>
+</ol>
+</div>
+
+<div class="card-grid">
+<div class="card-sm">
+<h4>Numeric Values</h4>
+<p>Captured values that parse as numbers become an <strong>Analog</strong> line chart. Examples: temperature, pressure, position offsets, counters.</p>
+</div>
+<div class="card-sm">
+<h4>Boolean Values</h4>
+<p><code>True</code>/<code>False</code> captures become a <strong>Digital</strong> (0/1) chart. Useful for valve states, enable flags, sensor statuses.</p>
+</div>
+<div class="card-sm">
+<h4>Machine State Overlay</h4>
+<p>Optionally includes a Gantt state track (S6: <code>PlcMngr: A -&gt; B</code>, S4-5: <code>==== STATE - Enter</code>) alongside the signal chart.</p>
+</div>
+<div class="card-sm">
+<h4>Auto-Detect Intelligence</h4>
+<p>Prioritizes <code>key=value</code> patterns. Picks the <strong>last</strong> <code>=number</code> in the message, escapes the prefix, and inserts <code>\s*(-?\d+\.?\d*)</code>.</p>
+</div>
+</div>
+
+<h3>Example: Extracting DiffPosition</h3>
+<table>
+<tr><th>Step</th><th>Content</th></tr>
+<tr><td>Original Message</td><td><code>Engage Rear Monitor.s = 486799 Engage Rear DiffPosition =-37</code></td></tr>
+<tr><td>Auto-Detected Pattern</td><td><code>...Engage\ Rear\ DiffPosition\ \=\s*(-?\d+\.?\d*)</code></td></tr>
+<tr><td>Captured Value</td><td><code>-37</code> (numeric, Analog chart)</td></tr>
+<tr><td>Result</td><td>Line chart with values -37, -29, -31, -35... over time, with optional machine state Gantt</td></tr>
+</table>
+</section>
+
+<section id="feat-heatmap">
+<h2>Heatmap</h2>
+<p>The vertical heatmap bar alongside the log grid provides a bird's-eye view of the entire log file.</p>
+<h3>Marker Types (Priority Order)</h3>
+<table>
+<tr><th>Type</th><th>Color</th><th>Detection</th></tr>
+<tr><td>State Transitions</td><td><span style="color:var(--cyan)">&#9608;&#9608; Cyan</span></td><td>S4-5: "=== state" pattern. S6: Manager thread + "PlcMngr:" + "->"</td></tr>
+<tr><td>Marked Rows</td><td><span style="color:var(--success)">&#9608;&#9608; Green</span></td><td>User-marked entries</td></tr>
+<tr><td>Actual Errors</td><td><span style="color:var(--danger)">&#9608;&#9608; Red</span></td><td>Level="Error" (excludes Events thread errors)</td></tr>
+</table>
+<ul>
+<li>Higher priority types override lower when sharing a pixel</li>
+<li>Click a tick to scroll the DataGrid to that log position</li>
+<li>Hover tooltip shows: line number, event type, timestamp, message preview</li>
+<li>150ms debounce on redraws during updates</li>
+</ul>
+</section>
+
+<section id="feat-external">
+<h2>External Tools</h2>
+<p>Toolbar buttons for external service integration:</p>
+<table>
+<tr><th>Tool</th><th>Description</th></tr>
+<tr><td><strong>JIRA</strong></td><td>Open JIRA issue tracker in browser</td></tr>
+<tr><td><strong>Kibana</strong></td><td>Open Kibana log dashboard — auto-extracts machine name from Readme file for URL construction</td></tr>
+<tr><td><strong>Email (Outlook)</strong></td><td>Compose email with session details</td></tr>
+</table>
+</section>
+
+<!-- Architecture -->
+<section id="arch-overview">
+<h2>Architecture Overview</h2>
+<p>IndiLogs 3.0 follows the MVVM (Model-View-ViewModel) pattern with manual dependency injection and a service-oriented architecture.</p>
+
+<div class="arch-diagram">
+<div class="arch-layer">
+<div class="arch-box" style="border-color:var(--primary)"><div class="label">Presentation</div><div class="name">Views (41 XAML)</div></div>
+<div class="arch-box" style="border-color:var(--primary)"><div class="label">Presentation</div><div class="name">Controls (20)</div></div>
+<div class="arch-box" style="border-color:var(--primary)"><div class="label">Presentation</div><div class="name">Converters (11)</div></div>
+</div>
+<div class="arch-arrow">&#8595;</div>
+<div class="arch-layer">
+<div class="arch-box" style="border-color:var(--warning)"><div class="label">Logic</div><div class="name">ViewModels (75)</div></div>
+</div>
+<div class="arch-arrow">&#8595;</div>
+<div class="arch-layer">
+<div class="arch-box" style="border-color:var(--success)"><div class="label">Business</div><div class="name">Services (84)</div></div>
+<div class="arch-box" style="border-color:var(--success)"><div class="label">Contracts</div><div class="name">Interfaces (19)</div></div>
+</div>
+<div class="arch-arrow">&#8595;</div>
+<div class="arch-layer">
+<div class="arch-box" style="border-color:var(--cyan)"><div class="label">Data</div><div class="name">Models (32)</div></div>
+<div class="arch-box" style="border-color:var(--cyan)"><div class="label">Extension</div><div class="name">PluginAPI</div></div>
+</div>
+<div class="arch-arrow">&#8595;</div>
+<div class="arch-layer">
+<div class="arch-box" style="border-color:var(--purple)"><div class="label">Composition Root</div><div class="name">Bootstrapper.cs</div></div>
+</div>
+</div>
+
+<div class="card">
+<h4>3-Project Solution</h4>
+<table>
+<tr><th>Project</th><th>Purpose</th></tr>
+<tr><td><code>Indilogs 3.0</code></td><td>Main WPF application — all Views, ViewModels, Services, Models</td></tr>
+<tr><td><code>IndiLogs.PluginAPI</code></td><td>Plugin contract — defines <code>ILogFilePlugin</code> interface. Shared by plugins and main app.</td></tr>
+<tr><td><code>IndiLogs.Tests</code></td><td>xUnit tests — 6,700+ test cases, 72% line coverage, 43% branch coverage. Uses NSubstitute for mocking.</td></tr>
+</table>
+</div>
+</section>
+
+<section id="arch-mvvm">
+<h2>MVVM Pattern</h2>
+<h3>Rules</h3>
+<ul>
+<li><strong>Views</strong> contain ZERO business logic — only XAML + minimal code-behind for UI plumbing</li>
+<li><strong>ViewModels</strong> never reference concrete Window types — use <code>IViewFactory.Create&lt;T&gt;()</code></li>
+<li><strong>ViewModels</strong> never call <code>MessageBox.Show()</code> — use <code>IDialogService</code></li>
+<li><strong>Services</strong> are stateless or singleton — all dependencies injected via constructor</li>
+<li><strong>No Dispatcher.Invoke</strong> (blocking) — only <code>Dispatcher.InvokeAsync</code> or <code>BeginInvoke</code></li>
+</ul>
+<h3>Base Classes</h3>
+<table>
+<tr><th>Class</th><th>Purpose</th></tr>
+<tr><td><code>ViewModelBase</code></td><td>Base for all VMs. Provides <code>OnPropertyChanged()</code> with CallerMemberName and <code>SetField()</code></td></tr>
+<tr><td><code>RelayCommand</code></td><td><code>ICommand</code> implementation for binding commands to UI controls</td></tr>
+</table>
+</section>
+
+<section id="arch-di">
+<h2>Dependency Injection</h2>
+<p>Manual DI via <code>Bootstrapper.cs</code> — no external container (Autofac, Unity, etc.).</p>
+<h3>How It Works</h3>
+<pre>// Bootstrapper.cs — Composition Root
+static Dictionary&lt;Type, object&gt; _services = new();
+
+public static void Configure()
+{
+    // Register services as singletons
+    Register&lt;IPluginLoader&gt;(new PluginLoader());
+    Register&lt;IDialogService&gt;(new DialogService());
+    Register&lt;ILogFileService&gt;(new LogFileService(
+        Resolve&lt;IPluginLoader&gt;(),
+        Resolve&lt;IDialogService&gt;()));
+    // ... 20 services + MainViewModel
+}
+
+public static T Resolve&lt;T&gt;() =&gt; (T)_services[typeof(T)];</pre>
+
+<h3>Registered Services (18)</h3>
+<div class="card-grid">
+<div class="card-sm"><h4>Core</h4><p>ILogFileService, ILogColoringService, ICsvExportService, IDefaultConfigurationService</p></div>
+<div class="card-sm"><h4>UI</h4><p>IDialogService, IViewFactory, IDispatcher, IWindowManager, IWindowOwnerProvider</p></div>
+<div class="card-sm"><h4>Search</h4><p>IGlobalGrepService, ISearchLocationService, ISearchConfigService, ISearchSchedulerService, IEmailNotificationService</p></div>
+<div class="card-sm"><h4>Charts</h4><p>IChartDataTransferService, ChartSyncService, EmStatisticsService</p></div>
+<div class="card-sm"><h4>System</h4><p>IPluginLoader, IWindowsTaskSchedulerService, IUpdateService, ITabTearOffManager</p></div>
+<div class="card-sm"><h4>Bundle</h4><p>GrepServiceBundle — groups 6 grep-related services into one injectable unit</p></div>
+</div>
+</section>
+
+<section id="arch-folders">
+<h2>Folder Structure</h2>
+
+<div class="card" style="font-family:Consolas,monospace;font-size:13px;line-height:2">
+<div><strong style="color:var(--primary)">Indilogs 3.0/</strong></div>
+<div>&nbsp;&nbsp;Bootstrapper.cs <span style="color:var(--text-secondary)">— Manual DI composition root</span></div>
+<div>&nbsp;&nbsp;AppConstants.cs <span style="color:var(--text-secondary)">— Constants, regex, paths, tab indices</span></div>
+<div>&nbsp;&nbsp;App.xaml <span style="color:var(--text-secondary)">— Theme, styles, color palette</span></div>
+<div>&nbsp;&nbsp;MainWindow.xaml <span style="color:var(--text-secondary)">— 13-tab main layout (1,876 lines)</span></div>
+<div>&nbsp;&nbsp;</div>
+<div>&nbsp;&nbsp;<strong style="color:var(--primary)">Views/</strong> <span style="color:var(--text-secondary)">— 41 XAML windows & dialogs</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;FilterWindow, ColoringWindow, GlobalGrepWindow, ExportConfigurationWindow,</div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;HelpWindow, SettingsWindow, StatesWindow, ComparisonWindow, etc.</div>
+<div>&nbsp;&nbsp;</div>
+<div>&nbsp;&nbsp;<strong style="color:var(--warning)">ViewModels/</strong> <span style="color:var(--text-secondary)">— 75 files (logic layer)</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;MainViewModel.cs + 13 partials <span style="color:var(--text-secondary)">— Orchestrator (80+ commands)</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;ViewModelBase.cs, RelayCommand.cs <span style="color:var(--text-secondary)">— Base infrastructure</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;<strong style="color:var(--warning)">Components/</strong> <span style="color:var(--text-secondary)">— Child ViewModels</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FilterSearchViewModel.cs + 10 partials <span style="color:var(--text-secondary)">— Filter engine</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CaseManagementViewModel.cs + 4 partials <span style="color:var(--text-secondary)">— Cases, annotations, coloring</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GlobalGrepViewModel.cs + 6 partials <span style="color:var(--text-secondary)">— Search UI</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LogSessionViewModel.cs + 3 partials <span style="color:var(--text-secondary)">— Session management</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ConfigExplorerViewModel, ChartTabViewModel, LiveMonitoringViewModel, etc.</div>
+<div>&nbsp;&nbsp;</div>
+<div>&nbsp;&nbsp;<strong style="color:var(--success)">Services/</strong> <span style="color:var(--text-secondary)">— 103 files</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;LogFileService.cs + 12 partials <span style="color:var(--text-secondary)">— Central ZIP/file loading hub</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;LogColoringService.cs <span style="color:var(--text-secondary)">— Rule-based row coloring (parallel)</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;GlobalGrepService.cs + 3 partials <span style="color:var(--text-secondary)">— Multi-location search engine</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;<strong style="color:var(--success)">Interfaces/</strong> <span style="color:var(--text-secondary)">— 19 service contracts</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;<strong style="color:var(--success)">Grep/</strong> <span style="color:var(--text-secondary)">— 11 search services</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;<strong style="color:var(--success)">Charts/</strong> <span style="color:var(--text-secondary)">— 5 chart data services</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;<strong style="color:var(--success)">Cpr/</strong> <span style="color:var(--text-secondary)">— 4 CPR analysis services</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;<strong style="color:var(--success)">Analysis/</strong> <span style="color:var(--text-secondary)">— State failure analysis</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;<strong style="color:var(--success)">BuiltInPlugins/</strong> <span style="color:var(--text-secondary)">— 5 built-in parsers + registry</span></div>
+<div>&nbsp;&nbsp;</div>
+<div>&nbsp;&nbsp;<strong style="color:var(--cyan)">Models/</strong> <span style="color:var(--text-secondary)">— 32 files (data structures)</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;LogEntry.cs <span style="color:var(--text-secondary)">— Core log row (frozen brush optimization)</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;LogSessionData.cs <span style="color:var(--text-secondary)">— Session container with pre-built lists</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;<strong style="color:var(--cyan)">Charts/</strong>, <strong style="color:var(--cyan)">Cpr/</strong>, <strong style="color:var(--cyan)">Grep/</strong>, <strong style="color:var(--cyan)">Analysis/</strong></div>
+<div>&nbsp;&nbsp;</div>
+<div>&nbsp;&nbsp;<strong style="color:var(--pink)">Controls/</strong> <span style="color:var(--text-secondary)">— 40+ custom WPF controls</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;PlcLogsGridControl, AppLogsTabControl, LogHeatmapControl, TimelineCanvas,</div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;<strong style="color:var(--pink)">Charts/</strong> <span style="color:var(--text-secondary)">— SkiaSharp chart views (Gantt, Graph, Signal, Timeline)</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;<strong style="color:var(--pink)">Cpr/</strong> <span style="color:var(--text-secondary)">— CPR analysis controls</span></div>
+<div>&nbsp;&nbsp;</div>
+<div>&nbsp;&nbsp;<strong>Converters/</strong> <span style="color:var(--text-secondary)">— 11 XAML value converters</span></div>
+<div>&nbsp;&nbsp;<strong>Resources/</strong> <span style="color:var(--text-secondary)">— Icons (indilogs.ico, indichart.ico, jira/kibana/outlook.ico)</span></div>
+<div>&nbsp;&nbsp;<strong>Interfaces/</strong> <span style="color:var(--text-secondary)">— Non-service interfaces (ITabHost)</span></div>
+</div>
+</section>
+
+<section id="arch-services">
+<h2>Services Deep Dive</h2>
+<p>19 service interfaces with 103 implementation files. All registered as singletons in Bootstrapper.cs.</p>
+
+<div class="tabs">
+<button class="tab-btn active" onclick="showTab(this,'svc-core')">Core</button>
+<button class="tab-btn" onclick="showTab(this,'svc-ui')">UI</button>
+<button class="tab-btn" onclick="showTab(this,'svc-search')">Search</button>
+<button class="tab-btn" onclick="showTab(this,'svc-chart')">Charts</button>
+<button class="tab-btn" onclick="showTab(this,'svc-parsing')">Parsing</button>
+</div>
+
+<div id="svc-core" class="tab-content active">
+<h4>ILogFileService — Central Loading Hub</h4>
+<p>The largest service (11 files). Handles ZIP processing, format detection (S4-5 vs S6), parsing, session assembly, nested ZIP handling, and component reload.</p>
+<p>Key methods: <code>LoadSessionAsync()</code>, <code>PreScanZip()</code>, <code>ParseLogStream()</code>, <code>ReloadComponentAsync()</code></p>
+
+<h4>ILogColoringService — Row Coloring</h4>
+<p>Applies color rules using <code>Parallel.ForEach</code>. Caches compiled Regex patterns in a <code>ConcurrentDictionary</code>.</p>
+
+<h4>ICsvExportService — CSV Export</h4>
+<p>4 partial files for log parsing, preset formatting, preset writing, and export execution.</p>
+
+<h4>IoTerminalDataService</h4>
+<p>Parses IO Terminal CSV files from S4-5 ZIPs (BIM, ECM, PDC devices). Parallelized parsing for multi-file scenarios.</p>
+</div>
+
+<div id="svc-ui" class="tab-content">
+<h4>IDialogService</h4>
+<p>WPF MessageBox wrapper. Methods: <code>ShowInfo()</code>, <code>ShowWarning()</code>, <code>ShowError()</code>, <code>ShowConfirm()</code>, <code>ShowYesNoCancel()</code></p>
+
+<h4>IViewFactory</h4>
+<p>Creates Window instances: <code>Create&lt;T&gt;(params args)</code>. Ensures ViewModels never reference concrete window types.</p>
+
+<h4>IDispatcher</h4>
+<p>UI thread marshaling abstraction. Methods: <code>Post(action)</code>, <code>Post(action, priority)</code>, <code>InvokeAsync(action)</code></p>
+
+<h4>IWindowManager</h4>
+<p>Window lifecycle: <code>OpenWindow()</code>, <code>ShowDialog()</code>, <code>FindWindow&lt;T&gt;()</code>, <code>GetOrCreate&lt;T&gt;()</code></p>
+
+<h4>ITabTearOffManager</h4>
+<p>Tab detaching/reattaching: <code>DetachTab()</code>, <code>ReattachTab()</code>, <code>ReattachAll()</code></p>
+</div>
+
+<div id="svc-search" class="tab-content">
+<h4>IGlobalGrepService — Search Engine</h4>
+<p>4 files. Methods for searching loaded sessions, external files, and multiple locations. Supports structured criteria with AND/OR conditions.</p>
+
+<h4>ISearchLocationService — Search Targets</h4>
+<p>Manages search locations (file paths, SMB shares). Includes connectivity testing.</p>
+
+<h4>ISearchConfigService — Profiles</h4>
+<p>Save/load/export/import search profiles with criteria and locations.</p>
+
+<h4>ISearchSchedulerService — Automation</h4>
+<p>Scheduled searches with Windows Task Scheduler sync. Events for search start/complete.</p>
+
+<h4>IEmailNotificationService</h4>
+<p>SMTP email delivery for search results. HTML body building with statistics.</p>
+</div>
+
+<div id="svc-chart" class="tab-content">
+<h4>ChartDataService — CSV Engine</h4>
+<p>High-performance CSV parser using memory-mapped files. Detects 4 CSV formats: PlcIos, YTScope, Legacy, Unknown.</p>
+
+<h4>ChartDataTransferService — Data Pipeline</h4>
+<p>5 partial files. Transfers data between Log and Chart tabs without file I/O. Lazy signal materialization with forward-fill logic.</p>
+
+<h4>ChartSyncService</h4>
+<p>Synchronizes view ranges and cursor positions across multiple chart instances.</p>
+
+<h4>EmStatisticsService</h4>
+<p>Parses EM_Statistics.csv into Gantt timeline data with 1-second resolution.</p>
+</div>
+
+<div id="svc-parsing" class="tab-content">
+<h4>LogParserService — Core Parser</h4>
+<p>Low-level log line parsing. Extracts timestamp, level, thread, message from raw text.</p>
+
+<h4>QueryParserService</h4>
+<p>Converts boolean search queries ("foo AND bar OR NOT baz") into FilterNode trees.</p>
+
+<h4>StateTransitionHelper</h4>
+<p>PLC state transition detection. S4-5: "=== state" pattern. S6: Manager thread + "PlcMngr:" + "->".</p>
+
+<h4>CprAnalysisService + CprDataService</h4>
+<p>CPR analysis computation (4 files). Frequency analysis (DFT), statistics (percentiles), polynomial fitting (bow degree).</p>
+
+<h4>Built-In Plugins</h4>
+<p>5 parsers: CsvAuto, GenericText, IndigoApp, Json, Log4Net. Registry discovers and instantiates them.</p>
+</div>
+</section>
+
+<section id="arch-viewmodels">
+<h2>ViewModels Deep Dive</h2>
+<p>75 files organized into root ViewModels and component (child) ViewModels.</p>
+
+<h3>MainViewModel — The Orchestrator</h3>
+<p>Central coordinator with 10+ child ViewModels and 80+ commands. Split into 14 partial files by concern:</p>
+<table>
+<tr><th>Partial</th><th>Responsibility</th></tr>
+<tr><td><code>.cs</code> (core)</td><td>Constructor, child VM wiring, command declarations</td></tr>
+<tr><td><code>.FileOps.cs</code></td><td>File loading, drag-drop, export routing</td></tr>
+<tr><td><code>.Filtering.cs</code></td><td>Filter state management, search syntax validation</td></tr>
+<tr><td><code>.Windows.cs</code></td><td>Opening child windows (States, Analysis, GlobalGrep, Compare, etc.)</td></tr>
+<tr><td><code>.Tabs.cs</code></td><td>13-tab navigation, tab pre-selection, visibility control</td></tr>
+<tr><td><code>.StateAnalysis.cs</code></td><td>State machine analysis, failure detection</td></tr>
+<tr><td><code>.Globals.cs</code></td><td>Globals tab — XML parsing, search, diff toggle</td></tr>
+<tr><td><code>.Systab.cs</code></td><td>Systab tab — tree building, parameter filtering</td></tr>
+<tr><td><code>.Theme.cs</code></td><td>Dark/light mode switching (30+ resource swaps)</td></tr>
+<tr><td><code>.TimeSync.cs</code></td><td>Cross-tab time synchronization (binary search, clock conversion)</td></tr>
+<tr><td><code>.Properties.cs</code></td><td>Computed properties, panel visibility toggles</td></tr>
+<tr><td><code>.Data.cs</code></td><td>Events DataView loading, SQLite/CSV data population</td></tr>
+<tr><td><code>.FilterHelpers.cs</code></td><td>Filter reset, time focus clearing, drill-down filter application</td></tr>
+<tr><td><code>.Lifecycle.cs</code></td><td>Initialization, visual mode setup, cleanup, window closing</td></tr>
+</table>
+
+<h3>Child ViewModels</h3>
+<table>
+<tr><th>ViewModel</th><th>Partials</th><th>Purpose</th></tr>
+<tr><td>FilterSearchViewModel</td><td>10</td><td>Unified filtering engine for PLC/APP (filter trees, threads, loggers, time, search)</td></tr>
+<tr><td>CaseManagementViewModel</td><td>5</td><td>Annotations, marked logs, coloring rules, case files, saved configs</td></tr>
+<tr><td>GlobalGrepViewModel</td><td>7</td><td>Multi-location search UI (profiles, locations, schedules, results)</td></tr>
+<tr><td>ExportConfigurationViewModel</td><td>6</td><td>CSV export with IO terminal and chart data options</td></tr>
+<tr><td>LogSessionViewModel</td><td>4</td><td>Session loading, log caching, session switching</td></tr>
+<tr><td>ConfigExplorerViewModel</td><td>3</td><td>Config/database/CSV browser</td></tr>
+<tr><td>CprAnalysisViewModel</td><td>2</td><td>CPR analysis UI and graph computation</td></tr>
+<tr><td>StepRecorderViewModel</td><td>2</td><td>ISR image playback</td></tr>
+<tr><td>LiveMonitoringViewModel</td><td>2</td><td>Real-time log polling</td></tr>
+<tr><td>ChartTabViewModel</td><td>1</td><td>Chart panel orchestration</td></tr>
+<tr><td>DifferentLogsViewModel</td><td>2</td><td>Plugin-driven log display</td></tr>
+</table>
+</section>
+
+<section id="arch-models">
+<h2>Models</h2>
+<p>32 model files defining data structures. Key models:</p>
+<table>
+<tr><th>Model</th><th>Description</th></tr>
+<tr><td><code>LogEntry</code></td><td>Core log row. Frozen WPF Brush optimization, marking flag, custom color, annotation reference, SyncedTime for time-sync</td></tr>
+<tr><td><code>LogSessionData</code></td><td>Session container with pre-built lists (StateTransitions, CriticalFailures), screenshots, configuration, globals</td></tr>
+<tr><td><code>FilterNode</code></td><td>Recursive AND/OR/NOT filter tree node with conditions</td></tr>
+<tr><td><code>ColoringCondition</code></td><td>Field + Operator + Value + Color for row coloring rules</td></tr>
+<tr><td><code>GrepResult</code></td><td>Search result with file path, timestamp, preview, matched fields</td></tr>
+<tr><td><code>ChartModels</code></td><td>SignalSeries, ReferenceLine, StateInterval, EventMarker, GapRegion</td></tr>
+<tr><td><code>ChartStateConfig</code></td><td>19 machine states with names and colors</td></tr>
+<tr><td><code>CprModels</code></td><td>CprRecord, CprFilterState, CprStationPair, CprSeriesData, CprGraphResult</td></tr>
+<tr><td><code>SearchCriteria</code></td><td>Structured search with condition groups and time filters</td></tr>
+<tr><td><code>ScheduledSearch</code></td><td>Recurring search with schedule type, repeat interval, email config</td></tr>
+</table>
+</section>
+
+<section id="arch-performance">
+<h2>Performance Optimizations</h2>
+<div class="card-grid">
+<div class="card-sm">
+<h4>StringPool</h4>
+<p>Thread-safe string interning during parsing. Deduplicates repeated logger names, thread names, etc.</p>
+</div>
+<div class="card-sm">
+<h4>Frozen Brushes</h4>
+<p>Static, frozen WPF Brush instances shared across all LogEntry objects. Level-based tint brushes (8% alpha).</p>
+</div>
+<div class="card-sm">
+<h4>Parallel Processing</h4>
+<p><code>Parallel.ForEach</code> for log coloring. PLINQ <code>AsParallel().AsOrdered()</code> for filtering chains.</p>
+</div>
+<div class="card-sm">
+<h4>Batch UI Updates</h4>
+<p><code>ObservableRangeCollection.AddRange()</code> with 500-item batches (<code>AppConstants.UiUpdateBatchSize</code>).</p>
+</div>
+<div class="card-sm">
+<h4>Compiled Regex</h4>
+<p><code>RegexOptions.Compiled</code> for hot-path patterns. Cached in <code>ConcurrentDictionary</code>.</p>
+</div>
+<div class="card-sm">
+<h4>Memory-Mapped Files</h4>
+<p>ChartDataService uses MMF for large CSV files — no full memory load required.</p>
+</div>
+<div class="card-sm">
+<h4>Deferred Parsing</h4>
+<p>Nested ZIP data not loaded until user opens the tab. TerminalCsvBytes stored as byte[].</p>
+</div>
+<div class="card-sm">
+<h4>Binary Search</h4>
+<p>Time-sync uses O(log N) search for nearest log at target time.</p>
+</div>
+<div class="card-sm">
+<h4>ConfigureAwait(false)</h4>
+<p>All service-layer async methods skip UI context marshaling.</p>
+</div>
+<div class="card-sm">
+<h4>GetRange() over Skip/Take</h4>
+<p>List&lt;T&gt;.GetRange() for range filtering — avoids LINQ enumerator overhead.</p>
+</div>
+<div class="card-sm">
+<h4>Lazy Chart Signals</h4>
+<p>SignalData stores sparse points; dense array materialized on first access with forward-fill.</p>
+</div>
+<div class="card-sm">
+<h4>HashSet Lookups</h4>
+<p>O(1) thread/logger filter membership checks instead of O(N) list contains.</p>
+</div>
+<div class="card-sm">
+<h4>FrozenSet / FrozenDictionary <span class="badge badge-green">New</span></h4>
+<p>Immutable, read-optimized collections for static lookup tables: state colors, field maps, file extensions, error levels, public key tokens.</p>
+</div>
+<div class="card-sm">
+<h4>Cached Compiled Regex <span class="badge badge-green">New</span></h4>
+<p>FilterNode and SearchCondition cache compiled regex per pattern. Eliminates per-entry recompilation during filtering and grep operations.</p>
+</div>
+<div class="card-sm">
+<h4>ThreadStatic Buffers <span class="badge badge-green">New</span></h4>
+<p>ChartDataService uses <code>[ThreadStatic]</code> byte buffers instead of per-call allocations. Zero GC pressure in tight CSV parsing loops.</p>
+</div>
+<div class="card-sm">
+<h4>Zero-Alloc String Search <span class="badge badge-green">New</span></h4>
+<p><code>StringComparison.OrdinalIgnoreCase</code> replaces <code>.ToLower().Contains()</code> across all search/filter code — no intermediate string allocations.</p>
+</div>
+<div class="card-sm">
+<h4>Centralized Constants <span class="badge badge-green">New</span></h4>
+<p>Shared <code>AppConstants.BuiltInFields</code> and <code>AppConstants.ErrorLevels</code> as FrozenSets — eliminates 5+ duplicate HashSet definitions.</p>
+</div>
+</div>
+</section>
+
+<section id="arch-security">
+<h2>Security</h2>
+<table>
+<tr><th>Measure</th><th>Implementation</th></tr>
+<tr><td>Password Encryption</td><td>DPAPI (<code>DataProtectionScope.CurrentUser</code>) for credentials in <code>update-credentials.dat</code></td></tr>
+<tr><td>Regex Timeout</td><td><code>AppConstants.RegexTimeout</code> = 2 seconds — prevents ReDoS on user-supplied patterns</td></tr>
+<tr><td>JSON Depth Limit</td><td><code>AppConstants.JsonMaxDepth</code> = 64 — prevents stack overflow on deserialization</td></tr>
+<tr><td>Update Verification</td><td>SHA256 hash verification for downloaded update installers</td></tr>
+<tr><td>Plugin Validation</td><td>Authenticode signature + X.509 chain validation, or whitelisted strong-name public key token. Centralized via <code>AuthenticodeVerifier</code></td></tr>
+<tr><td>No Hardcoded Secrets</td><td>Server paths in <code>appsettings.json</code> (shipped empty) or <code>appsettings.local.json</code> (gitignored)</td></tr>
+<tr><td>SQL Injection</td><td>Bracket/quote escaping for SQL queries in AppConstants</td></tr>
+<tr><td>Authenticode Verifier <span class="badge badge-green">New</span></td><td>Centralized <code>AuthenticodeVerifier</code> utility validates Authenticode signatures with trusted publisher subject pinning (HP/Hewlett/Indigo). Used by both plugin loader and auto-update</td></tr>
+<tr><td>Regex Timeout Everywhere <span class="badge badge-green">New</span></td><td>All user-facing regex operations (row detail window, filter evaluation, grep search, pattern charts) use <code>AppConstants.RegexTimeout</code> (2s) to prevent ReDoS</td></tr>
+</table>
+</section>
+
+<section id="arch-testing">
+<h2>Testing</h2>
+<div class="card">
+<h4>Test Suite Overview</h4>
+<table>
+<tr><th>Metric</th><th>Value</th></tr>
+<tr><td>Framework</td><td>xUnit 2.9 with XPlat Code Coverage (Cobertura)</td></tr>
+<tr><td>Total Test Cases</td><td>6,700+</td></tr>
+<tr><td>Line Coverage</td><td>72%</td></tr>
+<tr><td>Branch Coverage</td><td>43%</td></tr>
+<tr><td>CI Threshold</td><td>50% minimum line coverage</td></tr>
+<tr><td>Mocking</td><td>NSubstitute</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h4>Test Categories</h4>
+<table>
+<tr><th>Category</th><th>Tests</th><th>What is Tested</th></tr>
+<tr><td>Services</td><td>~2,500</td><td>LogFileService, GlobalGrepService, CsvExportService, LogStatisticsService, SearchSchedulerService, ChartDataService, IoTerminalDataService, EmailNotificationService, UpdateService, AuthenticodeVerifier</td></tr>
+<tr><td>ViewModels</td><td>~2,800</td><td>FilterSearchViewModel (all partials), MainViewModel (all partials), CaseManagementViewModel, ExportConfigurationViewModel, GlobalGrepViewModel, ScheduleEditorViewModel, CprAnalysisViewModel, DifferentLogsViewModel, StatsViewModel, LogComparisonViewModel, VisualTimelineViewModel</td></tr>
+<tr><td>Models</td><td>~800</td><td>FilterNode, LogEntry, SearchCriteria, LoggerNode, ChartStateConfig, GrepResult, ScheduledSearch, CaseFile models, CPR models</td></tr>
+<tr><td>Parsers</td><td>~600</td><td>QueryParserService, TextFilterParser, SystabParserService, LogParserService, BuiltInPluginParsers (Log4Net, NLog, Serilog), StripeDataParserService</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h4>Running Tests</h4>
+<pre># Run all tests
+dotnet test IndiLogs.Tests/ --no-restore
+
+# Run with coverage
+dotnet test IndiLogs.Tests/ --collect:"Code Coverage;Format=Cobertura"
+
+# Run specific test class
+dotnet test IndiLogs.Tests/ --filter "FullyQualifiedName~QueryParserServiceTests"
+
+# Build + test (required before every commit)
+dotnet build "Indilogs 3.0/Indilogs 3.0.csproj" --no-restore &amp;&amp; dotnet test IndiLogs.Tests/ --no-restore</pre>
+</div>
+
+<div class="card">
+<h4>Test Patterns</h4>
+<ul>
+<li><strong>GetUninitializedObject</strong> — used to create service/VM instances without triggering constructors that need WPF or file system dependencies</li>
+<li><strong>Reflection</strong> — private methods tested via <code>BindingFlags.NonPublic</code> to maximize coverage</li>
+<li><strong>MemoryStream</strong> — replaces file I/O for parser and export tests</li>
+<li><strong>TestDialogService</strong> — mock for <code>IDialogService</code> in ViewModel tests</li>
+</ul>
+</div>
+</section>
+
+<!-- Reference -->
+<section id="ref-shortcuts">
+<h2>Keyboard Shortcuts</h2>
+<table>
+<tr><th>Shortcut</th><th>Action</th></tr>
+<tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td>Toggle search panel</td></tr>
+<tr><td><kbd>Esc</kbd></td><td>Close search panel</td></tr>
+<tr><td><kbd>Space</kbd></td><td>Mark / unmark selected row</td></tr>
+<tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>Undo last filter out</td></tr>
+<tr><td><kbd>Ctrl</kbd>+<kbd>+</kbd></td><td>Zoom in (increase font size)</td></tr>
+<tr><td><kbd>Ctrl</kbd>+<kbd>-</kbd></td><td>Zoom out (decrease font size)</td></tr>
+<tr><td><kbd>F1</kbd></td><td>Open help</td></tr>
+</table>
+</section>
+
+<section id="ref-files">
+<h2>File Locations</h2>
+<table>
+<tr><th>Location</th><th>Content</th></tr>
+<tr><td><code>%AppData%\IndiLogs3.0\Configs\</code></td><td>Filter configs, search profiles, schedules, defaults</td></tr>
+<tr><td><code>%AppData%\IndiLogs3.0\Plugins\</code></td><td>External plugin DLLs</td></tr>
+<tr><td><code>%AppData%\IndiLogs3.0\GridColumnSettings\</code></td><td>Column layout persistence</td></tr>
+<tr><td><code>%LocalAppData%\IndiLogs3.0\</code></td><td>DPAPI credentials, rotating app log</td></tr>
+<tr><td>Next to EXE</td><td><code>appsettings.json</code>, <code>appsettings.local.json</code> (gitignored)</td></tr>
+</table>
+</section>
+
+<section id="ref-configs">
+<h2>Configuration Types</h2>
+<div class="card-grid">
+<div class="card-sm" style="border-color:var(--primary)">
+<h4><span class="badge badge-blue">S4-5</span></h4>
+<p>ZIP contains a <strong>binary</strong> APP file.</p>
+<ul style="font-size:.9em">
+<li>IO Terminal data (Io-*.csv)</li>
+<li>EM Statistics Gantt</li>
+<li>AXIS, CHSTEP, Thread columns</li>
+<li>Systab tab available</li>
+<li>"=== state" pattern for state detection</li>
+</ul>
+</div>
+<div class="card-sm" style="border-color:var(--purple)">
+<h4><span class="badge badge-purple">S6</span></h4>
+<p>APP is <strong>not binary</strong> (text format).</p>
+<ul style="font-size:.9em">
+<li>Text-based APP log parsing</li>
+<li>State analysis via PlcMngr patterns</li>
+<li>Full PLC log columns</li>
+<li>No IO Terminal data</li>
+<li>"PlcMngr:" + "->" for state detection</li>
+</ul>
+</div>
+</div>
+</section>
+
+<div style="text-align:center;padding:40px 0;color:var(--text-secondary);font-size:.9em;border-top:1px solid var(--border);margin-top:40px">
+<p>IndiLogs 3.0 Interactive User Guide</p>
+<p style="font-size:.8em">.NET 10.0 | WPF + SkiaSharp | MVVM Architecture | C# Latest</p>
+</div>
+
+</main>
+
+<!-- Scroll to top -->
+<button class="scroll-top" id="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+<script>
+// ══════════════════════════════════════════════════════
+// Interactive Mockup Logic
+// ══════════════════════════════════════════════════════
+
+// Tab switching in mockup
+function mockupSwitchTab(tab, idx) {
+  document.querySelectorAll('#mu-tabbar .mockup-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.mu-tab-panel').forEach(p => p.classList.remove('active'));
+  tab.classList.add('active');
+  const panel = document.getElementById('mu-tab-' + idx);
+  if (panel) panel.classList.add('active');
+}
+
+// Row selection
+function mockupSelectRow(row) {
+  document.querySelectorAll('.mu-log-row').forEach(r => r.classList.remove('mu-selected'));
+  row.classList.add('mu-selected');
+  // Populate LOG DETAILS
+  document.getElementById('mu-detail-time').value = row.dataset.ts || '';
+  document.getElementById('mu-detail-thread').value = row.dataset.thread || '';
+  document.getElementById('mu-detail-level').value = row.dataset.level || '';
+  document.getElementById('mu-detail-logger').value = row.dataset.logger || '';
+  document.getElementById('mu-detail-msg').textContent = row.dataset.msg || '';
+}
+
+// Mark/unmark selected row
+function mockupMarkSelected() {
+  const sel = document.querySelector('.mu-log-row.mu-selected');
+  if (!sel) return;
+  sel.classList.toggle('mu-marked');
+  updateActiveFilters();
+}
+
+// Navigate to next/prev marked
+function mockupNextMarked() {
+  const rows = [...document.querySelectorAll('#mu-plc-grid .mu-log-row')];
+  const sel = document.querySelector('.mu-log-row.mu-selected');
+  const selIdx = sel ? rows.indexOf(sel) : -1;
+  for (let i = selIdx + 1; i < rows.length; i++) {
+    if (rows[i].classList.contains('mu-marked')) { mockupSelectRow(rows[i]); rows[i].scrollIntoView({block:'nearest'}); return; }
+  }
+  // wrap
+  for (let i = 0; i <= selIdx; i++) {
+    if (rows[i].classList.contains('mu-marked')) { mockupSelectRow(rows[i]); rows[i].scrollIntoView({block:'nearest'}); return; }
+  }
+}
+function mockupPrevMarked() {
+  const rows = [...document.querySelectorAll('#mu-plc-grid .mu-log-row')];
+  const sel = document.querySelector('.mu-log-row.mu-selected');
+  const selIdx = sel ? rows.indexOf(sel) : rows.length;
+  for (let i = selIdx - 1; i >= 0; i--) {
+    if (rows[i].classList.contains('mu-marked')) { mockupSelectRow(rows[i]); rows[i].scrollIntoView({block:'nearest'}); return; }
+  }
+  for (let i = rows.length - 1; i >= selIdx; i--) {
+    if (rows[i].classList.contains('mu-marked')) { mockupSelectRow(rows[i]); rows[i].scrollIntoView({block:'nearest'}); return; }
+  }
+}
+
+// Session switching
+function mockupSelectSession(el) {
+  document.querySelectorAll('#mu-sessions .mockup-session').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// Left panel tab switching (Explorer / Loggers)
+function mockupPanelTab(tab, showId, hideId) {
+  tab.parentElement.querySelectorAll('.mu-panel-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById(showId).style.display = '';
+  document.getElementById(hideId).style.display = 'none';
+}
+
+// Update active filters display
+function updateActiveFilters() {
+  const container = document.getElementById('mu-active-filters');
+  const marked = document.querySelectorAll('.mu-marked').length;
+  const filterOn = document.getElementById('mu-filter-chk').checked;
+  const filterOutOn = document.getElementById('mu-filterout-chk').checked;
+  let html = '';
+  if (filterOn) html += '<div class="mockup-filter-badge" style="background:var(--primary)">FILTER: Active</div>';
+  if (filterOutOn) html += '<div class="mockup-filter-badge" style="background:var(--danger)">FILTER OUT: Active</div>';
+  if (marked > 0) html += '<div class="mockup-filter-badge" style="background:var(--success)">MARKED: ' + marked + ' rows</div>';
+  if (!html) html = '<div style="font-size:11px;color:var(--text-secondary);font-style:italic;padding:4px 0">No active filters</div>';
+  container.innerHTML = html;
+}
+
+// Left panel menu toggle
+function toggleLeftMenu() {
+  const menu = document.getElementById('mu-left-menu');
+  const btn = document.getElementById('mu-left-dots');
+  const open = menu.style.display === 'none';
+  menu.style.display = open ? '' : 'none';
+  btn.classList.toggle('open', open);
+  btn.innerHTML = open ? '&#10005;' : '&#8943;&#8943;';
+}
+
+// Right panel menu toggle
+function toggleRightMenu() {
+  const menu = document.getElementById('mu-right-menu');
+  const btn = document.getElementById('mu-right-dots');
+  const open = menu.style.display === 'none';
+  menu.style.display = open ? '' : 'none';
+  btn.classList.toggle('open', open);
+  btn.innerHTML = open ? '&#10005;' : '&#8943;&#8943;';
+}
+
+// Wire up filter checkboxes
+document.addEventListener('DOMContentLoaded', () => {
+  const fc = document.getElementById('mu-filter-chk');
+  const fo = document.getElementById('mu-filterout-chk');
+  if (fc) fc.addEventListener('change', updateActiveFilters);
+  if (fo) fo.addEventListener('change', updateActiveFilters);
+});
+
+// ══════════════════════════════════════════════════════
+// Documentation Tab Switching (non-mockup tabs in content)
+// ══════════════════════════════════════════════════════
+function showTab(btn, id) {
+  const parent = btn.closest('section') || btn.parentElement.parentElement;
+  parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  parent.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(id).classList.add('active');
+}
+
+// Sidebar active link tracking
+const navLinks = document.querySelectorAll('.nav-link');
+const sections = [];
+navLinks.forEach(link => {
+  const href = link.getAttribute('href');
+  if (href && href.startsWith('#')) {
+    const el = document.getElementById(href.slice(1));
+    if (el) sections.push({ link, el });
+  }
+});
+
+let ticking = false;
+window.addEventListener('scroll', () => {
+  if (!ticking) {
+    requestAnimationFrame(() => {
+      // Active nav link
+      let current = sections[0];
+      for (const s of sections) {
+        if (s.el.getBoundingClientRect().top <= 100) current = s;
+      }
+      navLinks.forEach(l => l.classList.remove('active'));
+      if (current) current.link.classList.add('active');
+
+      // Scroll to top button
+      const btn = document.getElementById('scroll-top');
+      btn.classList.toggle('visible', window.scrollY > 400);
+      ticking = false;
+    });
+    ticking = true;
+  }
+});
+
+// Filter demo
+let filterOutMode = false;
+function toggleFilterOut() {
+  filterOutMode = !filterOutMode;
+  const btn = document.getElementById('demo-filterout-btn');
+  btn.textContent = 'Filter Out: ' + (filterOutMode ? 'ON' : 'OFF');
+  btn.classList.toggle('active', filterOutMode);
+  runFilterDemo();
+}
+
+function runFilterDemo() {
+  const query = document.getElementById('demo-filter').value.toLowerCase().trim();
+  const lines = document.querySelectorAll('#demo-logs .log-line');
+  let shown = 0;
+  lines.forEach(line => {
+    const text = line.dataset.text;
+    line.classList.remove('hidden', 'highlight', 'filtered-out');
+    if (!query) { shown++; return; }
+    const matches = text.includes(query);
+    if (filterOutMode) {
+      if (matches) { line.classList.add('filtered-out'); }
+      else { shown++; }
+    } else {
+      if (matches) { line.classList.add('highlight'); shown++; }
+      else { line.classList.add('hidden'); }
+    }
+  });
+  document.getElementById('demo-status').textContent =
+    `Showing ${shown} of ${lines.length} entries` + (query ? ` (${filterOutMode ? 'excluding' : 'matching'} "${query}")` : '');
+}
+
+function clearFilterDemo() {
+  document.getElementById('demo-filter').value = '';
+  filterOutMode = false;
+  document.getElementById('demo-filterout-btn').textContent = 'Filter Out: OFF';
+  document.getElementById('demo-filterout-btn').classList.remove('active');
+  runFilterDemo();
+}
+
+// Search documentation
+const searchBox = document.getElementById('search-box');
+const searchCount = document.getElementById('search-count');
+let searchTimeout;
+
+searchBox.addEventListener('input', () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    const query = searchBox.value.trim().toLowerCase();
+    // Remove previous highlights
+    document.querySelectorAll('mark.search-hl').forEach(m => {
+      const parent = m.parentNode;
+      parent.replaceChild(document.createTextNode(m.textContent), m);
+      parent.normalize();
+    });
+    if (!query || query.length < 2) {
+      searchCount.style.display = 'none';
+      return;
+    }
+    // Highlight matches in content
+    let count = 0;
+    const walker = document.createTreeWalker(
+      document.getElementById('content'),
+      NodeFilter.SHOW_TEXT,
+      { acceptNode: n => {
+        if (n.parentElement.closest('script,style,code,pre,input,button,.mockup-toolbar')) return NodeFilter.FILTER_REJECT;
+        return n.textContent.toLowerCase().includes(query) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }}
+    );
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(node => {
+      const text = node.textContent;
+      const lower = text.toLowerCase();
+      const idx = lower.indexOf(query);
+      if (idx === -1) return;
+      const before = document.createTextNode(text.slice(0, idx));
+      const mark = document.createElement('mark');
+      mark.className = 'search-hl';
+      mark.textContent = text.slice(idx, idx + query.length);
+      const after = document.createTextNode(text.slice(idx + query.length));
+      const parent = node.parentNode;
+      parent.replaceChild(after, node);
+      parent.insertBefore(mark, after);
+      parent.insertBefore(before, mark);
+      count++;
+    });
+    searchCount.style.display = 'block';
+    searchCount.textContent = count > 0 ? `Found ${count} matches` : 'No matches found';
+    // Scroll to first match
+    const first = document.querySelector('mark.search-hl');
+    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 300);
+});
+
+// Sidebar toggle on mobile
+document.addEventListener('click', (e) => {
+  const sidebar = document.getElementById('sidebar');
+  if (window.innerWidth <= 900 && !sidebar.contains(e.target) && e.target.id !== 'sidebar-toggle') {
+    sidebar.classList.remove('show');
+  }
+});
+
+// Smooth scroll for nav links
+navLinks.forEach(link => {
+  link.addEventListener('click', (e) => {
+    if (window.innerWidth <= 900) {
+      document.getElementById('sidebar').classList.remove('show');
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════
+// PLC TEXT / VISUAL toggle
+// ══════════════════════════════════════════════════════
+function muToggleView(mode) {
+  var text = document.getElementById('mu-plc-text');
+  var visual = document.getElementById('mu-plc-visual');
+  var btnT = document.getElementById('mu-btn-text');
+  var btnV = document.getElementById('mu-btn-visual');
+  if (mode === 'visual') {
+    text.style.display = 'none';
+    visual.style.display = 'flex';
+    btnT.classList.remove('active');
+    btnV.classList.add('active');
+  } else {
+    text.style.display = 'flex';
+    visual.style.display = 'none';
+    btnT.classList.add('active');
+    btnV.classList.remove('active');
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// Globals tab — DIFF toggle & search
+// ══════════════════════════════════════════════════════
+function muGlobalsDiff(on) {
+  document.querySelectorAll('.mu-global-row').forEach(r => {
+    if (on && r.dataset.diff === '0') r.style.display = 'none';
+    else r.style.display = '';
+  });
+}
+function muGlobalsSearch(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.mu-global-row').forEach(r => {
+    const name = r.querySelector('span').textContent.toLowerCase();
+    r.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// Systab tab — topic selection
+// ══════════════════════════════════════════════════════
+const systabData = [
+  // Motors
+  [['MainMotorSpeed','4800','4800','0','6000',0],['MainMotorAccel','1200','1200','100','2000',0],['DrumMotorTorque','85','80','0','100',1],['BlanketMotorPWM','72','72','0','100',0],['FuserRollerSpeed','3200','3000','1000','5000',1],['CoronaVoltage','550','550','200','800',0]],
+  // Sensors
+  [['TempSensorOffset','-0.5','0.0','‐5.0','5.0',1],['PressureSensor1','1013','1013','800','1200',0],['WebTensionSensor','4.2','4.0','0','10',1],['OpticalDensity','1.45','1.45','0','3.0',0]],
+  // Print Head
+  [['HeadGap','0.8','0.8','0.5','1.2',0],['DropVolume','12','12','6','18',0],['NozzleFireFreq','24000','24000','10000','30000',0]],
+  // Web Transport
+  [['WebSpeed','4800','4800','0','6000',0],['TensionSetpoint','3.8','4.0','1.0','8.0',1],['AlignmentOffset','0.02','0.00','‐1.0','1.0',1]],
+  // Ink System
+  [['InkTemp','42','42','30','60',0],['InkViscosity','8.5','8.5','5','15',0],['InkLevel_C','78','100','0','100',0],['InkLevel_M','65','100','0','100',0]],
+  // Image Quality
+  [['DotGain','18','18','10','30',0],['Registration_X','0.01','0.00','‐0.5','0.5',0],['Registration_Y','0.02','0.00','‐0.5','0.5',0]],
+  // Calibration
+  [['CalibDate','2025-02','2025-01','‐','‐',1],['BimCalibOffset','-0.032','0.000','‐1','1',1],['ColorCalibDelta','2.1','0.0','0','10',1]]
+];
+function muSystabSelect(el, idx) {
+  el.parentElement.querySelectorAll('.mu-systab-topic').forEach(t => {
+    t.classList.remove('active');
+    t.style.background = '';
+    t.style.color = '';
+  });
+  el.classList.add('active');
+  el.style.background = 'var(--primary-glow)';
+  el.style.color = 'var(--primary-hover)';
+  const grid = document.getElementById('mu-systab-grid');
+  let html = '<div class="mockup-row mu-header-row"><span style="flex:2">Parameter</span><span style="width:70px">Saved</span><span style="width:70px">Default</span><span style="width:60px">Min</span><span style="width:60px">Max</span></div>';
+  (systabData[idx]||[]).forEach(r => {
+    const diff = r[5];
+    const bg = diff ? ' style="background:rgba(255,215,0,.12)"' : '';
+    const clr = diff ? ';color:var(--warning)' : '';
+    html += `<div class="mockup-row"${bg}><span style="flex:2;font-family:Consolas,monospace${clr}">${r[0]}</span><span style="width:70px${clr}">${r[1]}</span><span style="width:70px">${r[2]}</span><span style="width:60px">${r[3]}</span><span style="width:60px">${r[4]}</span></div>`;
+  });
+  grid.innerHTML = html;
+}
+</script>
+
+</body>
+</html>

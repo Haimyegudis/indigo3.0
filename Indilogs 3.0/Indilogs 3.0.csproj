@@ -20,9 +20,10 @@
     <AssemblyTitle>IndiLogs 3.0</AssemblyTitle>
     <Product>IndiLogs 3.0</Product>
     <Copyright>Copyright © 2025</Copyright>
-    <AssemblyVersion>1.0.0.10</AssemblyVersion>
-    <FileVersion>1.0.0.10</FileVersion>
+    <AssemblyVersion>1.0.0.11</AssemblyVersion>
+    <FileVersion>1.0.0.11</FileVersion>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <InternalsVisibleTo>IndiLogs.Tests</InternalsVisibleTo>
 
     <!-- Single-file self-contained deployment (use: dotnet publish -r win-x64) -->
     <PublishSingleFile>true</PublishSingleFile>
@@ -94,6 +95,11 @@
     <Resource Include="Resources\outlook.ico" />
     <Resource Include="Resources\kibana.ico" />
     <Resource Include="Resources\mark.ico" />
+  </ItemGroup>
+
+  <!-- Help page -->
+  <ItemGroup>
+    <Content Include="Resources\help.html" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" Link="Resources\help.html" />
   </ItemGroup>
 
   <!-- appsettings.json — excluded from single-file so users can edit update paths -->

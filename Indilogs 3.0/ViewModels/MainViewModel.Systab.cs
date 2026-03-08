@@ -114,7 +114,7 @@ namespace IndiLogs_3._0.ViewModels
         private void FilterSystabEntries()
         {
             SystabEntries.Clear();
-            string search = (SystabSearchText ?? "").ToLower();
+            string search = (SystabSearchText ?? "").Trim();
             foreach (var entry in _allSystabEntries)
             {
                 if (_systabShowDiffsOnly && !entry.IsDifferent)
@@ -122,11 +122,11 @@ namespace IndiLogs_3._0.ViewModels
 
                 if (!string.IsNullOrWhiteSpace(search))
                 {
-                    if (!(entry.Parameter?.ToLower().Contains(search) == true) &&
-                        !(entry.Saved?.ToLower().Contains(search) == true) &&
-                        !(entry.Default?.ToLower().Contains(search) == true) &&
-                        !(entry.Minimum?.ToLower().Contains(search) == true) &&
-                        !(entry.Maximum?.ToLower().Contains(search) == true))
+                    if (!(entry.Parameter?.Contains(search, StringComparison.OrdinalIgnoreCase) == true) &&
+                        !(entry.Saved?.Contains(search, StringComparison.OrdinalIgnoreCase) == true) &&
+                        !(entry.Default?.Contains(search, StringComparison.OrdinalIgnoreCase) == true) &&
+                        !(entry.Minimum?.Contains(search, StringComparison.OrdinalIgnoreCase) == true) &&
+                        !(entry.Maximum?.Contains(search, StringComparison.OrdinalIgnoreCase) == true))
                     {
                         continue;
                     }

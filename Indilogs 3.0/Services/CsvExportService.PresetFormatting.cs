@@ -185,7 +185,7 @@ namespace IndiLogs_3._0.Services
             }
         }
 
-        private void ParseLogStats(string msg, string threadName, DateTime time,
+        internal void ParseLogStats(string msg, string threadName, DateTime time,
             SortedDictionary<string, SortedDictionary<string, SortedSet<string>>> schema,
             SortedDictionary<DateTime, Dictionary<string, string>> dataMatrix,
             Dictionary<string, string> threadNameMap)

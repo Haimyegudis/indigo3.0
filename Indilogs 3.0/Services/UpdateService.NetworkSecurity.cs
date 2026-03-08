@@ -83,50 +83,8 @@ namespace IndiLogs_3._0.Services
 
         // ── Authenticode signature verification ──
 
-        /// <summary>
-        /// Verifies that a file has a valid Authenticode signature with a trusted certificate chain.
-        /// Returns true if the signature is valid, false otherwise.
-        /// </summary>
-        private static bool VerifyAuthenticode(string filePath)
-        {
-            try
-            {
-                var cert = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadCertificateFromFile(filePath);
-                if (cert != null)
-                {
-                    using (var chain = new System.Security.Cryptography.X509Certificates.X509Chain())
-                    {
-                        chain.ChainPolicy.RevocationMode = System.Security.Cryptography.X509Certificates.X509RevocationMode.Online;
-                        chain.ChainPolicy.RevocationFlag = System.Security.Cryptography.X509Certificates.X509RevocationFlag.EntireChain;
-                        if (chain.Build(cert))
-                        {
-                            if (!IsTrustedSubject(cert.Subject))
-                            {
-                                UpdateLogger.Log($"[AUTO-UPDATE] Binary signed by untrusted publisher: {cert.Subject}");
-                                return false;
-                            }
-                            UpdateLogger.Log($"[AUTO-UPDATE] Binary signed by (chain valid): {cert.Subject}");
-                            return true;
-                        }
-                        UpdateLogger.Log($"[AUTO-UPDATE] Certificate chain invalid: {cert.Subject}");
-                    }
-                }
-            }
-            catch (System.Security.Cryptography.CryptographicException)
-            {
-                UpdateLogger.Log("[AUTO-UPDATE] Binary has no Authenticode signature.");
-            }
-            catch (Exception ex)
-            {
-                UpdateLogger.Log($"[AUTO-UPDATE] Signature verification error: {ex.Message}");
-            }
-            return false;
-        }
-
-        private static bool IsTrustedSubject(string subject) =>
-            subject.Contains("HP", StringComparison.OrdinalIgnoreCase)
-            || subject.Contains("Hewlett", StringComparison.OrdinalIgnoreCase)
-            || subject.Contains("Indigo", StringComparison.OrdinalIgnoreCase);
+        private static bool VerifyAuthenticode(string filePath) =>
+            AuthenticodeVerifier.VerifySignature(filePath, msg => UpdateLogger.Log($"[AUTO-UPDATE] {msg}"));
 
         // ── DPAPI-encrypted credential storage for network share access ──
 

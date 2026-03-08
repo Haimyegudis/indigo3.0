@@ -73,7 +73,7 @@ namespace IndiLogs_3._0.Services.Grep
                         if (ct.IsCancellationRequested) { loopState.Break(); return; }
 
                         string logType = DetermineLogType(file);
-                        if (IsNumericAppFileName(Path.GetFileName(file).ToLowerInvariant()))
+                        if (LogFileClassifier.IsNumericAppFileName(Path.GetFileName(file).ToLowerInvariant()))
                             Interlocked.Exchange(ref hasBinaryFlag, 1);
 
                         try
@@ -158,7 +158,7 @@ namespace IndiLogs_3._0.Services.Grep
                                             if (!IsLogEntry(innerEntry.FullName, criteria.SearchPLC, criteria.SearchAPP)) continue;
 
                                             string innerLogType = DetermineLogType(innerEntry.FullName);
-                                            if (IsNumericAppFileName(innerEntry.Name.ToLowerInvariant()))
+                                            if (LogFileClassifier.IsNumericAppFileName(innerEntry.Name.ToLowerInvariant()))
                                                 Interlocked.Exchange(ref hasBinaryFlag, 1);
 
                                             using (var s = innerEntry.Open())
@@ -177,7 +177,7 @@ namespace IndiLogs_3._0.Services.Grep
                         if (!IsLogEntry(entry.FullName, criteria.SearchPLC, criteria.SearchAPP)) continue;
 
                         string logType = DetermineLogType(entry.FullName);
-                        if (IsNumericAppFileName(entry.Name.ToLowerInvariant()))
+                        if (LogFileClassifier.IsNumericAppFileName(entry.Name.ToLowerInvariant()))
                             Interlocked.Exchange(ref hasBinaryFlag, 1);
 
                         using (var s = entry.Open())
@@ -254,58 +254,10 @@ namespace IndiLogs_3._0.Services.Grep
             return count;
         }
 
-        // ====================================================================
-        //  File classification (copied from GlobalGrepService for independence)
-        // ====================================================================
-
-        private static bool IsLogFile(string p, bool plc, bool app)
-        {
-            string lp = p.ToLowerInvariant();
-            if (lp.EndsWith(".zip")) return true;
-            return IsSearchableLogFile(lp, plc, app);
-        }
-
-        private static bool IsLogEntry(string entryName, bool plc, bool app)
-        {
-            string lp = entryName.ToLowerInvariant();
-            if (lp.EndsWith(".zip")) return false;
-            return IsSearchableLogFile(lp, plc, app);
-        }
-
-        private static bool IsSearchableLogFile(string lp, bool plc, bool app)
-        {
-            string fileName = lp;
-            int lastSlash = lp.LastIndexOfAny(new[] { '/', '\\' });
-            if (lastSlash >= 0) fileName = lp.Substring(lastSlash + 1);
-
-            bool isPLC = fileName.Contains("enginegroupa.file") ||
-                         fileName.Contains("enginegroupb.file") ||
-                         fileName.EndsWith(".file.log") ||
-                         (fileName.Contains("no-sn") && fileName.Contains("file"));
-
-            bool isAPP = fileName.Contains("appdev") || fileName.Contains("press.host.app");
-            if (!isAPP) isAPP = IsNumericAppFileName(fileName);
-
-            return (plc && isPLC) || (app && isAPP);
-        }
-
-        private static bool IsNumericAppFileName(string lowerFileName)
-        {
-            if (lowerFileName.Contains("enginegroup")) return false;
-            int dotFileIdx = lowerFileName.IndexOf(".file");
-            if (dotFileIdx <= 0) return false;
-            string prefix = lowerFileName.Substring(0, dotFileIdx);
-            return prefix.Length > 0 && char.IsDigit(prefix[prefix.Length - 1]);
-        }
-
-        private static string DetermineLogType(string p)
-        {
-            string lp = p.ToLowerInvariant();
-            string fileName = Path.GetFileName(lp);
-            if (fileName.Contains("appdev") || fileName.Contains("press.host.app")) return "APP";
-            if (IsNumericAppFileName(fileName)) return "APP";
-            return "PLC";
-        }
+        // File classification delegated to shared LogFileClassifier
+        private static bool IsLogFile(string p, bool plc, bool app) => LogFileClassifier.IsLogFile(p, plc, app);
+        private static bool IsLogEntry(string entryName, bool plc, bool app) => LogFileClassifier.IsLogEntry(entryName, plc, app);
+        private static string DetermineLogType(string p) => LogFileClassifier.DetermineLogType(p);
 
 
         private static List<string> FilterFilesByTimeRange(List<string> files, TimeRangeFilter filter)

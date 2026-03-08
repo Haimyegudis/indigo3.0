@@ -76,6 +76,8 @@
                 <MenuItem Header="📌 End Range" Command="{Binding EndRangeCommand}"/>
                 <MenuItem Header="❌ Clear Range" Command="{Binding ClearRangeCommand}"/>
                 <Separator/>
+                <MenuItem Header="📊 Create Chart from Pattern..." Command="{Binding CreateChartFromPatternCommand}"/>
+                <Separator/>
                 <MenuItem Header="⏱ Show Synced Time Column" IsCheckable="True"
                           IsChecked="{Binding ShowSyncedTimeColumn, Mode=TwoWay}"
                           IsEnabled="{Binding HasTimeSyncData}"/>

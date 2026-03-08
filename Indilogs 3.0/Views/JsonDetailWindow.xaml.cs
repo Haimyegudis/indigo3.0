@@ -60,7 +60,7 @@ namespace IndiLogs_3._0.Views
 
         private void FilterTextBox_TextChanged(object? sender, TextChangedEventArgs e)
         {
-            string filter = FilterTextBox.Text?.Trim().ToLower() ?? "";
+            string filter = FilterTextBox.Text?.Trim() ?? "";
 
             if (string.IsNullOrEmpty(filter))
             {
@@ -69,7 +69,7 @@ namespace IndiLogs_3._0.Views
             else
             {
                 _filteredItems = _allItems
-                    .Where(x => x.Key.ToLower().Contains(filter) || x.Value.ToLower().Contains(filter))
+                    .Where(x => x.Key.Contains(filter, StringComparison.OrdinalIgnoreCase) || x.Value.Contains(filter, StringComparison.OrdinalIgnoreCase))
                     .ToList();
             }
 

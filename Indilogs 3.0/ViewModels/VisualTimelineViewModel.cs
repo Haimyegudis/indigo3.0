@@ -1,6 +1,7 @@
 using IndiLogs_3._0.Models;
 using IndiLogs_3._0.Services;
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -237,7 +238,7 @@ namespace IndiLogs_3._0.ViewModels
         }
 
         /// <summary>State name → color mapping matching ChartStateConfig for consistency.</summary>
-        private static readonly Dictionary<string, Color> _stateColorMap = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase)
+        private static readonly System.Collections.Frozen.FrozenDictionary<string, Color> _stateColorMap = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase)
         {
             { "INIT",           Color.FromRgb(0xFF, 0xE1, 0x35) },  // Yellow
             { "POWER_DISABLE",  Color.FromRgb(0xFF, 0x6B, 0x6B) },  // Red
@@ -257,7 +258,7 @@ namespace IndiLogs_3._0.ViewModels
             { "GO_TO_STANDBY",  Color.FromRgb(0xDA, 0xA5, 0x20) },  // Goldenrod
             { "GO_TO_SERVICE",  Color.FromRgb(0xCD, 0x85, 0x3F) },  // Peru
             { "SML_OFF",        Color.FromRgb(0xC6, 0x28, 0x28) },  // Dark Red
-        };
+        }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
         private Color GetColorForState(string name)
         {

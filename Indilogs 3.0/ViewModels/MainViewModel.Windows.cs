@@ -299,6 +299,22 @@ namespace IndiLogs_3._0.ViewModels
             catch (Exception ex) { AppLogger.Error($"OpenUrl failed for '{url}'", ex); }
         }
 
+        private static void OpenHelpHtml()
+        {
+            try
+            {
+                var exeDir = System.IO.Path.GetDirectoryName(Environment.ProcessPath) ?? AppDomain.CurrentDomain.BaseDirectory;
+                var helpPath = System.IO.Path.Combine(exeDir, "Resources", "help.html");
+                if (!System.IO.File.Exists(helpPath))
+                    helpPath = System.IO.Path.Combine(exeDir, "help.html");
+                if (System.IO.File.Exists(helpPath))
+                    Process.Start(new ProcessStartInfo(helpPath) { UseShellExecute = true });
+                else
+                    AppLogger.Warn($"Help file not found at: {helpPath}");
+            }
+            catch (Exception ex) { AppLogger.Error("Failed to open help", ex); }
+        }
+
         private void OpenOutlook(object? obj) { try { Process.Start(new ProcessStartInfo("outlook.exe", "/c ipm.note") { UseShellExecute = true }); } catch (Exception ex) { AppLogger.Warn($"Outlook launch failed: {ex.Message}"); OpenUrl("mailto:"); } }
 
         /// <summary>

@@ -164,5 +164,137 @@ namespace IndiLogs.Tests
             Assert.Equal("200", tree[0].Entries[0].Saved);
             Assert.Equal("100", tree[0].Entries[0].Default);
         }
+
+        [Fact]
+        public void BuildSystabTree_MultipleIndices_CreatesChildNodes()
+        {
+            string saved =
+                @"[HKEY_LOCAL_MACHINE\SOFTWARE\Indigo\Unicorn\Mode\Station\TopicB\0]" + "\r\n" +
+                "\"A\"=\"1\"\r\n" +
+                @"[HKEY_LOCAL_MACHINE\SOFTWARE\Indigo\Unicorn\Mode\Station\TopicB\1]" + "\r\n" +
+                "\"B\"=\"2\"\r\n";
+            var tree = SystabParserService.BuildSystabTree(new Dictionary<string, string> { { "saved", saved } });
+            Assert.Single(tree);
+            Assert.Equal("TopicB", tree[0].Name);
+            Assert.Equal(2, tree[0].Children.Count);
+        }
+
+        [Fact]
+        public void BuildSystabTree_NumericIndex_DisplaysNameWithIndex()
+        {
+            string saved =
+                @"[HKEY_LOCAL_MACHINE\SOFTWARE\Indigo\Unicorn\M\S\MyTopic\0]" + "\r\n" +
+                "\"A\"=\"1\"\r\n" +
+                @"[HKEY_LOCAL_MACHINE\SOFTWARE\Indigo\Unicorn\M\S\MyTopic\1]" + "\r\n" +
+                "\"B\"=\"2\"\r\n";
+            var tree = SystabParserService.BuildSystabTree(new Dictionary<string, string> { { "saved", saved } });
+            var childNames = new System.Collections.Generic.List<string>();
+            foreach (var c in tree[0].Children) childNames.Add(c.Name);
+            Assert.Contains("MyTopic 0", childNames);
+            Assert.Contains("MyTopic 1", childNames);
+        }
+
+        [Fact]
+        public void BuildSystabTree_MultipleTopics_SortedAlphabetically()
+        {
+            string saved =
+                @"[HKEY_LOCAL_MACHINE\SOFTWARE\Indigo\Unicorn\M\S\Zebra\0]" + "\r\n" +
+                "\"X\"=\"1\"\r\n" +
+                @"[HKEY_LOCAL_MACHINE\SOFTWARE\Indigo\Unicorn\M\S\Alpha\0]" + "\r\n" +
+                "\"Y\"=\"2\"\r\n";
+            var tree = SystabParserService.BuildSystabTree(new Dictionary<string, string> { { "saved", saved } });
+            Assert.Equal(2, tree.Count);
+            Assert.Equal("Alpha", tree[0].Name);
+            Assert.Equal("Zebra", tree[1].Name);
+        }
+
+        [Fact]
+        public void BuildSystabTree_AllFourFiles_PopulatesAllColumns()
+        {
+            string path = @"[HKEY_LOCAL_MACHINE\SOFTWARE\Indigo\Unicorn\M\S\Topic\0]" + "\r\n\"P\"=";
+            var files = new Dictionary<string, string>
+            {
+                { "saved",   path + "\"10\"\r\n" },
+                { "default", path + "\"20\"\r\n" },
+                { "minimum", path + "\"0\"\r\n" },
+                { "maximum", path + "\"100\"\r\n" }
+            };
+            var tree = SystabParserService.BuildSystabTree(files);
+            Assert.Single(tree);
+            var entry = tree[0].Entries[0];
+            Assert.Equal("10", entry.Saved);
+            Assert.Equal("20", entry.Default);
+            Assert.Equal("0", entry.Minimum);
+            Assert.Equal("100", entry.Maximum);
+            Assert.True(entry.IsDifferent);
+        }
+
+        [Fact]
+        public void BuildSystabTree_SameValues_NotDifferent()
+        {
+            string path = @"[HKEY_LOCAL_MACHINE\SOFTWARE\Indigo\Unicorn\M\S\Topic\0]" + "\r\n\"P\"=";
+            var files = new Dictionary<string, string>
+            {
+                { "saved",   path + "\"100\"\r\n" },
+                { "default", path + "\"100\"\r\n" }
+            };
+            var tree = SystabParserService.BuildSystabTree(files);
+            Assert.False(tree[0].HasDifferences);
+        }
+
+        [Fact]
+        public void BuildSystabTree_MissingDefaultFile_HandlesGracefully()
+        {
+            var files = new Dictionary<string, string>
+            {
+                { "saved", @"[HKEY_LOCAL_MACHINE\SOFTWARE\Indigo\Unicorn\M\S\Topic\0]" + "\r\n\"P\"=\"val\"\r\n" }
+            };
+            var tree = SystabParserService.BuildSystabTree(files);
+            Assert.Single(tree);
+            var entry = tree[0].Entries[0];
+            Assert.Equal("val", entry.Saved);
+            Assert.Equal("", entry.Default);
+        }
+
+        [Fact]
+        public void BuildSystabTree_ChildNodeHasDifferences_PropagatedToParent()
+        {
+            string saved =
+                @"[HKEY_LOCAL_MACHINE\SOFTWARE\Indigo\Unicorn\M\S\Topic\0]" + "\r\n\"A\"=\"1\"\r\n" +
+                @"[HKEY_LOCAL_MACHINE\SOFTWARE\Indigo\Unicorn\M\S\Topic\1]" + "\r\n\"B\"=\"2\"\r\n";
+            string def =
+                @"[HKEY_LOCAL_MACHINE\SOFTWARE\Indigo\Unicorn\M\S\Topic\0]" + "\r\n\"A\"=\"1\"\r\n" +
+                @"[HKEY_LOCAL_MACHINE\SOFTWARE\Indigo\Unicorn\M\S\Topic\1]" + "\r\n\"B\"=\"999\"\r\n";
+            var files = new Dictionary<string, string> { { "saved", saved }, { "default", def } };
+            var tree = SystabParserService.BuildSystabTree(files);
+            Assert.True(tree[0].HasDifferences);
+        }
+
+        [Fact]
+        public void BuildSystabTree_CountAggregated_ForParentNode()
+        {
+            string saved =
+                @"[HKEY_LOCAL_MACHINE\SOFTWARE\Indigo\Unicorn\M\S\Topic\0]" + "\r\n\"A\"=\"1\"\r\n\"B\"=\"2\"\r\n" +
+                @"[HKEY_LOCAL_MACHINE\SOFTWARE\Indigo\Unicorn\M\S\Topic\1]" + "\r\n\"C\"=\"3\"\r\n";
+            var files = new Dictionary<string, string> { { "saved", saved } };
+            var tree = SystabParserService.BuildSystabTree(files);
+            Assert.Equal(3, tree[0].Count); // 2 + 1 params total
+        }
+
+        [Fact]
+        public void ParseRegContent_DwordZero()
+        {
+            var content = "[S]\r\n\"X\"=dword:00000000\r\n";
+            var result = SystabParserService.ParseRegContent(content);
+            Assert.Equal("0", result[("S", "X")]);
+        }
+
+        [Fact]
+        public void ExtractTopicInfo_CaseInsensitive()
+        {
+            var path = @"HKEY_LOCAL_MACHINE\SOFTWARE\INDIGO\UNICORN\Mode\Station\Topic\0";
+            var (topic, station, index) = SystabParserService.ExtractTopicInfo(path);
+            Assert.Equal("Topic", topic);
+        }
     }
 }

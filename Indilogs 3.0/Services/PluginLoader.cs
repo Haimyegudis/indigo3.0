@@ -2,6 +2,7 @@ using IndiLogs.PluginAPI;
 using IndiLogs_3._0.Services.BuiltInPlugins;
 using IndiLogs_3._0.Services.Interfaces;
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -35,10 +36,10 @@ namespace IndiLogs_3._0.Services
 
         // Allowed strong-name public key tokens (lowercase hex, no dashes).
         // Add your organization's plugin signing key tokens here.
-        private static readonly HashSet<string> _allowedPublicKeyTokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        private static readonly System.Collections.Frozen.FrozenSet<string> _allowedPublicKeyTokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             // Example: "b03f5f7f11d50a3a" — replace with your actual plugin signing key tokens
-        };
+        }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
         // ---------------------------------------------------------------
         // IPluginLoader
@@ -176,7 +177,7 @@ namespace IndiLogs_3._0.Services
                         chain.ChainPolicy.RevocationFlag = System.Security.Cryptography.X509Certificates.X509RevocationFlag.EntireChain;
                         if (chain.Build(cert))
                         {
-                            if (!IsTrustedSubject(cert.Subject))
+                            if (!AuthenticodeVerifier.IsTrustedSubject(cert.Subject))
                             {
                                 AppLogger.Warn($"Plugin signed by untrusted publisher: {cert.Subject}");
                                 return false;
@@ -218,11 +219,6 @@ namespace IndiLogs_3._0.Services
             AppLogger.Warn($"REJECTED unsigned/unverified plugin: {Path.GetFileName(dllPath)}");
             return false;
         }
-
-        private static bool IsTrustedSubject(string subject) =>
-            subject.Contains("HP", StringComparison.OrdinalIgnoreCase)
-            || subject.Contains("Hewlett", StringComparison.OrdinalIgnoreCase)
-            || subject.Contains("Indigo", StringComparison.OrdinalIgnoreCase);
 
         private void LoadPluginsFromAssembly(string dllPath)
         {

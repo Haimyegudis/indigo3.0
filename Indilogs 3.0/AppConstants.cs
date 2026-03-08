@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Frozen;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -55,6 +57,25 @@ namespace IndiLogs_3._0
         /// Batch size for UI update operations (e.g. ObservableRangeCollection batching).
         /// </summary>
         public const int UiUpdateBatchSize = 500;
+
+        // ── Shared field/level sets ──────────────────────────────────
+
+        /// <summary>
+        /// Built-in log field names that bind directly on LogEntry (not plugin ExtraFields).
+        /// </summary>
+        public static readonly FrozenSet<string> BuiltInFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Date", "Level", "Message", "ThreadName", "Logger",
+            "ProcessName", "Source", "LineNumber"
+        }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Log levels considered errors for statistics and filtering.
+        /// </summary>
+        public static readonly FrozenSet<string> ErrorLevels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Error", "Fatal"
+        }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
         // ── Tab Indices ─────────────────────────────────────────────
         // Must match the order of TabItems in MainWindow.xaml

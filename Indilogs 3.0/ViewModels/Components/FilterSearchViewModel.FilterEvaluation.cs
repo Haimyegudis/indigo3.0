@@ -162,7 +162,9 @@ namespace IndiLogs_3._0.ViewModels.Components
                     for (int i = 0; i < colorRules.Count; i++)
                     {
                         var rule = colorRules[i];
-                        items.Add(new ActiveFilterItem { Category = "COLORING", Description = $"{rule.Field} {rule.Operator} \"{rule.Value}\"", IsActive = true, Key = $"COLORING:{i}", ColorBrush = new System.Windows.Media.SolidColorBrush(rule.Color) });
+                        var colorBrush = new System.Windows.Media.SolidColorBrush(rule.Color);
+                        colorBrush.Freeze();
+                        items.Add(new ActiveFilterItem { Category = "COLORING", Description = $"{rule.Field} {rule.Operator} \"{rule.Value}\"", IsActive = true, Key = $"COLORING:{i}", ColorBrush = colorBrush });
                     }
                 }
 
@@ -175,7 +177,9 @@ namespace IndiLogs_3._0.ViewModels.Components
                         for (int i = 0; i < defaultRules.Count; i++)
                         {
                             var rule = defaultRules[i];
-                            items.Add(new ActiveFilterItem { Category = "COLORING", Description = $"{rule.Field} {rule.Operator} \"{rule.Value}\" (default)", IsActive = true, Key = $"DEFAULT_COLORING:{i}", ColorBrush = new System.Windows.Media.SolidColorBrush(rule.Color) });
+                            var defColorBrush = new System.Windows.Media.SolidColorBrush(rule.Color);
+                            defColorBrush.Freeze();
+                            items.Add(new ActiveFilterItem { Category = "COLORING", Description = $"{rule.Field} {rule.Operator} \"{rule.Value}\" (default)", IsActive = true, Key = $"DEFAULT_COLORING:{i}", ColorBrush = defColorBrush });
                         }
                     }
                 }
@@ -244,7 +248,13 @@ namespace IndiLogs_3._0.ViewModels.Components
                 if (op == "Ends With") return val.EndsWith(criteria, StringComparison.OrdinalIgnoreCase);
                 if (op == "Regex")
                 {
-                    try { return Regex.IsMatch(val, criteria, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(2)); }
+                    try
+                    {
+                        var compiled = node.CompiledRegex;
+                        if (compiled != null)
+                            return compiled.IsMatch(val);
+                        return Regex.IsMatch(val, criteria, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(2));
+                    }
                     catch (Exception ex) { AppLogger.Warn($"Invalid regex pattern '{criteria}': {ex.Message}"); return false; }
                 }
                 return val.IndexOf(criteria, StringComparison.OrdinalIgnoreCase) >= 0;
@@ -285,7 +295,7 @@ namespace IndiLogs_3._0.ViewModels.Components
             return EvaluateFilterNode(l, filter);
         }
 
-        private static bool MatchesSearch(LogEntry l, string search)
+        internal static bool MatchesSearch(LogEntry l, string search)
         {
             if (l.Message != null && l.Message.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
                 return true;

@@ -216,8 +216,7 @@ namespace IndiLogs_3._0.ViewModels
             AppLogger.Info($"[Stats] Statistics calculated for {totalLogs:N0} entries — {statsSw.ElapsedMilliseconds}ms");
         }
 
-        private static readonly HashSet<string> _errorLevels =
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Error", "Fatal" };
+        private static readonly System.Collections.Frozen.FrozenSet<string> _errorLevels = AppConstants.ErrorLevels;
 
         private static List<LogEntry> GetErrorLogs(List<LogEntry> source)
         {

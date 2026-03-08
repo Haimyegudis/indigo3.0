@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -24,10 +25,10 @@ namespace IndiLogs_3._0.Views
         public bool BrowseExternalRequested { get; private set; }
 
         // File extensions considered relevant for log/config browsing
-        private static readonly HashSet<string> RelevantExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        private static readonly System.Collections.Frozen.FrozenSet<string> RelevantExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             ".log", ".file", ".csv", ".txt", ".xml", ".json", ".cfg", ".ini", ".config", ".dat"
-        };
+        }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
         public ZipBrowserWindow(string zipPath)
         {

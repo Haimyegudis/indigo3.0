@@ -47,7 +47,7 @@ namespace IndiLogs_3._0
         //  Scroll-To Methods
         // ============================================
 
-        private void MapsToLogRow(LogEntry log)
+        private async void MapsToLogRow(LogEntry log)
         {
             if (log == null) return;
 
@@ -75,12 +75,12 @@ namespace IndiLogs_3._0
                     targetGrid.UpdateLayout();
                     targetGrid.ApplyTemplate();
 
-                    // Try multiple times with slight delays for lazy-loaded grids
+                    // Try multiple times with yield for lazy-loaded grids
                     for (int attempt = 0; attempt < 3 && scrollViewer == null; attempt++)
                     {
                         if (attempt > 0)
                         {
-                            System.Threading.Thread.Sleep(10); // Small delay
+                            await System.Threading.Tasks.Task.Delay(10);
                             targetGrid.UpdateLayout();
                         }
 

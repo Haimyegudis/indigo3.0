@@ -6,7 +6,7 @@ namespace IndiLogs_3._0.Services
     /// Groups all grep-related service dependencies into a single injectable bundle.
     /// Avoids excessive constructor parameters when passing grep services through ViewModels.
     /// </summary>
-    public sealed class GrepServiceBundle
+    public sealed class GrepServiceBundle : Interfaces.IGrepServiceBundle
     {
         public IGlobalGrepService GrepService { get; }
         public ISearchLocationService LocationService { get; }

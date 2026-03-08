@@ -108,14 +108,14 @@ namespace IndiLogs_3._0.Views
             var matches = new System.Collections.Generic.List<(int Index, int Length, SolidColorBrush Color)>();
 
             // Find all keys
-            foreach (Match match in Regex.Matches(line, keyPattern))
+            foreach (Match match in Regex.Matches(line, keyPattern, RegexOptions.None, AppConstants.RegexTimeout))
             {
                 var keyText = match.Value.TrimEnd(':', ' ');
                 matches.Add((match.Index, keyText.Length, KeyColor));
             }
 
             // Find string values (after colon)
-            foreach (Match match in Regex.Matches(line, stringPattern))
+            foreach (Match match in Regex.Matches(line, stringPattern, RegexOptions.None, AppConstants.RegexTimeout))
             {
                 var colonIndex = match.Value.IndexOf(':');
                 var valueStart = match.Index + colonIndex + 1;
@@ -126,7 +126,7 @@ namespace IndiLogs_3._0.Views
             }
 
             // Find number values
-            foreach (Match match in Regex.Matches(line, numberPattern))
+            foreach (Match match in Regex.Matches(line, numberPattern, RegexOptions.None, AppConstants.RegexTimeout))
             {
                 var colonIndex = match.Value.IndexOf(':');
                 var valueStart = match.Index + colonIndex + 1;
@@ -137,7 +137,7 @@ namespace IndiLogs_3._0.Views
             }
 
             // Find bool/null values
-            foreach (Match match in Regex.Matches(line, boolNullPattern))
+            foreach (Match match in Regex.Matches(line, boolNullPattern, RegexOptions.None, AppConstants.RegexTimeout))
             {
                 var colonIndex = match.Value.IndexOf(':');
                 var valueStart = match.Index + colonIndex + 1;
@@ -148,19 +148,19 @@ namespace IndiLogs_3._0.Views
             }
 
             // Find array string values
-            foreach (Match match in Regex.Matches(line, arrayStringPattern))
+            foreach (Match match in Regex.Matches(line, arrayStringPattern, RegexOptions.None, AppConstants.RegexTimeout))
             {
                 matches.Add((match.Index, match.Length, StringColor));
             }
 
             // Find array number values
-            foreach (Match match in Regex.Matches(line, arrayNumberPattern))
+            foreach (Match match in Regex.Matches(line, arrayNumberPattern, RegexOptions.None, AppConstants.RegexTimeout))
             {
                 matches.Add((match.Index, match.Length, NumberColor));
             }
 
             // Find brackets and braces
-            foreach (Match match in Regex.Matches(line, bracketPattern))
+            foreach (Match match in Regex.Matches(line, bracketPattern, RegexOptions.None, AppConstants.RegexTimeout))
             {
                 matches.Add((match.Index, match.Length, BracketColor));
             }

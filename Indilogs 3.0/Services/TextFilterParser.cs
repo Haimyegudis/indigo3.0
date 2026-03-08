@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using IndiLogs_3._0.Models;
@@ -20,7 +21,7 @@ namespace IndiLogs_3._0.Services
     {
         #region Field / Operator Maps
 
-        private static readonly Dictionary<string, string> FieldMap =
+        private static readonly System.Collections.Frozen.FrozenDictionary<string, string> FieldMap =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 { "Thread",     "ThreadName" },
@@ -29,16 +30,16 @@ namespace IndiLogs_3._0.Services
                 { "Level",      "Level"      },
                 { "Logger",     "Logger"     },
                 { "ProcessName","ProcessName"},
-            };
+            }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
-        private static readonly Dictionary<string, string> OperatorMap =
+        private static readonly System.Collections.Frozen.FrozenDictionary<string, string> OperatorMap =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 { "StartsWith", "Begins With" },
                 { "Contains",   "Contains"    },
                 { "EndsWith",   "Ends With"   },
                 { "Equals",     "Equals"      },
-            };
+            }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
         #endregion
 

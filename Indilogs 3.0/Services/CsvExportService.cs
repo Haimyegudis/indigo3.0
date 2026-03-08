@@ -26,7 +26,7 @@ namespace IndiLogs_3._0.Services
         private readonly string[] _drvTempParams = new[] { "DrvTemp", "eIoStatus" };
 
         // eIoStatus enum string mapping
-        private static string DecodeIoStatus(string statusStr)
+        internal static string DecodeIoStatus(string statusStr)
         {
             if (string.IsNullOrEmpty(statusStr)) return "Op"; // default Operational
             switch (statusStr.Trim())

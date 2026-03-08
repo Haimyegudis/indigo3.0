@@ -311,5 +311,210 @@ namespace IndiLogs.Tests
                 new List<LogEntry>(), l => l.Logger, 10);
             Assert.Empty(result);
         }
+
+        // ── CalculateStateEntries ──
+
+        [Fact]
+        public void CalculateStateEntries_Empty_ReturnsEmpty()
+        {
+            Assert.Empty(LogStatisticsService.CalculateStateEntries(new List<LogEntry>()));
+        }
+
+        [Fact]
+        public void CalculateStateEntries_S6_WithTransitions_ParsesStates()
+        {
+            var now = DateTime.Now;
+            var logs = new List<LogEntry>
+            {
+                new LogEntry { Date = now, ThreadName = "Events", Message = "boot" },
+                new LogEntry { Date = now.AddSeconds(1), ThreadName = "Manager", Message = "PlcMngr: Idle -> Printing" },
+                new LogEntry { Date = now.AddSeconds(5), ThreadName = "Manager", Message = "PlcMngr: Printing -> Done" },
+                new LogEntry { Date = now.AddSeconds(10), ThreadName = "Worker", Message = "regular" },
+            };
+            var states = LogStatisticsService.CalculateStateEntries(logs);
+            Assert.True(states.Count >= 2);
+            Assert.Contains(states, s => s.StateName == "Printing");
+            Assert.Contains(states, s => s.StateName == "Done");
+        }
+
+        [Fact]
+        public void CalculateStateEntries_S6_InitialState_Extracted()
+        {
+            var now = DateTime.Now;
+            var logs = new List<LogEntry>
+            {
+                new LogEntry { Date = now, ThreadName = "Events", Message = "start" },
+                new LogEntry { Date = now.AddSeconds(1), ThreadName = "Manager", Message = "PlcMngr: Idle -> Printing" },
+            };
+            var states = LogStatisticsService.CalculateStateEntries(logs);
+            Assert.True(states.Count >= 1);
+            Assert.Equal("Idle", states[0].StateName);
+        }
+
+        [Fact]
+        public void CalculateStateEntries_NoTransitions_ReturnsEmpty()
+        {
+            var now = DateTime.Now;
+            var logs = new List<LogEntry>
+            {
+                new LogEntry { Date = now, ThreadName = "Worker", Message = "no transitions here" },
+                new LogEntry { Date = now.AddSeconds(1), ThreadName = "Events", Message = "just events" },
+            };
+            var states = LogStatisticsService.CalculateStateEntries(logs);
+            Assert.Empty(states);
+        }
+
+        // ── MapErrorsToStates ──
+
+        [Fact]
+        public void MapErrorsToStates_Empty_ReturnsEmpty()
+        {
+            Assert.Empty(LogStatisticsService.MapErrorsToStates(new List<LogEntry>(), new List<StateEntry>()));
+        }
+
+        [Fact]
+        public void MapErrorsToStates_NullStates_ReturnsEmpty()
+        {
+            var errors = new List<LogEntry> { new LogEntry { Date = DateTime.Now, Level = "Error" } };
+            Assert.Empty(LogStatisticsService.MapErrorsToStates(errors, null!));
+        }
+
+        [Fact]
+        public void MapErrorsToStates_MapsErrorsToCorrectState()
+        {
+            var now = DateTime.Now;
+            var states = new List<StateEntry>
+            {
+                new StateEntry { StateName = "Idle", StartTime = now, EndTime = now.AddMinutes(1) },
+                new StateEntry { StateName = "Printing", StartTime = now.AddMinutes(1), EndTime = now.AddMinutes(5) },
+            };
+            var errors = new List<LogEntry>
+            {
+                new LogEntry { Date = now.AddSeconds(30), Level = "Error", Message = "e1" },
+                new LogEntry { Date = now.AddMinutes(2), Level = "Error", Message = "e2" },
+                new LogEntry { Date = now.AddMinutes(3), Level = "Error", Message = "e3" },
+            };
+            var result = LogStatisticsService.MapErrorsToStates(errors, states);
+            Assert.True(result.Count >= 1);
+            var printing = result.FirstOrDefault(r => r.Name == "Printing");
+            Assert.NotNull(printing);
+            Assert.Equal(2, printing!.Count);
+        }
+
+        // ── ComputeStatistics integration ──
+
+        [Fact]
+        public void ComputeStatistics_EmptyLogs_ReturnsZeroCounts()
+        {
+            var result = LogStatisticsService.ComputeStatistics(new List<LogEntry>(), new List<LogEntry>());
+            Assert.Equal(0, result.TotalPlcLogs);
+            Assert.Equal(0, result.TotalAppLogs);
+            Assert.Null(result.EarliestTimestamp);
+        }
+
+        [Fact]
+        public void ComputeStatistics_WithPlcLogs_PopulatesAllStats()
+        {
+            var now = DateTime.Now;
+            var plcLogs = new List<LogEntry>
+            {
+                new LogEntry { Date = now, Level = "Info", ThreadName = "Manager", Message = "start" },
+                new LogEntry { Date = now.AddSeconds(1), Level = "Error", ThreadName = "Manager", Message = "err" },
+                new LogEntry { Date = now.AddSeconds(2), Level = "Info", ThreadName = "Worker", Message = "work" },
+            };
+            var result = LogStatisticsService.ComputeStatistics(plcLogs, new List<LogEntry>());
+            Assert.Equal(3, result.TotalPlcLogs);
+            Assert.Equal(1, result.TotalPlcErrors);
+            Assert.NotNull(result.EarliestTimestamp);
+            Assert.NotNull(result.LatestTimestamp);
+            Assert.True(result.PlcTopErrors.Count > 0);
+            Assert.True(result.PlcThreadLoad.Count > 0);
+        }
+
+        [Fact]
+        public void ComputeStatistics_WithAppLogs_PopulatesAppStats()
+        {
+            var now = DateTime.Now;
+            var appLogs = new List<LogEntry>
+            {
+                new LogEntry { Date = now, Level = "Info", Logger = "App.Service", Method = "Init", Message = "ok" },
+                new LogEntry { Date = now.AddSeconds(1), Level = "Error", Logger = "App.DB", Method = "Query", Message = "fail" },
+            };
+            var result = LogStatisticsService.ComputeStatistics(new List<LogEntry>(), appLogs);
+            Assert.Equal(2, result.TotalAppLogs);
+            Assert.Equal(1, result.TotalAppErrors);
+            Assert.True(result.AppLoggerLoad.Count > 0);
+        }
+
+        [Fact]
+        public void ComputeStatistics_BinaryApp_SkipsMethodStats()
+        {
+            var now = DateTime.Now;
+            var appLogs = new List<LogEntry>
+            {
+                new LogEntry { Date = now, Level = "Info", Logger = "App", Message = "a" },
+            };
+            var result = LogStatisticsService.ComputeStatistics(new List<LogEntry>(), appLogs, hasBinaryAppLogs: true);
+            Assert.True(result.HasBinaryAppLogs);
+            Assert.Empty(result.AppMethodLoad);
+        }
+
+        [Fact]
+        public void ComputeStatistics_WithTransitions_PopulatesStates()
+        {
+            var now = DateTime.Now;
+            var plcLogs = new List<LogEntry>
+            {
+                new LogEntry { Date = now, Level = "Info", ThreadName = "Events", Message = "boot" },
+                new LogEntry { Date = now.AddSeconds(1), Level = "Info", ThreadName = "Manager", Message = "PlcMngr: Idle -> Printing" },
+                new LogEntry { Date = now.AddSeconds(2), Level = "Error", ThreadName = "Worker", Message = "Print error" },
+                new LogEntry { Date = now.AddSeconds(5), Level = "Info", ThreadName = "Manager", Message = "PlcMngr: Printing -> Done" },
+            };
+            var result = LogStatisticsService.ComputeStatistics(plcLogs, new List<LogEntry>());
+            Assert.True(result.StateEntries.Count > 0);
+            Assert.True(result.ErrorsByState.Count > 0);
+        }
+
+        [Fact]
+        public void ComputeStatistics_TimeSpan_Correct()
+        {
+            var start = new DateTime(2024, 1, 15, 10, 0, 0);
+            var end = new DateTime(2024, 1, 15, 12, 0, 0);
+            var plcLogs = new List<LogEntry>
+            {
+                new LogEntry { Date = start, Level = "Info", Message = "first" },
+                new LogEntry { Date = end, Level = "Info", Message = "last" },
+            };
+            var result = LogStatisticsService.ComputeStatistics(plcLogs, new List<LogEntry>());
+            Assert.Equal(start, result.EarliestTimestamp);
+            Assert.Equal(end, result.LatestTimestamp);
+        }
+
+        [Fact]
+        public void CalculateLoadDistribution_WithFullName_PreservesFullName()
+        {
+            var logs = new List<LogEntry>
+            {
+                new LogEntry { Logger = "Com.HP.Indigo.Service", Message = "a" },
+                new LogEntry { Logger = "Com.HP.Indigo.Service", Message = "b" },
+            };
+            var result = LogStatisticsService.CalculateLoadDistribution(
+                logs, l => LogStatisticsService.GetShortLoggerName(l.Logger), 10, l => l.Logger);
+            Assert.Single(result);
+            Assert.Equal("Com.HP.Indigo.Service", result[0].FullName);
+        }
+
+        [Fact]
+        public void CalculateErrorHistogram_LongMessage_Truncated()
+        {
+            var longMsg = new string('x', 200);
+            var errors = new List<LogEntry>
+            {
+                new LogEntry { Level = "Error", Message = longMsg },
+            };
+            var result = LogStatisticsService.CalculateErrorHistogram(errors, 10);
+            Assert.Single(result);
+            Assert.True(result[0].Name.Length < 200);
+        }
     }
 }

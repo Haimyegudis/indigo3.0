@@ -84,7 +84,7 @@ namespace IndiLogs_3._0.Controls.Charts
 
         private void ApplyFilters()
         {
-            string searchText = _pendingSearchText.ToLower();
+            string searchText = _pendingSearchText;
 
             _filteredItems = _allItems.Where(item =>
             {
@@ -110,8 +110,8 @@ namespace IndiLogs_3._0.Controls.Charts
                 // Search filter
                 if (!string.IsNullOrEmpty(searchText))
                 {
-                    if (!item.FullName.ToLower().Contains(searchText) &&
-                        !item.DisplayName.ToLower().Contains(searchText))
+                    if (!item.FullName.Contains(searchText, StringComparison.OrdinalIgnoreCase) &&
+                        !item.DisplayName.Contains(searchText, StringComparison.OrdinalIgnoreCase))
                         return false;
                 }
 

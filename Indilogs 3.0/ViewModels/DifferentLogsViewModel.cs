@@ -26,11 +26,7 @@ namespace IndiLogs_3._0.ViewModels
     public partial class DifferentLogsViewModel : ViewModelBase
     {
         // ── Built-in field names that bind directly on LogEntry ───
-        public static readonly HashSet<string> BuiltInFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "Date", "Level", "Message", "ThreadName", "Logger",
-            "ProcessName", "Source", "LineNumber"
-        };
+        public static readonly System.Collections.Frozen.FrozenSet<string> BuiltInFields = AppConstants.BuiltInFields;
 
         private readonly IPluginLoader _pluginLoader;
         private readonly IDialogService _dialogService;

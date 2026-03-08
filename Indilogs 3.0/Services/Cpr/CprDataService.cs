@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -13,17 +14,17 @@ namespace IndiLogs_3._0.Services.Cpr
         public bool IsLoaded => _allRecords.Count > 0;
 
         // Revolution index mapping (matching Python app)
-        private static readonly Dictionary<string, string> RevolutionMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        private static readonly System.Collections.Frozen.FrozenDictionary<string, string> RevolutionMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             { "RevolutionOneOnly", "One Only" },
             { "RevolutionFirstOfMany", "First of Many" },
             { "RevolutionLastOfMany", "Last of Many" },
             { "RevolutionMiddle", "Middle of Many" },
             { "RevType", "RevType" }
-        };
+        }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
         // Column name normalization (lowercase → camelCase, matching Python)
-        private static readonly Dictionary<string, string> ColumnMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        private static readonly System.Collections.Frozen.FrozenDictionary<string, string> ColumnMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             { "iterationnum", "IterationNum" },
             { "cyclenumber", "CycleNumber" },
@@ -46,7 +47,7 @@ namespace IndiLogs_3._0.Services.Cpr
             { "revolutionindex", "RevolutionIndex" },
             { "startcalibrationtime", "StartCalibrationTime" },
             { "sn", "sn" }
-        };
+        }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
         public void LoadCsv(string filePath)
         {

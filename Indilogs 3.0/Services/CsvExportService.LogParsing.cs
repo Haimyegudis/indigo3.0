@@ -6,7 +6,7 @@ namespace IndiLogs_3._0.Services
 {
     public partial class CsvExportService
     {
-        private void ParseAxisMon(string msg, string threadName, DateTime time,
+        internal void ParseAxisMon(string msg, string threadName, DateTime time,
             HashSet<string>? selectedAxis,
             SortedDictionary<string, SortedDictionary<string, SortedSet<string>>> schema,
             SortedDictionary<DateTime, Dictionary<string, string>> dataMatrix,
@@ -59,7 +59,7 @@ namespace IndiLogs_3._0.Services
             catch (Exception ex) { AppLogger.Error("Parse failed", ex); }
         }
 
-        private void ParseAxM(string msg, string threadName, DateTime time,
+        internal void ParseAxM(string msg, string threadName, DateTime time,
             HashSet<string>? selectedAxis,
             SortedDictionary<string, SortedDictionary<string, SortedSet<string>>> schema,
             SortedDictionary<DateTime, Dictionary<string, string>> dataMatrix,
@@ -118,7 +118,7 @@ namespace IndiLogs_3._0.Services
             catch (Exception ex) { AppLogger.Error("Parse failed", ex); }
         }
 
-        private void ParseIOMon(string msg, string threadName, DateTime time,
+        internal void ParseIOMon(string msg, string threadName, DateTime time,
             HashSet<string>? selectedIO,
             SortedDictionary<string, SortedDictionary<string, SortedSet<string>>> schema,
             SortedDictionary<DateTime, Dictionary<string, string>> dataMatrix,
@@ -177,7 +177,7 @@ namespace IndiLogs_3._0.Services
             catch (Exception ex) { AppLogger.Error("Parse failed", ex); }
         }
 
-        private void ParseIO(string msg, string threadName, DateTime time,
+        internal void ParseIO(string msg, string threadName, DateTime time,
             HashSet<string>? selectedIO,
             SortedDictionary<string, SortedDictionary<string, SortedSet<string>>> schema,
             SortedDictionary<DateTime, Dictionary<string, string>> dataMatrix,
@@ -274,7 +274,7 @@ namespace IndiLogs_3._0.Services
             }
         }
 
-        private static void DecomposeIOSymbol(string fullSymbolName, out string componentName, out string paramName)
+        internal static void DecomposeIOSymbol(string fullSymbolName, out string componentName, out string paramName)
         {
             if (fullSymbolName.EndsWith("_MotTemp", StringComparison.OrdinalIgnoreCase))
             {
@@ -293,7 +293,7 @@ namespace IndiLogs_3._0.Services
             }
         }
 
-        private void AddToSchema(SortedDictionary<string, SortedDictionary<string, SortedSet<string>>> schema,
+        internal void AddToSchema(SortedDictionary<string, SortedDictionary<string, SortedSet<string>>> schema,
                                  string subsys, string component, IEnumerable<string> paramsToAdd)
         {
             if (!schema.TryGetValue(subsys, out var compDict))
@@ -308,7 +308,7 @@ namespace IndiLogs_3._0.Services
             }
         }
 
-        private void ParseAndAddValue(string rawPart, string subsys, string motor, DateTime time,
+        internal void ParseAndAddValue(string rawPart, string subsys, string motor, DateTime time,
                                       SortedDictionary<DateTime, Dictionary<string, string>> data,
                                       string[] validParams)
         {

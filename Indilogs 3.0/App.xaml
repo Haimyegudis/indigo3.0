@@ -71,7 +71,7 @@
         <!-- Row selection / highlight colors (updated by ApplyTheme) -->
         <SolidColorBrush x:Key="RowSelectedBg" Color="#FFFACD"/>
         <SolidColorBrush x:Key="RowMarkedBg" Color="#90EE90"/>
-        <SolidColorBrush x:Key="RowErrorFg" Color="#FF6B6B"/>
+        <SolidColorBrush x:Key="RowErrorFg" Color="#FF8A8A"/>
 
         <!-- Scrollbar style:
              Vertical  – Windows-style: visible dark track rail, flat rectangular thumb (CornerRadius=2),

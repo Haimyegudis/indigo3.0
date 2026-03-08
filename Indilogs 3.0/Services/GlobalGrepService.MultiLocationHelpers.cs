@@ -104,7 +104,8 @@ namespace IndiLogs_3._0.Services
         {
             // Get all field values to check
             var fieldsToCheck = GetFieldValues(entry, condition.Field);
-            bool match = fieldsToCheck.Any(text => MatchText(text, condition.Value, condition.Operator));
+            var compiledRegex = condition.CompiledRegex;
+            bool match = fieldsToCheck.Any(text => MatchText(text, condition.Value, condition.Operator, compiledRegex));
             return condition.Negate ? !match : match;
         }
 
@@ -133,7 +134,7 @@ namespace IndiLogs_3._0.Services
             return values;
         }
 
-        private bool MatchText(string text, string value, SearchOperator op)
+        private bool MatchText(string text, string value, SearchOperator op, System.Text.RegularExpressions.Regex? compiledRegex = null)
         {
             if (string.IsNullOrEmpty(text)) return false;
             if (string.IsNullOrEmpty(value)) return false;
@@ -149,7 +150,12 @@ namespace IndiLogs_3._0.Services
                 case SearchOperator.EndsWith:
                     return text.EndsWith(value, StringComparison.OrdinalIgnoreCase);
                 case SearchOperator.Regex:
-                    try { return Regex.IsMatch(text, value, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(2)); }
+                    try
+                    {
+                        if (compiledRegex != null)
+                            return compiledRegex.IsMatch(text);
+                        return Regex.IsMatch(text, value, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(2));
+                    }
                     catch (Exception ex) { AppLogger.Warn($"[Grep] Regex match failed for pattern '{value}': {ex.Message}"); return false; }
                 default:
                     return false;
@@ -178,17 +184,19 @@ namespace IndiLogs_3._0.Services
                     if (condition.Field == SearchField.Any)
                     {
                         // Check each individual field to see which ones actually matched
+                        var anyRegex = condition.CompiledRegex;
                         foreach (var field in allFields)
                         {
                             var values = GetFieldValues(entry, field);
-                            if (values.Any(v => MatchText(v, condition.Value, condition.Operator)))
+                            if (values.Any(v => MatchText(v, condition.Value, condition.Operator, anyRegex)))
                                 matchedFields.Add(field.ToString());
                         }
                     }
                     else
                     {
                         var values = GetFieldValues(entry, condition.Field);
-                        if (values.Any(v => MatchText(v, condition.Value, condition.Operator)))
+                        var cRegex2 = condition.CompiledRegex;
+                        if (values.Any(v => MatchText(v, condition.Value, condition.Operator, cRegex2)))
                             matchedFields.Add(condition.Field.ToString());
                     }
                 }

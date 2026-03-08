@@ -29,6 +29,10 @@ namespace IndiLogs_3._0.Services.Charts
         private long _fileLength;
         private List<long> _lineOffsets;
 
+        // Thread-local reusable buffer to avoid per-call byte[] allocations in GetStringAt/GetValueAt
+        [ThreadStatic]
+        private static byte[]? t_rowBuffer;
+
         public List<string> ColumnNames { get; private set; }
         public List<string> RawColumnNames { get; private set; }
         public int TotalRows => _lineOffsets.Count;
@@ -44,6 +48,17 @@ namespace IndiLogs_3._0.Services.Charts
             RawColumnNames = new List<string>();
         }
 
+        private static byte[] RentRowBuffer(int minSize)
+        {
+            var buf = t_rowBuffer;
+            if (buf == null || buf.Length < minSize)
+            {
+                buf = new byte[Math.Max(minSize, 4096)];
+                t_rowBuffer = buf;
+            }
+            return buf;
+        }
+
         public unsafe string GetStringAt(int rowIndex, int colIndex)
         {
             if (rowIndex >= _lineOffsets.Count) return "";
@@ -53,7 +68,7 @@ namespace IndiLogs_3._0.Services.Charts
             if (end > start && _ptr[end - 1] == '\r') end--;
 
             int len = (int)(end - start);
-            byte[] buffer = new byte[len];
+            byte[] buffer = RentRowBuffer(len);
             Marshal.Copy((IntPtr)(_ptr + start), buffer, 0, len);
 
             // Handle CSV with quoted fields containing commas
@@ -92,7 +107,7 @@ namespace IndiLogs_3._0.Services.Charts
             if (end > start && _ptr[end - 1] == '\r') end--;
 
             int len = (int)(end - start);
-            byte[] buffer = new byte[len];
+            byte[] buffer = RentRowBuffer(len);
             Marshal.Copy((IntPtr)(_ptr + start), buffer, 0, len);
 
             int current = 0;
@@ -196,8 +211,6 @@ namespace IndiLogs_3._0.Services.Charts
         /// </summary>
         public int FindColumnIndex(string namePattern)
         {
-            string pattern = namePattern.ToLower();
-
             // Exact match first
             for (int i = 0; i < ColumnNames.Count; i++)
             {
@@ -208,7 +221,7 @@ namespace IndiLogs_3._0.Services.Charts
             // Partial match
             for (int i = 0; i < ColumnNames.Count; i++)
             {
-                if (ColumnNames[i].ToLower().Contains(pattern))
+                if (ColumnNames[i].IndexOf(namePattern, StringComparison.OrdinalIgnoreCase) >= 0)
                     return i;
             }
 

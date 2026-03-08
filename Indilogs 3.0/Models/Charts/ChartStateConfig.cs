@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 using SkiaSharp;
@@ -20,11 +21,11 @@ namespace IndiLogs_3._0.Models.Charts
         };
 
         // Reverse mapping (name -> ID)
-        public static readonly Dictionary<string, int> StateNameToId;
+        public static readonly FrozenDictionary<string, int> StateNameToId;
 
         static ChartStateConfig()
         {
-            StateNameToId = StateNames.ToDictionary(x => x.Value, x => x.Key);
+            StateNameToId = StateNames.ToFrozenDictionary(x => x.Value, x => x.Key);
         }
 
         // State colors (semi-transparent for background display)

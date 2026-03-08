@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Exclude>
+            [Indilogs 3.0]IndiLogs_3._0.Views.*,
+            [Indilogs 3.0]IndiLogs_3._0.Controls.*,
+            [Indilogs 3.0]IndiLogs_3._0.MainWindow*,
+            [Indilogs 3.0]IndiLogs_3._0.HighlightTextBlock*,
+            [Indilogs 3.0]IndiLogs_3._0.IndigoLogsReaderExplorer*
+          </Exclude>
+          <ExcludeByFile>
+            **/Views/**,
+            **/Controls/**,
+            **/MainWindow.*,
+            **/obj/**,
+            **/HighlightTextBlock*,
+            **/IndigoLogsReaderExplorer*
+          </ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

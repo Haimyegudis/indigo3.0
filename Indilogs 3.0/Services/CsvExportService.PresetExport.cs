@@ -56,7 +56,7 @@ namespace IndiLogs_3._0.Services
         // ===================================================================
 
         // Fast PlcMngr state parsing
-        private static bool TryParsePlcMngrState(string msg, out string? stateName)
+        internal static bool TryParsePlcMngrState(string msg, out string? stateName)
         {
             stateName = null;
             // CHStep: PlcMngr, STATE_NAME, ...
@@ -105,7 +105,7 @@ namespace IndiLogs_3._0.Services
         }
 
         // Fast CHStep parsing - replaces complex Regex
-        private static bool TryParseCHStep(string msg, out string? chName, out string? stepMessage, out string? stateId,
+        internal static bool TryParseCHStep(string msg, out string? chName, out string? stepMessage, out string? stateId,
             out string? chParentName, out string? subsysID, out string? prevStepNo, out string? diffTime, out string? subStepNo, out string? chObjType)
         {
             chName = stepMessage = stateId = chParentName = subsysID = prevStepNo = diffTime = subStepNo = chObjType = null;
@@ -174,7 +174,7 @@ namespace IndiLogs_3._0.Services
         }
 
         // Fast LogStats parsing - replaces multiple Regex
-        private static bool TryParseLogStats(string msg, out string? total, out string? isReady, out string? semTotal,
+        internal static bool TryParseLogStats(string msg, out string? total, out string? isReady, out string? semTotal,
             out string? semMult, out string? lost, out string? bufFull, out string? maxNum, out string? maxCat)
         {
             total = isReady = semTotal = semMult = lost = bufFull = maxNum = maxCat = null;

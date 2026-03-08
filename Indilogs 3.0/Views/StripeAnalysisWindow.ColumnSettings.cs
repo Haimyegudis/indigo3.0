@@ -214,7 +214,7 @@ namespace IndiLogs_3._0.Views
                     return;
 
                 if (result == MessageBoxResult.Yes)
-                    filteredEntries = filteredEntries.Take(50).ToList();
+                    filteredEntries = filteredEntries.GetRange(0, Math.Min(50, filteredEntries.Count));
             }
 
             var transposeWindow = new TransposeViewWindow();

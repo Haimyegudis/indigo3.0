@@ -290,7 +290,7 @@ namespace IndiLogs_3._0.ViewModels
             ToggleThemeCommand = new RelayCommand(o => IsDarkMode = !IsDarkMode);
             ToggleBoldCommand = new RelayCommand(o => IsBold = !IsBold);
             OpenSettingsCommand = new RelayCommand(OpenSettingsWindow);
-            OpenHelpCommand = new RelayCommand(o => _windowManager.OpenWindow(_viewFactory.Create<Views.HelpWindow>()));
+            OpenHelpCommand = new RelayCommand(o => OpenHelpHtml());
             OpenPluginTesterCommand = new RelayCommand(o => _windowManager.GetOrCreate<Views.PluginTesterWindow>(() => _viewFactory.Create<Views.PluginTesterWindow>()));
             OpenFontsWindowCommand = new RelayCommand(OpenFontsWindow);
             OpenSnakeGameCommand = new RelayCommand(OpenSnakeGame);
@@ -329,6 +329,7 @@ namespace IndiLogs_3._0.ViewModels
 
             SetAsDefaultCommand = new RelayCommand(SetCurrentAsDefault);
             ResetDefaultsCommand = new RelayCommand(ResetDefaults);
+            InitChartFromPatternCommand();
 
             _isDarkMode = Properties.Settings.Default.IsDarkMode;
             ApplyTheme(_isDarkMode);

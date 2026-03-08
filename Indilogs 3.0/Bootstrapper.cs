@@ -77,6 +77,7 @@ namespace IndiLogs_3._0
             Register<IUpdateService>(updateService);
 
             var grepBundle = new GrepServiceBundle(globalGrepService, searchLocationService, searchConfigService, searchSchedulerService, windowsTaskSchedulerService, emailNotificationService);
+            Register<Services.Interfaces.IGrepServiceBundle>(grepBundle);
             Register<GrepServiceBundle>(grepBundle);
 
             // --- ViewModels ---

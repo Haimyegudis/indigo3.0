@@ -1,6 +1,8 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 
 namespace IndiLogs_3._0.Models
 {
@@ -14,12 +16,35 @@ namespace IndiLogs_3._0.Models
         private string _operator = "Contains";
         private string _value = "";
 
+        // Cached compiled regex for "Regex" operator — avoids per-entry recompilation
+        [Newtonsoft.Json.JsonIgnore]
+        private Regex? _compiledRegex;
+        [Newtonsoft.Json.JsonIgnore]
+        private string? _compiledRegexPattern;
+
+        [Newtonsoft.Json.JsonIgnore]
+        public Regex? CompiledRegex
+        {
+            get
+            {
+                if (_operator != "Regex" || string.IsNullOrEmpty(_value))
+                    return null;
+                if (_compiledRegex == null || _compiledRegexPattern != _value)
+                {
+                    _compiledRegexPattern = _value;
+                    try { _compiledRegex = new Regex(_value, RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(2)); }
+                    catch (ArgumentException) { _compiledRegex = null; }
+                }
+                return _compiledRegex;
+            }
+        }
+
         public NodeType Type { get => _type; set { _type = value; OnPropertyChanged(); } }
         public string LogicalOperator { get => _logicalOperator; set { _logicalOperator = value; OnPropertyChanged(); } }
         public ObservableCollection<FilterNode> Children { get; set; } = new ObservableCollection<FilterNode>();
         public string Field { get => _field; set { _field = value; OnPropertyChanged(); } }
         public string Operator { get => _operator; set { _operator = value; OnPropertyChanged(); } }
-        public string Value { get => _value; set { _value = value; OnPropertyChanged(); } }
+        public string Value { get => _value; set { _value = value; _compiledRegex = null; _compiledRegexPattern = null; OnPropertyChanged(); } }
 
         /// <summary>
         /// When false, this condition is temporarily disabled (cleared) but not deleted.

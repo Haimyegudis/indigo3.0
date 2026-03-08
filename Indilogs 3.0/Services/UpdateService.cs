@@ -184,13 +184,37 @@ namespace IndiLogs_3._0.Services
                     return;
                 }
 
+                // Copy companion files (e.g., help.html) if present on server
+                string serverDir = Path.GetDirectoryName(serverExePath)!;
+                string serverHelpPath = Path.Combine(serverDir, "Resources", "help.html");
+                string localResourcesDir = Path.Combine(currentDir!, "Resources");
+                string tempHelpPath = Path.Combine(currentDir!, "help_update.tmp");
+                bool hasHelpUpdate = false;
+
+                try
+                {
+                    if (File.Exists(serverHelpPath))
+                    {
+                        Directory.CreateDirectory(localResourcesDir);
+                        File.Copy(serverHelpPath, tempHelpPath, true);
+                        hasHelpUpdate = true;
+                        UpdateLogger.Log("[AUTO-UPDATE] Copied updated help.html");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    UpdateLogger.Log($"[AUTO-UPDATE] help.html copy skipped: {ex.Message}");
+                }
+
                 // Write a small .cmd script that waits, replaces, and relaunches
                 string cmdPath = Path.Combine(currentDir!, "update.cmd");
+                string localHelpDest = Path.Combine(localResourcesDir, "help.html");
                 string cmdContent =
                     "@echo off\r\n" +
                     "echo Updating IndiLogs 3.0...\r\n" +
                     "timeout /t 2 /nobreak\r\n" +
                     $"move /y \"{tempExePath}\" \"{currentExePath}\"\r\n" +
+                    (hasHelpUpdate ? $"move /y \"{tempHelpPath}\" \"{localHelpDest}\"\r\n" : "") +
                     $"start \"\" \"{currentExePath}\"\r\n" +
                     $"del \"%~f0\"\r\n";
                 File.WriteAllText(cmdPath, cmdContent);

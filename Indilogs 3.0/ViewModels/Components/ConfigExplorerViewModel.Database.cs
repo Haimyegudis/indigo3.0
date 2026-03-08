@@ -59,13 +59,12 @@ namespace IndiLogs_3._0.ViewModels.Components
                 }
                 else
                 {
-                    string searchLower = ConfigSearchText.ToLower();
                     rootNode.IsVisible = true;
 
                     // Filter tables by name
                     foreach (var tableNode in rootNode.Children)
                     {
-                        bool matches = tableNode.Name?.ToLower().Contains(searchLower) == true;
+                        bool matches = tableNode.Name?.Contains(ConfigSearchText, StringComparison.OrdinalIgnoreCase) == true;
                         tableNode.IsVisible = matches;
 
                         // If table matches, show all its children (columns)
@@ -81,16 +80,16 @@ namespace IndiLogs_3._0.ViewModels.Components
             }
         }
 
-        private bool FilterTreeNode(DbTreeNode node, string searchLower)
+        private bool FilterTreeNode(DbTreeNode node, string searchText)
         {
-            bool selfMatches = (node.Name?.ToLower().Contains(searchLower) == true) ||
-                               (node.Type?.ToLower().Contains(searchLower) == true) ||
-                               (node.Schema?.ToLower().Contains(searchLower) == true);
+            bool selfMatches = (node.Name?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true) ||
+                               (node.Type?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true) ||
+                               (node.Schema?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true);
 
             bool anyChildMatches = false;
             foreach (var child in node.Children)
             {
-                bool childMatches = FilterTreeNode(child, searchLower);
+                bool childMatches = FilterTreeNode(child, searchText);
                 if (childMatches) anyChildMatches = true;
             }
 

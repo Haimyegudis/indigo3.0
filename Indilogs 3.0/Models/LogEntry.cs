@@ -268,12 +268,9 @@ namespace IndiLogs_3._0.Models
                 }
 
                 // Subtle level-based tint — lowest priority, only when no user color applies
-                switch (Level?.ToUpperInvariant())
-                {
-                    case "WARNING":
-                    case "WARN":
-                        return _brushLevelWarning;
-                }
+                if (string.Equals(Level, "WARNING", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(Level, "WARN", StringComparison.OrdinalIgnoreCase))
+                    return _brushLevelWarning;
 
                 return Brushes.Transparent;
             }

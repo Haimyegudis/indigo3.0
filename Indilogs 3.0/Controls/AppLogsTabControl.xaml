@@ -39,6 +39,8 @@
                     <MenuItem Header="📌 Start Range" Command="{Binding StartRangeCommand}"/>
                     <MenuItem Header="📌 End Range" Command="{Binding EndRangeCommand}"/>
                     <MenuItem Header="❌ Clear Range" Command="{Binding ClearRangeCommand}"/>
+                    <Separator/>
+                    <MenuItem Header="📊 Create Chart from Pattern..." Command="{Binding CreateChartFromPatternCommand}"/>
                 </ContextMenu>
             </DataGrid.ContextMenu>
 
@@ -73,7 +75,7 @@
                                         <Setter Property="Padding" Value="8,0"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
-                                                <Setter Property="Foreground" Value="#DC3232"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding Level}" Value="DEBUG">
                                                 <Setter Property="Foreground" Value="#4FC3F7"/>
@@ -110,7 +112,7 @@
                                         <Setter Property="Padding" Value="8,0"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
-                                                <Setter Property="Foreground" Value="#DC3232"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
                                                 <Setter Property="Foreground" Value="Black"/>
@@ -147,7 +149,7 @@
                                         <Setter Property="Padding" Value="8,0"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
-                                                <Setter Property="Foreground" Value="#DC3232"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
                                                 <Setter Property="Foreground" Value="Black"/>
@@ -184,7 +186,7 @@
                                         <Setter Property="Padding" Value="8,0"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
-                                                <Setter Property="Foreground" Value="#DC3232"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
                                                 <Setter Property="Foreground" Value="Black"/>
@@ -221,7 +223,7 @@
                                         <Setter Property="Padding" Value="8,0"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
-                                                <Setter Property="Foreground" Value="#DC3232"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
                                                 <Setter Property="Foreground" Value="Black"/>
@@ -257,7 +259,7 @@
                                         <Setter Property="TextWrapping" Value="NoWrap"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
-                                                <Setter Property="Foreground" Value="#DC3232"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
                                                 <Setter Property="Foreground" Value="Black"/>
@@ -291,7 +293,7 @@
                                         <Setter Property="Padding" Value="8,0"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
-                                                <Setter Property="Foreground" Value="#DC3232"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
                                                 <Setter Property="Foreground" Value="Black"/>
@@ -325,7 +327,7 @@
                                         <Setter Property="Padding" Value="8,0"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
-                                                <Setter Property="Foreground" Value="#DC3232"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
                                                 <Setter Property="Foreground" Value="Black"/>
@@ -359,7 +361,7 @@
                                         <Setter Property="Padding" Value="8,0"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsErrorOrEvents}" Value="True">
-                                                <Setter Property="Foreground" Value="#DC3232"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource RowErrorFg}"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding RowForeground}" Value="{x:Static Brushes.Black}">
                                                 <Setter Property="Foreground" Value="Black"/>
